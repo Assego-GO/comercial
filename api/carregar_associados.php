@@ -56,6 +56,9 @@ try {
         ]
     );
     
+    // Desabilita temporariamente o ONLY_FULL_GROUP_BY para esta sessão
+    $pdo->exec("SET SESSION sql_mode = REPLACE(@@sql_mode, 'ONLY_FULL_GROUP_BY', '')");
+    
     // Para compatibilidade com o frontend atual, vamos carregar todos os dados
     // mas de forma otimizada
     
@@ -67,7 +70,7 @@ try {
     $limite = $totalRegistros > 5000 ? 5000 : $totalRegistros;
     
     // Query otimizada - seleciona apenas campos essenciais
-    // DISTINCT para evitar duplicatas
+    // Usando MAX() para campos agregados quando necessário
     $sql = "
         SELECT DISTINCT
             a.id,
@@ -82,32 +85,44 @@ try {
             a.escolaridade,
             a.estadoCivil,
             a.indicacao,
-            m.corporacao,
-            m.patente,
-            m.categoria,
-            m.lotacao,
-            m.unidade,
-            f.tipoAssociado,
-            f.situacaoFinanceira,
-            f.vinculoServidor,
-            f.localDebito,
-            f.agencia,
-            f.operacao,
-            f.contaCorrente,
-            e.cep,
-            e.endereco,
-            e.bairro,
-            e.cidade,
-            e.numero,
-            e.complemento,
-            c.dataFiliacao as data_filiacao,
-            c.dataDesfiliacao as data_desfiliacao
+            MAX(m.corporacao) as corporacao,
+            MAX(m.patente) as patente,
+            MAX(m.categoria) as categoria,
+            MAX(m.lotacao) as lotacao,
+            MAX(m.unidade) as unidade,
+            MAX(f.tipoAssociado) as tipoAssociado,
+            MAX(f.situacaoFinanceira) as situacaoFinanceira,
+            MAX(f.vinculoServidor) as vinculoServidor,
+            MAX(f.localDebito) as localDebito,
+            MAX(f.agencia) as agencia,
+            MAX(f.operacao) as operacao,
+            MAX(f.contaCorrente) as contaCorrente,
+            MAX(e.cep) as cep,
+            MAX(e.endereco) as endereco,
+            MAX(e.bairro) as bairro,
+            MAX(e.cidade) as cidade,
+            MAX(e.numero) as numero,
+            MAX(e.complemento) as complemento,
+            MAX(c.dataFiliacao) as data_filiacao,
+            MAX(c.dataDesfiliacao) as data_desfiliacao
         FROM Associados a
         LEFT JOIN Militar m ON a.id = m.associado_id
         LEFT JOIN Financeiro f ON a.id = f.associado_id
         LEFT JOIN Endereco e ON a.id = e.associado_id
         LEFT JOIN Contrato c ON a.id = c.associado_id
-        GROUP BY a.id
+        GROUP BY 
+            a.id,
+            a.nome,
+            a.cpf,
+            a.rg,
+            a.email,
+            a.telefone,
+            a.nasc,
+            a.sexo,
+            a.situacao,
+            a.escolaridade,
+            a.estadoCivil,
+            a.indicacao
         ORDER BY a.id DESC
         LIMIT " . $limite;
     
