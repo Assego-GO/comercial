@@ -53,313 +53,176 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - <?php echo SISTEMA_NOME; ?></title>
     
-    <!-- CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <style>
-        body {
-            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-        
-        .login-container {
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 20px;
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
-            overflow: hidden;
-            max-width: 400px;
-            width: 100%;
-            animation: slideIn 0.5s ease-out;
-        }
-        
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateY(-20px);
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="estilizacao/login-style.css">
+    
+    <!-- Tailwind Config -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#e0f2fe',
+                            100: '#bae6fd',
+                            200: '#7dd3fc',
+                            300: '#38bdf8',
+                            400: '#0ea5e9',
+                            500: '#0284c7',
+                            600: '#0369a1',
+                            700: '#0c4a6e',
+                            800: '#075985',
+                            900: '#0c4a6e',
+                        }
+                    },
+                    animation: {
+                        'float': 'float 6s ease-in-out infinite',
+                        'glow': 'glow 2s ease-in-out infinite alternate',
+                        'twinkle': 'twinkle 3s ease-in-out infinite alternate',
+                        'shoot': 'shoot 3s linear infinite',
+                        'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    }
+                }
             }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
         }
-        
-        .login-header {
-            background: linear-gradient(135deg, #2a5298 0%, #1e3c72 100%);
-            color: white;
-            padding: 30px;
-            text-align: center;
-        }
-        
-        .login-header h1 {
-            margin: 0;
-            font-size: 28px;
-            font-weight: 600;
-        }
-        
-        .login-header p {
-            margin: 5px 0 0;
-            opacity: 0.9;
-            font-size: 14px;
-        }
-        
-        .logo {
-            width: 80px;
-            height: 80px;
-            background: white;
-            border-radius: 50%;
-            margin: 0 auto 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 40px;
-            color: #2a5298;
-        }
-        
-        .login-body {
-            padding: 40px 30px;
-        }
-        
-        .form-floating {
-            margin-bottom: 20px;
-        }
-        
-        .form-floating input {
-            border: 2px solid #e0e0e0;
-            border-radius: 10px;
-            font-size: 16px;
-            padding: 15px;
-            transition: all 0.3s;
-        }
-        
-        .form-floating input:focus {
-            border-color: #2a5298;
-            box-shadow: 0 0 0 0.2rem rgba(42, 82, 152, 0.1);
-        }
-        
-        .form-floating label {
-            color: #666;
-        }
-        
-        .btn-login {
-            background: linear-gradient(135deg, #2a5298 0%, #1e3c72 100%);
-            color: white;
-            border: none;
-            border-radius: 10px;
-            padding: 12px;
-            font-size: 18px;
-            font-weight: 600;
-            width: 100%;
-            transition: all 0.3s;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-        
-        .btn-login:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 20px rgba(42, 82, 152, 0.4);
-        }
-        
-        .btn-login:active {
-            transform: translateY(0);
-        }
-        
-        .form-check {
-            margin-bottom: 20px;
-        }
-        
-        .form-check-input:checked {
-            background-color: #2a5298;
-            border-color: #2a5298;
-        }
-        
-        .forgot-password {
-            text-align: center;
-            margin-top: 20px;
-        }
-        
-        .forgot-password a {
-            color: #2a5298;
-            text-decoration: none;
-            font-size: 14px;
-            transition: color 0.3s;
-        }
-        
-        .forgot-password a:hover {
-            color: #1e3c72;
-            text-decoration: underline;
-        }
-        
-        .alert {
-            border-radius: 10px;
-            margin-bottom: 20px;
-        }
-        
-        .password-toggle {
-            position: absolute;
-            right: 15px;
-            top: 50%;
-            transform: translateY(-50%);
-            cursor: pointer;
-            color: #666;
-            z-index: 10;
-        }
-        
-        .password-toggle:hover {
-            color: #2a5298;
-        }
-        
-        .input-group {
-            position: relative;
-        }
-        
-        .footer-text {
-            text-align: center;
-            margin-top: 30px;
-            font-size: 12px;
-            color: #666;
-        }
-    </style>
+    </script>
 </head>
-<body>
-    <div class="container">
-        <div class="row justify-content-center">
-            <div class="col-md-6 col-lg-5">
-                <div class="login-container">
-                    <div class="login-header">
-                        <div class="logo">
-                            <i class="fas fa-shield-alt"></i>
+<body class="min-h-screen overflow-hidden relative">
+    <!-- Galaxy Background -->
+    <div class="galaxy-bg" id="galaxy-container"></div>
+    
+    <!-- Stars Background -->
+    <div class="stars-bg" id="stars-container"></div>
+    
+    <!-- Nebulas -->
+    <div class="nebulas-bg" id="nebulas-container"></div>
+    
+    <!-- Particles -->
+    <div id="particles-container"></div>
+    
+    <!-- Main Container -->
+    <div class="min-h-screen flex items-center justify-center relative z-10 p-4">
+        <div class="login-container backdrop-blur-lg bg-gradient-to-br from-sky-500/10 to-blue-800/20 border border-sky-300/20 rounded-3xl shadow-2xl max-w-md w-full overflow-hidden">
+            <!-- Header -->
+            <div class="login-header bg-gradient-to-br from-sky-600/90 to-blue-800/90 text-white p-8 text-center relative">
+                <div class="absolute inset-0 bg-gradient-to-br from-sky-500/20 to-blue-600/20 animate-pulse-slow"></div>
+                
+                <div class="logo-container relative z-10 mb-6">
+                    <div class="logo w-20 h-20 bg-white/20 backdrop-blur-sm rounded-full mx-auto flex items-center justify-center text-4xl animate-float border border-white/30">
+                        <i class="fas fa-shield-alt text-white"></i>
+                    </div>
+                </div>
+                
+                <h1 class="text-3xl font-bold mb-2 animate-glow relative z-10">
+                    <?php echo SISTEMA_NOME ?? 'Sistema Comercial'; ?>
+                </h1>
+                <p class="text-sky-100 text-sm font-medium relative z-10">
+                    Área Do Comercial Da Assego
+                </p>
+            </div>
+            
+            <!-- Form Body -->
+            <div class="login-body p-8 relative">
+                <?php if ($erro): ?>
+                    <div class="alert-error bg-red-500/10 backdrop-blur-sm border border-red-500/20 text-red-300 px-4 py-3 rounded-xl mb-6 flex items-center animate-pulse" role="alert">
+                        <i class="fas fa-exclamation-circle mr-3 text-red-400"></i>
+                        <span><?php echo htmlspecialchars($erro); ?></span>
+                        <button type="button" class="ml-auto text-red-400 hover:text-red-300 transition-colors" onclick="this.parentElement.style.display='none'">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                <?php endif; ?>
+                
+                <form method="POST" action="" id="loginForm" class="space-y-6">
+                    <!-- Email Field -->
+                    <div class="form-group relative">
+                        <div class="input-wrapper">
+                            <i class="fas fa-envelope input-icon"></i>
+                            <input type="email" 
+                                   class="form-input w-full bg-white/5 backdrop-blur-sm border border-white/20 rounded-xl px-12 py-4 text-white placeholder-gray-300 focus:border-sky-400 focus:bg-white/10 transition-all duration-300"
+                                   id="email" 
+                                   name="email" 
+                                   placeholder="Seu Email"
+                                   value="<?php echo htmlspecialchars($_POST['email'] ?? ''); ?>"
+                                   required 
+                                   autofocus>
                         </div>
-                        <h1><?php echo SISTEMA_NOME; ?></h1>
-                        <p>Área Restrita - Funcionários</p>
                     </div>
                     
-                    <div class="login-body">
-                        <?php if ($erro): ?>
-                            <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                                <i class="fas fa-exclamation-circle me-2"></i>
-                                <?php echo htmlspecialchars($erro); ?>
-                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                            </div>
-                        <?php endif; ?>
-                        
-                        <form method="POST" action="" id="loginForm">
-                            <div class="form-floating">
-                                <input type="email" 
-                                       class="form-control" 
-                                       id="email" 
-                                       name="email" 
-                                       placeholder="seu@email.com"
-                                       value="<?php echo htmlspecialchars($_POST['email'] ?? ''); ?>"
-                                       required 
-                                       autofocus>
-                                <label for="email">
-                                    <i class="fas fa-envelope me-2"></i>Email
-                                </label>
-                            </div>
-                            
-                            <div class="form-floating">
-                                <div class="input-group">
-                                    <input type="password" 
-                                           class="form-control" 
-                                           id="senha" 
-                                           name="senha" 
-                                           placeholder="Senha"
-                                           required>
-                                    <span class="password-toggle" onclick="togglePassword()">
-                                        <i class="fas fa-eye" id="toggleIcon"></i>
-                                    </span>
-                                </div>
-                                <label for="senha">
-                                    <i class="fas fa-lock me-2"></i>Senha
-                                </label>
-                            </div>
-                            
-                            <div class="form-check">
-                                <input class="form-check-input" 
-                                       type="checkbox" 
-                                       id="lembrar" 
-                                       name="lembrar">
-                                <label class="form-check-label" for="lembrar">
-                                    Lembrar meu acesso
-                                </label>
-                            </div>
-                            
-                            <button type="submit" class="btn btn-login">
-                                <i class="fas fa-sign-in-alt me-2"></i>
-                                Entrar
+                    <!-- Password Field -->
+                    <div class="form-group relative">
+                        <div class="input-wrapper">
+                            <i class="fas fa-lock input-icon"></i>
+                            <input type="password" 
+                                   class="form-input w-full bg-white/5 backdrop-blur-sm border border-white/20 rounded-xl px-12 py-4 pr-16 text-white placeholder-gray-300 focus:border-sky-400 focus:bg-white/10 transition-all duration-300"
+                                   id="senha" 
+                                   name="senha" 
+                                   placeholder="Sua Senha"
+                                   required>
+                            <button type="button" class="password-toggle absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition-colors" onclick="togglePassword()">
+                                <i class="fas fa-eye" id="toggleIcon"></i>
                             </button>
-                        </form>
-                        
-                        <div class="forgot-password">
-                            <a href="<?php echo BASE_URL; ?>/pages/recuperar-senha.php">
-                                <i class="fas fa-key me-1"></i>
-                                Esqueceu sua senha?
-                            </a>
-                        </div>
-                        
-                        <div class="footer-text">
-                            <p>&copy; <?php echo date('Y'); ?> <?php echo SISTEMA_EMPRESA; ?>. Todos os direitos reservados.</p>
-                            <p>Versão <?php echo SISTEMA_VERSAO; ?></p>
                         </div>
                     </div>
+                    
+                    <!-- Remember Me -->
+                    <div class="form-check flex items-center">
+                        <input type="checkbox" 
+                               id="lembrar" 
+                               name="lembrar"
+                               class="w-4 h-4 text-sky-600 bg-white/10 border-white/20 rounded focus:ring-sky-500 focus:ring-2">
+                        <label for="lembrar" class="ml-3 text-sm text-gray-300 cursor-pointer">
+                            Lembrar meu acesso
+                        </label>
+                    </div>
+                    
+                    <!-- Submit Button -->
+                    <button type="submit" class="btn-login w-full bg-gradient-to-r from-sky-600 to-blue-800 hover:from-sky-700 hover:to-blue-900 text-white font-bold py-4 px-8 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg focus:outline-none focus:ring-4 focus:ring-sky-500/50 relative overflow-hidden">
+                        <span class="relative z-10 flex items-center justify-center">
+                            <i class="fas fa-sign-in-alt mr-3"></i>
+                            ACESSAR SISTEMA
+                        </span>
+                        <div class="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
+                    </button>
+                </form>
+                
+                <!-- Forgot Password -->
+                <div class="text-center mt-8">
+                    <a href="<?php echo BASE_URL ?? ''; ?>/pages/recuperar-senha.php" 
+                       class="forgot-link text-sky-300 hover:text-sky-100 text-sm font-medium transition-colors duration-300 flex items-center justify-center">
+                        <i class="fas fa-key mr-2"></i>
+                        Esqueceu sua senha?
+                    </a>
+                </div>
+                
+                <!-- Footer -->
+                <div class="text-center mt-8 pt-6 border-t border-white/10">
+                    <p class="text-xs text-gray-400 mb-1">
+                        &copy; <?php echo date('Y'); ?> <?php echo SISTEMA_EMPRESA ?? 'ASSEGO'; ?>. Todos os direitos reservados.
+                    </p>
+                    <p class="text-xs text-gray-500">
+                        Versão <?php echo SISTEMA_VERSAO ?? '1.0.0'; ?>
+                    </p>
                 </div>
             </div>
         </div>
     </div>
     
-    <!-- Scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+        <div class="bg-white/10 backdrop-blur-sm rounded-2xl p-8 text-center">
+            <div class="loading-spinner mx-auto mb-4"></div>
+            <p class="text-white font-medium">Fazendo login...</p>
+        </div>
+    </div>
     
-    <script>
-        // Toggle password visibility
-        function togglePassword() {
-            const passwordInput = document.getElementById('senha');
-            const toggleIcon = document.getElementById('toggleIcon');
-            
-            if (passwordInput.type === 'password') {
-                passwordInput.type = 'text';
-                toggleIcon.classList.remove('fa-eye');
-                toggleIcon.classList.add('fa-eye-slash');
-            } else {
-                passwordInput.type = 'password';
-                toggleIcon.classList.remove('fa-eye-slash');
-                toggleIcon.classList.add('fa-eye');
-            }
-        }
-        
-        // Form validation
-        document.getElementById('loginForm').addEventListener('submit', function(e) {
-            const email = document.getElementById('email').value;
-            const senha = document.getElementById('senha').value;
-            
-            if (!email || !senha) {
-                e.preventDefault();
-                alert('Por favor, preencha todos os campos.');
-                return false;
-            }
-            
-            // Email validation
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            if (!emailRegex.test(email)) {
-                e.preventDefault();
-                alert('Por favor, insira um email válido.');
-                return false;
-            }
-        });
-        
-        // Auto-hide alerts after 5 seconds
-        setTimeout(function() {
-            const alerts = document.querySelectorAll('.alert');
-            alerts.forEach(function(alert) {
-                const bsAlert = new bootstrap.Alert(alert);
-                bsAlert.close();
-            });
-        }, 5000);
-    </script>
+    <!-- Scripts -->
+    <script src="js/login-script.js"></script>
 </body>
 </html>
