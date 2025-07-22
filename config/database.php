@@ -6,8 +6,8 @@
 
 // Configurações do banco de dados
 define('DB_HOST', 'localhost');
-define('DB_USER', 'wwasse_cadastro');
-define('DB_PASS', 'rotam102030');
+define('DB_USER', 'superuser');
+define('DB_PASS', 'senhaForte123');
 define('DB_NAME_CADASTRO', 'wwasse_cadastro');
 define('DB_NAME_RELATORIOS', 'wwasse_relatorios_diarios');
 define('DB_CHARSET', 'utf8mb4');
