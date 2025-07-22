@@ -34,7 +34,7 @@ try {
     $stmt = $db->prepare("SELECT COUNT(*) as total FROM Associados");
     $stmt->execute();
     $totalAssociados = $stmt->fetch()['total'] ?? 0;
-    
+
     $stmt = $db->prepare("
         SELECT COUNT(DISTINCT a.id) as total 
         FROM Associados a 
@@ -42,7 +42,7 @@ try {
     ");
     $stmt->execute();
     $associadosFiliados = $stmt->fetch()['total'] ?? 0;
-    
+
     $stmt = $db->prepare("
         SELECT COUNT(DISTINCT a.id) as total 
         FROM Associados a 
@@ -50,7 +50,7 @@ try {
     ");
     $stmt->execute();
     $associadosDesfiliados = $stmt->fetch()['total'] ?? 0;
-    
+
     $stmt = $db->prepare("
         SELECT COUNT(*) as total 
         FROM Associados a
@@ -67,6 +67,7 @@ try {
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -82,7 +83,8 @@ try {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
 
     <!-- AOS Animation -->
     <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
@@ -113,13 +115,13 @@ try {
             --gray-800: #3A3A3C;
             --gray-900: #2C2C2E;
             --white: #FFFFFF;
-            
+
             --header-height: 70px;
-            
-            --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
-            --shadow-md: 0 4px 6px rgba(0,0,0,0.12), 0 2px 4px rgba(0,0,0,0.24);
-            --shadow-lg: 0 10px 20px rgba(0,0,0,0.12), 0 4px 8px rgba(0,0,0,0.24);
-            --shadow-xl: 0 20px 40px rgba(0,0,0,0.12), 0 8px 16px rgba(0,0,0,0.24);
+
+            --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+            --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.24);
+            --shadow-lg: 0 10px 20px rgba(0, 0, 0, 0.12), 0 4px 8px rgba(0, 0, 0, 0.24);
+            --shadow-xl: 0 20px 40px rgba(0, 0, 0, 0.12), 0 8px 16px rgba(0, 0, 0, 0.24);
         }
 
         * {
@@ -315,9 +317,11 @@ try {
             0% {
                 box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7);
             }
+
             70% {
                 box-shadow: 0 0 0 8px rgba(220, 53, 69, 0);
             }
+
             100% {
                 box-shadow: 0 0 0 0 rgba(220, 53, 69, 0);
             }
@@ -727,18 +731,18 @@ try {
             width: 100%;
             height: 100%;
         }
-        
+
         /* Transição suave para carregamento de imagens */
         .table-avatar img,
         .modal-avatar img {
             transition: opacity 0.3s ease;
         }
-        
+
         /* Indicador visual de foto carregando */
         .table-avatar {
             position: relative;
         }
-        
+
         .table-avatar::after {
             content: '';
             position: absolute;
@@ -746,18 +750,23 @@ try {
             left: 0;
             right: 0;
             bottom: 0;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
             transform: translateX(-100%);
             transition: transform 0.8s;
         }
-        
+
         .table-avatar.loading::after {
             animation: shimmer 1.5s infinite;
         }
-        
+
         @keyframes shimmer {
-            0% { transform: translateX(-100%); }
-            100% { transform: translateX(100%); }
+            0% {
+                transform: translateX(-100%);
+            }
+
+            100% {
+                transform: translateX(100%);
+            }
         }
 
         .status-badge {
@@ -867,7 +876,7 @@ try {
             background: var(--gray-200);
             margin: 0.5rem 0;
         }
-        
+
         .loading-overlay {
             position: fixed;
             top: 0;
@@ -906,7 +915,9 @@ try {
         }
 
         @keyframes spin {
-            to { transform: rotate(360deg); }
+            to {
+                transform: rotate(360deg);
+            }
         }
 
         /* Paginação */
@@ -1022,6 +1033,7 @@ try {
                 transform: translateY(50px);
                 opacity: 0;
             }
+
             to {
                 transform: translateY(0);
                 opacity: 1;
@@ -1044,7 +1056,7 @@ try {
             right: -50%;
             width: 200%;
             height: 200%;
-            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
             animation: pulse 4s ease-in-out infinite;
         }
 
@@ -1242,6 +1254,7 @@ try {
                 opacity: 0;
                 transform: translateY(10px);
             }
+
             to {
                 opacity: 1;
                 transform: translateY(0);
@@ -1610,23 +1623,23 @@ try {
                 margin: 1rem;
                 max-height: calc(100vh - 2rem);
             }
-            
+
             .modal-header-info {
                 flex-direction: column;
                 align-items: flex-start;
                 gap: 1rem;
             }
-            
+
             .modal-tabs {
                 overflow-x: auto;
                 -webkit-overflow-scrolling: touch;
             }
-            
+
             .overview-grid,
             .detail-grid {
                 grid-template-columns: 1fr;
             }
-            
+
             .stats-section {
                 grid-template-columns: repeat(2, 1fr);
                 gap: 1rem;
@@ -1639,6 +1652,7 @@ try {
                 opacity: 0;
                 transform: translateY(20px);
             }
+
             to {
                 opacity: 1;
                 transform: translateY(0);
@@ -1650,6 +1664,7 @@ try {
         }
     </style>
 </head>
+
 <body>
     <!-- Loading Overlay -->
     <div class="loading-overlay" id="loadingOverlay">
@@ -1663,7 +1678,8 @@ try {
         <header class="main-header">
             <div class="header-left">
                 <div class="logo-section">
-                    <div style="width: 40px; height: 40px; background: var(--primary); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white; font-weight: 800;">
+                    <div
+                        style="width: 40px; height: 40px; background: var(--primary); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white; font-weight: 800;">
                         A
                     </div>
                     <div>
@@ -1672,7 +1688,7 @@ try {
                     </div>
                 </div>
             </div>
-            
+
             <div class="header-right">
                 <button class="header-btn">
                     <i class="fas fa-search"></i>
@@ -1684,13 +1700,14 @@ try {
                 <div class="user-menu" id="userMenu">
                     <div class="user-info">
                         <p class="user-name"><?php echo htmlspecialchars($usuarioLogado['nome']); ?></p>
-                        <p class="user-role"><?php echo htmlspecialchars($usuarioLogado['cargo'] ?? 'Funcionário'); ?></p>
+                        <p class="user-role"><?php echo htmlspecialchars($usuarioLogado['cargo'] ?? 'Funcionário'); ?>
+                        </p>
                     </div>
                     <div class="user-avatar">
                         <?php echo strtoupper(substr($usuarioLogado['nome'], 0, 1)); ?>
                     </div>
                     <i class="fas fa-chevron-down ms-2" style="font-size: 0.75rem; color: var(--gray-500);"></i>
-                    
+
                     <!-- Dropdown Menu -->
                     <div class="dropdown-menu-custom" id="userDropdown">
                         <a href="perfil.php" class="dropdown-item-custom">
@@ -1698,10 +1715,10 @@ try {
                             <span>Meu Perfil</span>
                         </a>
                         <?php if ($auth->isDiretor()): ?>
-                        <a href="configuracoes.php" class="dropdown-item-custom">
-                            <i class="fas fa-cog"></i>
-                            <span>Configurações</span>
-                        </a>
+                            <a href="configuracoes.php" class="dropdown-item-custom">
+                                <i class="fas fa-cog"></i>
+                                <span>Configurações</span>
+                            </a>
                         <?php endif; ?>
                         <div class="dropdown-divider-custom"></div>
                         <a href="../php/login/logout.php" class="dropdown-item-custom">
@@ -1725,14 +1742,14 @@ try {
                     </a>
                 </li>
                 <?php if ($auth->isDiretor()): ?>
-                <li class="nav-tab-item">
-                    <a href="funcionarios.php" class="nav-tab-link">
-                        <div class="nav-tab-icon">
-                            <i class="fas fa-user-tie"></i>
-                        </div>
-                        <span class="nav-tab-text">Funcionários</span>
-                    </a>
-                </li>
+                    <li class="nav-tab-item">
+                        <a href="funcionarios.php" class="nav-tab-link">
+                            <div class="nav-tab-icon">
+                                <i class="fas fa-user-tie"></i>
+                            </div>
+                            <span class="nav-tab-text">Funcionários</span>
+                        </a>
+                    </li>
                 <?php endif; ?>
                 <li class="nav-tab-item">
                     <a href="relatorios.php" class="nav-tab-link">
@@ -1790,7 +1807,8 @@ try {
                 <div class="stat-card">
                     <div class="stat-header">
                         <div>
-                            <div class="stat-value"><?php echo number_format($associadosDesfiliados, 0, ',', '.'); ?></div>
+                            <div class="stat-value"><?php echo number_format($associadosDesfiliados, 0, ',', '.'); ?>
+                            </div>
                             <div class="stat-label">Inativos</div>
                             <div class="stat-change negative">
                                 <i class="fas fa-arrow-down"></i>
@@ -1827,10 +1845,11 @@ try {
                         <label class="filter-label">Buscar</label>
                         <div style="position: relative;">
                             <i class="fas fa-search search-icon"></i>
-                            <input type="text" class="search-input" id="searchInput" placeholder="Buscar por RG, nome, CPF ou telefone...">
+                            <input type="text" class="search-input" id="searchInput"
+                                placeholder="Buscar por RG, nome, CPF ou telefone...">
                         </div>
                     </div>
-                    
+
                     <div class="filter-group">
                         <label class="filter-label">Situação</label>
                         <select class="filter-select" id="filterSituacao">
@@ -1839,14 +1858,14 @@ try {
                             <option value="Desfiliado">Desfiliado</option>
                         </select>
                     </div>
-                    
+
                     <div class="filter-group">
                         <label class="filter-label">Corporação</label>
                         <select class="filter-select" id="filterCorporacao">
                             <option value="">Todos</option>
                         </select>
                     </div>
-                    
+
                     <div class="filter-group">
                         <label class="filter-label">Patente</label>
                         <select class="filter-select" id="filterPatente">
@@ -1854,7 +1873,7 @@ try {
                         </select>
                     </div>
                 </div>
-                
+
                 <div class="actions-row">
                     <button class="btn-modern btn-secondary" onclick="limparFiltros()">
                         <i class="fas fa-eraser"></i>
@@ -1875,9 +1894,10 @@ try {
             <div class="table-container" data-aos="fade-up" data-aos-delay="200">
                 <div class="table-header">
                     <h3 class="table-title">Lista de Associados</h3>
-                    <span class="table-info">Mostrando <span id="showingCount">0</span> de <span id="totalCount">0</span> registros</span>
+                    <span class="table-info">Mostrando <span id="showingCount">0</span> de <span
+                            id="totalCount">0</span> registros</span>
                 </div>
-                
+
                 <div class="table-responsive p-2">
                     <table class="modern-table" id="associadosTable">
                         <thead>
@@ -1906,11 +1926,12 @@ try {
                         </tbody>
                     </table>
                 </div>
-                
+
                 <!-- Paginação -->
                 <div class="pagination-container">
                     <div class="pagination-info">
-                        <span>Mostrando página <strong id="currentPage">1</strong> de <strong id="totalPages">1</strong></span>
+                        <span>Mostrando página <strong id="currentPage">1</strong> de <strong
+                                id="totalPages">1</strong></span>
                         <select class="page-select ms-3" id="perPageSelect">
                             <option value="10">10 por página</option>
                             <option value="25" selected>25 por página</option>
@@ -1918,7 +1939,7 @@ try {
                             <option value="100">100 por página</option>
                         </select>
                     </div>
-                    
+
                     <div class="pagination-controls">
                         <button class="page-btn" id="firstPage" title="Primeira página">
                             <i class="fas fa-angle-double-left"></i>
@@ -1926,9 +1947,9 @@ try {
                         <button class="page-btn" id="prevPage" title="Página anterior">
                             <i class="fas fa-angle-left"></i>
                         </button>
-                        
+
                         <div id="pageNumbers"></div>
-                        
+
                         <button class="page-btn" id="nextPage" title="Próxima página">
                             <i class="fas fa-angle-right"></i>
                         </button>
@@ -2046,352 +2067,352 @@ try {
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
-    
+
     <script>
-// Configuração inicial
-console.log('=== INICIANDO SISTEMA ASSEGO ===');
-console.log('jQuery versão:', jQuery.fn.jquery);
+        // Configuração inicial
+        console.log('=== INICIANDO SISTEMA ASSEGO ===');
+        console.log('jQuery versão:', jQuery.fn.jquery);
 
-// Inicializa AOS com delay
-setTimeout(() => {
-    AOS.init({
-        duration: 800,
-        once: true
-    });
-}, 100);
-
-// Variáveis globais
-let todosAssociados = [];
-let associadosFiltrados = [];
-let carregamentoIniciado = false;
-let carregamentoCompleto = false; // Nova flag para evitar duplicação
-let imagensCarregadas = new Set();
-
-// Variáveis de paginação
-let paginaAtual = 1;
-let registrosPorPagina = 25;
-let totalPaginas = 1;
-
-// User Dropdown Menu
-document.addEventListener('DOMContentLoaded', function() {
-    const userMenu = document.getElementById('userMenu');
-    const userDropdown = document.getElementById('userDropdown');
-
-    if (userMenu && userDropdown) {
-        userMenu.addEventListener('click', function(e) {
-            e.stopPropagation();
-            userDropdown.classList.toggle('show');
-        });
-
-        // Fecha dropdown ao clicar fora
-        document.addEventListener('click', function() {
-            userDropdown.classList.remove('show');
-        });
-    }
-});
-
-// Loading functions
-function showLoading() {
-    const overlay = document.getElementById('loadingOverlay');
-    if (overlay) {
-        overlay.classList.add('active');
-        console.log('Loading ativado');
-    }
-}
-
-function hideLoading() {
-    const overlay = document.getElementById('loadingOverlay');
-    if (overlay) {
-        overlay.classList.remove('active');
-        console.log('Loading desativado');
-    }
-}
-
-// Função para obter URL da foto
-function getFotoUrl(cpf) {
-    if (!cpf) return null;
-    const cpfNormalizado = normalizarCPF(cpf);
-    return `https://assegonaopara.com.br/QRV/images/fotos/${cpfNormalizado}.jpg`;
-}
-
-// Função para pré-carregar imagem
-function preloadImage(url) {
-    return new Promise((resolve, reject) => {
-        const img = new Image();
-        img.onload = () => resolve(url);
-        img.onerror = () => reject(url);
-        img.src = url;
-    });
-}
-
-// Formata data
-function formatarData(dataStr) {
-    if (!dataStr || dataStr === "0000-00-00" || dataStr === "") return "-";
-    try {
-        const [ano, mes, dia] = dataStr.split("-");
-        return `${dia}/${mes}/${ano}`;
-    } catch (e) {
-        return "-";
-    }
-}
-
-// Formata CPF
-function formatarCPF(cpf) {
-    if (!cpf) return "-";
-    cpf = cpf.toString().replace(/\D/g, '');
-    cpf = cpf.padStart(11, '0');
-    if (cpf.length !== 11) return cpf;
-    return cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
-}
-
-// Função para garantir CPF com 11 dígitos
-function normalizarCPF(cpf) {
-    if (!cpf) return '';
-    cpf = cpf.toString().replace(/\D/g, '');
-    return cpf.padStart(11, '0');
-}
-
-// Formata telefone
-function formatarTelefone(telefone) {
-    if (!telefone) return "-";
-    telefone = telefone.toString().replace(/\D/g, '');
-    if (telefone.length === 11) {
-        return telefone.replace(/(\d{2})(\d{5})(\d{4})/, "($1) $2-$3");
-    } else if (telefone.length === 10) {
-        return telefone.replace(/(\d{2})(\d{4})(\d{4})/, "($1) $2-$3");
-    } else if (telefone.length === 9) {
-        return telefone.replace(/(\d{5})(\d{4})/, "$1-$2");
-    } else if (telefone.length === 8) {
-        return telefone.replace(/(\d{4})(\d{4})/, "$1-$2");
-    }
-    return telefone;
-}
-
-// Função principal - Carrega dados da tabela
-function carregarAssociados() {
-    // Evita múltiplas chamadas e recarregamentos
-    if (carregamentoIniciado || carregamentoCompleto) {
-        console.log('Carregamento já realizado ou em andamento, ignorando nova chamada');
-        return;
-    }
-    
-    carregamentoIniciado = true;
-    console.log('Iniciando carregamento de associados...');
-    showLoading();
-    
-    const startTime = Date.now();
-    
-    const timeoutId = setTimeout(() => {
-        hideLoading();
-        carregamentoIniciado = false;
-        console.error('TIMEOUT: Requisição demorou mais de 30 segundos');
-        alert('Tempo esgotado ao carregar dados. Por favor, recarregue a página.');
-        renderizarTabela([]);
-    }, 30000);
-
-    // Requisição AJAX
-    $.ajax({
-        url: '../api/carregar_associados.php',
-        method: 'GET',
-        dataType: 'json',
-        cache: false,
-        timeout: 25000,
-        beforeSend: function() {
-            console.log('Enviando requisição para:', this.url);
-        },
-        success: function(response) {
-            clearTimeout(timeoutId);
-            const elapsed = Date.now() - startTime;
-            console.log(`Resposta recebida em ${elapsed}ms`);
-            console.log('Total de registros:', response.total);
-            
-            if (response && response.status === 'success') {
-                todosAssociados = Array.isArray(response.dados) ? response.dados : [];
-                
-                // Remove duplicatas baseado no ID
-                const idsUnicos = new Set();
-                todosAssociados = todosAssociados.filter(associado => {
-                    if (idsUnicos.has(associado.id)) {
-                        return false;
-                    }
-                    idsUnicos.add(associado.id);
-                    return true;
-                });
-                
-                // Ordena por ID decrescente (mais recentes primeiro)
-                todosAssociados.sort((a, b) => b.id - a.id);
-                
-                associadosFiltrados = [...todosAssociados];
-                
-                // Preenche os filtros
-                preencherFiltros();
-                
-                // Calcula total de páginas
-                calcularPaginacao();
-                
-                // Renderiza a primeira página
-                renderizarPagina();
-                
-                // Marca como carregamento completo
-                carregamentoCompleto = true;
-                
-                console.log('✓ Dados carregados com sucesso!');
-                console.log(`Total de associados únicos: ${todosAssociados.length}`);
-                
-                if (response.aviso) {
-                    console.warn(response.aviso);
-                }
-            } else {
-                console.error('Resposta com erro:', response);
-                alert('Erro ao carregar dados: ' + (response.message || 'Erro desconhecido'));
-                renderizarTabela([]);
-            }
-        },
-        error: function(xhr, status, error) {
-            clearTimeout(timeoutId);
-            const elapsed = Date.now() - startTime;
-            console.error(`Erro após ${elapsed}ms:`, {
-                status: xhr.status,
-                statusText: xhr.statusText,
-                error: error
+        // Inicializa AOS com delay
+        setTimeout(() => {
+            AOS.init({
+                duration: 800,
+                once: true
             });
-            
-            let mensagemErro = 'Erro ao carregar dados';
-            
-            if (xhr.status === 0) {
-                mensagemErro = 'Sem conexão com o servidor';
-            } else if (xhr.status === 404) {
-                mensagemErro = 'Arquivo não encontrado';
-            } else if (xhr.status === 500) {
-                mensagemErro = 'Erro no servidor';
-            } else if (status === 'timeout') {
-                mensagemErro = 'Tempo esgotado';
-            } else if (status === 'parsererror') {
-                mensagemErro = 'Resposta inválida do servidor';
+        }, 100);
+
+        // Variáveis globais
+        let todosAssociados = [];
+        let associadosFiltrados = [];
+        let carregamentoIniciado = false;
+        let carregamentoCompleto = false; // Nova flag para evitar duplicação
+        let imagensCarregadas = new Set();
+
+        // Variáveis de paginação
+        let paginaAtual = 1;
+        let registrosPorPagina = 25;
+        let totalPaginas = 1;
+
+        // User Dropdown Menu
+        document.addEventListener('DOMContentLoaded', function () {
+            const userMenu = document.getElementById('userMenu');
+            const userDropdown = document.getElementById('userDropdown');
+
+            if (userMenu && userDropdown) {
+                userMenu.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    userDropdown.classList.toggle('show');
+                });
+
+                // Fecha dropdown ao clicar fora
+                document.addEventListener('click', function () {
+                    userDropdown.classList.remove('show');
+                });
             }
-            
-            alert(mensagemErro + '\n\nPor favor, recarregue a página.');
-            renderizarTabela([]);
-        },
-        complete: function() {
-            clearTimeout(timeoutId);
-            hideLoading();
-            carregamentoIniciado = false;
-            console.log('Carregamento finalizado');
+        });
+
+        // Loading functions
+        function showLoading() {
+            const overlay = document.getElementById('loadingOverlay');
+            if (overlay) {
+                overlay.classList.add('active');
+                console.log('Loading ativado');
+            }
         }
-    });
-}
 
-// [Resto das funções permanece igual...]
-// Copie todas as outras funções do seu código original aqui
-// (preencherFiltros, calcularPaginacao, renderizarTabela, etc.)
+        function hideLoading() {
+            const overlay = document.getElementById('loadingOverlay');
+            if (overlay) {
+                overlay.classList.remove('active');
+                console.log('Loading desativado');
+            }
+        }
 
-// Preenche os filtros dinâmicos
-function preencherFiltros() {
-    console.log('Preenchendo filtros...');
-    
-    const selectCorporacao = document.getElementById('filterCorporacao');
-    const selectPatente = document.getElementById('filterPatente');
-    
-    selectCorporacao.innerHTML = '<option value="">Todos</option>';
-    selectPatente.innerHTML = '<option value="">Todos</option>';
-    
-    const corporacoes = [...new Set(todosAssociados
-        .map(a => a.corporacao)
-        .filter(c => c && c.trim() !== '')
-    )].sort();
-    
-    corporacoes.forEach(corp => {
-        const option = document.createElement('option');
-        option.value = corp;
-        option.textContent = corp;
-        selectCorporacao.appendChild(option);
-    });
+        // Função para obter URL da foto
+        function getFotoUrl(cpf) {
+            if (!cpf) return null;
+            const cpfNormalizado = normalizarCPF(cpf);
+            return `https://assegonaopara.com.br/QRV/images/fotos/${cpfNormalizado}.jpg`;
+        }
 
-    const patentes = [...new Set(todosAssociados
-        .map(a => a.patente)
-        .filter(p => p && p.trim() !== '')
-    )].sort();
-    
-    patentes.forEach(pat => {
-        const option = document.createElement('option');
-        option.value = pat;
-        option.textContent = pat;
-        selectPatente.appendChild(option);
-    });
-    
-    console.log(`Filtros preenchidos: ${corporacoes.length} corporações, ${patentes.length} patentes`);
-}
+        // Função para pré-carregar imagem
+        function preloadImage(url) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => resolve(url);
+                img.onerror = () => reject(url);
+                img.src = url;
+            });
+        }
 
-// Calcula paginação
-function calcularPaginacao() {
-    totalPaginas = Math.ceil(associadosFiltrados.length / registrosPorPagina);
-    if (paginaAtual > totalPaginas) {
-        paginaAtual = 1;
-    }
-    atualizarControlesPaginacao();
-}
+        // Formata data
+        function formatarData(dataStr) {
+            if (!dataStr || dataStr === "0000-00-00" || dataStr === "") return "-";
+            try {
+                const [ano, mes, dia] = dataStr.split("-");
+                return `${dia}/${mes}/${ano}`;
+            } catch (e) {
+                return "-";
+            }
+        }
 
-// Atualiza controles de paginação
-function atualizarControlesPaginacao() {
-    document.getElementById('currentPage').textContent = paginaAtual;
-    document.getElementById('totalPages').textContent = totalPaginas;
-    document.getElementById('totalCount').textContent = associadosFiltrados.length;
-    
-    document.getElementById('firstPage').disabled = paginaAtual === 1;
-    document.getElementById('prevPage').disabled = paginaAtual === 1;
-    document.getElementById('nextPage').disabled = paginaAtual === totalPaginas;
-    document.getElementById('lastPage').disabled = paginaAtual === totalPaginas;
-    
-    const pageNumbers = document.getElementById('pageNumbers');
-    pageNumbers.innerHTML = '';
-    
-    let startPage = Math.max(1, paginaAtual - 2);
-    let endPage = Math.min(totalPaginas, paginaAtual + 2);
-    
-    for (let i = startPage; i <= endPage; i++) {
-        const btn = document.createElement('button');
-        btn.className = 'page-btn' + (i === paginaAtual ? ' active' : '');
-        btn.textContent = i;
-        btn.onclick = () => irParaPagina(i);
-        pageNumbers.appendChild(btn);
-    }
-}
+        // Formata CPF
+        function formatarCPF(cpf) {
+            if (!cpf) return "-";
+            cpf = cpf.toString().replace(/\D/g, '');
+            cpf = cpf.padStart(11, '0');
+            if (cpf.length !== 11) return cpf;
+            return cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+        }
 
-// Renderiza página atual
-function renderizarPagina() {
-    const inicio = (paginaAtual - 1) * registrosPorPagina;
-    const fim = inicio + registrosPorPagina;
-    const dadosPagina = associadosFiltrados.slice(inicio, fim);
-    
-    renderizarTabela(dadosPagina);
-    
-    const mostrando = Math.min(registrosPorPagina, dadosPagina.length);
-    document.getElementById('showingCount').textContent = 
-        `${inicio + 1}-${inicio + mostrando}`;
-}
+        // Função para garantir CPF com 11 dígitos
+        function normalizarCPF(cpf) {
+            if (!cpf) return '';
+            cpf = cpf.toString().replace(/\D/g, '');
+            return cpf.padStart(11, '0');
+        }
 
-// Navegar entre páginas
-function irParaPagina(pagina) {
-    paginaAtual = pagina;
-    renderizarPagina();
-    atualizarControlesPaginacao();
-}
+        // Formata telefone
+        function formatarTelefone(telefone) {
+            if (!telefone) return "-";
+            telefone = telefone.toString().replace(/\D/g, '');
+            if (telefone.length === 11) {
+                return telefone.replace(/(\d{2})(\d{5})(\d{4})/, "($1) $2-$3");
+            } else if (telefone.length === 10) {
+                return telefone.replace(/(\d{2})(\d{4})(\d{4})/, "($1) $2-$3");
+            } else if (telefone.length === 9) {
+                return telefone.replace(/(\d{5})(\d{4})/, "$1-$2");
+            } else if (telefone.length === 8) {
+                return telefone.replace(/(\d{4})(\d{4})/, "$1-$2");
+            }
+            return telefone;
+        }
 
-// Renderiza tabela
-function renderizarTabela(dados) {
-    console.log(`Renderizando ${dados.length} registros...`);
-    const tbody = document.getElementById('tableBody');
-    
-    if (!tbody) {
-        console.error('Elemento tableBody não encontrado!');
-        return;
-    }
-    
-    tbody.innerHTML = '';
+        // Função principal - Carrega dados da tabela
+        function carregarAssociados() {
+            // Evita múltiplas chamadas e recarregamentos
+            if (carregamentoIniciado || carregamentoCompleto) {
+                console.log('Carregamento já realizado ou em andamento, ignorando nova chamada');
+                return;
+            }
 
-    if (dados.length === 0) {
-        tbody.innerHTML = `
+            carregamentoIniciado = true;
+            console.log('Iniciando carregamento de associados...');
+            showLoading();
+
+            const startTime = Date.now();
+
+            const timeoutId = setTimeout(() => {
+                hideLoading();
+                carregamentoIniciado = false;
+                console.error('TIMEOUT: Requisição demorou mais de 30 segundos');
+                alert('Tempo esgotado ao carregar dados. Por favor, recarregue a página.');
+                renderizarTabela([]);
+            }, 30000);
+
+            // Requisição AJAX
+            $.ajax({
+                url: '../api/carregar_associados.php',
+                method: 'GET',
+                dataType: 'json',
+                cache: false,
+                timeout: 25000,
+                beforeSend: function () {
+                    console.log('Enviando requisição para:', this.url);
+                },
+                success: function (response) {
+                    clearTimeout(timeoutId);
+                    const elapsed = Date.now() - startTime;
+                    console.log(`Resposta recebida em ${elapsed}ms`);
+                    console.log('Total de registros:', response.total);
+
+                    if (response && response.status === 'success') {
+                        todosAssociados = Array.isArray(response.dados) ? response.dados : [];
+
+                        // Remove duplicatas baseado no ID
+                        const idsUnicos = new Set();
+                        todosAssociados = todosAssociados.filter(associado => {
+                            if (idsUnicos.has(associado.id)) {
+                                return false;
+                            }
+                            idsUnicos.add(associado.id);
+                            return true;
+                        });
+
+                        // Ordena por ID decrescente (mais recentes primeiro)
+                        todosAssociados.sort((a, b) => b.id - a.id);
+
+                        associadosFiltrados = [...todosAssociados];
+
+                        // Preenche os filtros
+                        preencherFiltros();
+
+                        // Calcula total de páginas
+                        calcularPaginacao();
+
+                        // Renderiza a primeira página
+                        renderizarPagina();
+
+                        // Marca como carregamento completo
+                        carregamentoCompleto = true;
+
+                        console.log('✓ Dados carregados com sucesso!');
+                        console.log(`Total de associados únicos: ${todosAssociados.length}`);
+
+                        if (response.aviso) {
+                            console.warn(response.aviso);
+                        }
+                    } else {
+                        console.error('Resposta com erro:', response);
+                        alert('Erro ao carregar dados: ' + (response.message || 'Erro desconhecido'));
+                        renderizarTabela([]);
+                    }
+                },
+                error: function (xhr, status, error) {
+                    clearTimeout(timeoutId);
+                    const elapsed = Date.now() - startTime;
+                    console.error(`Erro após ${elapsed}ms:`, {
+                        status: xhr.status,
+                        statusText: xhr.statusText,
+                        error: error
+                    });
+
+                    let mensagemErro = 'Erro ao carregar dados';
+
+                    if (xhr.status === 0) {
+                        mensagemErro = 'Sem conexão com o servidor';
+                    } else if (xhr.status === 404) {
+                        mensagemErro = 'Arquivo não encontrado';
+                    } else if (xhr.status === 500) {
+                        mensagemErro = 'Erro no servidor';
+                    } else if (status === 'timeout') {
+                        mensagemErro = 'Tempo esgotado';
+                    } else if (status === 'parsererror') {
+                        mensagemErro = 'Resposta inválida do servidor';
+                    }
+
+                    alert(mensagemErro + '\n\nPor favor, recarregue a página.');
+                    renderizarTabela([]);
+                },
+                complete: function () {
+                    clearTimeout(timeoutId);
+                    hideLoading();
+                    carregamentoIniciado = false;
+                    console.log('Carregamento finalizado');
+                }
+            });
+        }
+
+        // [Resto das funções permanece igual...]
+        // Copie todas as outras funções do seu código original aqui
+        // (preencherFiltros, calcularPaginacao, renderizarTabela, etc.)
+
+        // Preenche os filtros dinâmicos
+        function preencherFiltros() {
+            console.log('Preenchendo filtros...');
+
+            const selectCorporacao = document.getElementById('filterCorporacao');
+            const selectPatente = document.getElementById('filterPatente');
+
+            selectCorporacao.innerHTML = '<option value="">Todos</option>';
+            selectPatente.innerHTML = '<option value="">Todos</option>';
+
+            const corporacoes = [...new Set(todosAssociados
+                .map(a => a.corporacao)
+                .filter(c => c && c.trim() !== '')
+            )].sort();
+
+            corporacoes.forEach(corp => {
+                const option = document.createElement('option');
+                option.value = corp;
+                option.textContent = corp;
+                selectCorporacao.appendChild(option);
+            });
+
+            const patentes = [...new Set(todosAssociados
+                .map(a => a.patente)
+                .filter(p => p && p.trim() !== '')
+            )].sort();
+
+            patentes.forEach(pat => {
+                const option = document.createElement('option');
+                option.value = pat;
+                option.textContent = pat;
+                selectPatente.appendChild(option);
+            });
+
+            console.log(`Filtros preenchidos: ${corporacoes.length} corporações, ${patentes.length} patentes`);
+        }
+
+        // Calcula paginação
+        function calcularPaginacao() {
+            totalPaginas = Math.ceil(associadosFiltrados.length / registrosPorPagina);
+            if (paginaAtual > totalPaginas) {
+                paginaAtual = 1;
+            }
+            atualizarControlesPaginacao();
+        }
+
+        // Atualiza controles de paginação
+        function atualizarControlesPaginacao() {
+            document.getElementById('currentPage').textContent = paginaAtual;
+            document.getElementById('totalPages').textContent = totalPaginas;
+            document.getElementById('totalCount').textContent = associadosFiltrados.length;
+
+            document.getElementById('firstPage').disabled = paginaAtual === 1;
+            document.getElementById('prevPage').disabled = paginaAtual === 1;
+            document.getElementById('nextPage').disabled = paginaAtual === totalPaginas;
+            document.getElementById('lastPage').disabled = paginaAtual === totalPaginas;
+
+            const pageNumbers = document.getElementById('pageNumbers');
+            pageNumbers.innerHTML = '';
+
+            let startPage = Math.max(1, paginaAtual - 2);
+            let endPage = Math.min(totalPaginas, paginaAtual + 2);
+
+            for (let i = startPage; i <= endPage; i++) {
+                const btn = document.createElement('button');
+                btn.className = 'page-btn' + (i === paginaAtual ? ' active' : '');
+                btn.textContent = i;
+                btn.onclick = () => irParaPagina(i);
+                pageNumbers.appendChild(btn);
+            }
+        }
+
+        // Renderiza página atual
+        function renderizarPagina() {
+            const inicio = (paginaAtual - 1) * registrosPorPagina;
+            const fim = inicio + registrosPorPagina;
+            const dadosPagina = associadosFiltrados.slice(inicio, fim);
+
+            renderizarTabela(dadosPagina);
+
+            const mostrando = Math.min(registrosPorPagina, dadosPagina.length);
+            document.getElementById('showingCount').textContent =
+                `${inicio + 1}-${inicio + mostrando}`;
+        }
+
+        // Navegar entre páginas
+        function irParaPagina(pagina) {
+            paginaAtual = pagina;
+            renderizarPagina();
+            atualizarControlesPaginacao();
+        }
+
+        // Renderiza tabela
+        function renderizarTabela(dados) {
+            console.log(`Renderizando ${dados.length} registros...`);
+            const tbody = document.getElementById('tableBody');
+
+            if (!tbody) {
+                console.error('Elemento tableBody não encontrado!');
+                return;
+            }
+
+            tbody.innerHTML = '';
+
+            if (dados.length === 0) {
+                tbody.innerHTML = `
             <tr>
                 <td colspan="10" class="text-center py-5">
                     <div class="d-flex flex-column align-items-center">
@@ -2402,37 +2423,37 @@ function renderizarTabela(dados) {
                 </td>
             </tr>
         `;
-        return;
-    }
-
-    dados.forEach(associado => {
-        const situacaoBadge = associado.situacao === 'Filiado' 
-            ? '<span class="status-badge active"><i class="fas fa-check-circle"></i> Filiado</span>'
-            : '<span class="status-badge inactive"><i class="fas fa-times-circle"></i> Desfiliado</span>';
-
-        const row = document.createElement('tr');
-        row.onclick = (e) => {
-            if (!e.target.closest('.btn-icon')) {
-                visualizarAssociado(associado.id);
+                return;
             }
-        };
-        
-        let fotoHtml = `<span>${associado.nome ? associado.nome.charAt(0).toUpperCase() : '?'}</span>`;
-        
-        if (associado.cpf) {
-            const cpfNormalizado = normalizarCPF(associado.cpf);
-            const fotoUrl = `https://assegonaopara.com.br/QRV/images/fotos/${cpfNormalizado}.jpg`;
-            
-            fotoHtml = `
+
+            dados.forEach(associado => {
+                const situacaoBadge = associado.situacao === 'Filiado'
+                    ? '<span class="status-badge active"><i class="fas fa-check-circle"></i> Filiado</span>'
+                    : '<span class="status-badge inactive"><i class="fas fa-times-circle"></i> Desfiliado</span>';
+
+                const row = document.createElement('tr');
+                row.onclick = (e) => {
+                    if (!e.target.closest('.btn-icon')) {
+                        visualizarAssociado(associado.id);
+                    }
+                };
+
+                let fotoHtml = `<span>${associado.nome ? associado.nome.charAt(0).toUpperCase() : '?'}</span>`;
+
+                if (associado.cpf) {
+                    const cpfNormalizado = normalizarCPF(associado.cpf);
+                    const fotoUrl = `https://assegonaopara.com.br/QRV/images/fotos/${cpfNormalizado}.jpg`;
+
+                    fotoHtml = `
                 <img src="${fotoUrl}" 
                      alt="${associado.nome}"
                      onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
                      onload="this.style.display='block'; this.nextElementSibling.style.display='none';">
                 <span style="display:none;">${associado.nome ? associado.nome.charAt(0).toUpperCase() : '?'}</span>
             `;
-        }
-        
-        row.innerHTML = `
+                }
+
+                row.innerHTML = `
             <td>
                 <div class="table-avatar">
                     ${fotoHtml}
@@ -2464,130 +2485,738 @@ function renderizarTabela(dados) {
                 </div>
             </td>
         `;
-        tbody.appendChild(row);
-    });
-}
+                tbody.appendChild(row);
+            });
+        }
 
-// Aplica filtros
-function aplicarFiltros() {
-    console.log('Aplicando filtros...');
-    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-    const filterSituacao = document.getElementById('filterSituacao').value;
-    const filterCorporacao = document.getElementById('filterCorporacao').value;
-    const filterPatente = document.getElementById('filterPatente').value;
+        // Aplica filtros
+        function aplicarFiltros() {
+            console.log('Aplicando filtros...');
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const filterSituacao = document.getElementById('filterSituacao').value;
+            const filterCorporacao = document.getElementById('filterCorporacao').value;
+            const filterPatente = document.getElementById('filterPatente').value;
 
-    associadosFiltrados = todosAssociados.filter(associado => {
-        const matchSearch = !searchTerm || 
-            (associado.nome && associado.nome.toLowerCase().includes(searchTerm)) ||
-            (associado.cpf && associado.cpf.includes(searchTerm)) ||
-            (associado.rg && associado.rg.includes(searchTerm)) ||
-            (associado.telefone && associado.telefone.includes(searchTerm));
+            associadosFiltrados = todosAssociados.filter(associado => {
+                const matchSearch = !searchTerm ||
+                    (associado.nome && associado.nome.toLowerCase().includes(searchTerm)) ||
+                    (associado.cpf && associado.cpf.includes(searchTerm)) ||
+                    (associado.rg && associado.rg.includes(searchTerm)) ||
+                    (associado.telefone && associado.telefone.includes(searchTerm));
 
-        const matchSituacao = !filterSituacao || associado.situacao === filterSituacao;
-        const matchCorporacao = !filterCorporacao || associado.corporacao === filterCorporacao;
-        const matchPatente = !filterPatente || associado.patente === filterPatente;
+                const matchSituacao = !filterSituacao || associado.situacao === filterSituacao;
+                const matchCorporacao = !filterCorporacao || associado.corporacao === filterCorporacao;
+                const matchPatente = !filterPatente || associado.patente === filterPatente;
 
-        return matchSearch && matchSituacao && matchCorporacao && matchPatente;
-    });
+                return matchSearch && matchSituacao && matchCorporacao && matchPatente;
+            });
 
-    console.log(`Filtros aplicados: ${associadosFiltrados.length} de ${todosAssociados.length} registros`);
-    
-    paginaAtual = 1;
-    calcularPaginacao();
-    renderizarPagina();
-}
+            console.log(`Filtros aplicados: ${associadosFiltrados.length} de ${todosAssociados.length} registros`);
 
-// Limpa filtros
-function limparFiltros() {
-    console.log('Limpando filtros...');
-    document.getElementById('searchInput').value = '';
-    document.getElementById('filterSituacao').value = '';
-    document.getElementById('filterCorporacao').value = '';
-    document.getElementById('filterPatente').value = '';
-    
-    associadosFiltrados = [...todosAssociados];
-    paginaAtual = 1;
-    calcularPaginacao();
-    renderizarPagina();
-}
-
-// [Copie aqui todas as outras funções do código original]
-// visualizarAssociado, atualizarHeaderModal, preencherTabVisaoGeral, etc.
-
-// Event listeners - só adiciona UMA VEZ
-document.addEventListener('DOMContentLoaded', function() {
-    // Adiciona listeners aos filtros
-    const searchInput = document.getElementById('searchInput');
-    const filterSituacao = document.getElementById('filterSituacao');
-    const filterCorporacao = document.getElementById('filterCorporacao');
-    const filterPatente = document.getElementById('filterPatente');
-    
-    if (searchInput) searchInput.addEventListener('input', aplicarFiltros);
-    if (filterSituacao) filterSituacao.addEventListener('change', aplicarFiltros);
-    if (filterCorporacao) filterCorporacao.addEventListener('change', aplicarFiltros);
-    if (filterPatente) filterPatente.addEventListener('change', aplicarFiltros);
-    
-    // Paginação
-    const perPageSelect = document.getElementById('perPageSelect');
-    if (perPageSelect) {
-        perPageSelect.addEventListener('change', function() {
-            registrosPorPagina = parseInt(this.value);
             paginaAtual = 1;
             calcularPaginacao();
             renderizarPagina();
+        }
+
+        // Limpa filtros
+        function limparFiltros() {
+            console.log('Limpando filtros...');
+            document.getElementById('searchInput').value = '';
+            document.getElementById('filterSituacao').value = '';
+            document.getElementById('filterCorporacao').value = '';
+            document.getElementById('filterPatente').value = '';
+
+            associadosFiltrados = [...todosAssociados];
+            paginaAtual = 1;
+            calcularPaginacao();
+            renderizarPagina();
+        }
+
+        // [Copie aqui todas as outras funções do código original]
+        // visualizarAssociado, atualizarHeaderModal, preencherTabVisaoGeral, etc.
+        // Função para visualizar detalhes do associado
+        function visualizarAssociado(id) {
+            console.log('Visualizando associado ID:', id);
+            const associado = todosAssociados.find(a => a.id == id);
+
+            if (!associado) {
+                console.error('Associado não encontrado:', id);
+                alert('Associado não encontrado!');
+                return;
+            }
+
+            // Atualiza o header do modal
+            atualizarHeaderModal(associado);
+
+            // Preenche as tabs
+            preencherTabVisaoGeral(associado);
+            preencherTabMilitar(associado);
+            preencherTabFinanceiro(associado);
+            preencherTabContato(associado);
+            preencherTabDependentes(associado);
+            preencherTabDocumentos(associado);
+
+            // Abre o modal
+            document.getElementById('modalAssociado').classList.add('show');
+            document.body.style.overflow = 'hidden';
+        }
+
+        // Atualiza o header do modal
+        function atualizarHeaderModal(associado) {
+            // Nome e ID
+            document.getElementById('modalNome').textContent = associado.nome || 'Sem nome';
+            document.getElementById('modalId').textContent = `ID: ${associado.id}`;
+
+            // Data de filiação
+            document.getElementById('modalDataFiliacao').textContent =
+                formatarData(associado.data_filiacao) !== '-'
+                    ? `Desde ${formatarData(associado.data_filiacao)}`
+                    : 'Data não informada';
+
+            // Status
+            const statusPill = document.getElementById('modalStatusPill');
+            if (associado.situacao === 'Filiado') {
+                statusPill.innerHTML = `
+            <div class="status-pill active">
+                <i class="fas fa-check-circle"></i>
+                Ativo
+            </div>
+        `;
+            } else {
+                statusPill.innerHTML = `
+            <div class="status-pill inactive">
+                <i class="fas fa-times-circle"></i>
+                Inativo
+            </div>
+        `;
+            }
+
+            // Avatar
+            const modalAvatar = document.getElementById('modalAvatarHeader');
+            if (associado.cpf) {
+                const cpfNormalizado = normalizarCPF(associado.cpf);
+                const fotoUrl = `https://assegonaopara.com.br/QRV/images/fotos/${cpfNormalizado}.jpg`;
+
+                modalAvatar.innerHTML = `
+            <img src="${fotoUrl}" 
+                 alt="${associado.nome}"
+                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+                 onload="this.style.display='block'; this.nextElementSibling.style.display='none';">
+            <div class="modal-avatar-header-placeholder" style="display:none;">
+                ${associado.nome ? associado.nome.charAt(0).toUpperCase() : '?'}
+            </div>
+        `;
+            } else {
+                modalAvatar.innerHTML = `
+            <div class="modal-avatar-header-placeholder">
+                ${associado.nome ? associado.nome.charAt(0).toUpperCase() : '?'}
+            </div>
+        `;
+            }
+        }
+
+        // Preenche tab Visão Geral
+        function preencherTabVisaoGeral(associado) {
+            const overviewTab = document.getElementById('overview-tab');
+
+            // Calcula idade
+            let idade = '-';
+            if (associado.nasc && associado.nasc !== '0000-00-00') {
+                const hoje = new Date();
+                const nascimento = new Date(associado.nasc);
+                idade = Math.floor((hoje - nascimento) / (365.25 * 24 * 60 * 60 * 1000));
+                idade = idade + ' anos';
+            }
+
+            overviewTab.innerHTML = `
+        <!-- Stats Section -->
+        <div class="stats-section">
+            <div class="stat-item">
+                <div class="stat-value">${associado.total_servicos || 0}</div>
+                <div class="stat-label">Serviços Ativos</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">${associado.total_dependentes || 0}</div>
+                <div class="stat-label">Dependentes</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">${associado.total_documentos || 0}</div>
+                <div class="stat-label">Documentos</div>
+            </div>
+        </div>
+        
+        <!-- Overview Grid -->
+        <div class="overview-grid">
+            <!-- Dados Pessoais -->
+            <div class="overview-card">
+                <div class="overview-card-header">
+                    <div class="overview-card-icon blue">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <h4 class="overview-card-title">Dados Pessoais</h4>
+                </div>
+                <div class="overview-card-content">
+                    <div class="overview-item">
+                        <span class="overview-label">Nome Completo</span>
+                        <span class="overview-value">${associado.nome || '-'}</span>
+                    </div>
+                    <div class="overview-item">
+                        <span class="overview-label">CPF</span>
+                        <span class="overview-value">${formatarCPF(associado.cpf)}</span>
+                    </div>
+                    <div class="overview-item">
+                        <span class="overview-label">RG</span>
+                        <span class="overview-value">${associado.rg || '-'}</span>
+                    </div>
+                    <div class="overview-item">
+                        <span class="overview-label">Data de Nascimento</span>
+                        <span class="overview-value">${formatarData(associado.nasc)}</span>
+                    </div>
+                    <div class="overview-item">
+                        <span class="overview-label">Idade</span>
+                        <span class="overview-value">${idade}</span>
+                    </div>
+                    <div class="overview-item">
+                        <span class="overview-label">Sexo</span>
+                        <span class="overview-value">${associado.sexo === 'M' ? 'Masculino' : associado.sexo === 'F' ? 'Feminino' : '-'}</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Informações de Filiação -->
+            <div class="overview-card">
+                <div class="overview-card-header">
+                    <div class="overview-card-icon green">
+                        <i class="fas fa-id-card"></i>
+                    </div>
+                    <h4 class="overview-card-title">Informações de Filiação</h4>
+                </div>
+                <div class="overview-card-content">
+                    <div class="overview-item">
+                        <span class="overview-label">Situação</span>
+                        <span class="overview-value">${associado.situacao || '-'}</span>
+                    </div>
+                    <div class="overview-item">
+                        <span class="overview-label">Data de Filiação</span>
+                        <span class="overview-value">${formatarData(associado.data_filiacao)}</span>
+                    </div>
+                    <div class="overview-item">
+                        <span class="overview-label">Data de Desfiliação</span>
+                        <span class="overview-value">${formatarData(associado.data_desfiliacao)}</span>
+                    </div>
+                    <div class="overview-item">
+                        <span class="overview-label">Escolaridade</span>
+                        <span class="overview-value">${associado.escolaridade || '-'}</span>
+                    </div>
+                    <div class="overview-item">
+                        <span class="overview-label">Estado Civil</span>
+                        <span class="overview-value">${associado.estadoCivil || '-'}</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Informações Extras -->
+            <div class="overview-card">
+                <div class="overview-card-header">
+                    <div class="overview-card-icon purple">
+                        <i class="fas fa-info-circle"></i>
+                    </div>
+                    <h4 class="overview-card-title">Informações Adicionais</h4>
+                </div>
+                <div class="overview-card-content">
+                    <div class="overview-item">
+                        <span class="overview-label">Indicação</span>
+                        <span class="overview-value">${associado.indicacao || '-'}</span>
+                    </div>
+                    <div class="overview-item">
+                        <span class="overview-label">Tipo de Associado</span>
+                        <span class="overview-value">${associado.tipoAssociado || '-'}</span>
+                    </div>
+                    <div class="overview-item">
+                        <span class="overview-label">Situação Financeira</span>
+                        <span class="overview-value">${associado.situacaoFinanceira || '-'}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+        }
+
+        // Preenche tab Militar
+        function preencherTabMilitar(associado) {
+            const militarTab = document.getElementById('militar-tab');
+
+            militarTab.innerHTML = `
+        <div class="detail-section">
+            <div class="section-header">
+                <div class="section-icon">
+                    <i class="fas fa-shield-alt"></i>
+                </div>
+                <h3 class="section-title">Informações Militares</h3>
+            </div>
+            
+            <div class="detail-grid">
+                <div class="detail-item">
+                    <span class="detail-label">Corporação</span>
+                    <span class="detail-value">${associado.corporacao || '-'}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Patente</span>
+                    <span class="detail-value">${associado.patente || '-'}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Categoria</span>
+                    <span class="detail-value">${associado.categoria || '-'}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Lotação</span>
+                    <span class="detail-value">${associado.lotacao || '-'}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Unidade</span>
+                    <span class="detail-value">${associado.unidade || '-'}</span>
+                </div>
+            </div>
+        </div>
+    `;
+        }
+
+        // Preenche tab Financeiro
+        function preencherTabFinanceiro(associado) {
+            const financeiroTab = document.getElementById('financeiro-tab');
+
+            financeiroTab.innerHTML = `
+        <div class="detail-section">
+            <div class="section-header">
+                <div class="section-icon">
+                    <i class="fas fa-dollar-sign"></i>
+                </div>
+                <h3 class="section-title">Informações Financeiras</h3>
+            </div>
+            
+            <div class="detail-grid">
+                <div class="detail-item">
+                    <span class="detail-label">Tipo de Associado</span>
+                    <span class="detail-value">${associado.tipoAssociado || '-'}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Situação Financeira</span>
+                    <span class="detail-value">${associado.situacaoFinanceira || '-'}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Vínculo Servidor</span>
+                    <span class="detail-value">${associado.vinculoServidor || '-'}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Local de Débito</span>
+                    <span class="detail-value">${associado.localDebito || '-'}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Agência</span>
+                    <span class="detail-value">${associado.agencia || '-'}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Operação</span>
+                    <span class="detail-value">${associado.operacao || '-'}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Conta Corrente</span>
+                    <span class="detail-value">${associado.contaCorrente || '-'}</span>
+                </div>
+            </div>
+        </div>
+    `;
+        }
+
+        // Preenche tab Contato
+        function preencherTabContato(associado) {
+            const contatoTab = document.getElementById('contato-tab');
+
+            contatoTab.innerHTML = `
+        <div class="detail-section">
+            <div class="section-header">
+                <div class="section-icon">
+                    <i class="fas fa-phone"></i>
+                </div>
+                <h3 class="section-title">Informações de Contato</h3>
+            </div>
+            
+            <div class="detail-grid">
+                <div class="detail-item">
+                    <span class="detail-label">Telefone</span>
+                    <span class="detail-value">${formatarTelefone(associado.telefone)}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">E-mail</span>
+                    <span class="detail-value">${associado.email || '-'}</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="detail-section">
+            <div class="section-header">
+                <div class="section-icon">
+                    <i class="fas fa-map-marker-alt"></i>
+                </div>
+                <h3 class="section-title">Endereço</h3>
+            </div>
+            
+            <div class="detail-grid">
+                <div class="detail-item">
+                    <span class="detail-label">CEP</span>
+                    <span class="detail-value">${associado.cep || '-'}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Endereço</span>
+                    <span class="detail-value">${associado.endereco || '-'}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Número</span>
+                    <span class="detail-value">${associado.numero || '-'}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Complemento</span>
+                    <span class="detail-value">${associado.complemento || '-'}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Bairro</span>
+                    <span class="detail-value">${associado.bairro || '-'}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Cidade</span>
+                    <span class="detail-value">${associado.cidade || '-'}</span>
+                </div>
+            </div>
+        </div>
+    `;
+        }
+
+        // Preenche tab Dependentes
+        function preencherTabDependentes(associado) {
+            const dependentesTab = document.getElementById('dependentes-tab');
+
+            if (!associado.dependentes || associado.dependentes.length === 0) {
+                dependentesTab.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-users"></i>
+                <p>Nenhum dependente cadastrado</p>
+            </div>
+        `;
+                return;
+            }
+
+            let dependentesHtml = `
+        <div class="detail-section">
+            <div class="section-header">
+                <div class="section-icon">
+                    <i class="fas fa-users"></i>
+                </div>
+                <h3 class="section-title">Dependentes (${associado.dependentes.length})</h3>
+            </div>
+            <div class="list-container">
+    `;
+
+            associado.dependentes.forEach(dep => {
+                let idade = '-';
+                if (dep.data_nascimento && dep.data_nascimento !== '0000-00-00') {
+                    const hoje = new Date();
+                    const nascimento = new Date(dep.data_nascimento);
+                    idade = Math.floor((hoje - nascimento) / (365.25 * 24 * 60 * 60 * 1000));
+                    idade = idade + ' anos';
+                }
+
+                dependentesHtml += `
+            <div class="list-item">
+                <div class="list-item-content">
+                    <div class="list-item-title">${dep.nome || 'Sem nome'}</div>
+                    <div class="list-item-subtitle">
+                        ${dep.parentesco || 'Parentesco não informado'} • 
+                        ${formatarData(dep.data_nascimento)} • 
+                        ${idade}
+                    </div>
+                </div>
+                <span class="list-item-badge">${dep.sexo || '-'}</span>
+            </div>
+        `;
+            });
+
+            dependentesHtml += `
+            </div>
+        </div>
+    `;
+
+            dependentesTab.innerHTML = dependentesHtml;
+        }
+
+        // Preenche tab Documentos
+        function preencherTabDocumentos(associado) {
+            const documentosTab = document.getElementById('documentos-tab');
+
+            documentosTab.innerHTML = `
+        <div class="detail-section">
+            <div class="section-header">
+                <div class="section-icon">
+                    <i class="fas fa-folder-open"></i>
+                </div>
+                <h3 class="section-title">Documentos</h3>
+            </div>
+            <div class="empty-state">
+                <i class="fas fa-file-alt"></i>
+                <p>Funcionalidade de documentos em desenvolvimento</p>
+            </div>
+        </div>
+    `;
+        }
+
+        // Função para fechar modal
+        function fecharModal() {
+            const modal = document.getElementById('modalAssociado');
+            modal.classList.remove('show');
+            document.body.style.overflow = 'auto';
+
+            // Volta para a primeira tab
+            abrirTab('overview');
+        }
+
+        // Função para trocar de tab
+        function abrirTab(tabName) {
+            // Remove active de todas as tabs
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+
+            // Adiciona active na tab selecionada
+            const activeButton = document.querySelector(`.tab-button[onclick="abrirTab('${tabName}')"]`);
+            if (activeButton) {
+                activeButton.classList.add('active');
+            }
+
+            const activeContent = document.getElementById(`${tabName}-tab`);
+            if (activeContent) {
+                activeContent.classList.add('active');
+            }
+        }
+
+        // Função para editar associado
+        function editarAssociado(id) {
+            console.log('Editando associado ID:', id);
+
+            // Previne propagação do clique
+            event.stopPropagation();
+
+            // Redireciona para a página de edição
+            window.location.href = `../pages/editarAssociado.php?id=${id}`;
+        }
+
+        // Função para excluir associado
+        function excluirAssociado(id) {
+            console.log('Excluindo associado ID:', id);
+
+            // Previne propagação do clique
+            event.stopPropagation();
+
+            const associado = todosAssociados.find(a => a.id == id);
+
+            if (!associado) {
+                alert('Associado não encontrado!');
+                return;
+            }
+
+            if (!confirm(`Tem certeza que deseja excluir o associado ${associado.nome}?\n\nEsta ação não pode ser desfeita!`)) {
+                return;
+            }
+
+            showLoading();
+
+            // Chamada AJAX para excluir
+            $.ajax({
+                url: '../api/excluir_associado.php',
+                method: 'POST',
+                data: { id: id },
+                dataType: 'json',
+                success: function (response) {
+                    hideLoading();
+
+                    if (response.status === 'success') {
+                        alert('Associado excluído com sucesso!');
+
+                        // Remove da lista local
+                        todosAssociados = todosAssociados.filter(a => a.id != id);
+                        associadosFiltrados = associadosFiltrados.filter(a => a.id != id);
+
+                        // Recalcula paginação e renderiza
+                        calcularPaginacao();
+                        renderizarPagina();
+                    } else {
+                        alert('Erro ao excluir associado: ' + response.message);
+                    }
+                },
+                error: function (xhr, status, error) {
+                    hideLoading();
+                    console.error('Erro ao excluir:', error);
+                    alert('Erro ao excluir associado. Por favor, tente novamente.');
+                }
+            });
+        }
+
+        // Fecha modal ao clicar fora
+        window.addEventListener('click', function (event) {
+            const modal = document.getElementById('modalAssociado');
+            if (event.target === modal) {
+                fecharModal();
+            }
         });
-    }
-    
-    const firstPage = document.getElementById('firstPage');
-    const prevPage = document.getElementById('prevPage');
-    const nextPage = document.getElementById('nextPage');
-    const lastPage = document.getElementById('lastPage');
-    
-    if (firstPage) firstPage.addEventListener('click', () => irParaPagina(1));
-    if (prevPage) prevPage.addEventListener('click', () => irParaPagina(paginaAtual - 1));
-    if (nextPage) nextPage.addEventListener('click', () => irParaPagina(paginaAtual + 1));
-    if (lastPage) lastPage.addEventListener('click', () => irParaPagina(totalPaginas));
-    
-    console.log('Event listeners adicionados');
-    
-    // Carrega dados apenas UMA vez após 500ms
-    setTimeout(function() {
-        carregarAssociados();
-    }, 500);
-});
 
-// Remove todos os outros event listeners e timeouts duplicados
+        // Tecla ESC fecha o modal
+        document.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape') {
+                fecharModal();
+            }
+        });
 
-// Função para verificar sistema
-function verificarSistema() {
-    console.log('=== VERIFICAÇÃO DO SISTEMA ===');
-    console.log('jQuery:', typeof jQuery !== 'undefined' ? '✓' : '✗');
-    console.log('Total associados carregados:', todosAssociados.length);
-    console.log('Carregamento completo:', carregamentoCompleto ? '✓' : '✗');
-    console.log('=========================');
-}
+        // Adiciona smooth scroll
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
 
-// Exporta funções para debug
-window.debugAssociados = function() {
-    verificarSistema();
-    console.log('Total associados:', todosAssociados.length);
-    console.log('Associados filtrados:', associadosFiltrados.length);
-    console.log('Carregamento em andamento:', carregamentoIniciado);
-    console.log('Carregamento completo:', carregamentoCompleto);
-    console.log('Página atual:', paginaAtual);
-    console.log('Total de páginas:', totalPaginas);
-    console.log('Registros por página:', registrosPorPagina);
-    
-    // Verifica duplicatas
-    const ids = todosAssociados.map(a => a.id);
-    const idsUnicos = [...new Set(ids)];
-    console.log('IDs totais:', ids.length);
-    console.log('IDs únicos:', idsUnicos.length);
-    console.log('Duplicatas:', ids.length - idsUnicos.length);
-};
+        // Função auxiliar para formatar valores monetários
+        function formatarMoeda(valor) {
+            if (!valor || isNaN(valor)) return 'R$ 0,00';
 
-console.log('Sistema inicializado. Use debugAssociados() para debug.');
-</script>
+            return new Intl.NumberFormat('pt-BR', {
+                style: 'currency',
+                currency: 'BRL'
+            }).format(valor);
+        }
+
+        // Função para validar CPF
+        function validarCPF(cpf) {
+            cpf = cpf.replace(/[^\d]+/g, '');
+
+            if (cpf.length !== 11) return false;
+
+            // Elimina CPFs invalidos conhecidos
+            if (/^(\d)\1+$/.test(cpf)) return false;
+
+            // Valida 1o digito
+            let add = 0;
+            for (let i = 0; i < 9; i++) {
+                add += parseInt(cpf.charAt(i)) * (10 - i);
+            }
+            let rev = 11 - (add % 11);
+            if (rev === 10 || rev === 11) rev = 0;
+            if (rev !== parseInt(cpf.charAt(9))) return false;
+
+            // Valida 2o digito
+            add = 0;
+            for (let i = 0; i < 10; i++) {
+                add += parseInt(cpf.charAt(i)) * (11 - i);
+            }
+            rev = 11 - (add % 11);
+            if (rev === 10 || rev === 11) rev = 0;
+            if (rev !== parseInt(cpf.charAt(10))) return false;
+
+            return true;
+        }
+
+        // Auto-resize para textarea
+        document.querySelectorAll('textarea').forEach(textarea => {
+            textarea.addEventListener('input', function () {
+                this.style.height = 'auto';
+                this.style.height = this.scrollHeight + 'px';
+            });
+        });
+
+        console.log('✓ Todas as funções JavaScript carregadas com sucesso!');
+
+        // Event listeners - só adiciona UMA VEZ
+        document.addEventListener('DOMContentLoaded', function () {
+            // Adiciona listeners aos filtros
+            const searchInput = document.getElementById('searchInput');
+            const filterSituacao = document.getElementById('filterSituacao');
+            const filterCorporacao = document.getElementById('filterCorporacao');
+            const filterPatente = document.getElementById('filterPatente');
+
+            if (searchInput) searchInput.addEventListener('input', aplicarFiltros);
+            if (filterSituacao) filterSituacao.addEventListener('change', aplicarFiltros);
+            if (filterCorporacao) filterCorporacao.addEventListener('change', aplicarFiltros);
+            if (filterPatente) filterPatente.addEventListener('change', aplicarFiltros);
+
+            // Paginação
+            const perPageSelect = document.getElementById('perPageSelect');
+            if (perPageSelect) {
+                perPageSelect.addEventListener('change', function () {
+                    registrosPorPagina = parseInt(this.value);
+                    paginaAtual = 1;
+                    calcularPaginacao();
+                    renderizarPagina();
+                });
+            }
+
+            const firstPage = document.getElementById('firstPage');
+            const prevPage = document.getElementById('prevPage');
+            const nextPage = document.getElementById('nextPage');
+            const lastPage = document.getElementById('lastPage');
+
+            if (firstPage) firstPage.addEventListener('click', () => irParaPagina(1));
+            if (prevPage) prevPage.addEventListener('click', () => irParaPagina(paginaAtual - 1));
+            if (nextPage) nextPage.addEventListener('click', () => irParaPagina(paginaAtual + 1));
+            if (lastPage) lastPage.addEventListener('click', () => irParaPagina(totalPaginas));
+
+            console.log('Event listeners adicionados');
+
+            // Carrega dados apenas UMA vez após 500ms
+            setTimeout(function () {
+                carregarAssociados();
+            }, 500);
+        });
+
+        // Remove todos os outros event listeners e timeouts duplicados
+
+        // Função para verificar sistema
+        function verificarSistema() {
+            console.log('=== VERIFICAÇÃO DO SISTEMA ===');
+            console.log('jQuery:', typeof jQuery !== 'undefined' ? '✓' : '✗');
+            console.log('Total associados carregados:', todosAssociados.length);
+            console.log('Carregamento completo:', carregamentoCompleto ? '✓' : '✗');
+            console.log('=========================');
+        }
+
+        // Exporta funções para debug
+        window.debugAssociados = function () {
+            verificarSistema();
+            console.log('Total associados:', todosAssociados.length);
+            console.log('Associados filtrados:', associadosFiltrados.length);
+            console.log('Carregamento em andamento:', carregamentoIniciado);
+            console.log('Carregamento completo:', carregamentoCompleto);
+            console.log('Página atual:', paginaAtual);
+            console.log('Total de páginas:', totalPaginas);
+            console.log('Registros por página:', registrosPorPagina);
+
+            // Verifica duplicatas
+            const ids = todosAssociados.map(a => a.id);
+            const idsUnicos = [...new Set(ids)];
+            console.log('IDs totais:', ids.length);
+            console.log('IDs únicos:', idsUnicos.length);
+            console.log('Duplicatas:', ids.length - idsUnicos.length);
+        };
+
+        console.log('Sistema inicializado. Use debugAssociados() para debug.');
+    </script>
 
 </body>
+
 </html>
