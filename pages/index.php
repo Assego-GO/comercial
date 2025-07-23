@@ -21,6 +21,14 @@ if ($auth->isLoggedIn()) {
     exit;
 }
 
+// Processar mensagens de logout
+$mensagem = '';
+$tipo_mensagem = '';
+if (isset($_GET['mensagem']) && isset($_GET['tipo'])) {
+    $mensagem = urldecode($_GET['mensagem']);
+    $tipo_mensagem = urldecode($_GET['tipo']);
+}
+
 // Processar login
 $erro = '';
 $sucesso = '';
@@ -129,6 +137,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             <!-- Form Body -->
             <div class="login-body p-8 relative">
+                <?php if ($mensagem): ?>
+                    <?php
+                    $alert_classes = [
+                        'success' => 'bg-green-500/10 border-green-500/20 text-green-300',
+                        'error' => 'bg-red-500/10 border-red-500/20 text-red-300',
+                        'warning' => 'bg-yellow-500/10 border-yellow-500/20 text-yellow-300',
+                        'info' => 'bg-blue-500/10 border-blue-500/20 text-blue-300'
+                    ];
+                    $icon_classes = [
+                        'success' => 'fa-check-circle text-green-400',
+                        'error' => 'fa-exclamation-circle text-red-400',
+                        'warning' => 'fa-exclamation-triangle text-yellow-400',
+                        'info' => 'fa-info-circle text-blue-400'
+                    ];
+                    $alert_class = $alert_classes[$tipo_mensagem] ?? $alert_classes['info'];
+                    $icon_class = $icon_classes[$tipo_mensagem] ?? $icon_classes['info'];
+                    ?>
+                    <div class="alert-message <?php echo $alert_class; ?> backdrop-blur-sm border px-4 py-3 rounded-xl mb-6 flex items-center animate-fade-in" role="alert">
+                        <i class="fas <?php echo $icon_class; ?> mr-3"></i>
+                        <span><?php echo htmlspecialchars($mensagem); ?></span>
+                        <button type="button" class="ml-auto text-gray-300 hover:text-white transition-colors" onclick="this.parentElement.style.display='none'">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                <?php endif; ?>
+                
                 <?php if ($erro): ?>
                     <div class="alert-error bg-red-500/10 backdrop-blur-sm border border-red-500/20 text-red-300 px-4 py-3 rounded-xl mb-6 flex items-center animate-pulse" role="alert">
                         <i class="fas fa-exclamation-circle mr-3 text-red-400"></i>
@@ -183,7 +217,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                     
                     <!-- Submit Button -->
-                    <button type="submit" class="btn-login w-full bg-gradient-to-r from-sky-600 to-blue-800 hover:from-sky-700 hover:to-blue-900 text-white font-bold py-4 px-8 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg focus:outline-none focus:ring-4 focus:ring-sky-500/50 relative overflow-hidden">
+                    <button type="submit" class="btn-login w-full bg-gradient-to-r from-sky-600 to-blue-800 hover:from-sky-700 hover:to-blue-900 text-white font-bold py-4 px-8 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg focus:outline-none focus:ring-4 focus:ring-sky-500/50 relative overflow-hidden group">
                         <span class="relative z-10 flex items-center justify-center">
                             <i class="fas fa-sign-in-alt mr-3"></i>
                             ACESSAR SISTEMA
@@ -224,5 +258,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     <!-- Scripts -->
     <script src="js/login-script.js"></script>
+    
+    <!-- Auto-hide messages after 5 seconds -->
+    <script>
+        // Auto-hide logout messages
+        setTimeout(function() {
+            const alerts = document.querySelectorAll('.alert-message');
+            alerts.forEach(function(alert) {
+                alert.style.transition = 'opacity 0.5s ease-out';
+                alert.style.opacity = '0';
+                setTimeout(function() {
+                    alert.style.display = 'none';
+                }, 500);
+            });
+        }, 5000);
+    </script>
 </body>
 </html>

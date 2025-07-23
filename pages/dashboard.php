@@ -1721,7 +1721,7 @@ try {
                             </a>
                         <?php endif; ?>
                         <div class="dropdown-divider-custom"></div>
-                        <a href="../php/login/logout.php" class="dropdown-item-custom">
+                        <a href="logout.php" class="dropdown-item-custom">
                             <i class="fas fa-sign-out-alt"></i>
                             <span>Sair</span>
                         </a>
