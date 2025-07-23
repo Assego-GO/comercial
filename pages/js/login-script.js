@@ -2,23 +2,42 @@
  * Login Script - Efeitos Avançados e Interatividade
  */
 
-// Estado global da aplicação
+// Estado global da aplicação (ultra-otimizada)
 const LoginApp = {
     isLoading: false,
-    particles: [],
+    isLowEndDevice: false,
     
-    // Inicialização
+    // Inicialização (ultra-otimizada)
     init() {
+        this.detectLowEndDevice();
         this.setupEventListeners();
-        this.createParticles();
-        this.startStarsEffect();
-        this.startGalaxyEffects();
+        
+        // Só criar estrelas se não for dispositivo fraco
+        if (!this.isLowEndDevice) {
+            this.createMinimalStars();
+        }
+        
         this.setupFormValidation();
         this.setupAnimations();
-        console.log('🚀 Login App iniciado com sucesso!');
+        console.log('🚀 Login App iniciado - Modo Ultra-Leve');
     },
     
-    // Event Listeners
+    // Detecta dispositivos fracos
+    detectLowEndDevice() {
+        // Detecta RAM baixa ou dispositivo móvel
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        const hasLowRAM = navigator.deviceMemory && navigator.deviceMemory <= 4;
+        const hasSlowConnection = navigator.connection && navigator.connection.effectiveType && navigator.connection.effectiveType.includes('2g');
+        
+        this.isLowEndDevice = isMobile || hasLowRAM || hasSlowConnection || window.innerWidth < 1024;
+        
+        if (this.isLowEndDevice) {
+            document.body.classList.add('low-end-device');
+            console.log('Modo economizado ativado para dispositivo fraco');
+        }
+    },
+    
+    // Event Listeners (otimizado)
     setupEventListeners() {
         // Form submission
         const form = document.getElementById('loginForm');
@@ -26,7 +45,7 @@ const LoginApp = {
             form.addEventListener('submit', this.handleFormSubmit.bind(this));
         }
         
-        // Input focus effects
+        // Input focus effects (simplificado)
         const inputs = document.querySelectorAll('.form-input');
         inputs.forEach(input => {
             input.addEventListener('focus', this.handleInputFocus.bind(this));
@@ -34,22 +53,19 @@ const LoginApp = {
             input.addEventListener('input', this.handleInputChange.bind(this));
         });
         
-        // Window resize
-        window.addEventListener('resize', this.handleResize.bind(this));
-        
         // Keyboard shortcuts
         document.addEventListener('keydown', this.handleKeyPress.bind(this));
         
-        // Mouse movement for parallax
-        document.addEventListener('mousemove', this.handleMouseMove.bind(this));
+        // Removido mouse movement (muito pesado)
     },
     
-    // Criação de partículas flutuantes
+    // Criação de partículas flutuantes (otimizado)
     createParticles() {
         const container = document.getElementById('particles-container');
         if (!container) return;
         
-        const particleCount = window.innerWidth > 768 ? 50 : 25;
+        // Reduzido drasticamente para performance
+        const particleCount = window.innerWidth > 768 ? 15 : 8;
         
         for (let i = 0; i < particleCount; i++) {
             setTimeout(() => {
@@ -179,31 +195,31 @@ const LoginApp = {
             }, 3000);
         };
         
-        // Criar estrelas iniciais
-        for (let i = 0; i < 15; i++) {
+        // Criar estrelas iniciais (reduzido)
+        for (let i = 0; i < 8; i++) {
             setTimeout(() => {
                 createStar();
             }, Math.random() * 2000);
         }
         
-        // Criar estrelas continuamente
+        // Criar estrelas continuamente (menos frequente)
         setInterval(() => {
             createStar();
-        }, 800);
+        }, 2000); // Era 800ms, agora 2s
         
-        // Criar estrelas cadentes a cada 5 segundos
+        // Criar estrelas cadentes menos frequentes
         setInterval(() => {
             createShootingStar();
-        }, 5000);
+        }, 8000); // Era 5s, agora 8s
     },
     
-    // Criar estrelas fixas de fundo
+    // Criar estrelas fixas de fundo (otimizado)
     createBackgroundStars() {
         const container = document.getElementById('stars-container');
         if (!container) return;
         
-        // Estrelas pequenas e distantes
-        for (let i = 0; i < 200; i++) {
+        // Reduzido para melhor performance
+        for (let i = 0; i < 60; i++) {
             const star = document.createElement('div');
             star.className = 'star-fixed';
             
@@ -220,9 +236,10 @@ const LoginApp = {
             star.style.borderRadius = '50%';
             star.style.opacity = opacity;
             star.style.position = 'absolute';
-            star.style.boxShadow = `0 0 ${size * 2}px rgba(255, 255, 255, ${opacity * 0.8})`;
+            star.style.boxShadow = `0 0 ${size * 2}px rgba(255, 255, 255, ${opacity * 0.6})`;
             
-            if (Math.random() > 0.85) {
+            // Menos estrelas piscando para performance
+            if (Math.random() > 0.9) {
                 star.style.animation = 'twinkle 4s ease-in-out infinite alternate';
                 star.style.animationDelay = Math.random() * 4 + 's';
             }
@@ -230,14 +247,14 @@ const LoginApp = {
             container.appendChild(star);
         }
         
-        // Algumas estrelas maiores e mais brilhantes
-        for (let i = 0; i < 20; i++) {
+        // Apenas algumas estrelas brilhantes
+        for (let i = 0; i < 8; i++) {
             const brightStar = document.createElement('div');
             brightStar.className = 'star-fixed bright';
             
             const x = Math.random() * window.innerWidth;
             const y = Math.random() * window.innerHeight;
-            const size = Math.random() * 3 + 2;
+            const size = Math.random() * 2 + 1;
             
             brightStar.style.left = x + 'px';
             brightStar.style.top = y + 'px';
@@ -245,9 +262,9 @@ const LoginApp = {
             brightStar.style.height = size + 'px';
             brightStar.style.background = 'white';
             brightStar.style.borderRadius = '50%';
-            brightStar.style.opacity = '0.9';
+            brightStar.style.opacity = '0.8';
             brightStar.style.position = 'absolute';
-            brightStar.style.boxShadow = `0 0 ${size * 4}px rgba(255, 255, 255, 0.8), 0 0 ${size * 8}px rgba(255, 255, 255, 0.4)`;
+            brightStar.style.boxShadow = `0 0 ${size * 3}px rgba(255, 255, 255, 0.6)`;
             brightStar.style.animation = 'twinkle 3s ease-in-out infinite alternate';
             brightStar.style.animationDelay = Math.random() * 3 + 's';
             
@@ -321,8 +338,9 @@ const LoginApp = {
         }
     },
     
-    // Validação de formulário
+    // Validação de formulário (simplificada)
     setupFormValidation() {
+        // Validação básica apenas
         const emailInput = document.getElementById('email');
         const senhaInput = document.getElementById('senha');
         
@@ -344,7 +362,15 @@ const LoginApp = {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         const isValid = emailRegex.test(email);
         
-        this.updateFieldValidation(input, isValid, 'Email inválido');
+        // Validação visual simplificada
+        if (!isValid && email) {
+            input.style.borderColor = '#ef4444';
+        } else if (isValid) {
+            input.style.borderColor = '#22c55e';
+        } else {
+            input.style.borderColor = '';
+        }
+        
         return isValid;
     },
     
@@ -352,59 +378,19 @@ const LoginApp = {
         const password = input.value;
         const isValid = password.length >= 4;
         
-        this.updateFieldValidation(input, isValid, 'Senha muito curta');
+        // Validação visual simplificada
+        if (!isValid && password) {
+            input.style.borderColor = '#ef4444';
+        } else if (isValid) {
+            input.style.borderColor = '#22c55e';
+        } else {
+            input.style.borderColor = '';
+        }
+        
         return isValid;
     },
     
-    updateFieldValidation(input, isValid, message) {
-        const wrapper = input.closest('.form-group');
-        if (!wrapper) return;
-        
-        // Remover mensagens anteriores
-        const existingError = wrapper.querySelector('.error-message');
-        if (existingError) {
-            existingError.remove();
-        }
-        
-        if (!isValid && input.value) {
-            // Adicionar classe de erro
-            input.classList.add('border-red-500', 'shake');
-            
-            // Criar mensagem de erro
-            const errorDiv = document.createElement('div');
-            errorDiv.className = 'error-message text-red-400 text-xs mt-1 flex items-center animate-pulse';
-            errorDiv.innerHTML = `<i class="fas fa-exclamation-triangle mr-1"></i>${message}`;
-            wrapper.appendChild(errorDiv);
-            
-            // Remover classe de shake após animação
-            setTimeout(() => {
-                input.classList.remove('shake');
-            }, 500);
-        } else {
-            // Remover classe de erro
-            input.classList.remove('border-red-500');
-            
-            if (isValid && input.value) {
-                // Adicionar classe de sucesso
-                input.classList.add('border-green-500');
-                
-                // Ícone de sucesso
-                const successIcon = document.createElement('div');
-                successIcon.className = 'success-icon absolute right-12 top-1/2 transform -translate-y-1/2 text-green-400';
-                successIcon.innerHTML = '<i class="fas fa-check-circle"></i>';
-                wrapper.querySelector('.input-wrapper').appendChild(successIcon);
-                
-                setTimeout(() => {
-                    if (successIcon.parentNode) {
-                        successIcon.parentNode.removeChild(successIcon);
-                    }
-                    input.classList.remove('border-green-500');
-                }, 2000);
-            }
-        }
-    },
-    
-    // Manipulação de eventos
+    // Manipulação de eventos (simplificado)
     handleFormSubmit(e) {
         e.preventDefault();
         
@@ -421,18 +407,16 @@ const LoginApp = {
             setTimeout(() => {
                 // Submeter formulário real
                 e.target.submit();
-            }, 1500);
+            }, 1000); // Reduzido de 1500ms
         } else {
-            this.showShakeAnimation();
+            // Removido shake animation (pesado)
         }
     },
     
     handleInputFocus(e) {
         const wrapper = e.target.closest('.form-group');
         wrapper.classList.add('focused');
-        
-        // Criar partícula no foco
-        this.createFocusParticle(e.target);
+        // Removido createFocusParticle (pesado)
     },
     
     handleInputBlur(e) {
@@ -449,22 +433,12 @@ const LoginApp = {
         }
     },
     
-    handleResize() {
-        // Recriar partículas no redimensionamento
-        const container = document.getElementById('particles-container');
-        if (container) {
-            container.innerHTML = '';
-            this.createParticles();
-        }
-    },
+    // Removido handleResize (pesado)
     
     handleKeyPress(e) {
         // Enter para submeter
         if (e.key === 'Enter' && !e.shiftKey) {
-            const form = document.getElementById('loginForm');
-            if (document.activeElement.tagName !== 'BUTTON') {
-                // form.dispatchEvent(new Event('submit'));
-            }
+            // Simplificado
         }
         
         // Esc para limpar
@@ -473,76 +447,15 @@ const LoginApp = {
         }
     },
     
-    handleMouseMove(e) {
-        // Efeito parallax 3D melhorado
-        const container = document.querySelector('.login-container');
-        if (!container) return;
-        
-        const rect = container.getBoundingClientRect();
-        const x = (e.clientX - rect.left - rect.width / 2) / rect.width;
-        const y = (e.clientY - rect.top - rect.height / 2) / rect.height;
-        
-        const rotateX = y * -10; // -10deg a 10deg
-        const rotateY = x * 15;  // -15deg a 15deg
-        const translateZ = Math.abs(x * y) * 20; // Efeito de profundidade
-        
-        container.style.transform = `
-            perspective(1000px) 
-            rotateX(${rotateX}deg) 
-            rotateY(${rotateY}deg) 
-            translateZ(${translateZ}px)
-            scale(${1 + Math.abs(x * y) * 0.05})
-        `;
-        
-        // Reset suave quando mouse sai
-        container.addEventListener('mouseleave', () => {
-            container.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg) translateZ(0px) scale(1)';
-        });
-    },
+    // Removido handleMouseMove (muito pesado)
     
-    // Efeitos visuais
-    createFocusParticle(input) {
-        const rect = input.getBoundingClientRect();
-        const particle = document.createElement('div');
-        particle.className = 'absolute w-2 h-2 bg-sky-400 rounded-full pointer-events-none';
-        particle.style.left = (rect.left + rect.width / 2) + 'px';
-        particle.style.top = (rect.top + rect.height / 2) + 'px';
-        particle.style.boxShadow = '0 0 10px #0ea5e9';
-        particle.style.zIndex = '1000';
-        
-        document.body.appendChild(particle);
-        
-        // Animar partícula
-        particle.animate([
-            { 
-                transform: 'translate(-50%, -50%) scale(0)', 
-                opacity: 1 
-            },
-            { 
-                transform: 'translate(-50%, -50%) scale(1)', 
-                opacity: 0.8 
-            },
-            { 
-                transform: 'translate(-50%, -50%) scale(0)', 
-                opacity: 0 
-            }
-        ], {
-            duration: 800,
-            easing: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)'
-        }).onfinish = () => {
-            if (particle.parentNode) {
-                particle.parentNode.removeChild(particle);
-            }
-        };
-    },
+    // Removido createFocusParticle (pesado)
     
     showLoading() {
         const overlay = document.getElementById('loadingOverlay');
         if (overlay) {
             overlay.classList.remove('hidden');
-            
-            // Adicionar partículas de loading
-            this.createLoadingParticles();
+            // Removido createLoadingParticles (pesado)
         }
     },
     
@@ -553,38 +466,9 @@ const LoginApp = {
         }
     },
     
-    createLoadingParticles() {
-        const overlay = document.getElementById('loadingOverlay');
-        if (!overlay) return;
-        
-        for (let i = 0; i < 10; i++) {
-            setTimeout(() => {
-                const particle = document.createElement('div');
-                particle.className = 'absolute w-1 h-1 bg-sky-400 rounded-full animate-ping';
-                particle.style.left = Math.random() * 100 + '%';
-                particle.style.top = Math.random() * 100 + '%';
-                particle.style.animationDelay = Math.random() * 2 + 's';
-                
-                overlay.appendChild(particle);
-                
-                setTimeout(() => {
-                    if (particle.parentNode) {
-                        particle.parentNode.removeChild(particle);
-                    }
-                }, 3000);
-            }, i * 100);
-        }
-    },
+    // Removido createLoadingParticles (pesado)
     
-    showShakeAnimation() {
-        const container = document.querySelector('.login-container');
-        if (container) {
-            container.style.animation = 'shake 0.5s ease-in-out';
-            setTimeout(() => {
-                container.style.animation = '';
-            }, 500);
-        }
-    },
+    // Removido showShakeAnimation (pesado)
     
     clearForm() {
         const inputs = document.querySelectorAll('.form-input');
@@ -599,36 +483,22 @@ const LoginApp = {
     },
     
     setupAnimations() {
-        // Observador de interseção para animações
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.style.opacity = '1';
-                    entry.target.style.transform = 'translateY(0)';
-                }
-            });
-        });
+        // Animações simplificadas apenas se não for dispositivo fraco
+        if (this.isLowEndDevice) return;
         
-        // Observar elementos animáveis
+        // Fade-in simples sem observer pesado
         const elements = document.querySelectorAll('.form-group, .btn-login');
-        elements.forEach(el => {
-            el.style.opacity = '0';
-            el.style.transform = 'translateY(20px)';
-            el.style.transition = 'all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
-            observer.observe(el);
-        });
-        
-        // Delay sequencial para elementos
         elements.forEach((el, index) => {
+            el.style.opacity = '0';
             setTimeout(() => {
                 el.style.opacity = '1';
-                el.style.transform = 'translateY(0)';
-            }, index * 100 + 300);
+                el.style.transition = 'opacity 0.3s ease';
+            }, index * 100 + 200);
         });
     }
 };
 
-// Função para toggle de senha
+// Função para toggle de senha (simplificada)
 function togglePassword() {
     const passwordInput = document.getElementById('senha');
     const toggleIcon = document.getElementById('toggleIcon');
@@ -638,123 +508,26 @@ function togglePassword() {
         
         passwordInput.type = isPassword ? 'text' : 'password';
         toggleIcon.className = isPassword ? 'fas fa-eye-slash' : 'fas fa-eye';
-        
-        // Efeito de rotação no ícone
-        toggleIcon.style.transform = 'rotateY(180deg)';
-        setTimeout(() => {
-            toggleIcon.style.transform = 'rotateY(0deg)';
-        }, 200);
-        
-        // Criar partícula de feedback
-        LoginApp.createFocusParticle(passwordInput);
     }
 }
 
-// Funções utilitárias
-const Utils = {
-    // Debounce para otimização
-    debounce(func, wait) {
-        let timeout;
-        return function executedFunction(...args) {
-            const later = () => {
-                clearTimeout(timeout);
-                func(...args);
-            };
-            clearTimeout(timeout);
-            timeout = setTimeout(later, wait);
-        };
-    },
-    
-    // Throttle para eventos frequentes
-    throttle(func, limit) {
-        let inThrottle;
-        return function() {
-            const args = arguments;
-            const context = this;
-            if (!inThrottle) {
-                func.apply(context, args);
-                inThrottle = true;
-                setTimeout(() => inThrottle = false, limit);
-            }
-        }
-    },
-    
-    // Criar elemento com classes
-    createElement(tag, classes, content) {
-        const element = document.createElement(tag);
-        if (classes) element.className = classes;
-        if (content) element.innerHTML = content;
-        return element;
-    }
-};
-
-// Easter Eggs
-const EasterEggs = {
-    konamiCode: [38, 38, 40, 40, 37, 39, 37, 39, 66, 65],
-    userInput: [],
-    
-    init() {
-        document.addEventListener('keydown', this.handleKonami.bind(this));
-        document.addEventListener('dblclick', this.handleDoubleClick.bind(this));
-    },
-    
-    handleKonami(e) {
-        this.userInput.push(e.keyCode);
-        this.userInput = this.userInput.slice(-this.konamiCode.length);
-        
-        if (JSON.stringify(this.userInput) === JSON.stringify(this.konamiCode)) {
-            this.activateKonamiMode();
-        }
-    },
-    
-    handleDoubleClick(e) {
-        if (e.target.classList.contains('logo')) {
-            this.activatePartyMode();
-        }
-    },
-    
-    activateKonamiMode() {
-        console.log('🎮 Konami Code ativado!');
-        document.body.style.filter = 'hue-rotate(180deg)';
-        
-        setTimeout(() => {
-            document.body.style.filter = '';
-        }, 3000);
-    },
-    
-    activatePartyMode() {
-        console.log('🎉 Party Mode ativado!');
-        for (let i = 0; i < 20; i++) {
-            setTimeout(() => {
-                LoginApp.createSingleParticle();
-            }, i * 100);
-        }
-    }
-};
-
-// Inicialização quando DOM estiver pronto
+// Inicialização quando DOM estiver pronto (simplificado)
 document.addEventListener('DOMContentLoaded', () => {
     LoginApp.init();
-    EasterEggs.init();
+    // Removido EasterEggs (desnecessário)
     
-    // Auto-hide alerts
+    // Auto-hide alerts (simplificado)
     setTimeout(() => {
         const alerts = document.querySelectorAll('.alert-error');
         alerts.forEach(alert => {
             alert.style.opacity = '0';
-            alert.style.transform = 'translateY(-20px)';
             setTimeout(() => {
                 if (alert.parentNode) {
                     alert.parentNode.removeChild(alert);
                 }
             }, 300);
         });
-    }, 5000);
-});
-
-// Prevenção de FOUC (Flash of Unstyled Content)
-window.addEventListener('load', () => {
-    document.body.style.opacity = '1';
+    }, 4000); // Reduzido de 5000ms
 });
 
 // Export para uso global
