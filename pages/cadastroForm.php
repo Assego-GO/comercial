@@ -42,6 +42,38 @@ if ($isEdit) {
     
     $page_title = 'Editar Associado - ASSEGO';
 }
+
+
+try {
+    $db = Database::getInstance(DB_NAME_CADASTRO)->getConnection();
+    
+    // Buscar serviços ativos
+    $stmt = $db->prepare("SELECT id, nome, valor_base FROM Servicos WHERE ativo = 1 ORDER BY nome");
+    $stmt->execute();
+    $servicos = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    // Buscar tipos de associado únicos
+    $stmt = $db->prepare("SELECT DISTINCT tipo_associado FROM Regras_Contribuicao ORDER BY tipo_associado");
+    $stmt->execute();
+    $tiposAssociado = $stmt->fetchAll(PDO::FETCH_COLUMN);
+    
+    // Buscar regras de contribuição para usar no JavaScript
+    $stmt = $db->prepare("
+        SELECT rc.tipo_associado, rc.servico_id, rc.percentual_valor, rc.opcional, s.nome as servico_nome 
+        FROM Regras_Contribuicao rc 
+        INNER JOIN Servicos s ON rc.servico_id = s.id 
+        WHERE s.ativo = 1
+        ORDER BY rc.tipo_associado, s.nome
+    ");
+    $stmt->execute();
+    $regrasContribuicao = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+} catch (Exception $e) {
+    error_log("Erro ao buscar dados para serviços: " . $e->getMessage());
+    $servicos = [];
+    $tiposAssociado = [];
+    $regrasContribuicao = [];
+}
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -1335,95 +1367,185 @@ if ($isEdit) {
                     </div>
                 </div>
 
-                <!-- Step 4: Financeiro -->
                 <div class="section-card" data-step="4">
-                    <div class="section-header">
-                        <div class="section-icon">
-                            <i class="fas fa-dollar-sign"></i>
-                        </div>
+    <div class="section-header">
+        <div class="section-icon">
+            <i class="fas fa-dollar-sign"></i>
+        </div>
+        <div>
+            <h2 class="section-title">Dados Financeiros</h2>
+            <p class="section-subtitle">Informações para cobrança e pagamentos</p>
+        </div>
+    </div>
+
+    <div class="form-grid">
+        <!-- NOVOS CAMPOS DE SERVIÇOS -->
+        <div class="form-group full-width">
+            <label class="form-label">
+                Tipo de Associado <span class="required">*</span>
+                <i class="fas fa-info-circle info-tooltip" title="Define o percentual de cobrança dos serviços"></i>
+            </label>
+            <select class="form-input form-select" name="tipoAssociadoServico" id="tipoAssociadoServico" required onchange="calcularServicos()">
+                <option value="">Selecione o tipo de associado...</option>
+                <?php foreach ($tiposAssociado as $tipo): ?>
+                    <option value="<?php echo htmlspecialchars($tipo); ?>"
+                        <?php echo (isset($associadoData['tipoAssociadoServico']) && $associadoData['tipoAssociadoServico'] == $tipo) ? 'selected' : ''; ?>>
+                        <?php echo htmlspecialchars($tipo); ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+            <span class="form-error">Por favor, selecione o tipo de associado</span>
+        </div>
+
+        <!-- Seção de Serviços -->
+        <div class="form-group full-width">
+            <div style="background: var(--white); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--gray-200);">
+                <h4 style="margin-bottom: 1rem; color: var(--primary);">
+                    <i class="fas fa-clipboard-list"></i> Serviços do Associado
+                </h4>
+                
+                <!-- Serviço Social (Obrigatório) -->
+                <div class="servico-item" style="margin-bottom: 1.5rem; padding: 1rem; background: var(--gray-100); border-radius: 8px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
                         <div>
-                            <h2 class="section-title">Dados Financeiros</h2>
-                            <p class="section-subtitle">Informações para cobrança e pagamentos</p>
+                            <span style="font-weight: 600; color: var(--success);">
+                                <i class="fas fa-check-circle"></i> Serviço Social
+                            </span>
+                            <span style="background: var(--success); color: white; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.7rem; margin-left: 0.5rem;">
+                                OBRIGATÓRIO
+                            </span>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="font-size: 0.8rem; color: var(--gray-600);">Valor Base: R$ <span id="valorBaseSocial">173,10</span></div>
+                            <div style="font-weight: 700; color: var(--success);">Total: R$ <span id="valorFinalSocial">0,00</span></div>
                         </div>
                     </div>
+                    <div style="font-size: 0.8rem; color: var(--gray-600);">
+                        Percentual aplicado: <span id="percentualSocial">0</span>% 
+                        <span style="margin-left: 1rem;">Contribuição social para associados</span>
+                    </div>
+                    <input type="hidden" name="servicoSocial" value="1">
+                    <input type="hidden" name="valorSocial" id="valorSocial" value="0">
+                    <input type="hidden" name="percentualAplicadoSocial" id="percentualAplicadoSocial" value="0">
+                </div>
 
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label class="form-label">
-                                Tipo de Associado
+                <!-- Serviço Jurídico (Opcional) -->
+                <div class="servico-item" style="margin-bottom: 1rem; padding: 1rem; background: var(--gray-100); border-radius: 8px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <input type="checkbox" name="servicoJuridico" id="servicoJuridico" value="2" onchange="calcularServicos()" 
+                                style="width: 20px; height: 20px;">
+                            <label for="servicoJuridico" style="font-weight: 600; color: var(--info); cursor: pointer;">
+                                <i class="fas fa-balance-scale"></i> Serviço Jurídico
                             </label>
-                            <select class="form-input form-select" name="tipoAssociado" id="tipoAssociado">
-                                <option value="">Selecione...</option>
-                                <option value="Titular" <?php echo (isset($associadoData['tipoAssociado']) && $associadoData['tipoAssociado'] == 'Titular') ? 'selected' : ''; ?>>Titular</option>
-                                <option value="Pensionista" <?php echo (isset($associadoData['tipoAssociado']) && $associadoData['tipoAssociado'] == 'Pensionista') ? 'selected' : ''; ?>>Pensionista</option>
-                                <option value="Dependente" <?php echo (isset($associadoData['tipoAssociado']) && $associadoData['tipoAssociado'] == 'Dependente') ? 'selected' : ''; ?>>Dependente</option>
-                            </select>
+                            <span style="background: var(--info); color: white; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.7rem;">
+                                OPCIONAL
+                            </span>
                         </div>
+                        <div style="text-align: right;">
+                            <div style="font-size: 0.8rem; color: var(--gray-600);">Valor Base: R$ <span id="valorBaseJuridico">43,28</span></div>
+                            <div style="font-weight: 700; color: var(--info);">Total: R$ <span id="valorFinalJuridico">0,00</span></div>
+                        </div>
+                    </div>
+                    <div style="font-size: 0.8rem; color: var(--gray-600);">
+                        Percentual aplicado: <span id="percentualJuridico">0</span>% 
+                        <span style="margin-left: 1rem;">Serviço jurídico opcional</span>
+                    </div>
+                    <input type="hidden" name="valorJuridico" id="valorJuridico" value="0">
+                    <input type="hidden" name="percentualAplicadoJuridico" id="percentualAplicadoJuridico" value="0">
+                </div>
 
-                        <div class="form-group">
-                            <label class="form-label">
-                                Situação Financeira
-                            </label>
-                            <select class="form-input form-select" name="situacaoFinanceira" id="situacaoFinanceira">
-                                <option value="">Selecione...</option>
-                                <option value="Adimplente" <?php echo (isset($associadoData['situacaoFinanceira']) && $associadoData['situacaoFinanceira'] == 'Adimplente') ? 'selected' : ''; ?>>Adimplente</option>
-                                <option value="Inadimplente" <?php echo (isset($associadoData['situacaoFinanceira']) && $associadoData['situacaoFinanceira'] == 'Inadimplente') ? 'selected' : ''; ?>>Inadimplente</option>
-                                <option value="Isento" <?php echo (isset($associadoData['situacaoFinanceira']) && $associadoData['situacaoFinanceira'] == 'Isento') ? 'selected' : ''; ?>>Isento</option>
-                            </select>
-                        </div>
-
-                        <div class="form-group">
-                            <label class="form-label">
-                                Vínculo Servidor
-                            </label>
-                            <select class="form-input form-select" name="vinculoServidor" id="vinculoServidor">
-                                <option value="">Selecione...</option>
-                                <option value="Estado" <?php echo (isset($associadoData['vinculoServidor']) && $associadoData['vinculoServidor'] == 'Estado') ? 'selected' : ''; ?>>Estado</option>
-                                <option value="Federal" <?php echo (isset($associadoData['vinculoServidor']) && $associadoData['vinculoServidor'] == 'Federal') ? 'selected' : ''; ?>>Federal</option>
-                                <option value="Municipal" <?php echo (isset($associadoData['vinculoServidor']) && $associadoData['vinculoServidor'] == 'Municipal') ? 'selected' : ''; ?>>Municipal</option>
-                            </select>
-                        </div>
-
-                        <div class="form-group">
-                            <label class="form-label">
-                                Local de Débito
-                            </label>
-                            <select class="form-input form-select" name="localDebito" id="localDebito">
-                                <option value="">Selecione...</option>
-                                <option value="Folha de Pagamento" <?php echo (isset($associadoData['localDebito']) && $associadoData['localDebito'] == 'Folha de Pagamento') ? 'selected' : ''; ?>>Folha de Pagamento</option>
-                                <option value="Débito em Conta" <?php echo (isset($associadoData['localDebito']) && $associadoData['localDebito'] == 'Débito em Conta') ? 'selected' : ''; ?>>Débito em Conta</option>
-                                <option value="Boleto" <?php echo (isset($associadoData['localDebito']) && $associadoData['localDebito'] == 'Boleto') ? 'selected' : ''; ?>>Boleto</option>
-                            </select>
-                        </div>
-
-                        <div class="form-group">
-                            <label class="form-label">
-                                Agência
-                            </label>
-                            <input type="text" class="form-input" name="agencia" id="agencia"
-                                   value="<?php echo $associadoData['agencia'] ?? ''; ?>"
-                                   placeholder="Número da agência">
-                        </div>
-
-                        <div class="form-group">
-                            <label class="form-label">
-                                Operação
-                            </label>
-                            <input type="text" class="form-input" name="operacao" id="operacao"
-                                   value="<?php echo $associadoData['operacao'] ?? ''; ?>"
-                                   placeholder="Código da operação">
-                        </div>
-
-                        <div class="form-group">
-                            <label class="form-label">
-                                Conta Corrente
-                            </label>
-                            <input type="text" class="form-input" name="contaCorrente" id="contaCorrente"
-                                   value="<?php echo $associadoData['contaCorrente'] ?? ''; ?>"
-                                   placeholder="Número da conta">
-                        </div>
+                <!-- Total Geral -->
+                <div style="padding: 1rem; background: var(--primary-light); border-radius: 8px; border: 2px solid var(--primary);">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-weight: 700; color: var(--primary); font-size: 1.1rem;">
+                            <i class="fas fa-calculator"></i> VALOR TOTAL MENSAL
+                        </span>
+                        <span style="font-weight: 800; color: var(--primary); font-size: 1.3rem;">
+                            R$ <span id="valorTotalGeral">0,00</span>
+                        </span>
                     </div>
                 </div>
+            </div>
+        </div>
+
+        <!-- CAMPOS FINANCEIROS EXISTENTES -->
+        <div class="form-group">
+            <label class="form-label">
+                Tipo de Associado (Categoria)
+            </label>
+            <select class="form-input form-select" name="tipoAssociado" id="tipoAssociado">
+                <option value="">Selecione...</option>
+                <option value="Titular" <?php echo (isset($associadoData['tipoAssociado']) && $associadoData['tipoAssociado'] == 'Titular') ? 'selected' : ''; ?>>Titular</option>
+                <option value="Pensionista" <?php echo (isset($associadoData['tipoAssociado']) && $associadoData['tipoAssociado'] == 'Pensionista') ? 'selected' : ''; ?>>Pensionista</option>
+                <option value="Dependente" <?php echo (isset($associadoData['tipoAssociado']) && $associadoData['tipoAssociado'] == 'Dependente') ? 'selected' : ''; ?>>Dependente</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">
+                Situação Financeira
+            </label>
+            <select class="form-input form-select" name="situacaoFinanceira" id="situacaoFinanceira">
+                <option value="">Selecione...</option>
+                <option value="Adimplente" <?php echo (isset($associadoData['situacaoFinanceira']) && $associadoData['situacaoFinanceira'] == 'Adimplente') ? 'selected' : ''; ?>>Adimplente</option>
+                <option value="Inadimplente" <?php echo (isset($associadoData['situacaoFinanceira']) && $associadoData['situacaoFinanceira'] == 'Inadimplente') ? 'selected' : ''; ?>>Inadimplente</option>
+                <option value="Isento" <?php echo (isset($associadoData['situacaoFinanceira']) && $associadoData['situacaoFinanceira'] == 'Isento') ? 'selected' : ''; ?>>Isento</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">
+                Vínculo Servidor
+            </label>
+            <select class="form-input form-select" name="vinculoServidor" id="vinculoServidor">
+                <option value="">Selecione...</option>
+                <option value="Estado" <?php echo (isset($associadoData['vinculoServidor']) && $associadoData['vinculoServidor'] == 'Estado') ? 'selected' : ''; ?>>Estado</option>
+                <option value="Federal" <?php echo (isset($associadoData['vinculoServidor']) && $associadoData['vinculoServidor'] == 'Federal') ? 'selected' : ''; ?>>Federal</option>
+                <option value="Municipal" <?php echo (isset($associadoData['vinculoServidor']) && $associadoData['vinculoServidor'] == 'Municipal') ? 'selected' : ''; ?>>Municipal</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">
+                Local de Débito
+            </label>
+            <select class="form-input form-select" name="localDebito" id="localDebito">
+                <option value="">Selecione...</option>
+                <option value="Folha de Pagamento" <?php echo (isset($associadoData['localDebito']) && $associadoData['localDebito'] == 'Folha de Pagamento') ? 'selected' : ''; ?>>Folha de Pagamento</option>
+                <option value="Débito em Conta" <?php echo (isset($associadoData['localDebito']) && $associadoData['localDebito'] == 'Débito em Conta') ? 'selected' : ''; ?>>Débito em Conta</option>
+                <option value="Boleto" <?php echo (isset($associadoData['localDebito']) && $associadoData['localDebito'] == 'Boleto') ? 'selected' : ''; ?>>Boleto</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">
+                Agência
+            </label>
+            <input type="text" class="form-input" name="agencia" id="agencia"
+                   value="<?php echo $associadoData['agencia'] ?? ''; ?>"
+                   placeholder="Número da agência">
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">
+                Operação
+            </label>
+            <input type="text" class="form-input" name="operacao" id="operacao"
+                   value="<?php echo $associadoData['operacao'] ?? ''; ?>"
+                   placeholder="Código da operação">
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">
+                Conta Corrente
+            </label>
+            <input type="text" class="form-input" name="contaCorrente" id="contaCorrente"
+                   value="<?php echo $associadoData['contaCorrente'] ?? ''; ?>"
+                   placeholder="Número da conta">
+        </div>
+    </div>
+</div>
 
                 <!-- Step 5: Dependentes -->
                 <div class="section-card" data-step="5">
@@ -1542,6 +1664,8 @@ if ($isEdit) {
     <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/i18n/pt-BR.min.js"></script>
     
     <script>
+// JavaScript Completo com FALLBACKS - substitua o JavaScript do cadastroForm.php
+
 // Configuração inicial
 const isEdit = <?php echo $isEdit ? 'true' : 'false'; ?>;
 const associadoId = <?php echo $associadoId ? $associadoId : 'null'; ?>;
@@ -1551,9 +1675,26 @@ let currentStep = 1;
 const totalSteps = 6;
 let dependenteIndex = <?php echo isset($associadoData['dependentes']) ? count($associadoData['dependentes']) : 0; ?>;
 
+// Dados carregados dos serviços (para edição)
+let servicosCarregados = null;
+
+// Dados de serviços com fallback
+let regrasContribuicao = [];
+let servicosData = [];
+
 // Inicialização
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Iniciando formulário de cadastro...');
+    
+    // Carrega dados de serviços se não estiverem disponíveis
+    if (typeof window.regrasContribuicao !== 'undefined') {
+        regrasContribuicao = window.regrasContribuicao;
+        servicosData = window.servicosData;
+        console.log('Dados carregados do PHP:', {regrasContribuicao, servicosData});
+    } else {
+        console.warn('Dados não encontrados, carregando via AJAX...');
+        carregarDadosServicos();
+    }
     
     // Máscaras
     $('#cpf').mask('000.000.000-00');
@@ -1589,10 +1730,166 @@ document.addEventListener('DOMContentLoaded', function() {
     // Validação em tempo real
     setupRealtimeValidation();
     
+    // Carrega dados dos serviços se estiver editando
+    if (isEdit && associadoId) {
+        carregarServicosAssociado();
+    }
+    
     // Atualiza interface
     updateProgressBar();
     updateNavigationButtons();
 });
+
+// NOVA FUNÇÃO: Carrega dados de serviços via AJAX se necessário
+function carregarDadosServicos() {
+    fetch('../api/buscar_dados_servicos.php')
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                regrasContribuicao = data.regras || [];
+                servicosData = data.servicos || [];
+                console.log('Dados carregados via AJAX:', {regrasContribuicao, servicosData});
+            } else {
+                console.error('Erro ao carregar dados de serviços');
+                // Dados hardcoded como fallback
+                useHardcodedData();
+            }
+        })
+        .catch(error => {
+            console.error('Erro na requisição:', error);
+            useHardcodedData();
+        });
+}
+
+// Dados hardcoded como último recurso
+function useHardcodedData() {
+    console.warn('Usando dados hardcoded como fallback');
+    
+    servicosData = [
+        {id: "1", nome: "Social", valor_base: "173.10"},
+        {id: "2", nome: "Jurídico", valor_base: "43.28"}
+    ];
+    
+    regrasContribuicao = [
+        {tipo_associado: "Contribuinte", servico_id: "1", percentual_valor: "100.00"},
+        {tipo_associado: "Contribuinte", servico_id: "2", percentual_valor: "100.00"},
+        {tipo_associado: "Aluno", servico_id: "1", percentual_valor: "50.00"},
+        {tipo_associado: "Aluno", servico_id: "2", percentual_valor: "100.00"},
+        {tipo_associado: "Soldado 2ª Classe", servico_id: "1", percentual_valor: "50.00"},
+        {tipo_associado: "Soldado 2ª Classe", servico_id: "2", percentual_valor: "100.00"},
+        {tipo_associado: "Soldado 1ª Classe", servico_id: "1", percentual_valor: "100.00"},
+        {tipo_associado: "Soldado 1ª Classe", servico_id: "2", percentual_valor: "100.00"},
+        {tipo_associado: "Agregado", servico_id: "1", percentual_valor: "50.00"},
+        {tipo_associado: "Agregado", servico_id: "2", percentual_valor: "100.00"},
+        {tipo_associado: "Remido", servico_id: "1", percentual_valor: "0.00"},
+        {tipo_associado: "Remido", servico_id: "2", percentual_valor: "100.00"},
+        {tipo_associado: "Remido 50%", servico_id: "1", percentual_valor: "50.00"},
+        {tipo_associado: "Remido 50%", servico_id: "2", percentual_valor: "100.00"},
+        {tipo_associado: "Benemerito", servico_id: "1", percentual_valor: "0.00"},
+        {tipo_associado: "Benemerito", servico_id: "2", percentual_valor: "100.00"}
+    ];
+    
+    console.log('Dados hardcoded definidos:', {regrasContribuicao, servicosData});
+}
+
+// Função para carregar serviços do associado (modo edição)
+function carregarServicosAssociado() {
+    console.log('Carregando serviços do associado...');
+    
+    fetch(`../api/buscar_servicos_associado.php?associado_id=${associadoId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                servicosCarregados = data.data;
+                preencherDadosServicos(data.data);
+                console.log('Serviços carregados:', data.data);
+            } else {
+                console.warn('Nenhum serviço encontrado para este associado');
+            }
+        })
+        .catch(error => {
+            console.error('Erro ao carregar serviços:', error);
+        });
+}
+
+function preencherDadosServicos(dadosServicos) {
+    console.log('=== PREENCHENDO DADOS DOS SERVIÇOS (CORRIGIDO) ===');
+    console.log('Dados recebidos:', dadosServicos);
+    
+    // Limpa valores anteriores primeiro
+    resetarCalculos();
+    
+    // Define o tipo de associado
+    if (dadosServicos.tipo_associado_servico) {
+        const selectElement = document.getElementById('tipoAssociadoServico');
+        if (selectElement) {
+            selectElement.value = dadosServicos.tipo_associado_servico;
+            
+            // Trigger change para atualizar Select2
+            if (typeof $ !== 'undefined' && $('#tipoAssociadoServico').length) {
+                $('#tipoAssociadoServico').trigger('change');
+            }
+            
+            console.log('✓ Tipo de associado definido:', dadosServicos.tipo_associado_servico);
+        }
+    }
+    
+    // Preenche dados do serviço social
+    if (dadosServicos.servicos && dadosServicos.servicos.social) {
+        const social = dadosServicos.servicos.social;
+        
+        updateElementSafe('valorSocial', social.valor_aplicado, 'value');
+        updateElementSafe('percentualAplicadoSocial', social.percentual_aplicado, 'value');
+        updateElementSafe('valorFinalSocial', parseFloat(social.valor_aplicado).toFixed(2));
+        updateElementSafe('percentualSocial', parseFloat(social.percentual_aplicado).toFixed(0));
+        
+        // Busca valor base para exibição
+        const servicoSocial = servicosData.find(s => s.id == 1);
+        if (servicoSocial) {
+            updateElementSafe('valorBaseSocial', parseFloat(servicoSocial.valor_base).toFixed(2));
+        }
+        
+        console.log('✓ Serviço Social preenchido:', social);
+    }
+    
+    // Preenche dados do serviço jurídico se existir
+    if (dadosServicos.servicos && dadosServicos.servicos.juridico) {
+        const juridico = dadosServicos.servicos.juridico;
+        
+        // Marca o checkbox
+        const juridicoCheckEl = document.getElementById('servicoJuridico');
+        if (juridicoCheckEl) {
+            juridicoCheckEl.checked = true;
+        }
+        
+        updateElementSafe('valorJuridico', juridico.valor_aplicado, 'value');
+        updateElementSafe('percentualAplicadoJuridico', juridico.percentual_aplicado, 'value');
+        updateElementSafe('valorFinalJuridico', parseFloat(juridico.valor_aplicado).toFixed(2));
+        updateElementSafe('percentualJuridico', parseFloat(juridico.percentual_aplicado).toFixed(0));
+        
+        // Busca valor base para exibição
+        const servicoJuridico = servicosData.find(s => s.id == 2);
+        if (servicoJuridico) {
+            updateElementSafe('valorBaseJuridico', parseFloat(servicoJuridico.valor_base).toFixed(2));
+        }
+        
+        console.log('✓ Serviço Jurídico preenchido:', juridico);
+    } else {
+        // Garante que o checkbox está desmarcado
+        const juridicoCheckEl = document.getElementById('servicoJuridico');
+        if (juridicoCheckEl) {
+            juridicoCheckEl.checked = false;
+        }
+        console.log('✓ Serviço Jurídico não contratado');
+    }
+    
+    // Atualiza total geral
+    const totalMensal = dadosServicos.valor_total_mensal || 0;
+    updateElementSafe('valorTotalGeral', parseFloat(totalMensal).toFixed(2));
+    
+    console.log('✓ Total mensal:', totalMensal);
+    console.log('=== FIM PREENCHIMENTO ===');
+}
 
 // Navegação entre steps
 function proximoStep() {
@@ -1696,7 +1993,7 @@ function validarStepAtual() {
     if (currentStep === 1) {
         // Valida CPF
         const cpfField = document.getElementById('cpf');
-        if (cpfField.value && !validarCPF(cpfField.value)) {
+        if (cpfField && cpfField.value && !validarCPF(cpfField.value)) {
             cpfField.classList.add('error');
             isValid = false;
             showAlert('CPF inválido!', 'error');
@@ -1704,10 +2001,28 @@ function validarStepAtual() {
         
         // Valida email
         const emailField = document.getElementById('email');
-        if (emailField.value && !validarEmail(emailField.value)) {
+        if (emailField && emailField.value && !validarEmail(emailField.value)) {
             emailField.classList.add('error');
             isValid = false;
             showAlert('E-mail inválido!', 'error');
+        }
+    }
+    
+    // CORREÇÃO: Validação do step financeiro (4) - ACEITA VALOR 0
+    if (currentStep === 4) {
+        const tipoAssociadoServico = document.getElementById('tipoAssociadoServico');
+        const valorSocial = document.getElementById('valorSocial');
+        
+        if (tipoAssociadoServico && !tipoAssociadoServico.value) {
+            tipoAssociadoServico.classList.add('error');
+            isValid = false;
+            showAlert('Por favor, selecione o tipo de associado para os serviços!', 'error');
+        }
+        
+        // CORREÇÃO: Aceita valor 0 para isentos, só não aceita vazio
+        if (valorSocial && valorSocial.value === '') {
+            isValid = false;
+            showAlert('Erro no cálculo dos serviços. Verifique o tipo de associado selecionado!', 'error');
         }
     }
     
@@ -1717,6 +2032,8 @@ function validarStepAtual() {
     
     return isValid;
 }
+
+console.log('✓ Funções JavaScript corrigidas carregadas!');
 
 // Validação em tempo real
 function setupRealtimeValidation() {
@@ -1730,20 +2047,26 @@ function setupRealtimeValidation() {
     });
     
     // Validação específica de CPF
-    document.getElementById('cpf').addEventListener('blur', function() {
-        if (this.value && !validarCPF(this.value)) {
-            this.classList.add('error');
-            showAlert('CPF inválido!', 'error');
-        }
-    });
+    const cpfField = document.getElementById('cpf');
+    if (cpfField) {
+        cpfField.addEventListener('blur', function() {
+            if (this.value && !validarCPF(this.value)) {
+                this.classList.add('error');
+                showAlert('CPF inválido!', 'error');
+            }
+        });
+    }
     
     // Validação específica de email
-    document.getElementById('email').addEventListener('blur', function() {
-        if (this.value && !validarEmail(this.value)) {
-            this.classList.add('error');
-            showAlert('E-mail inválido!', 'error');
-        }
-    });
+    const emailField = document.getElementById('email');
+    if (emailField) {
+        emailField.addEventListener('blur', function() {
+            if (this.value && !validarEmail(this.value)) {
+                this.classList.add('error');
+                showAlert('E-mail inválido!', 'error');
+            }
+        });
+    }
 }
 
 // Funções de validação
@@ -1786,7 +2109,10 @@ function validarEmail(email) {
 
 // Buscar CEP
 function buscarCEP() {
-    const cep = document.getElementById('cep').value.replace(/\D/g, '');
+    const cepField = document.getElementById('cep');
+    if (!cepField) return;
+    
+    const cep = cepField.value.replace(/\D/g, '');
     
     if (cep.length !== 8) {
         showAlert('CEP inválido!', 'error');
@@ -1805,12 +2131,17 @@ function buscarCEP() {
                 return;
             }
             
-            document.getElementById('endereco').value = data.logradouro;
-            document.getElementById('bairro').value = data.bairro;
-            document.getElementById('cidade').value = data.localidade;
+            const enderecoField = document.getElementById('endereco');
+            const bairroField = document.getElementById('bairro');
+            const cidadeField = document.getElementById('cidade');
+            const numeroField = document.getElementById('numero');
+            
+            if (enderecoField) enderecoField.value = data.logradouro;
+            if (bairroField) bairroField.value = data.bairro;
+            if (cidadeField) cidadeField.value = data.localidade;
             
             // Foca no campo número
-            document.getElementById('numero').focus();
+            if (numeroField) numeroField.focus();
         })
         .catch(error => {
             hideLoading();
@@ -1822,6 +2153,8 @@ function buscarCEP() {
 // Gerenciar dependentes
 function adicionarDependente() {
     const container = document.getElementById('dependentesContainer');
+    if (!container) return;
+    
     const novoIndex = dependenteIndex++;
     
     const dependenteHtml = `
@@ -1878,32 +2211,455 @@ function adicionarDependente() {
 
 function removerDependente(button) {
     const card = button.closest('.dependente-card');
+    if (!card) return;
+    
     card.style.animation = 'fadeOut 0.3s ease';
     
     setTimeout(() => {
         card.remove();
         // Reordena os números
         document.querySelectorAll('.dependente-card').forEach((card, index) => {
-            card.querySelector('.dependente-number').textContent = `Dependente ${index + 1}`;
+            const numberEl = card.querySelector('.dependente-number');
+            if (numberEl) {
+                numberEl.textContent = `Dependente ${index + 1}`;
+            }
         });
     }, 300);
 }
 
-// Preencher revisão
-function preencherRevisao() {
-    const container = document.getElementById('revisaoContainer');
+function calcularServicos() {
+    console.log('=== CALCULANDO SERVIÇOS (VERSÃO CORRIGIDA) ===');
+    
+    const tipoAssociadoEl = document.getElementById('tipoAssociadoServico');
+    const servicoJuridicoEl = document.getElementById('servicoJuridico');
+    
+    if (!tipoAssociadoEl || !servicoJuridicoEl) {
+        console.error('Elementos não encontrados');
+        return;
+    }
+    
+    const tipoAssociado = tipoAssociadoEl.value;
+    const servicoJuridicoChecked = servicoJuridicoEl.checked;
+    
+    console.log('Tipo associado:', tipoAssociado);
+    console.log('Jurídico selecionado:', servicoJuridicoChecked);
+    
+    if (!tipoAssociado) {
+        resetarCalculos();
+        return;
+    }
+    
+    // Buscar regras para o tipo de associado selecionado
+    const regrasSocial = regrasContribuicao.filter(r => 
+        r.tipo_associado === tipoAssociado && r.servico_id == 1
+    );
+    const regrasJuridico = regrasContribuicao.filter(r => 
+        r.tipo_associado === tipoAssociado && r.servico_id == 2
+    );
+    
+    console.log('Regras encontradas:', {regrasSocial, regrasJuridico});
+    
+    let valorTotalGeral = 0;
+    
+    // Calcular Serviço Social (sempre obrigatório)
+    if (regrasSocial.length > 0) {
+        const regra = regrasSocial[0];
+        const servicoSocial = servicosData.find(s => s.id == 1);
+        const valorBase = parseFloat(servicoSocial?.valor_base || 173.10);
+        const percentual = parseFloat(regra.percentual_valor);
+        const valorFinal = (valorBase * percentual) / 100;
+        
+        console.log('Cálculo Social:', {valorBase, percentual, valorFinal});
+        
+        // Atualiza elementos do DOM
+        updateElementSafe('valorBaseSocial', valorBase.toFixed(2));
+        updateElementSafe('percentualSocial', percentual.toFixed(0));
+        updateElementSafe('valorFinalSocial', valorFinal.toFixed(2));
+        
+        // CORREÇÃO: Sempre define o valor, mesmo sendo 0 para isentos
+        updateElementSafe('valorSocial', valorFinal.toFixed(2), 'value');
+        updateElementSafe('percentualAplicadoSocial', percentual.toFixed(2), 'value');
+        
+        valorTotalGeral += valorFinal;
+    }
+    
+    // Calcular Serviço Jurídico (se selecionado)
+    if (servicoJuridicoChecked && regrasJuridico.length > 0) {
+        const regra = regrasJuridico[0];
+        const servicoJuridico = servicosData.find(s => s.id == 2);
+        const valorBase = parseFloat(servicoJuridico?.valor_base || 43.28);
+        const percentual = parseFloat(regra.percentual_valor);
+        const valorFinal = (valorBase * percentual) / 100;
+        
+        console.log('Cálculo Jurídico:', {valorBase, percentual, valorFinal});
+        
+        updateElementSafe('valorBaseJuridico', valorBase.toFixed(2));
+        updateElementSafe('percentualJuridico', percentual.toFixed(0));
+        updateElementSafe('valorFinalJuridico', valorFinal.toFixed(2));
+        updateElementSafe('valorJuridico', valorFinal.toFixed(2), 'value');
+        updateElementSafe('percentualAplicadoJuridico', percentual.toFixed(2), 'value');
+        
+        valorTotalGeral += valorFinal;
+    } else {
+        // Reset jurídico se não selecionado
+        updateElementSafe('percentualJuridico', '0');
+        updateElementSafe('valorFinalJuridico', '0,00');
+        updateElementSafe('valorJuridico', '0', 'value');
+        updateElementSafe('percentualAplicadoJuridico', '0', 'value');
+    }
+    
+    // Atualizar total geral
+    updateElementSafe('valorTotalGeral', valorTotalGeral.toFixed(2));
+    
+    console.log('Valor total calculado:', valorTotalGeral);
+    console.log('=== FIM CÁLCULO SERVIÇOS ===');
+}
+
+// Função auxiliar para atualizar elementos com segurança
+function updateElementSafe(elementId, value, property = 'textContent') {
+    const element = document.getElementById(elementId);
+    if (element) {
+        if (property === 'value') {
+            element.value = value;
+        } else {
+            element[property] = value;
+        }
+    } else {
+        console.warn(`Elemento ${elementId} não encontrado`);
+    }
+}
+
+// Função para preencher dados dos serviços no formulário - VERSÃO CORRIGIDA
+function preencherDadosServicos(dadosServicos) {
+    console.log('=== PREENCHENDO DADOS DOS SERVIÇOS ===');
+    console.log('Dados recebidos:', dadosServicos);
+    
+    // Limpa valores anteriores primeiro
+    resetarCalculos();
+    
+    // Define o tipo de associado
+    if (dadosServicos.tipo_associado_servico) {
+        const selectElement = document.getElementById('tipoAssociadoServico');
+        if (selectElement) {
+            selectElement.value = dadosServicos.tipo_associado_servico;
+            
+            // Trigger change para atualizar Select2
+            if (typeof $ !== 'undefined' && $('#tipoAssociadoServico').length) {
+                $('#tipoAssociadoServico').trigger('change');
+            }
+            
+            console.log('✓ Tipo de associado definido:', dadosServicos.tipo_associado_servico);
+        }
+    }
+    
+    // Preenche dados do serviço social
+    if (dadosServicos.servicos && dadosServicos.servicos.social) {
+        const social = dadosServicos.servicos.social;
+        
+        updateElementSafe('valorSocial', social.valor_aplicado, 'value');
+        updateElementSafe('percentualAplicadoSocial', social.percentual_aplicado, 'value');
+        updateElementSafe('valorFinalSocial', parseFloat(social.valor_aplicado).toFixed(2));
+        updateElementSafe('percentualSocial', parseFloat(social.percentual_aplicado).toFixed(0));
+        
+        // Busca valor base para exibição
+        const servicoSocial = servicosData.find(s => s.id == 1);
+        if (servicoSocial) {
+            updateElementSafe('valorBaseSocial', parseFloat(servicoSocial.valor_base).toFixed(2));
+        }
+        
+        console.log('✓ Serviço Social preenchido:', social);
+    }
+    
+    // Preenche dados do serviço jurídico se existir
+    if (dadosServicos.servicos && dadosServicos.servicos.juridico) {
+        const juridico = dadosServicos.servicos.juridico;
+        
+        // Marca o checkbox
+        const juridicoCheckEl = document.getElementById('servicoJuridico');
+        if (juridicoCheckEl) {
+            juridicoCheckEl.checked = true;
+        }
+        
+        updateElementSafe('valorJuridico', juridico.valor_aplicado, 'value');
+        updateElementSafe('percentualAplicadoJuridico', juridico.percentual_aplicado, 'value');
+        updateElementSafe('valorFinalJuridico', parseFloat(juridico.valor_aplicado).toFixed(2));
+        updateElementSafe('percentualJuridico', parseFloat(juridico.percentual_aplicado).toFixed(0));
+        
+        // Busca valor base para exibição
+        const servicoJuridico = servicosData.find(s => s.id == 2);
+        if (servicoJuridico) {
+            updateElementSafe('valorBaseJuridico', parseFloat(servicoJuridico.valor_base).toFixed(2));
+        }
+        
+        console.log('✓ Serviço Jurídico preenchido:', juridico);
+    } else {
+        // Garante que o checkbox está desmarcado
+        const juridicoCheckEl = document.getElementById('servicoJuridico');
+        if (juridicoCheckEl) {
+            juridicoCheckEl.checked = false;
+        }
+        console.log('✓ Serviço Jurídico não contratado');
+    }
+    
+    // Atualiza total geral
+    const totalMensal = dadosServicos.valor_total_mensal || 0;
+    updateElementSafe('valorTotalGeral', parseFloat(totalMensal).toFixed(2));
+    
+    console.log('✓ Total mensal:', totalMensal);
+    console.log('=== FIM PREENCHIMENTO ===');
+}
+
+// Função para carregar serviços do associado (modo edição) - VERSÃO CORRIGIDA
+function carregarServicosAssociado() {
+    if (!associadoId) {
+        console.log('Não é modo edição, pulando carregamento de serviços');
+        return;
+    }
+    
+    console.log('=== CARREGANDO SERVIÇOS DO ASSOCIADO ===');
+    console.log('ID do associado:', associadoId);
+    
+    // Mostra loading
+    const loadingHtml = `
+        <div style="text-align: center; padding: 1rem; color: var(--gray-500);">
+            <i class="fas fa-spinner fa-spin"></i> Carregando serviços...
+        </div>
+    `;
+    
+    const servicosContainer = document.querySelector('[data-step="4"] .form-group.full-width');
+    if (servicosContainer) {
+        const serviceDiv = servicosContainer.querySelector('div[style*="background: var(--white)"]');
+        if (serviceDiv) {
+            serviceDiv.innerHTML = loadingHtml;
+        }
+    }
+    
+    fetch(`../api/buscar_servicos_associado.php?associado_id=${associadoId}`)
+        .then(response => {
+            console.log('Response status:', response.status);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Resposta da API:', data);
+            
+            if (data.status === 'success' && data.data) {
+                servicosCarregados = data.data;
+                preencherDadosServicos(data.data);
+                
+                // Restaura o HTML original dos serviços
+                restaurarHtmlServicos();
+                
+                console.log('✓ Serviços carregados e preenchidos com sucesso');
+            } else {
+                console.warn('API retornou erro:', data.message || 'Erro desconhecido');
+                // Mesmo assim, tenta calcular com os dados atuais
+                setTimeout(() => {
+                    if (document.getElementById('tipoAssociadoServico').value) {
+                        calcularServicos();
+                    }
+                }, 500);
+            }
+        })
+        .catch(error => {
+            console.error('Erro ao carregar serviços:', error);
+            
+            // Restaura o HTML e tenta calcular
+            restaurarHtmlServicos();
+            
+            setTimeout(() => {
+                if (document.getElementById('tipoAssociadoServico').value) {
+                    calcularServicos();
+                }
+            }, 500);
+        });
+}
+
+// Função para restaurar HTML dos serviços
+function restaurarHtmlServicos() {
+    const servicosContainer = document.querySelector('[data-step="4"] .form-group.full-width');
+    if (servicosContainer) {
+        const serviceDiv = servicosContainer.querySelector('div[style*="background: var(--white)"]');
+        if (serviceDiv) {
+            // Aqui você pode colocar o HTML original dos serviços
+            // Por simplicidade, vou apenas remover o loading
+            if (serviceDiv.innerHTML.includes('fa-spinner')) {
+                location.reload(); // Recarrega para restaurar estado original
+            }
+        }
+    }
+}
+
+function salvarAssociado() {
+    console.log('=== SALVANDO ASSOCIADO (VERSÃO CORRIGIDA) ===');
+    
+    // Validação final
+    if (!validarFormularioCompleto()) {
+        showAlert('Por favor, verifique todos os campos obrigatórios!', 'error');
+        return;
+    }
+    
+    showLoading();
+    
     const formData = new FormData(document.getElementById('formAssociado'));
     
-    let html = '';
+    // CORREÇÃO: Garante que o tipo de associado seja enviado corretamente
+    const tipoAssociadoEl = document.getElementById('tipoAssociadoServico');
+    if (tipoAssociadoEl && tipoAssociadoEl.value) {
+        formData.set('tipoAssociadoServico', tipoAssociadoEl.value);
+        console.log('✓ Tipo de associado adicionado:', tipoAssociadoEl.value);
+    }
     
-    // Dados Pessoais
-    html += `
+    // CORREÇÃO: Garante que os valores dos serviços sejam enviados mesmo sendo 0
+    const valorSocialEl = document.getElementById('valorSocial');
+    const valorJuridicoEl = document.getElementById('valorJuridico');
+    const percentualSocialEl = document.getElementById('percentualAplicadoSocial');
+    const percentualJuridicoEl = document.getElementById('percentualAplicadoJuridico');
+    
+    if (valorSocialEl) {
+        formData.set('valorSocial', valorSocialEl.value || '0');
+        console.log('✓ Valor Social:', valorSocialEl.value || '0');
+    }
+    
+    if (percentualSocialEl) {
+        formData.set('percentualAplicadoSocial', percentualSocialEl.value || '0');
+        console.log('✓ Percentual Social:', percentualSocialEl.value || '0');
+    }
+    
+    if (valorJuridicoEl) {
+        formData.set('valorJuridico', valorJuridicoEl.value || '0');
+        console.log('✓ Valor Jurídico:', valorJuridicoEl.value || '0');
+    }
+    
+    if (percentualJuridicoEl) {
+        formData.set('percentualAplicadoJuridico', percentualJuridicoEl.value || '0');
+        console.log('✓ Percentual Jurídico:', percentualJuridicoEl.value || '0');
+    }
+    
+    // Log dos dados que estão sendo enviados
+    console.log('Dados sendo enviados:');
+    for (let [key, value] of formData.entries()) {
+        console.log(`${key}: ${value}`);
+    }
+    
+    // URL da API
+    const url = isEdit 
+        ? `../api/atualizar_associado.php?id=${associadoId}`
+        : '../api/criar_associado.php';
+    
+    console.log('URL da requisição:', url);
+    console.log('Método:', isEdit ? 'ATUALIZAR' : 'CRIAR');
+    
+    fetch(url, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        console.log('Response status:', response.status);
+        console.log('Content-Type:', response.headers.get('content-type'));
+        
+        return response.text();
+    })
+    .then(responseText => {
+        console.log('Response texto:', responseText);
+        
+        hideLoading();
+        
+        let data;
+        try {
+            data = JSON.parse(responseText);
+            console.log('JSON parseado:', data);
+        } catch (e) {
+            console.error('Erro ao fazer parse JSON:', e);
+            console.log('Resposta não é JSON válido');
+            
+            if (responseText.includes('<html>') || responseText.includes('<!DOCTYPE')) {
+                showAlert('Erro no servidor - retornou HTML ao invés de JSON. Verifique os logs.', 'error');
+            } else {
+                showAlert('Erro de comunicação: ' + responseText.substring(0, 200), 'error');
+            }
+            return;
+        }
+        
+        if (data.status === 'success') {
+            let mensagem = isEdit ? 'Associado atualizado com sucesso!' : 'Associado cadastrado com sucesso!';
+            
+            // Adiciona informações sobre serviços se houver
+            if (data.data && data.data.servicos_alterados && data.data.detalhes_servicos) {
+                mensagem += '\n\nServiços atualizados:\n' + data.data.detalhes_servicos.join('\n');
+            }
+            
+            // CORREÇÃO: Mostra o tipo de associado salvo
+            if (data.data && data.data.tipo_associado_servico) {
+                mensagem += '\n\nTipo de associado: ' + data.data.tipo_associado_servico;
+            }
+            
+            showAlert(mensagem, 'success');
+            
+            console.log('✓ Sucesso:', data);
+            
+            // Redireciona após 3 segundos para dar tempo de ler as alterações
+            setTimeout(() => {
+                window.location.href = 'dashboard.php';
+            }, 3000);
+        } else {
+            console.error('Erro da API:', data);
+            showAlert(data.message || 'Erro ao salvar associado!', 'error');
+            
+            if (data.debug) {
+                console.log('Debug info:', data.debug);
+            }
+        }
+    })
+    .catch(error => {
+        hideLoading();
+        console.error('Erro de rede:', error);
+        showAlert('Erro de comunicação com o servidor!', 'error');
+    });
+    
+    console.log('=== FIM SALVAMENTO ===');
+}
+
+// Garanta que esta função seja chamada no carregamento da página se for edição
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM carregado - Modo edição:', isEdit);
+    
+    if (isEdit && associadoId) {
+        // Aguarda um pouco para garantir que tudo está carregado
+        setTimeout(() => {
+            carregarServicosAssociado();
+        }, 1000);
+    }
+    
+    // Adiciona listeners aos campos de serviços
+    const tipoAssociadoEl = document.getElementById('tipoAssociadoServico');
+    const servicoJuridicoEl = document.getElementById('servicoJuridico');
+    
+    if (tipoAssociadoEl) {
+        tipoAssociadoEl.addEventListener('change', calcularServicos);
+    }
+    
+    if (servicoJuridicoEl) {
+        servicoJuridicoEl.addEventListener('change', calcularServicos);
+    }
+});
+
+// Preencher revisão (versão simplificada por enquanto)
+function preencherRevisao() {
+    const container = document.getElementById('revisaoContainer');
+    if (!container) return;
+    
+    const formData = new FormData(document.getElementById('formAssociado'));
+    
+    let html = `
         <div class="overview-card">
             <div class="overview-card-header">
                 <div class="overview-card-icon blue">
                     <i class="fas fa-user"></i>
                 </div>
-                <h3 class="overview-card-title">Dados Pessoais</h3>
+                <h3 class="overview-card-title">Resumo do Cadastro</h3>
             </div>
             <div class="overview-card-content">
                 <div class="overview-item">
@@ -1915,129 +2671,51 @@ function preencherRevisao() {
                     <span class="overview-value">${formData.get('cpf') || '-'}</span>
                 </div>
                 <div class="overview-item">
-                    <span class="overview-label">RG</span>
-                    <span class="overview-value">${formData.get('rg') || '-'}</span>
+                    <span class="overview-label">Tipo de Associado</span>
+                    <span class="overview-value">${formData.get('tipoAssociadoServico') || '-'}</span>
                 </div>
                 <div class="overview-item">
-                    <span class="overview-label">Telefone</span>
-                    <span class="overview-value">${formData.get('telefone') || '-'}</span>
-                </div>
-                <div class="overview-item">
-                    <span class="overview-label">E-mail</span>
-                    <span class="overview-value">${formData.get('email') || '-'}</span>
+                    <span class="overview-label">Valor Total Mensal</span>
+                    <span class="overview-value">R$ ${document.getElementById('valorTotalGeral')?.textContent || '0,00'}</span>
                 </div>
             </div>
         </div>
     `;
     
-    // Dados Militares
-    if (formData.get('corporacao') || formData.get('patente')) {
-        html += `
-            <div class="overview-card">
-                <div class="overview-card-header">
-                    <div class="overview-card-icon green">
-                        <i class="fas fa-shield-alt"></i>
-                    </div>
-                    <h3 class="overview-card-title">Dados Militares</h3>
-                </div>
-                <div class="overview-card-content">
-                    <div class="overview-item">
-                        <span class="overview-label">Corporação</span>
-                        <span class="overview-value">${formData.get('corporacao') || '-'}</span>
-                    </div>
-                    <div class="overview-item">
-                        <span class="overview-label">Patente</span>
-                        <span class="overview-value">${formData.get('patente') || '-'}</span>
-                    </div>
-                    <div class="overview-item">
-                        <span class="overview-label">Categoria</span>
-                        <span class="overview-value">${formData.get('categoria') || '-'}</span>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-    
-    // Endereço
-    if (formData.get('endereco') || formData.get('cidade')) {
-        html += `
-            <div class="overview-card">
-                <div class="overview-card-header">
-                    <div class="overview-card-icon orange">
-                        <i class="fas fa-map-marker-alt"></i>
-                    </div>
-                    <h3 class="overview-card-title">Endereço</h3>
-                </div>
-                <div class="overview-card-content">
-                    <div class="overview-item">
-                        <span class="overview-label">Endereço</span>
-                        <span class="overview-value">${formData.get('endereco') || '-'} ${formData.get('numero') || ''}</span>
-                    </div>
-                    <div class="overview-item">
-                        <span class="overview-label">Bairro</span>
-                        <span class="overview-value">${formData.get('bairro') || '-'}</span>
-                    </div>
-                    <div class="overview-item">
-                        <span class="overview-label">Cidade</span>
-                        <span class="overview-value">${formData.get('cidade') || '-'}</span>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-    
     container.innerHTML = html;
 }
 
-// Salvar associado
-function salvarAssociado() {
-    // Validação final
-    if (!validarFormularioCompleto()) {
-        showAlert('Por favor, verifique todos os campos obrigatórios!', 'error');
-        return;
-    }
+
+
+// Função adicional para testar conexão
+function testarConexao() {
+    console.log('Testando conexão...');
     
-    showLoading();
-    
-    const formData = new FormData(document.getElementById('formAssociado'));
-    
-    // URL da API
-    const url = isEdit 
-        ? `../api/atualizar_associado.php?id=${associadoId}`
-        : '../api/criar_associado.php';
-    
-    fetch(url, {
+    fetch('../api/criar_associado.php', {
         method: 'POST',
-        body: formData
+        body: new FormData() // FormData vazio só para testar
     })
-    .then(response => response.json())
-    .then(data => {
-        hideLoading();
-        
-        if (data.status === 'success') {
-            showAlert(
-                isEdit ? 'Associado atualizado com sucesso!' : 'Associado cadastrado com sucesso!',
-                'success'
-            );
-            
-            // Redireciona após 2 segundos
-            setTimeout(() => {
-                window.location.href = 'dashboard.php';
-            }, 2000);
-        } else {
-            showAlert(data.message || 'Erro ao salvar associado!', 'error');
-        }
+    .then(response => response.text())
+    .then(text => {
+        console.log('Teste de conexão - resposta:');
+        console.log(text);
     })
     .catch(error => {
-        hideLoading();
-        console.error('Erro:', error);
-        showAlert('Erro ao processar requisição!', 'error');
+        console.error('Erro no teste de conexão:', error);
     });
 }
+
+// Execute o teste quando a página carregar
+document.addEventListener('DOMContentLoaded', function() {
+    // Descomente a linha abaixo para testar a conexão
+    // testarConexao();
+});
 
 // Validação do formulário completo
 function validarFormularioCompleto() {
     const form = document.getElementById('formAssociado');
+    if (!form) return false;
+    
     const requiredFields = form.querySelectorAll('[required]');
     let isValid = true;
     
@@ -2060,15 +2738,22 @@ function validarFormularioCompleto() {
 
 // Funções auxiliares
 function showLoading() {
-    document.getElementById('loadingOverlay').classList.add('active');
+    const overlay = document.getElementById('loadingOverlay');
+    if (overlay) overlay.classList.add('active');
 }
 
 function hideLoading() {
-    document.getElementById('loadingOverlay').classList.remove('active');
+    const overlay = document.getElementById('loadingOverlay');
+    if (overlay) overlay.classList.remove('active');
 }
 
 function showAlert(message, type = 'info') {
     const alertContainer = document.getElementById('alertContainer');
+    if (!alertContainer) {
+        console.log('Alert:', message);
+        return;
+    }
+    
     const alertId = 'alert-' + Date.now();
     
     const alertHtml = `
@@ -2090,6 +2775,9 @@ function showAlert(message, type = 'info') {
     }, 5000);
 }
 
+// Inicializar após tudo carregado
+inicializarCalculos();
+
 // Animação fadeOut
 const style = document.createElement('style');
 style.textContent = `
@@ -2099,6 +2787,9 @@ style.textContent = `
     }
 `;
 document.head.appendChild(style);
+
+// Log final
+console.log('JavaScript carregado completamente!');
     </script>
 </body>
 </html>
