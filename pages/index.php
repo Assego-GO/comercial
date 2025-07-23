@@ -145,7 +145,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <div class="input-wrapper">
                             <i class="fas fa-envelope input-icon"></i>
                             <input type="email" 
-                                   class="form-input w-full bg-white/5 backdrop-blur-sm border border-white/20 rounded-xl px-12 py-4 text-white placeholder-gray-300 focus:border-sky-400 focus:bg-white/10 transition-all duration-300"
+                                   class="form-input w-full bg-white/5 backdrop-blur-sm border border-white/20 rounded-xl px-12 py-4 text-black placeholder-gray-300 focus:border-sky-400 focus:bg-white/10 transition-all duration-300"
                                    id="email" 
                                    name="email" 
                                    placeholder="Seu Email"
@@ -160,12 +160,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <div class="input-wrapper">
                             <i class="fas fa-lock input-icon"></i>
                             <input type="password" 
-                                   class="form-input w-full bg-white/5 backdrop-blur-sm border border-white/20 rounded-xl px-12 py-4 pr-16 text-white placeholder-gray-300 focus:border-sky-400 focus:bg-white/10 transition-all duration-300"
+                                   class="form-input w-full bg-white/5 backdrop-blur-sm border border-white/20 rounded-xl px-12 py-4 pr-16 text-black placeholder-gray-300 focus:border-sky-400 focus:bg-white/10 transition-all duration-300"
                                    id="senha" 
                                    name="senha" 
                                    placeholder="Sua Senha"
                                    required>
-                            <button type="button" class="password-toggle absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition-colors" onclick="togglePassword()">
+                            <button type="button" class="password-toggle absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-black transition-colors" onclick="togglePassword()">
                                 <i class="fas fa-eye" id="toggleIcon"></i>
                             </button>
                         </div>
