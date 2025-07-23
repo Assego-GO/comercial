@@ -593,6 +593,266 @@ try {
             text-transform: uppercase;
         }
 
+        /* Quick Actions */
+        .quick-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--gray-200);
+        }
+
+        .quick-action {
+            flex: 1;
+            padding: 0.5rem 0.75rem;
+            background: var(--white);
+            border: 1.5px solid var(--gray-200);
+            border-radius: 8px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--gray-600);
+            text-align: center;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.375rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .quick-action::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, transparent, rgba(0, 86, 210, 0.1));
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .quick-action:hover {
+            background: var(--primary);
+            color: var(--white);
+            border-color: var(--primary);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 86, 210, 0.2);
+        }
+
+        .quick-action:hover::before {
+            opacity: 1;
+        }
+
+        .quick-action:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 4px rgba(0, 86, 210, 0.2);
+        }
+
+        .quick-action i {
+            font-size: 0.875rem;
+        }
+
+        /* Model Actions */
+        .model-actions {
+            display: flex;
+            gap: 0.375rem;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--gray-200);
+        }
+
+        .model-action {
+            flex: 1;
+            padding: 0.5rem;
+            background: transparent;
+            border: 1.5px solid transparent;
+            border-radius: 8px;
+            font-size: 0.6875rem;
+            font-weight: 600;
+            color: var(--gray-600);
+            text-align: center;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.25rem;
+            position: relative;
+        }
+
+        .model-action:hover {
+            background: var(--gray-100);
+            border-color: var(--gray-300);
+        }
+
+        .model-action.primary {
+            background: var(--primary-light);
+            color: var(--primary);
+            border-color: var(--primary-light);
+        }
+
+        .model-action.primary:hover {
+            background: var(--primary);
+            color: var(--white);
+            border-color: var(--primary);
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0, 86, 210, 0.2);
+        }
+
+        .model-action.danger {
+            color: var(--danger);
+        }
+
+        .model-action.danger:hover {
+            background: var(--danger);
+            color: var(--white);
+            border-color: var(--danger);
+        }
+
+        .model-action i {
+            font-size: 0.75rem;
+        }
+
+        /* Report Card Actions */
+        .report-card-footer {
+            margin-top: auto;
+            padding-top: 1rem;
+        }
+
+        .report-actions-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.5rem;
+            margin-top: 0.75rem;
+        }
+
+        .report-action-btn {
+            padding: 0.625rem 0.75rem;
+            background: var(--white);
+            border: 1.5px solid var(--gray-200);
+            border-radius: 8px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: var(--gray-700);
+            text-align: center;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            text-decoration: none;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.25rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .report-action-btn i {
+            font-size: 1rem;
+            margin-bottom: 0.125rem;
+            transition: transform 0.2s ease;
+        }
+
+        .report-action-btn span {
+            display: block;
+            font-size: 0.625rem;
+            opacity: 0.8;
+        }
+
+        .report-action-btn:hover {
+            background: var(--primary);
+            color: var(--white);
+            border-color: var(--primary);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 86, 210, 0.2);
+        }
+
+        .report-action-btn:hover i {
+            transform: scale(1.1);
+        }
+
+        .report-action-btn.secondary:hover {
+            background: var(--gray-700);
+            border-color: var(--gray-700);
+        }
+
+        .report-action-btn.info:hover {
+            background: var(--info);
+            border-color: var(--info);
+        }
+
+        /* Quick Report Actions */
+        .quick-report-actions {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.375rem;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--gray-200);
+        }
+
+        .quick-report-action {
+            padding: 0.5rem 0.625rem;
+            background: linear-gradient(135deg, var(--white), var(--gray-100));
+            border: 1px solid var(--gray-200);
+            border-radius: 10px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: var(--gray-700);
+            text-align: center;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.375rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .quick-report-action::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: radial-gradient(circle, rgba(0, 86, 210, 0.1), transparent);
+            transform: translate(-50%, -50%);
+            transition: width 0.4s ease, height 0.4s ease;
+        }
+
+        .quick-report-action:hover {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: var(--white);
+            border-color: var(--primary);
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: 0 6px 20px rgba(0, 86, 210, 0.3);
+        }
+
+        .quick-report-action:hover::after {
+            width: 100%;
+            height: 100%;
+        }
+
+        .quick-report-action:active {
+            transform: translateY(0) scale(1);
+        }
+
+        .quick-report-action i {
+            font-size: 0.875rem;
+            transition: transform 0.2s ease;
+        }
+
+        .quick-report-action:hover i {
+            transform: rotate(5deg) scale(1.1);
+        }
+
         /* Recent Activity */
         .activity-list {
             padding: 0;
@@ -673,13 +933,17 @@ try {
             background: var(--white);
             border-radius: 24px;
             width: 100%;
-            max-width: 800px;
+            max-width: 600px;
             max-height: 90vh;
             overflow: hidden;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
             animation: slideUp 0.3s ease;
             display: flex;
             flex-direction: column;
+        }
+
+        .modal-content-custom.large {
+            max-width: 800px;
         }
 
         @keyframes slideUp {
@@ -827,6 +1091,167 @@ try {
             user-select: none;
         }
 
+        /* Campos Selecionados com Drag and Drop */
+        .campos-selecionados-container {
+            background: var(--white);
+            border: 2px solid var(--gray-200);
+            border-radius: 12px;
+            padding: 1rem;
+            min-height: 200px;
+        }
+
+        .campos-selecionados-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .campos-selecionados-title {
+            font-weight: 600;
+            color: var(--gray-700);
+            font-size: 0.875rem;
+        }
+
+        .campos-ordem-info {
+            font-size: 0.75rem;
+            color: var(--gray-500);
+        }
+
+        .campos-selecionados-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .campo-selecionado-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            background: var(--gray-100);
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+            cursor: move;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .campo-selecionado-item:hover {
+            background: var(--gray-200);
+            transform: translateX(4px);
+        }
+
+        .campo-selecionado-item.dragging {
+            opacity: 0.5;
+            background: var(--primary-light);
+        }
+
+        .campo-selecionado-item.drag-over {
+            border-top: 3px solid var(--primary);
+        }
+
+        .campo-drag-handle {
+            color: var(--gray-400);
+            font-size: 0.875rem;
+            cursor: grab;
+        }
+
+        .campo-drag-handle:active {
+            cursor: grabbing;
+        }
+
+        .campo-selecionado-numero {
+            width: 24px;
+            height: 24px;
+            background: var(--primary);
+            color: var(--white);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .campo-selecionado-nome {
+            flex: 1;
+            font-size: 0.8125rem;
+            color: var(--gray-700);
+        }
+
+        .campo-selecionado-remove {
+            width: 28px;
+            height: 28px;
+            border: none;
+            background: transparent;
+            color: var(--gray-400);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .campo-selecionado-remove:hover {
+            background: var(--danger);
+            color: var(--white);
+        }
+
+        .campos-selecionados-empty {
+            text-align: center;
+            padding: 3rem;
+            color: var(--gray-400);
+            font-size: 0.875rem;
+        }
+
+        .campos-selecionados-empty i {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            display: block;
+            opacity: 0.3;
+        }
+
+        /* Tabs para alternar entre seleção e ordenação */
+        .campos-tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            background: var(--gray-100);
+            padding: 0.25rem;
+            border-radius: 10px;
+        }
+
+        .campos-tab {
+            flex: 1;
+            padding: 0.625rem 1rem;
+            background: transparent;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.8125rem;
+            font-weight: 600;
+            color: var(--gray-600);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .campos-tab.active {
+            background: var(--white);
+            color: var(--primary);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .campos-tab-content {
+            display: none;
+        }
+
+        .campos-tab-content.active {
+            display: block;
+        }
+
         /* Category Header */
         .category-header {
             font-size: 0.875rem;
@@ -947,51 +1372,58 @@ try {
             opacity: 0.3;
         }
 
-        /* Results Section */
-        .results-section {
-            background: var(--white);
-            border-radius: 16px;
-            box-shadow: var(--shadow-sm);
-            margin-top: 2rem;
-            overflow: hidden;
-        }
-
-        .results-header {
-            padding: 1.5rem;
+        /* Quick Filters */
+        .quick-filters {
             background: var(--gray-100);
-            border-bottom: 1px solid var(--gray-200);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
+            padding: 1rem;
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
         }
 
-        .results-table {
-            width: 100%;
-            border-collapse: separate;
-            border-spacing: 0;
-        }
-
-        .results-table thead th {
-            background: var(--gray-100);
-            padding: 0.875rem 1.25rem;
+        .quick-filters-title {
+            font-size: 0.875rem;
             font-weight: 600;
+            color: var(--gray-700);
+            margin-bottom: 0.75rem;
+        }
+
+        .filter-pills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .filter-pill {
+            padding: 0.5rem 1rem;
+            background: var(--white);
+            border: 1px solid var(--gray-200);
+            border-radius: 20px;
             font-size: 0.75rem;
             color: var(--gray-600);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            border-bottom: 1px solid var(--gray-200);
-            white-space: nowrap;
+            cursor: pointer;
+            transition: all 0.2s ease;
         }
 
-        .results-table tbody td {
-            padding: 0.875rem 1.25rem;
-            vertical-align: middle;
-            border-bottom: 1px solid var(--gray-100);
-            font-size: 0.875rem;
+        .filter-pill:hover {
+            border-color: var(--primary);
+            color: var(--primary);
         }
 
-        .results-table tbody tr:hover {
-            background: var(--gray-100);
+        .filter-pill.active {
+            background: var(--primary);
+            color: var(--white);
+            border-color: var(--primary);
+        }
+
+        /* Simple Date Range */
+        .date-range-simple {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .date-range-simple .form-control-custom {
+            flex: 1;
         }
 
         /* Responsive */
@@ -1013,6 +1445,14 @@ try {
             .modal-content-custom {
                 max-width: 100%;
                 margin: 1rem;
+            }
+
+            .quick-actions {
+                flex-direction: column;
+            }
+
+            .date-range-simple {
+                flex-direction: column;
             }
         }
     </style>
@@ -1071,7 +1511,7 @@ try {
                         </a>
                         <?php endif; ?>
                         <div class="dropdown-divider-custom"></div>
-                        <a href="../php/login/logout.php" class="dropdown-item-custom">
+                        <a href="logout.php" class="dropdown-item-custom">
                             <i class="fas fa-sign-out-alt"></i>
                             <span>Sair</span>
                         </a>
@@ -1138,7 +1578,7 @@ try {
                     <div class="stat-header">
                         <div>
                             <div class="stat-value"><?php echo count($modelosDisponiveis); ?></div>
-                            <div class="stat-label">Modelos Disponíveis</div>
+                            <div class="stat-label">Modelos Salvos</div>
                         </div>
                         <div class="stat-icon success">
                             <i class="fas fa-layer-group"></i>
@@ -1186,111 +1626,195 @@ try {
                         <div class="section-icon">
                             <i class="fas fa-file-contract"></i>
                         </div>
-                        Relatórios Disponíveis
+                        Relatórios Rápidos
                     </h3>
                     <div class="section-actions">
-                        <button class="btn-modern btn-primary" onclick="abrirModalNovoRelatorio()">
-                            <i class="fas fa-plus"></i>
-                            Criar Novo Relatório
+                        <button class="btn-modern btn-primary" onclick="abrirModalPersonalizado()">
+                            <i class="fas fa-magic"></i>
+                            Criar Relatório Personalizado
                         </button>
                     </div>
                 </div>
 
                 <div class="report-grid">
                     <!-- Relatório de Associados -->
-                    <div class="report-card" onclick="abrirModalConfiguracao('associados')">
+                    <div class="report-card" onclick="executarRelatorioRapido('associados')">
                         <div class="report-icon blue">
                             <i class="fas fa-users"></i>
                         </div>
-                        <h4 class="report-title">Relatório de Associados</h4>
+                        <h4 class="report-title">Associados Ativos</h4>
                         <p class="report-description">
-                            Gere relatórios completos dos associados com filtros por situação, 
-                            corporação, patente e período.
+                            Lista completa de todos os associados ativos com informações básicas e contato.
                         </p>
-                        <div class="report-meta">
-                            <span><i class="fas fa-database"></i> Dados completos</span>
-                            <span class="report-badge">POPULAR</span>
+                        <div class="quick-report-actions">
+                            <a class="quick-report-action" onclick="executarRelatorioRapido('associados', 'hoje'); event.stopPropagation();">
+                                <i class="fas fa-calendar-day"></i>
+                                <span>Hoje</span>
+                            </a>
+                            <a class="quick-report-action" onclick="executarRelatorioRapido('associados', 'mes'); event.stopPropagation();">
+                                <i class="fas fa-calendar-alt"></i>
+                                <span>Este Mês</span>
+                            </a>
+                            <a class="quick-report-action" onclick="executarRelatorioRapido('associados', 'personalizar'); event.stopPropagation();">
+                                <i class="fas fa-sliders-h"></i>
+                                <span>Filtrar</span>
+                            </a>
                         </div>
                     </div>
 
                     <!-- Relatório Financeiro -->
-                    <div class="report-card" onclick="abrirModalConfiguracao('financeiro')">
+                    <div class="report-card" onclick="executarRelatorioRapido('financeiro')">
                         <div class="report-icon green">
                             <i class="fas fa-dollar-sign"></i>
                         </div>
-                        <h4 class="report-title">Relatório Financeiro</h4>
+                        <h4 class="report-title">Situação Financeira</h4>
                         <p class="report-description">
-                            Análise financeira dos associados, incluindo situação de pagamento 
-                            e tipos de contribuição.
+                            Análise da situação financeira dos associados e status de pagamentos.
                         </p>
-                        <div class="report-meta">
-                            <span><i class="fas fa-chart-line"></i> Análise detalhada</span>
+                        <div class="quick-report-actions">
+                            <a class="quick-report-action" onclick="executarRelatorioRapido('financeiro', 'adimplentes'); event.stopPropagation();">
+                                <i class="fas fa-check"></i>
+                                <span>Adimplentes</span>
+                            </a>
+                            <a class="quick-report-action" onclick="executarRelatorioRapido('financeiro', 'inadimplentes'); event.stopPropagation();">
+                                <i class="fas fa-times"></i>
+                                <span>Inadimplentes</span>
+                            </a>
+                            <a class="quick-report-action" onclick="executarRelatorioRapido('financeiro', 'personalizar'); event.stopPropagation();">
+                                <i class="fas fa-sliders-h"></i>
+                                <span>Filtrar</span>
+                            </a>
                         </div>
                     </div>
 
                     <!-- Relatório Militar -->
-                    <div class="report-card" onclick="abrirModalConfiguracao('militar')">
+                    <div class="report-card" onclick="executarRelatorioRapido('militar')">
                         <div class="report-icon orange">
                             <i class="fas fa-shield-alt"></i>
                         </div>
-                        <h4 class="report-title">Relatório Militar</h4>
+                        <h4 class="report-title">Distribuição Militar</h4>
                         <p class="report-description">
-                            Informações militares dos associados, distribuição por patente, 
-                            corporação e unidade.
+                            Distribuição dos associados por patente, corporação e unidade militar.
                         </p>
-                        <div class="report-meta">
-                            <span><i class="fas fa-sitemap"></i> Hierarquia</span>
+                        <div class="quick-report-actions">
+                            <a class="quick-report-action" onclick="executarRelatorioRapido('militar', 'patente'); event.stopPropagation();">
+                                <i class="fas fa-star"></i>
+                                <span>Por Patente</span>
+                            </a>
+                            <a class="quick-report-action" onclick="executarRelatorioRapido('militar', 'corporacao'); event.stopPropagation();">
+                                <i class="fas fa-building"></i>
+                                <span>Por Corporação</span>
+                            </a>
+                            <a class="quick-report-action" onclick="executarRelatorioRapido('militar', 'personalizar'); event.stopPropagation();">
+                                <i class="fas fa-sliders-h"></i>
+                                <span>Filtrar</span>
+                            </a>
                         </div>
                     </div>
 
                     <!-- Relatório de Serviços -->
-                    <div class="report-card" onclick="abrirModalConfiguracao('servicos')">
+                    <div class="report-card" onclick="executarRelatorioRapido('servicos')">
                         <div class="report-icon purple">
                             <i class="fas fa-concierge-bell"></i>
                         </div>
-                        <h4 class="report-title">Relatório de Serviços</h4>
+                        <h4 class="report-title">Adesão aos Serviços</h4>
                         <p class="report-description">
-                            Adesão aos serviços oferecidos, valores aplicados e análise 
-                            de utilização.
+                            Relatório de adesão aos serviços oferecidos e valores aplicados.
                         </p>
-                        <div class="report-meta">
-                            <span><i class="fas fa-list-check"></i> Serviços ativos</span>
+                        <div class="quick-report-actions">
+                            <a class="quick-report-action" onclick="executarRelatorioRapido('servicos', 'ativos'); event.stopPropagation();">
+                                <i class="fas fa-toggle-on"></i>
+                                <span>Ativos</span>
+                            </a>
+                            <a class="quick-report-action" onclick="executarRelatorioRapido('servicos', 'todos'); event.stopPropagation();">
+                                <i class="fas fa-list"></i>
+                                <span>Todos</span>
+                            </a>
+                            <a class="quick-report-action" onclick="executarRelatorioRapido('servicos', 'personalizar'); event.stopPropagation();">
+                                <i class="fas fa-sliders-h"></i>
+                                <span>Filtrar</span>
+                            </a>
                         </div>
                     </div>
 
                     <!-- Relatório de Documentos -->
-                    <div class="report-card" onclick="abrirModalConfiguracao('documentos')">
+                    <div class="report-card" onclick="executarRelatorioRapido('documentos')">
                         <div class="report-icon red">
                             <i class="fas fa-folder-open"></i>
                         </div>
-                        <h4 class="report-title">Relatório de Documentos</h4>
+                        <h4 class="report-title">Status de Documentos</h4>
                         <p class="report-description">
-                            Status dos documentos dos associados, verificações pendentes 
-                            e lotes processados.
+                            Controle de documentos enviados e status de verificação.
                         </p>
-                        <div class="report-meta">
-                            <span><i class="fas fa-file-check"></i> Verificação</span>
+                        <div class="quick-report-actions">
+                            <a class="quick-report-action" onclick="executarRelatorioRapido('documentos', 'pendentes'); event.stopPropagation();">
+                                <i class="fas fa-clock"></i>
+                                <span>Pendentes</span>
+                            </a>
+                            <a class="quick-report-action" onclick="executarRelatorioRapido('documentos', 'verificados'); event.stopPropagation();">
+                                <i class="fas fa-check-circle"></i>
+                                <span>Verificados</span>
+                            </a>
+                            <a class="quick-report-action" onclick="executarRelatorioRapido('documentos', 'personalizar'); event.stopPropagation();">
+                                <i class="fas fa-sliders-h"></i>
+                                <span>Filtrar</span>
+                            </a>
                         </div>
                     </div>
+                </div>
+            </div>
 
-                    <!-- Modelos Salvos -->
+            <!-- Saved Models Section -->
+            <?php if (!empty($modelosDisponiveis)): ?>
+            <div class="section-card" data-aos="fade-up" data-aos-delay="150">
+                <div class="section-header">
+                    <h3 class="section-title">
+                        <div class="section-icon">
+                            <i class="fas fa-save"></i>
+                        </div>
+                        Modelos Salvos
+                    </h3>
+                </div>
+
+                <div class="report-grid">
                     <?php foreach ($modelosDisponiveis as $modelo): ?>
                     <div class="report-card" onclick="executarModelo(<?php echo $modelo['id']; ?>)">
                         <div class="report-icon info">
-                            <i class="fas fa-save"></i>
+                            <i class="fas fa-file-code"></i>
                         </div>
                         <h4 class="report-title"><?php echo htmlspecialchars($modelo['nome']); ?></h4>
                         <p class="report-description">
-                            <?php echo htmlspecialchars($modelo['descricao'] ?? 'Modelo personalizado'); ?>
+                            <?php echo htmlspecialchars($modelo['descricao'] ?? 'Modelo personalizado de relatório'); ?>
                         </p>
                         <div class="report-meta">
                             <span><i class="fas fa-user"></i> <?php echo htmlspecialchars($modelo['criado_por_nome'] ?? 'Sistema'); ?></span>
                             <span><?php echo $modelo['total_execucoes'] ?? 0; ?> execuções</span>
                         </div>
+                        <div class="model-actions">
+                            <a class="model-action primary" onclick="executarModelo(<?php echo $modelo['id']; ?>); event.stopPropagation();">
+                                <i class="fas fa-play"></i>
+                                <span>Executar</span>
+                            </a>
+                            <a class="model-action" onclick="editarModelo(<?php echo $modelo['id']; ?>); event.stopPropagation();">
+                                <i class="fas fa-edit"></i>
+                                <span>Editar</span>
+                            </a>
+                            <a class="model-action" onclick="duplicarModelo(<?php echo $modelo['id']; ?>); event.stopPropagation();">
+                                <i class="fas fa-copy"></i>
+                                <span>Duplicar</span>
+                            </a>
+                            <?php if ($auth->isDiretor()): ?>
+                            <a class="model-action danger" onclick="excluirModelo(<?php echo $modelo['id']; ?>, '<?php echo htmlspecialchars($modelo['nome'], ENT_QUOTES); ?>'); event.stopPropagation();">
+                                <i class="fas fa-trash"></i>
+                                <span>Excluir</span>
+                            </a>
+                            <?php endif; ?>
+                        </div>
                     </div>
                     <?php endforeach; ?>
                 </div>
             </div>
+            <?php endif; ?>
 
             <!-- Recent Activity -->
             <div class="section-card" data-aos="fade-up" data-aos-delay="200">
@@ -1336,100 +1860,40 @@ try {
         </div>
     </div>
 
-    <!-- Modal de Configuração de Relatório -->
-    <div class="modal-custom" id="modalConfiguracao">
+    <!-- Modal de Filtros Rápidos -->
+    <div class="modal-custom" id="modalFiltrosRapidos">
         <div class="modal-content-custom">
             <div class="modal-header-custom">
-                <h2 class="modal-title-custom" id="modalTitle">Configurar Relatório</h2>
-                <button class="modal-close-custom" onclick="fecharModal('modalConfiguracao')">
+                <h2 class="modal-title-custom" id="modalFiltrosTitle">Filtrar Relatório</h2>
+                <button class="modal-close-custom" onclick="fecharModal('modalFiltrosRapidos')">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
             <div class="modal-body-custom">
-                <form id="formRelatorio">
-                    <input type="hidden" id="tipoRelatorio" name="tipo">
+                <form id="formFiltrosRapidos">
+                    <input type="hidden" id="tipoRelatorioRapido" name="tipo">
                     
-                    <!-- Seleção de Campos -->
+                    <!-- Filtros de Data -->
                     <div class="form-section">
-                        <h3 class="form-section-title">Campos do Relatório</h3>
-                        <p class="form-text mb-3">Selecione os campos que deseja incluir no relatório</p>
-                        <div class="checkbox-group" id="camposContainer">
-                            <!-- Campos serão carregados dinamicamente -->
+                        <h3 class="form-section-title">Período</h3>
+                        <div class="date-range-simple">
+                            <input type="date" class="form-control-custom" id="dataInicioRapido" name="data_inicio">
+                            <span style="color: var(--gray-500);">até</span>
+                            <input type="date" class="form-control-custom" id="dataFimRapido" name="data_fim">
                         </div>
                     </div>
 
-                    <!-- Filtros -->
-                    <div class="form-section">
-                        <h3 class="form-section-title">Filtros</h3>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label class="form-label">Data Inicial</label>
-                                    <input type="date" class="form-control-custom" id="dataInicio" name="data_inicio">
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label class="form-label">Data Final</label>
-                                    <input type="date" class="form-control-custom" id="dataFim" name="data_fim">
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div id="filtrosEspecificos">
-                            <!-- Filtros específicos por tipo serão carregados aqui -->
-                        </div>
-                    </div>
-
-                    <!-- Opções -->
-                    <div class="form-section">
-                        <h3 class="form-section-title">Opções do Relatório</h3>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label class="form-label">Ordenar por</label>
-                                    <select class="form-control-custom form-select-custom" id="ordenacao" name="ordenacao">
-                                        <option value="">Padrão</option>
-                                        <option value="nome ASC">Nome (A-Z)</option>
-                                        <option value="nome DESC">Nome (Z-A)</option>
-                                        <option value="id DESC">Mais recentes</option>
-                                        <option value="id ASC">Mais antigos</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label class="form-label">Formato de Exportação</label>
-                                    <select class="form-control-custom form-select-custom" id="formato" name="formato">
-                                        <option value="html">Visualizar (HTML)</option>
-                                        <option value="excel">Excel</option>
-                                        <option value="csv">CSV</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="form-group">
-                            <label class="checkbox-item">
-                                <input type="checkbox" class="checkbox-custom" id="salvarModelo" name="salvar_modelo">
-                                <span class="checkbox-label">Salvar como modelo para uso futuro</span>
-                            </label>
-                        </div>
-
-                        <div class="form-group" id="nomeModeloGroup" style="display: none;">
-                            <label class="form-label">Nome do Modelo</label>
-                            <input type="text" class="form-control-custom" id="nomeModelo" name="nome_modelo" placeholder="Digite um nome para o modelo">
-                        </div>
-                    </div>
+                    <!-- Filtros Específicos serão carregados aqui -->
+                    <div id="filtrosEspecificosRapidos"></div>
 
                     <!-- Botões -->
-                    <div class="d-flex justify-content-end gap-2">
-                        <button type="button" class="btn-modern btn-secondary" onclick="fecharModal('modalConfiguracao')">
+                    <div class="d-flex justify-content-end gap-2 mt-4">
+                        <button type="button" class="btn-modern btn-secondary" onclick="fecharModal('modalFiltrosRapidos')">
                             Cancelar
                         </button>
                         <button type="submit" class="btn-modern btn-primary">
-                            <i class="fas fa-play"></i>
-                            Gerar Relatório
+                            <i class="fas fa-filter"></i>
+                            Aplicar Filtros
                         </button>
                     </div>
                 </form>
@@ -1437,46 +1901,136 @@ try {
         </div>
     </div>
 
-    <!-- Modal de Novo Relatório -->
-    <div class="modal-custom" id="modalNovoRelatorio">
-        <div class="modal-content-custom" style="max-width: 600px;">
+    <!-- Modal de Relatório Personalizado -->
+    <div class="modal-custom" id="modalPersonalizado">
+        <div class="modal-content-custom large">
             <div class="modal-header-custom">
-                <h2 class="modal-title-custom">Criar Novo Relatório</h2>
-                <button class="modal-close-custom" onclick="fecharModal('modalNovoRelatorio')">
+                <h2 class="modal-title-custom">Criar Relatório Personalizado</h2>
+                <button class="modal-close-custom" onclick="fecharModal('modalPersonalizado')">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
             <div class="modal-body-custom">
-                <form id="formNovoRelatorio">
-                    <div class="form-group">
-                        <label class="form-label">Nome do Relatório</label>
-                        <input type="text" class="form-control-custom" id="novoNome" name="nome" required placeholder="Ex: Relatório Mensal de Associados">
+                <form id="formPersonalizado">
+                    <!-- Informações Básicas -->
+                    <div class="form-section">
+                        <h3 class="form-section-title">Informações do Relatório</h3>
+                        <div class="form-group">
+                            <label class="form-label">Nome do Relatório</label>
+                            <input type="text" class="form-control-custom" id="nomeRelatorio" name="nome" required placeholder="Ex: Relatório Mensal de Associados">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Tipo de Dados</label>
+                            <select class="form-control-custom form-select-custom" id="tipoRelatorio" name="tipo" required>
+                                <option value="">Selecione o tipo</option>
+                                <option value="associados">Associados</option>
+                                <option value="financeiro">Financeiro</option>
+                                <option value="militar">Militar</option>
+                                <option value="servicos">Serviços</option>
+                                <option value="documentos">Documentos</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Descrição (opcional)</label>
+                            <textarea class="form-control-custom" id="descricaoRelatorio" name="descricao" rows="2" placeholder="Descreva o objetivo deste relatório"></textarea>
+                        </div>
                     </div>
 
-                    <div class="form-group">
-                        <label class="form-label">Descrição</label>
-                        <textarea class="form-control-custom" id="novoDescricao" name="descricao" rows="3" placeholder="Descreva o objetivo deste relatório"></textarea>
+                    <!-- Seleção de Campos -->
+                    <div class="form-section" id="secaoCampos" style="display: none;">
+                        <h3 class="form-section-title">Campos do Relatório</h3>
+                        
+                        <!-- Tabs para alternar entre seleção e ordenação -->
+                        <div class="campos-tabs">
+                            <button type="button" class="campos-tab active" onclick="alternarTabCampos('selecao', event)">
+                                <i class="fas fa-check-square"></i> Selecionar Campos
+                            </button>
+                            <button type="button" class="campos-tab" onclick="alternarTabCampos('ordem', event)">
+                                <i class="fas fa-sort"></i> Ordenar Campos
+                            </button>
+                        </div>
+
+                        <!-- Tab de Seleção -->
+                        <div class="campos-tab-content active" id="tabSelecao">
+                            <div class="quick-filters">
+                                <div class="quick-filters-title">Ações rápidas:</div>
+                                <div class="filter-pills">
+                                    <span class="filter-pill" onclick="selecionarTodosCampos()">
+                                        <i class="fas fa-check-square"></i> Selecionar Todos
+                                    </span>
+                                    <span class="filter-pill" onclick="limparTodosCampos()">
+                                        <i class="fas fa-square"></i> Limpar Todos
+                                    </span>
+                                    <span class="filter-pill" onclick="selecionarCamposBasicos()">
+                                        <i class="fas fa-star"></i> Campos Básicos
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="checkbox-group" id="camposPersonalizados">
+                                <!-- Campos serão carregados dinamicamente -->
+                            </div>
+                        </div>
+
+                        <!-- Tab de Ordenação -->
+                        <div class="campos-tab-content" id="tabOrdem">
+                            <div class="campos-selecionados-container">
+                                <div class="campos-selecionados-header">
+                                    <div class="campos-selecionados-title">
+                                        <i class="fas fa-grip-vertical"></i> Arraste para reordenar
+                                    </div>
+                                    <div class="campos-ordem-info">
+                                        Os campos aparecerão no relatório nesta ordem
+                                    </div>
+                                </div>
+                                <ul class="campos-selecionados-list" id="camposSelecionadosList">
+                                    <!-- Campos selecionados aparecerão aqui -->
+                                </ul>
+                                <div class="campos-selecionados-empty" id="camposSelecionadosEmpty">
+                                    <i class="fas fa-inbox"></i>
+                                    <p>Nenhum campo selecionado</p>
+                                    <p class="text-muted small">Selecione campos na aba anterior</p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
-                    <div class="form-group">
-                        <label class="form-label">Tipo de Relatório</label>
-                        <select class="form-control-custom form-select-custom" id="novoTipo" name="tipo" required>
-                            <option value="">Selecione o tipo</option>
-                            <option value="associados">Associados</option>
-                            <option value="financeiro">Financeiro</option>
-                            <option value="militar">Militar</option>
-                            <option value="servicos">Serviços</option>
-                            <option value="documentos">Documentos</option>
-                        </select>
+                    <!-- Filtros e Ordenação -->
+                    <div class="form-section" id="secaoFiltros" style="display: none;">
+                        <h3 class="form-section-title">Filtros e Ordenação</h3>
+                        <div id="filtrosPersonalizados">
+                            <!-- Filtros serão carregados dinamicamente -->
+                        </div>
+                        
+                        <div class="form-group mt-3">
+                            <label class="form-label">Ordenar por</label>
+                            <select class="form-control-custom form-select-custom" name="ordenacao">
+                                <option value="">Padrão</option>
+                                <option value="nome ASC">Nome (A-Z)</option>
+                                <option value="nome DESC">Nome (Z-A)</option>
+                                <option value="id DESC">Mais recentes</option>
+                                <option value="id ASC">Mais antigos</option>
+                            </select>
+                        </div>
                     </div>
 
-                    <div class="d-flex justify-content-end gap-2 mt-4">
-                        <button type="button" class="btn-modern btn-secondary" onclick="fecharModal('modalNovoRelatorio')">
+                    <!-- Opções de Salvamento -->
+                    <div class="form-section">
+                        <label class="checkbox-item">
+                            <input type="checkbox" class="checkbox-custom" id="salvarModelo" name="salvar_modelo" checked>
+                            <span class="checkbox-label">Salvar como modelo para uso futuro</span>
+                        </label>
+                    </div>
+
+                    <!-- Botões -->
+                    <div class="d-flex justify-content-end gap-2">
+                        <button type="button" class="btn-modern btn-secondary" onclick="fecharModal('modalPersonalizado')">
                             Cancelar
                         </button>
                         <button type="submit" class="btn-modern btn-primary">
-                            <i class="fas fa-arrow-right"></i>
-                            Continuar
+                            <i class="fas fa-file-export"></i>
+                            Gerar Relatório
                         </button>
                     </div>
                 </form>
@@ -1498,6 +2052,15 @@ try {
         // Variáveis globais
         let tipoRelatorioAtual = '';
         let camposDisponiveis = {};
+        let camposOrdenados = [];
+        let isDiretor = <?php echo $auth->isDiretor() ? 'true' : 'false'; ?>;
+        let camposBasicos = {
+            'associados': ['nome', 'cpf', 'telefone', 'email', 'situacao'],
+            'financeiro': ['nome', 'cpf', 'tipoAssociado', 'situacaoFinanceira'],
+            'militar': ['nome', 'cpf', 'corporacao', 'patente'],
+            'servicos': ['nome', 'cpf', 'servico_nome', 'valor_aplicado', 'ativo'],
+            'documentos': ['nome', 'cpf', 'tipo_documento', 'data_upload', 'verificado']
+        };
 
         // User Dropdown Menu
         document.addEventListener('DOMContentLoaded', function() {
@@ -1515,13 +2078,37 @@ try {
                 });
             }
 
-            // Event listeners para formulários
-            document.getElementById('formRelatorio').addEventListener('submit', gerarRelatorio);
-            document.getElementById('formNovoRelatorio').addEventListener('submit', criarNovoRelatorio);
+            // Event listeners
+            document.getElementById('formFiltrosRapidos').addEventListener('submit', aplicarFiltrosRapidos);
+            document.getElementById('formPersonalizado').addEventListener('submit', gerarRelatorioPersonalizado);
             
-            // Checkbox salvar modelo
-            document.getElementById('salvarModelo').addEventListener('change', function() {
-                document.getElementById('nomeModeloGroup').style.display = this.checked ? 'block' : 'none';
+            // Mudança de tipo no relatório personalizado
+            document.getElementById('tipoRelatorio').addEventListener('change', function() {
+                if (this.value) {
+                    document.getElementById('secaoCampos').style.display = 'block';
+                    document.getElementById('secaoFiltros').style.display = 'block';
+                    
+                    // Se mudou o tipo, limpa a ordem anterior pois os campos são diferentes
+                    if (this.value !== tipoRelatorioAtual) {
+                        camposOrdenados = [];
+                    }
+                    
+                    tipoRelatorioAtual = this.value;
+                    carregarCamposPersonalizados(this.value);
+                    carregarFiltrosPersonalizados(this.value);
+                    // Reseta para aba de seleção (sem event)
+                    alternarTabCampos('selecao', null);
+                } else {
+                    document.getElementById('secaoCampos').style.display = 'none';
+                    document.getElementById('secaoFiltros').style.display = 'none';
+                }
+            });
+            
+            // Event listener para mudanças nos checkboxes
+            document.addEventListener('change', function(e) {
+                if (e.target.matches('#camposPersonalizados input[type="checkbox"]')) {
+                    atualizarCamposSelecionados();
+                }
             });
         });
 
@@ -1537,33 +2124,234 @@ try {
             document.getElementById('loadingOverlay').classList.remove('active');
         }
 
-        // Abre modal de configuração
-        function abrirModalConfiguracao(tipo) {
+        // Executa relatório rápido
+        function executarRelatorioRapido(tipo, preset = null) {
+            if (preset === 'personalizar') {
+                // Abre modal de filtros
+                abrirModalFiltrosRapidos(tipo);
+                return;
+            }
+
+            showLoading('Gerando relatório...');
+
+            // Prepara dados baseados no preset
+            const dados = {
+                tipo: tipo,
+                campos: getCamposPreset(tipo, preset),
+                formato: 'html'
+            };
+
+            // Adiciona filtros baseados no preset
+            const filtros = getFiltrosPreset(tipo, preset);
+            Object.assign(dados, filtros);
+
+            // Executa relatório
+            executarRelatorio(dados);
+        }
+
+        // Retorna campos predefinidos para relatórios rápidos
+        function getCamposPreset(tipo, preset) {
+            const presets = {
+                'associados': {
+                    'default': ['nome', 'cpf', 'telefone', 'email', 'situacao', 'corporacao', 'patente'],
+                    'hoje': ['nome', 'cpf', 'telefone', 'email', 'dataFiliacao'],
+                    'mes': ['nome', 'cpf', 'telefone', 'email', 'situacao', 'dataFiliacao']
+                },
+                'financeiro': {
+                    'default': ['nome', 'cpf', 'tipoAssociado', 'situacaoFinanceira', 'localDebito'],
+                    'adimplentes': ['nome', 'cpf', 'tipoAssociado', 'situacaoFinanceira'],
+                    'inadimplentes': ['nome', 'cpf', 'tipoAssociado', 'situacaoFinanceira', 'telefone', 'email']
+                },
+                'militar': {
+                    'default': ['nome', 'cpf', 'corporacao', 'patente', 'categoria', 'unidade'],
+                    'patente': ['patente', 'nome', 'cpf', 'corporacao', 'unidade'],
+                    'corporacao': ['corporacao', 'nome', 'cpf', 'patente', 'unidade']
+                },
+                'servicos': {
+                    'default': ['nome', 'cpf', 'servico_nome', 'valor_aplicado', 'data_adesao', 'ativo'],
+                    'ativos': ['nome', 'cpf', 'servico_nome', 'valor_aplicado', 'data_adesao'],
+                    'todos': ['nome', 'cpf', 'servico_nome', 'valor_aplicado', 'data_adesao', 'ativo']
+                },
+                'documentos': {
+                    'default': ['nome', 'cpf', 'tipo_documento', 'data_upload', 'verificado'],
+                    'pendentes': ['nome', 'cpf', 'tipo_documento', 'data_upload'],
+                    'verificados': ['nome', 'cpf', 'tipo_documento', 'data_upload', 'funcionario_nome']
+                }
+            };
+
+            return presets[tipo]?.[preset] || presets[tipo]?.['default'] || [];
+        }
+
+        // Retorna filtros predefinidos para relatórios rápidos
+        function getFiltrosPreset(tipo, preset) {
+            const hoje = new Date().toISOString().split('T')[0];
+            const inicioMes = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
+            
+            const filtros = {
+                'associados': {
+                    'hoje': { data_inicio: hoje, data_fim: hoje },
+                    'mes': { data_inicio: inicioMes, data_fim: hoje }
+                },
+                'financeiro': {
+                    'adimplentes': { situacaoFinanceira: 'Regular' },
+                    'inadimplentes': { situacaoFinanceira: 'Inadimplente' }
+                },
+                'militar': {
+                    'patente': { ordenacao: 'patente ASC, nome ASC' },
+                    'corporacao': { ordenacao: 'corporacao ASC, patente ASC, nome ASC' }
+                },
+                'servicos': {
+                    'ativos': { ativo: '1' },
+                    'todos': {}
+                },
+                'documentos': {
+                    'pendentes': { verificado: '0' },
+                    'verificados': { verificado: '1' }
+                }
+            };
+
+            return filtros[tipo]?.[preset] || {};
+        }
+
+        // Abre modal de filtros rápidos
+        function abrirModalFiltrosRapidos(tipo) {
             tipoRelatorioAtual = tipo;
-            document.getElementById('tipoRelatorio').value = tipo;
+            document.getElementById('tipoRelatorioRapido').value = tipo;
             
             // Atualiza título
             const titulos = {
-                'associados': 'Configurar Relatório de Associados',
-                'financeiro': 'Configurar Relatório Financeiro',
-                'militar': 'Configurar Relatório Militar',
-                'servicos': 'Configurar Relatório de Serviços',
-                'documentos': 'Configurar Relatório de Documentos'
+                'associados': 'Filtrar Relatório de Associados',
+                'financeiro': 'Filtrar Relatório Financeiro',
+                'militar': 'Filtrar Relatório Militar',
+                'servicos': 'Filtrar Relatório de Serviços',
+                'documentos': 'Filtrar Relatório de Documentos'
             };
-            document.getElementById('modalTitle').textContent = titulos[tipo] || 'Configurar Relatório';
-            
-            // Carrega campos disponíveis
-            carregarCampos(tipo);
+            document.getElementById('modalFiltrosTitle').textContent = titulos[tipo] || 'Filtrar Relatório';
             
             // Carrega filtros específicos
-            carregarFiltrosEspecificos(tipo);
+            carregarFiltrosRapidos(tipo);
             
             // Abre modal
-            document.getElementById('modalConfiguracao').classList.add('show');
+            document.getElementById('modalFiltrosRapidos').classList.add('show');
         }
 
-        // Carrega campos disponíveis
-        function carregarCampos(tipo) {
+        // Carrega filtros específicos para modal rápido
+        function carregarFiltrosRapidos(tipo) {
+            const container = document.getElementById('filtrosEspecificosRapidos');
+            let html = '<div class="form-section"><h3 class="form-section-title">Filtros Específicos</h3>';
+            
+            switch(tipo) {
+                case 'associados':
+                    html += `
+                        <div class="form-group">
+                            <label class="form-label">Situação</label>
+                            <select class="form-control-custom form-select-custom" name="situacao">
+                                <option value="">Todos</option>
+                                <option value="Filiado">Filiado</option>
+                                <option value="Desfiliado">Desfiliado</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Buscar</label>
+                            <input type="text" class="form-control-custom" name="busca" placeholder="Nome, CPF ou RG">
+                        </div>
+                    `;
+                    break;
+                    
+                case 'financeiro':
+                    html += `
+                        <div class="form-group">
+                            <label class="form-label">Situação Financeira</label>
+                            <select class="form-control-custom form-select-custom" name="situacaoFinanceira">
+                                <option value="">Todas</option>
+                                <option value="Regular">Regular</option>
+                                <option value="Inadimplente">Inadimplente</option>
+                            </select>
+                        </div>
+                    `;
+                    break;
+                    
+                case 'militar':
+                    html += `
+                        <div class="form-group">
+                            <label class="form-label">Corporação</label>
+                            <select class="form-control-custom form-select-custom" name="corporacao">
+                                <option value="">Todas</option>
+                                <option value="PM">Polícia Militar</option>
+                                <option value="CBM">Corpo de Bombeiros</option>
+                                <option value="PC">Polícia Civil</option>
+                            </select>
+                        </div>
+                    `;
+                    break;
+                    
+                case 'servicos':
+                    html += `
+                        <div class="form-group">
+                            <label class="form-label">Status do Serviço</label>
+                            <select class="form-control-custom form-select-custom" name="ativo">
+                                <option value="">Todos</option>
+                                <option value="1">Ativo</option>
+                                <option value="0">Inativo</option>
+                            </select>
+                        </div>
+                    `;
+                    break;
+                    
+                case 'documentos':
+                    html += `
+                        <div class="form-group">
+                            <label class="form-label">Status de Verificação</label>
+                            <select class="form-control-custom form-select-custom" name="verificado">
+                                <option value="">Todos</option>
+                                <option value="1">Verificado</option>
+                                <option value="0">Não Verificado</option>
+                            </select>
+                        </div>
+                    `;
+                    break;
+            }
+            
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        // Aplica filtros rápidos
+        function aplicarFiltrosRapidos(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            const dados = {
+                tipo: formData.get('tipo'),
+                campos: getCamposPreset(formData.get('tipo'), 'default'),
+                formato: 'html'
+            };
+            
+            // Adiciona filtros do formulário
+            for (let [key, value] of formData.entries()) {
+                if (key !== 'tipo' && value) {
+                    dados[key] = value;
+                }
+            }
+            
+            showLoading('Gerando relatório...');
+            executarRelatorio(dados);
+            fecharModal('modalFiltrosRapidos');
+        }
+
+        // Abre modal de relatório personalizado
+        function abrirModalPersonalizado() {
+            // Limpa estado anterior apenas se não estiver editando
+            const formPersonalizado = document.getElementById('formPersonalizado');
+            if (!formPersonalizado.getAttribute('data-modelo-id')) {
+                camposOrdenados = [];
+                tipoRelatorioAtual = '';
+            }
+            document.getElementById('modalPersonalizado').classList.add('show');
+        }
+
+        // Carrega campos para relatório personalizado
+        function carregarCamposPersonalizados(tipo) {
             showLoading('Carregando campos...');
             
             $.ajax({
@@ -1576,7 +2364,7 @@ try {
                     
                     if (response.status === 'success') {
                         camposDisponiveis = response.campos;
-                        renderizarCampos(response.campos);
+                        renderizarCamposPersonalizados(response.campos);
                     } else {
                         alert('Erro ao carregar campos: ' + response.message);
                     }
@@ -1587,87 +2375,20 @@ try {
                     
                     // Usa campos padrão como fallback
                     const camposPadrao = getCamposPadrao(tipo);
-                    renderizarCampos(camposPadrao);
+                    renderizarCamposPersonalizados(camposPadrao);
                 }
             });
         }
 
-        // Campos padrão por tipo (fallback)
-        function getCamposPadrao(tipo) {
-            const campos = {
-                'associados': {
-                    'Dados Pessoais': [
-                        { nome_campo: 'nome', nome_exibicao: 'Nome Completo' },
-                        { nome_campo: 'cpf', nome_exibicao: 'CPF' },
-                        { nome_campo: 'rg', nome_exibicao: 'RG' },
-                        { nome_campo: 'nasc', nome_exibicao: 'Data de Nascimento' },
-                        { nome_campo: 'sexo', nome_exibicao: 'Sexo' },
-                        { nome_campo: 'email', nome_exibicao: 'E-mail' },
-                        { nome_campo: 'telefone', nome_exibicao: 'Telefone' }
-                    ],
-                    'Informações Militares': [
-                        { nome_campo: 'corporacao', nome_exibicao: 'Corporação' },
-                        { nome_campo: 'patente', nome_exibicao: 'Patente' },
-                        { nome_campo: 'categoria', nome_exibicao: 'Categoria' },
-                        { nome_campo: 'lotacao', nome_exibicao: 'Lotação' },
-                        { nome_campo: 'unidade', nome_exibicao: 'Unidade' }
-                    ],
-                    'Situação': [
-                        { nome_campo: 'situacao', nome_exibicao: 'Situação' },
-                        { nome_campo: 'dataFiliacao', nome_exibicao: 'Data de Filiação' },
-                        { nome_campo: 'dataDesfiliacao', nome_exibicao: 'Data de Desfiliação' }
-                    ]
-                },
-                'financeiro': {
-                    'Dados Financeiros': [
-                        { nome_campo: 'tipoAssociado', nome_exibicao: 'Tipo de Associado' },
-                        { nome_campo: 'situacaoFinanceira', nome_exibicao: 'Situação Financeira' },
-                        { nome_campo: 'vinculoServidor', nome_exibicao: 'Vínculo Servidor' },
-                        { nome_campo: 'localDebito', nome_exibicao: 'Local de Débito' }
-                    ],
-                    'Dados Bancários': [
-                        { nome_campo: 'agencia', nome_exibicao: 'Agência' },
-                        { nome_campo: 'operacao', nome_exibicao: 'Operação' },
-                        { nome_campo: 'contaCorrente', nome_exibicao: 'Conta Corrente' }
-                    ]
-                },
-                'militar': {
-                    'Informações Militares': [
-                        { nome_campo: 'corporacao', nome_exibicao: 'Corporação' },
-                        { nome_campo: 'patente', nome_exibicao: 'Patente' },
-                        { nome_campo: 'categoria', nome_exibicao: 'Categoria' },
-                        { nome_campo: 'lotacao', nome_exibicao: 'Lotação' },
-                        { nome_campo: 'unidade', nome_exibicao: 'Unidade' }
-                    ]
-                },
-                'servicos': {
-                    'Serviços': [
-                        { nome_campo: 'servico_nome', nome_exibicao: 'Nome do Serviço' },
-                        { nome_campo: 'valor_aplicado', nome_exibicao: 'Valor Aplicado' },
-                        { nome_campo: 'percentual_aplicado', nome_exibicao: 'Percentual' },
-                        { nome_campo: 'data_adesao', nome_exibicao: 'Data de Adesão' },
-                        { nome_campo: 'ativo', nome_exibicao: 'Status' }
-                    ]
-                },
-                'documentos': {
-                    'Documentos': [
-                        { nome_campo: 'tipo_documento', nome_exibicao: 'Tipo de Documento' },
-                        { nome_campo: 'nome_arquivo', nome_exibicao: 'Nome do Arquivo' },
-                        { nome_campo: 'data_upload', nome_exibicao: 'Data de Upload' },
-                        { nome_campo: 'verificado', nome_exibicao: 'Verificado' }
-                    ]
-                }
-            };
-            
-            return campos[tipo] || {};
-        }
-
-        // Renderiza campos no checkbox group
-        function renderizarCampos(campos) {
-            const container = document.getElementById('camposContainer');
+        // Renderiza campos no modal personalizado
+        function renderizarCamposPersonalizados(campos) {
+            const container = document.getElementById('camposPersonalizados');
             container.innerHTML = '';
             
-            for (const categoria in campos) {
+            // Se já temos uma ordem definida, reorganiza os campos para respeitar
+            let camposOrganizados = reorganizarCamposPorOrdem(campos);
+            
+            for (const categoria in camposOrganizados) {
                 // Adiciona header da categoria
                 const categoryDiv = document.createElement('div');
                 categoryDiv.className = 'w-100';
@@ -1675,33 +2396,111 @@ try {
                 container.appendChild(categoryDiv);
                 
                 // Adiciona campos da categoria
-                campos[categoria].forEach(campo => {
+                camposOrganizados[categoria].forEach(campo => {
                     const checkboxItem = document.createElement('div');
                     checkboxItem.className = 'checkbox-item';
+                    
+                    // Marca campos básicos por padrão ou campos que estavam selecionados
+                    const isBasico = camposBasicos[tipoRelatorioAtual]?.includes(campo.nome_campo);
+                    const isSelecionado = camposOrdenados.includes(campo.nome_campo);
+                    
                     checkboxItem.innerHTML = `
                         <input type="checkbox" 
                                class="checkbox-custom" 
-                               id="campo_${campo.nome_campo}" 
+                               id="campo_personalizado_${campo.nome_campo}" 
                                name="campos[]" 
                                value="${campo.nome_campo}"
-                               checked>
-                        <label class="checkbox-label" for="campo_${campo.nome_campo}">
+                               ${(isBasico || isSelecionado) ? 'checked' : ''}>
+                        <label class="checkbox-label" for="campo_personalizado_${campo.nome_campo}">
                             ${campo.nome_exibicao}
                         </label>
                     `;
                     container.appendChild(checkboxItem);
                 });
             }
+            
+            // Se temos campos ordenados, atualiza a lista
+            if (camposOrdenados.length > 0) {
+                setTimeout(() => {
+                    atualizarCamposSelecionados();
+                }, 100);
+            }
         }
 
-        // Carrega filtros específicos por tipo
-        function carregarFiltrosEspecificos(tipo) {
-            const container = document.getElementById('filtrosEspecificos');
+        // Reorganiza campos respeitando a ordem salva
+        function reorganizarCamposPorOrdem(campos) {
+            if (camposOrdenados.length === 0) {
+                return campos;
+            }
+            
+            // Cria um mapa de campos para facilitar busca
+            let mapaCampos = {};
+            for (const categoria in campos) {
+                campos[categoria].forEach(campo => {
+                    mapaCampos[campo.nome_campo] = {
+                        ...campo,
+                        categoria: categoria
+                    };
+                });
+            }
+            
+            // Reorganiza baseado na ordem
+            let camposReorganizados = {};
+            
+            // Primeiro, adiciona campos na ordem definida
+            camposOrdenados.forEach(nomeCampo => {
+                if (mapaCampos[nomeCampo]) {
+                    const campo = mapaCampos[nomeCampo];
+                    const categoria = campo.categoria;
+                    
+                    if (!camposReorganizados[categoria]) {
+                        camposReorganizados[categoria] = [];
+                    }
+                    
+                    // Evita duplicatas
+                    if (!camposReorganizados[categoria].find(c => c.nome_campo === nomeCampo)) {
+                        camposReorganizados[categoria].push({
+                            nome_campo: campo.nome_campo,
+                            nome_exibicao: campo.nome_exibicao,
+                            tipo_dado: campo.tipo_dado
+                        });
+                    }
+                }
+            });
+            
+            // Depois, adiciona campos que não estão na ordem (novos campos)
+            for (const categoria in campos) {
+                campos[categoria].forEach(campo => {
+                    if (!camposOrdenados.includes(campo.nome_campo)) {
+                        if (!camposReorganizados[categoria]) {
+                            camposReorganizados[categoria] = [];
+                        }
+                        camposReorganizados[categoria].push(campo);
+                    }
+                });
+            }
+            
+            return camposReorganizados;
+        }
+
+        // Carrega filtros para relatório personalizado
+        function carregarFiltrosPersonalizados(tipo) {
+            const container = document.getElementById('filtrosPersonalizados');
             let html = '';
             
+            // Filtros de data (comuns a todos)
+            html += `
+                <div class="date-range-simple mb-3">
+                    <input type="date" class="form-control-custom" name="data_inicio" placeholder="Data inicial">
+                    <span style="color: var(--gray-500);">até</span>
+                    <input type="date" class="form-control-custom" name="data_fim" placeholder="Data final">
+                </div>
+            `;
+            
+            // Filtros específicos por tipo
             switch(tipo) {
                 case 'associados':
-                    html = `
+                    html += `
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="form-group">
@@ -1715,28 +2514,8 @@ try {
                             </div>
                             <div class="col-md-6">
                                 <div class="form-group">
-                                    <label class="form-label">Corporação</label>
-                                    <select class="form-control-custom form-select-custom" name="corporacao">
-                                        <option value="">Todas</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label class="form-label">Patente</label>
-                                    <select class="form-control-custom form-select-custom" name="patente">
-                                        <option value="">Todas</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label class="form-label">Tipo de Associado</label>
-                                    <select class="form-control-custom form-select-custom" name="tipo_associado">
-                                        <option value="">Todos</option>
-                                    </select>
+                                    <label class="form-label">Buscar</label>
+                                    <input type="text" class="form-control-custom" name="busca" placeholder="Nome, CPF ou RG">
                                 </div>
                             </div>
                         </div>
@@ -1744,74 +2523,36 @@ try {
                     break;
                     
                 case 'financeiro':
-                    html = `
+                    html += `
+                        <div class="form-group">
+                            <label class="form-label">Situação Financeira</label>
+                            <select class="form-control-custom form-select-custom" name="situacaoFinanceira">
+                                <option value="">Todas</option>
+                                <option value="Regular">Regular</option>
+                                <option value="Inadimplente">Inadimplente</option>
+                            </select>
+                        </div>
+                    `;
+                    break;
+                    
+                case 'militar':
+                    html += `
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="form-group">
-                                    <label class="form-label">Situação Financeira</label>
-                                    <select class="form-control-custom form-select-custom" name="situacaoFinanceira">
+                                    <label class="form-label">Corporação</label>
+                                    <select class="form-control-custom form-select-custom" name="corporacao">
                                         <option value="">Todas</option>
-                                        <option value="Regular">Regular</option>
-                                        <option value="Inadimplente">Inadimplente</option>
+                                        <option value="PM">Polícia Militar</option>
+                                        <option value="CBM">Corpo de Bombeiros</option>
+                                        <option value="PC">Polícia Civil</option>
                                     </select>
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="form-group">
-                                    <label class="form-label">Tipo de Associado</label>
-                                    <select class="form-control-custom form-select-custom" name="tipo_associado">
-                                        <option value="">Todos</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                    break;
-                    
-                case 'servicos':
-                    html = `
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label class="form-label">Serviço</label>
-                                    <select class="form-control-custom form-select-custom" name="servico_id">
-                                        <option value="">Todos</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label class="form-label">Status</label>
-                                    <select class="form-control-custom form-select-custom" name="ativo">
-                                        <option value="">Todos</option>
-                                        <option value="1">Ativo</option>
-                                        <option value="0">Inativo</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                    break;
-                    
-                case 'documentos':
-                    html = `
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label class="form-label">Tipo de Documento</label>
-                                    <select class="form-control-custom form-select-custom" name="tipo_documento">
-                                        <option value="">Todos</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label class="form-label">Status de Verificação</label>
-                                    <select class="form-control-custom form-select-custom" name="verificado">
-                                        <option value="">Todos</option>
-                                        <option value="1">Verificado</option>
-                                        <option value="0">Não Verificado</option>
-                                    </select>
+                                    <label class="form-label">Patente</label>
+                                    <input type="text" class="form-control-custom" name="patente" placeholder="Ex: Coronel">
                                 </div>
                             </div>
                         </div>
@@ -1820,52 +2561,32 @@ try {
             }
             
             container.innerHTML = html;
-            
-            // Carrega opções dos selects dinamicamente
-            carregarOpcoesSelects(tipo);
         }
 
-        // Carrega opções dos selects
-        function carregarOpcoesSelects(tipo) {
-            // Aqui você pode fazer chamadas AJAX para carregar as opções dinamicamente
-            // Por exemplo, carregar corporações, patentes, serviços, etc.
+        // Funções de seleção de campos
+        function selecionarTodosCampos() {
+            document.querySelectorAll('#camposPersonalizados input[type="checkbox"]').forEach(cb => {
+                cb.checked = true;
+            });
         }
 
-        // Abre modal de novo relatório
-        function abrirModalNovoRelatorio() {
-            document.getElementById('modalNovoRelatorio').classList.add('show');
+        function limparTodosCampos() {
+            document.querySelectorAll('#camposPersonalizados input[type="checkbox"]').forEach(cb => {
+                cb.checked = false;
+            });
         }
 
-        // Fecha modal
-        function fecharModal(modalId) {
-            document.getElementById(modalId).classList.remove('show');
+        function selecionarCamposBasicos() {
+            const tipo = document.getElementById('tipoRelatorio').value;
+            const basicos = camposBasicos[tipo] || [];
             
-            // Limpa formulários
-            if (modalId === 'modalConfiguracao') {
-                document.getElementById('formRelatorio').reset();
-            } else if (modalId === 'modalNovoRelatorio') {
-                document.getElementById('formNovoRelatorio').reset();
-            }
+            document.querySelectorAll('#camposPersonalizados input[type="checkbox"]').forEach(cb => {
+                cb.checked = basicos.includes(cb.value);
+            });
         }
 
-        // Cria novo relatório
-        function criarNovoRelatorio(e) {
-            e.preventDefault();
-            
-            const formData = new FormData(e.target);
-            const tipo = formData.get('tipo');
-            
-            // Fecha modal atual e abre modal de configuração
-            fecharModal('modalNovoRelatorio');
-            
-            // Aguarda um pouco para a animação
-            setTimeout(() => {
-                abrirModalConfiguracao(tipo);
-            }, 300);
-        }
-
-        // Gera relatório
-        function gerarRelatorio(e) {
+        // Gera relatório personalizado
+        function gerarRelatorioPersonalizado(e) {
             e.preventDefault();
             
             const formData = new FormData(e.target);
@@ -1874,11 +2595,21 @@ try {
             // Converte FormData para objeto
             for (let [key, value] of formData.entries()) {
                 if (key === 'campos[]') {
-                    if (!dados.campos) dados.campos = [];
-                    dados.campos.push(value);
+                    // Ignora campos[] do FormData, usaremos camposOrdenados
                 } else {
                     dados[key] = value;
                 }
+            }
+            
+            // Usa campos na ordem definida pelo usuário
+            if (camposOrdenados.length > 0) {
+                dados.campos = camposOrdenados;
+            } else {
+                // Se não há ordem definida, pega dos checkboxes
+                dados.campos = [];
+                document.querySelectorAll('#camposPersonalizados input[type="checkbox"]:checked').forEach(cb => {
+                    dados.campos.push(cb.value);
+                });
             }
             
             // Validações
@@ -1887,12 +2618,13 @@ try {
                 return;
             }
             
-            // Se marcou para salvar modelo, precisa de nome
-            if (dados.salvar_modelo && !dados.nome_modelo) {
-                alert('Digite um nome para o modelo');
-                document.getElementById('nomeModelo').focus();
-                return;
+            // Adiciona o ID do modelo se estiver editando
+            const modeloIdEditando = document.getElementById('formPersonalizado').getAttribute('data-modelo-id');
+            if (modeloIdEditando) {
+                dados.id = modeloIdEditando;
             }
+            
+            dados.formato = 'html'; // Padrão
             
             showLoading('Gerando relatório...');
             
@@ -1900,12 +2632,18 @@ try {
             if (dados.salvar_modelo) {
                 salvarModelo(dados).then(modeloId => {
                     executarRelatorio(dados);
+                    fecharModal('modalPersonalizado');
+                    // Recarrega a página para mostrar o modelo atualizado
+                    if (modeloIdEditando) {
+                        setTimeout(() => location.reload(), 1000);
+                    }
                 }).catch(error => {
                     hideLoading();
                     alert('Erro ao salvar modelo: ' + error);
                 });
             } else {
                 executarRelatorio(dados);
+                fecharModal('modalPersonalizado');
             }
         }
 
@@ -1913,31 +2651,46 @@ try {
         function salvarModelo(dados) {
             return new Promise((resolve, reject) => {
                 const modeloData = {
-                    nome: dados.nome_modelo,
+                    nome: dados.nome,
+                    descricao: dados.descricao || '',
                     tipo: dados.tipo,
                     campos: dados.campos,
-                    filtros: {
-                        data_inicio: dados.data_inicio,
-                        data_fim: dados.data_fim,
-                        situacao: dados.situacao,
-                        corporacao: dados.corporacao,
-                        patente: dados.patente,
-                        tipo_associado: dados.tipo_associado,
-                        servico_id: dados.servico_id,
-                        ativo: dados.ativo,
-                        tipo_documento: dados.tipo_documento,
-                        verificado: dados.verificado
-                    },
-                    ordenacao: dados.ordenacao
+                    filtros: {}
                 };
+                
+                // Se tem ID, é atualização
+                if (dados.id) {
+                    modeloData.id = dados.id;
+                }
+                
+                // Adiciona apenas filtros que não são vazios
+                const filtrosPossiveis = ['data_inicio', 'data_fim', 'situacao', 'corporacao', 
+                                         'patente', 'situacaoFinanceira', 'ativo', 'verificado', 'busca'];
+                
+                filtrosPossiveis.forEach(filtro => {
+                    if (dados[filtro] && dados[filtro] !== '') {
+                        modeloData.filtros[filtro] = dados[filtro];
+                    }
+                });
+                
+                // Adiciona ordenação se existir
+                if (dados.ordenacao && dados.ordenacao !== '') {
+                    modeloData.ordenacao = dados.ordenacao;
+                }
+                
+                // Define método baseado se é criação ou atualização
+                const method = dados.id ? 'PUT' : 'POST';
+                
+                console.log('Enviando modelo:', modeloData);
                 
                 $.ajax({
                     url: '../api/relatorios_salvar_modelo.php',
-                    method: 'POST',
+                    method: method,
                     data: JSON.stringify(modeloData),
                     contentType: 'application/json',
                     dataType: 'json',
                     success: function(response) {
+                        console.log('Resposta do servidor:', response);
                         if (response.status === 'success') {
                             resolve(response.modelo_id);
                         } else {
@@ -1945,7 +2698,13 @@ try {
                         }
                     },
                     error: function(xhr, status, error) {
-                        reject('Erro ao salvar modelo');
+                        console.error('Erro na requisição:', xhr.responseText);
+                        try {
+                            const errorResponse = JSON.parse(xhr.responseText);
+                            reject(errorResponse.message || 'Erro ao salvar modelo');
+                        } catch (e) {
+                            reject('Erro ao salvar modelo: ' + error);
+                        }
                     }
                 });
             });
@@ -1983,7 +2742,6 @@ try {
             document.body.removeChild(form);
             
             hideLoading();
-            fecharModal('modalConfiguracao');
         }
 
         // Executa modelo salvo
@@ -2001,47 +2759,26 @@ try {
                     if (response.status === 'success') {
                         const modelo = response.modelo;
                         
-                        // Preenche o formulário com os dados do modelo
-                        tipoRelatorioAtual = modelo.tipo;
-                        document.getElementById('tipoRelatorio').value = modelo.tipo;
+                        // Prepara dados para execução
+                        const dados = {
+                            tipo: modelo.tipo,
+                            campos: modelo.campos,
+                            formato: 'html',
+                            modelo_id: modeloId
+                        };
                         
-                        // Carrega campos e marca os selecionados
-                        carregarCampos(modelo.tipo);
+                        // Adiciona filtros
+                        if (modelo.filtros) {
+                            Object.assign(dados, modelo.filtros);
+                        }
                         
-                        // Aguarda campos carregarem
-                        setTimeout(() => {
-                            // Desmarca todos primeiro
-                            document.querySelectorAll('#camposContainer input[type="checkbox"]').forEach(cb => {
-                                cb.checked = false;
-                            });
-                            
-                            // Marca apenas os campos do modelo
-                            if (modelo.campos && Array.isArray(modelo.campos)) {
-                                modelo.campos.forEach(campo => {
-                                    const checkbox = document.getElementById('campo_' + campo);
-                                    if (checkbox) checkbox.checked = true;
-                                });
-                            }
-                            
-                            // Preenche filtros
-                            if (modelo.filtros) {
-                                for (const key in modelo.filtros) {
-                                    const input = document.querySelector(`[name="${key}"]`);
-                                    if (input && modelo.filtros[key]) {
-                                        input.value = modelo.filtros[key];
-                                    }
-                                }
-                            }
-                            
-                            // Ordenação
-                            if (modelo.ordenacao) {
-                                document.getElementById('ordenacao').value = modelo.ordenacao;
-                            }
-                            
-                            // Abre modal
-                            document.getElementById('modalTitle').textContent = 'Executar: ' + modelo.nome;
-                            document.getElementById('modalConfiguracao').classList.add('show');
-                        }, 500);
+                        // Adiciona ordenação
+                        if (modelo.ordenacao) {
+                            dados.ordenacao = modelo.ordenacao;
+                        }
+                        
+                        showLoading('Gerando relatório...');
+                        executarRelatorio(dados);
                     } else {
                         alert('Erro ao carregar modelo: ' + response.message);
                     }
@@ -2052,6 +2789,207 @@ try {
                     alert('Erro ao carregar modelo');
                 }
             });
+        }
+
+        // Edita modelo (abre modal com dados preenchidos)
+        function editarModelo(modeloId) {
+            showLoading('Carregando modelo...');
+            
+            $.ajax({
+                url: '../api/relatorios_carregar_modelo.php',
+                method: 'GET',
+                data: { id: modeloId },
+                dataType: 'json',
+                success: function(response) {
+                    hideLoading();
+                    
+                    if (response.status === 'success') {
+                        const modelo = response.modelo;
+                        
+                        // Marca o formulário como edição
+                        document.getElementById('formPersonalizado').setAttribute('data-modelo-id', modeloId);
+                        
+                        // Preenche o formulário
+                        document.getElementById('nomeRelatorio').value = modelo.nome;
+                        document.getElementById('descricaoRelatorio').value = modelo.descricao || '';
+                        document.getElementById('tipoRelatorio').value = modelo.tipo;
+                        
+                        // Dispara mudança para carregar campos
+                        document.getElementById('tipoRelatorio').dispatchEvent(new Event('change'));
+                        
+                        // Aguarda campos carregarem
+                        setTimeout(() => {
+                            // Marca campos do modelo
+                            if (modelo.campos && Array.isArray(modelo.campos)) {
+                                document.querySelectorAll('#camposPersonalizados input[type="checkbox"]').forEach(cb => {
+                                    cb.checked = modelo.campos.includes(cb.value);
+                                });
+                                // Define a ordem dos campos
+                                camposOrdenados = [...modelo.campos];
+                                atualizarCamposSelecionados();
+                            }
+                            
+                            // Preenche filtros
+                            if (modelo.filtros) {
+                                for (const key in modelo.filtros) {
+                                    const input = document.querySelector(`#filtrosPersonalizados [name="${key}"]`);
+                                    if (input && modelo.filtros[key]) {
+                                        input.value = modelo.filtros[key];
+                                    }
+                                }
+                            }
+                            
+                            // Preenche ordenação
+                            if (modelo.ordenacao) {
+                                const selectOrdenacao = document.querySelector('[name="ordenacao"]');
+                                if (selectOrdenacao) {
+                                    selectOrdenacao.value = modelo.ordenacao;
+                                }
+                            }
+                            
+                            // Marca para salvar
+                            document.getElementById('salvarModelo').checked = true;
+                            
+                            // Atualiza título do modal
+                            document.querySelector('#modalPersonalizado .modal-title-custom').textContent = 'Editar Relatório Personalizado';
+                            
+                            // Abre modal
+                            abrirModalPersonalizado();
+                        }, 1000);
+                    } else {
+                        alert('Erro ao carregar modelo: ' + response.message);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    hideLoading();
+                    console.error('Erro ao carregar modelo:', error);
+                    alert('Erro ao carregar modelo');
+                }
+            });
+        }
+
+        // Duplica modelo
+        function duplicarModelo(modeloId) {
+            if (confirm('Deseja duplicar este modelo?')) {
+                showLoading('Duplicando modelo...');
+                
+                // Por simplicidade, carrega o modelo e cria um novo
+                $.ajax({
+                    url: '../api/relatorios_carregar_modelo.php',
+                    method: 'GET',
+                    data: { id: modeloId },
+                    dataType: 'json',
+                    success: function(response) {
+                        if (response.status === 'success') {
+                            const modelo = response.modelo;
+                            modelo.nome = modelo.nome + ' (Cópia)';
+                            delete modelo.id;
+                            
+                            // Salva como novo modelo
+                            salvarModelo(modelo).then(novoId => {
+                                hideLoading();
+                                alert('Modelo duplicado com sucesso!');
+                                location.reload();
+                            }).catch(error => {
+                                hideLoading();
+                                alert('Erro ao duplicar modelo: ' + error);
+                            });
+                        } else {
+                            hideLoading();
+                            alert('Erro ao carregar modelo: ' + response.message);
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        hideLoading();
+                        alert('Erro ao duplicar modelo');
+                    }
+                });
+            }
+        }
+
+        // Exclui modelo (apenas diretores)
+        function excluirModelo(modeloId, nomeModelo) {
+            if (!isDiretor) {
+                alert('Apenas diretores podem excluir modelos de relatórios.');
+                return;
+            }
+            
+            // Confirmação com nome do modelo
+            const mensagem = `Tem certeza que deseja excluir o modelo "${nomeModelo}"?\n\nEsta ação não pode ser desfeita.`;
+            
+            if (confirm(mensagem)) {
+                // Segunda confirmação para modelos importantes
+                if (confirm('Esta é uma ação permanente. Confirma a exclusão?')) {
+                    showLoading('Excluindo modelo...');
+                    
+                    $.ajax({
+                        url: '../api/relatorios_excluir_modelo.php?id=' + modeloId,
+                        method: 'DELETE',
+                        dataType: 'json',
+                        success: function(response) {
+                            hideLoading();
+                            
+                            if (response.status === 'success') {
+                                // Feedback visual
+                                const card = document.querySelector(`[onclick*="executarModelo(${modeloId})"]`);
+                                if (card) {
+                                    card.style.transition = 'all 0.3s ease';
+                                    card.style.transform = 'scale(0.9)';
+                                    card.style.opacity = '0.5';
+                                }
+                                
+                                setTimeout(() => {
+                                    alert('Modelo excluído com sucesso!');
+                                    location.reload();
+                                }, 300);
+                            } else {
+                                alert('Erro ao excluir modelo: ' + response.message);
+                            }
+                        },
+                        error: function(xhr, status, error) {
+                            hideLoading();
+                            
+                            // Tenta obter mensagem de erro do servidor
+                            try {
+                                const errorResponse = JSON.parse(xhr.responseText);
+                                alert('Erro ao excluir modelo: ' + errorResponse.message);
+                            } catch (e) {
+                                alert('Erro ao excluir modelo. Por favor, tente novamente.');
+                            }
+                            
+                            console.error('Erro ao excluir:', xhr.responseText);
+                        }
+                    });
+                }
+            }
+        }
+
+        // Fecha modal
+        function fecharModal(modalId) {
+            document.getElementById(modalId).classList.remove('show');
+            
+            // Limpa formulários
+            if (modalId === 'modalFiltrosRapidos') {
+                document.getElementById('formFiltrosRapidos').reset();
+            } else if (modalId === 'modalPersonalizado') {
+                // Salva o estado atual antes de fechar
+                const modeloIdEditando = document.getElementById('formPersonalizado').getAttribute('data-modelo-id');
+                
+                // Se não está editando um modelo existente, limpa tudo
+                if (!modeloIdEditando) {
+                    document.getElementById('formPersonalizado').reset();
+                    document.getElementById('formPersonalizado').removeAttribute('data-modelo-id');
+                    document.getElementById('secaoCampos').style.display = 'none';
+                    document.getElementById('secaoFiltros').style.display = 'none';
+                    // Restaura título original
+                    document.querySelector('#modalPersonalizado .modal-title-custom').textContent = 'Criar Relatório Personalizado';
+                    // Limpa campos ordenados apenas se não estiver editando
+                    camposOrdenados = [];
+                    // Volta para aba de seleção (sem event)
+                    alternarTabCampos('selecao', null);
+                }
+                // Se está editando, mantém o estado atual
+            }
         }
 
         // Fecha modais ao clicar fora
@@ -2069,6 +3007,247 @@ try {
                 });
             }
         });
+
+        // Retorna campos padrão (fallback)
+        function getCamposPadrao(tipo) {
+            const campos = {
+                'associados': {
+                    'Dados Pessoais': [
+                        { nome_campo: 'nome', nome_exibicao: 'Nome Completo' },
+                        { nome_campo: 'cpf', nome_exibicao: 'CPF' },
+                        { nome_campo: 'rg', nome_exibicao: 'RG' },
+                        { nome_campo: 'telefone', nome_exibicao: 'Telefone' },
+                        { nome_campo: 'email', nome_exibicao: 'E-mail' }
+                    ],
+                    'Informações Militares': [
+                        { nome_campo: 'corporacao', nome_exibicao: 'Corporação' },
+                        { nome_campo: 'patente', nome_exibicao: 'Patente' }
+                    ]
+                },
+                'financeiro': {
+                    'Dados Financeiros': [
+                        { nome_campo: 'tipoAssociado', nome_exibicao: 'Tipo de Associado' },
+                        { nome_campo: 'situacaoFinanceira', nome_exibicao: 'Situação Financeira' }
+                    ]
+                },
+                'militar': {
+                    'Informações Militares': [
+                        { nome_campo: 'corporacao', nome_exibicao: 'Corporação' },
+                        { nome_campo: 'patente', nome_exibicao: 'Patente' },
+                        { nome_campo: 'unidade', nome_exibicao: 'Unidade' }
+                    ]
+                },
+                'servicos': {
+                    'Serviços': [
+                        { nome_campo: 'servico_nome', nome_exibicao: 'Nome do Serviço' },
+                        { nome_campo: 'valor_aplicado', nome_exibicao: 'Valor' },
+                        { nome_campo: 'ativo', nome_exibicao: 'Status' }
+                    ]
+                },
+                'documentos': {
+                    'Documentos': [
+                        { nome_campo: 'tipo_documento', nome_exibicao: 'Tipo' },
+                        { nome_campo: 'data_upload', nome_exibicao: 'Data' },
+                        { nome_campo: 'verificado', nome_exibicao: 'Status' }
+                    ]
+                }
+            };
+            
+            return campos[tipo] || {};
+        }
+
+        // Alternância entre tabs de campos
+        function alternarTabCampos(tab, event) {
+            // Se event não foi passado (chamada programática), não tenta acessar event.target
+            if (event && event.target) {
+                // Atualiza botões
+                document.querySelectorAll('.campos-tab').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                event.target.closest('.campos-tab').classList.add('active');
+            } else {
+                // Chamada programática - atualiza botões baseado no tab
+                document.querySelectorAll('.campos-tab').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                
+                // Encontra e ativa o botão correto
+                const botaoCorreto = tab === 'selecao' 
+                    ? document.querySelector('.campos-tab:first-child')
+                    : document.querySelector('.campos-tab:last-child');
+                    
+                if (botaoCorreto) {
+                    botaoCorreto.classList.add('active');
+                }
+            }
+            
+            // Atualiza conteúdo
+            document.querySelectorAll('.campos-tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            if (tab === 'selecao') {
+                document.getElementById('tabSelecao').classList.add('active');
+            } else {
+                document.getElementById('tabOrdem').classList.add('active');
+                atualizarCamposSelecionados();
+            }
+        }
+
+        // Atualiza lista de campos selecionados para ordenação
+        function atualizarCamposSelecionados() {
+            const checkboxes = document.querySelectorAll('#camposPersonalizados input[type="checkbox"]:checked');
+            const lista = document.getElementById('camposSelecionadosList');
+            const empty = document.getElementById('camposSelecionadosEmpty');
+            
+            lista.innerHTML = '';
+            
+            // Se não há checkboxes marcados
+            if (checkboxes.length === 0) {
+                lista.style.display = 'none';
+                empty.style.display = 'block';
+                camposOrdenados = [];
+                return;
+            }
+            
+            lista.style.display = 'block';
+            empty.style.display = 'none';
+            
+            // Se já temos uma ordem definida, usa ela
+            if (camposOrdenados.length > 0) {
+                // Remove campos que foram desmarcados
+                camposOrdenados = camposOrdenados.filter(campo => {
+                    const checkbox = document.querySelector(`#campo_personalizado_${campo}`);
+                    return checkbox && checkbox.checked;
+                });
+                
+                // Adiciona novos campos marcados ao final
+                checkboxes.forEach(checkbox => {
+                    if (!camposOrdenados.includes(checkbox.value)) {
+                        camposOrdenados.push(checkbox.value);
+                    }
+                });
+            } else {
+                // Se não há ordem definida, cria uma nova
+                camposOrdenados = [];
+                checkboxes.forEach(checkbox => {
+                    camposOrdenados.push(checkbox.value);
+                });
+            }
+            
+            // Renderiza a lista na ordem correta
+            camposOrdenados.forEach((campo, index) => {
+                const checkbox = document.querySelector(`#campo_personalizado_${campo}`);
+                if (checkbox && checkbox.checked) {
+                    const label = checkbox.parentElement.querySelector('label').textContent.trim();
+                    
+                    const li = document.createElement('li');
+                    li.className = 'campo-selecionado-item';
+                    li.draggable = true;
+                    li.dataset.campo = campo;
+                    li.innerHTML = `
+                        <span class="campo-drag-handle">
+                            <i class="fas fa-grip-vertical"></i>
+                        </span>
+                        <span class="campo-selecionado-numero">${index + 1}</span>
+                        <span class="campo-selecionado-nome">${label}</span>
+                        <button type="button" class="campo-selecionado-remove" onclick="removerCampoSelecionado('${campo}')">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    `;
+                    
+                    // Event listeners para drag and drop
+                    li.addEventListener('dragstart', handleDragStart);
+                    li.addEventListener('dragend', handleDragEnd);
+                    li.addEventListener('dragover', handleDragOver);
+                    li.addEventListener('drop', handleDrop);
+                    li.addEventListener('dragenter', handleDragEnter);
+                    li.addEventListener('dragleave', handleDragLeave);
+                    
+                    lista.appendChild(li);
+                }
+            });
+        }
+
+        // Remove campo da seleção
+        function removerCampoSelecionado(campo) {
+            const checkbox = document.querySelector(`#camposPersonalizados input[value="${campo}"]`);
+            if (checkbox) {
+                checkbox.checked = false;
+                atualizarCamposSelecionados();
+            }
+        }
+
+        // Drag and Drop handlers
+        let draggedElement = null;
+
+        function handleDragStart(e) {
+            draggedElement = this;
+            this.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/html', this.innerHTML);
+        }
+
+        function handleDragEnd(e) {
+            this.classList.remove('dragging');
+            
+            // Remove todas as classes de drag-over
+            document.querySelectorAll('.campo-selecionado-item').forEach(item => {
+                item.classList.remove('drag-over');
+            });
+        }
+
+        function handleDragOver(e) {
+            if (e.preventDefault) {
+                e.preventDefault();
+            }
+            e.dataTransfer.dropEffect = 'move';
+            return false;
+        }
+
+        function handleDragEnter(e) {
+            this.classList.add('drag-over');
+        }
+
+        function handleDragLeave(e) {
+            this.classList.remove('drag-over');
+        }
+
+        function handleDrop(e) {
+            if (e.stopPropagation) {
+                e.stopPropagation();
+            }
+            
+            if (draggedElement !== this) {
+                const lista = document.getElementById('camposSelecionadosList');
+                const allItems = [...lista.querySelectorAll('.campo-selecionado-item')];
+                const draggedIndex = allItems.indexOf(draggedElement);
+                const targetIndex = allItems.indexOf(this);
+                
+                if (draggedIndex < targetIndex) {
+                    this.parentNode.insertBefore(draggedElement, this.nextSibling);
+                } else {
+                    this.parentNode.insertBefore(draggedElement, this);
+                }
+                
+                // Atualiza array de campos ordenados
+                atualizarOrdemCampos();
+            }
+            
+            return false;
+        }
+
+        // Atualiza array de campos após reordenação
+        function atualizarOrdemCampos() {
+            const items = document.querySelectorAll('.campo-selecionado-item');
+            camposOrdenados = [];
+            
+            items.forEach((item, index) => {
+                camposOrdenados.push(item.dataset.campo);
+                // Atualiza número
+                item.querySelector('.campo-selecionado-numero').textContent = index + 1;
+            });
+        }
     </script>
 </body>
 </html>
