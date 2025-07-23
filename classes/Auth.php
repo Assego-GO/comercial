@@ -68,7 +68,7 @@ class Auth {
      */
     public function logout() {
         session_destroy();
-        header('Location: ' . BASE_URL . '/index.php');
+        header('Location: ' . BASE_URL . 'pages/index.php');
         exit;
     }
     
