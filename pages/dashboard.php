@@ -2782,51 +2782,492 @@ try {
         }
 
         // Preenche tab Financeiro
-        function preencherTabFinanceiro(associado) {
-            const financeiroTab = document.getElementById('financeiro-tab');
+        // VERSÃO COMPLETA - Adicione ao seu dashboard.php
 
-            financeiroTab.innerHTML = `
-        <div class="detail-section">
-            <div class="section-header">
-                <div class="section-icon">
-                    <i class="fas fa-dollar-sign"></i>
-                </div>
-                <h3 class="section-title">Informações Financeiras</h3>
-            </div>
-            
-            <div class="detail-grid">
-                <div class="detail-item">
-                    <span class="detail-label">Tipo de Associado</span>
-                    <span class="detail-value">${associado.tipoAssociado || '-'}</span>
-                </div>
-                <div class="detail-item">
-                    <span class="detail-label">Situação Financeira</span>
-                    <span class="detail-value">${associado.situacaoFinanceira || '-'}</span>
-                </div>
-                <div class="detail-item">
-                    <span class="detail-label">Vínculo Servidor</span>
-                    <span class="detail-value">${associado.vinculoServidor || '-'}</span>
-                </div>
-                <div class="detail-item">
-                    <span class="detail-label">Local de Débito</span>
-                    <span class="detail-value">${associado.localDebito || '-'}</span>
-                </div>
-                <div class="detail-item">
-                    <span class="detail-label">Agência</span>
-                    <span class="detail-value">${associado.agencia || '-'}</span>
-                </div>
-                <div class="detail-item">
-                    <span class="detail-label">Operação</span>
-                    <span class="detail-value">${associado.operacao || '-'}</span>
-                </div>
-                <div class="detail-item">
-                    <span class="detail-label">Conta Corrente</span>
-                    <span class="detail-value">${associado.contaCorrente || '-'}</span>
-                </div>
-            </div>
+// Preenche tab Financeiro - VERSÃO COMPLETA COM HISTÓRICO
+function preencherTabFinanceiro(associado) {
+    const financeiroTab = document.getElementById('financeiro-tab');
+
+    // Mostra loading enquanto carrega
+    financeiroTab.innerHTML = `
+        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 3rem; color: var(--gray-500);">
+            <div class="loading-spinner" style="margin-bottom: 1rem;"></div>
+            <p>Carregando informações financeiras...</p>
         </div>
     `;
+
+    // Busca dados dos serviços do associado
+    buscarServicosAssociado(associado.id)
+        .then(dadosServicos => {
+            console.log('Dados dos serviços:', dadosServicos);
+            
+            let servicosHtml = '';
+            let historicoHtml = '';
+            let valorTotalMensal = 0;
+            let tipoAssociadoServico = 'Não definido';
+            let servicosAtivos = [];
+            let resumoServicos = 'Nenhum serviço ativo';
+
+            if (dadosServicos && dadosServicos.status === 'success' && dadosServicos.data) {
+                const dados = dadosServicos.data;
+                valorTotalMensal = dados.valor_total_mensal || 0;
+                tipoAssociadoServico = dados.tipo_associado_servico || 'Não definido';
+
+                // Analisa os serviços contratados
+                if (dados.servicos.social) {
+                    servicosAtivos.push('Social');
+                }
+                if (dados.servicos.juridico) {
+                    servicosAtivos.push('Jurídico');
+                }
+
+                // Define resumo dos serviços
+                if (servicosAtivos.length === 2) {
+                    resumoServicos = 'Social + Jurídico';
+                } else if (servicosAtivos.includes('Social')) {
+                    resumoServicos = 'Apenas Social';
+                } else if (servicosAtivos.includes('Jurídico')) {
+                    resumoServicos = 'Apenas Jurídico';
+                }
+
+                // Gera HTML dos serviços
+                servicosHtml = gerarHtmlServicosCompleto(dados.servicos, valorTotalMensal);
+                
+                // Gera HTML do histórico
+                if (dados.historico && dados.historico.length > 0) {
+                    historicoHtml = gerarHtmlHistorico(dados.historico);
+                }
+            } else {
+                servicosHtml = `
+                    <div class="empty-state" style="padding: 2rem; text-align: center; color: var(--gray-500);">
+                        <i class="fas fa-info-circle" style="font-size: 2rem; margin-bottom: 1rem; opacity: 0.3;"></i>
+                        <p>Nenhum serviço contratado</p>
+                        <small>Este associado ainda não possui serviços ativos</small>
+                    </div>
+                `;
+            }
+
+            financeiroTab.innerHTML = `
+                <!-- Resumo Financeiro Principal -->
+                <div class="resumo-financeiro" style="margin: 1.5rem 2rem; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); border-radius: 16px; padding: 2rem; color: white; position: relative; overflow: hidden;">
+                    <div style="position: absolute; top: -30px; right: -30px; font-size: 6rem; opacity: 0.1;">
+                        <i class="fas fa-coins"></i>
+                    </div>
+                    <div style="position: relative; z-index: 1; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 2rem; align-items: center;">
+                        <div style="text-align: center;">
+                            <div style="font-size: 0.875rem; opacity: 0.9; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 1px;">
+                                Valor Mensal Total
+                            </div>
+                            <div style="font-size: 2.5rem; font-weight: 800; margin-bottom: 0.25rem;">
+                                R$ ${valorTotalMensal.toFixed(2).replace('.', ',')}
+                            </div>
+                            <div style="font-size: 0.75rem; opacity: 0.8;">
+                                ${servicosAtivos.length} serviço${servicosAtivos.length !== 1 ? 's' : ''} ativo${servicosAtivos.length !== 1 ? 's' : ''}
+                            </div>
+                        </div>
+                        <div style="text-align: center;">
+                            <div style="font-size: 0.875rem; opacity: 0.9; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 1px;">
+                                Tipo de Associado
+                            </div>
+                            <div style="font-size: 1.3rem; font-weight: 700; margin-bottom: 0.25rem;">
+                                ${tipoAssociadoServico}
+                            </div>
+                            <div style="font-size: 0.75rem; opacity: 0.8;">
+                                Define percentual de cobrança
+                            </div>
+                        </div>
+                        <div style="text-align: center;">
+                            <div style="font-size: 0.875rem; opacity: 0.9; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 1px;">
+                                Serviços Contratados
+                            </div>
+                            <div style="font-size: 1.3rem; font-weight: 700; margin-bottom: 0.25rem;">
+                                ${resumoServicos}
+                            </div>
+                            <div style="font-size: 0.75rem; opacity: 0.8;">
+                                ${servicosAtivos.includes('Jurídico') ? 'Inclui cobertura jurídica' : 'Cobertura básica'}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Seção de Serviços Contratados -->
+                <div class="detail-section">
+                    <div class="section-header">
+                        <div class="section-icon">
+                            <i class="fas fa-clipboard-list"></i>
+                        </div>
+                        <h3 class="section-title">Detalhes dos Serviços</h3>
+                    </div>
+                    ${servicosHtml}
+                </div>
+
+                ${historicoHtml ? `
+                <!-- Histórico de Alterações -->
+                <div class="detail-section">
+                    <div class="section-header">
+                        <div class="section-icon">
+                            <i class="fas fa-history"></i>
+                        </div>
+                        <h3 class="section-title">Histórico de Alterações</h3>
+                    </div>
+                    ${historicoHtml}
+                </div>
+                ` : ''}
+
+                <!-- Dados Bancários -->
+                <div class="detail-section">
+                    <div class="section-header">
+                        <div class="section-icon">
+                            <i class="fas fa-university"></i>
+                        </div>
+                        <h3 class="section-title">Dados Bancários e Cobrança</h3>
+                    </div>
+                    
+                    <div class="detail-grid">
+                        <div class="detail-item">
+                            <span class="detail-label">Categoria</span>
+                            <span class="detail-value">${associado.tipoAssociado || '-'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Situação Financeira</span>
+                            <span class="detail-value">
+                                ${associado.situacaoFinanceira ? 
+                                    `<span style="color: ${associado.situacaoFinanceira === 'Adimplente' ? 'var(--success)' : 'var(--danger)'}; font-weight: 600;">${associado.situacaoFinanceira}</span>` 
+                                    : '-'}
+                            </span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Vínculo Servidor</span>
+                            <span class="detail-value">${associado.vinculoServidor || '-'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Local de Débito</span>
+                            <span class="detail-value">${associado.localDebito || '-'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Agência</span>
+                            <span class="detail-value">${associado.agencia || '-'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Operação</span>
+                            <span class="detail-value">${associado.operacao || '-'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Conta Corrente</span>
+                            <span class="detail-value">${associado.contaCorrente || '-'}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        })
+        .catch(error => {
+            console.error('Erro ao buscar serviços:', error);
+            
+            // Fallback: mostra apenas dados tradicionais
+            financeiroTab.innerHTML = `
+                <div class="detail-section">
+                    <div class="section-header">
+                        <div class="section-icon">
+                            <i class="fas fa-exclamation-triangle" style="color: var(--warning);"></i>
+                        </div>
+                        <h3 class="section-title">Dados Financeiros</h3>
+                        <small style="color: var(--warning); font-size: 0.75rem;">⚠ Não foi possível carregar dados dos serviços</small>
+                    </div>
+                    
+                    <div class="detail-grid">
+                        <div class="detail-item">
+                            <span class="detail-label">Categoria</span>
+                            <span class="detail-value">${associado.tipoAssociado || '-'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Situação Financeira</span>
+                            <span class="detail-value">${associado.situacaoFinanceira || '-'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Vínculo Servidor</span>
+                            <span class="detail-value">${associado.vinculoServidor || '-'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Local de Débito</span>
+                            <span class="detail-value">${associado.localDebito || '-'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Agência</span>
+                            <span class="detail-value">${associado.agencia || '-'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Operação</span>
+                            <span class="detail-value">${associado.operacao || '-'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Conta Corrente</span>
+                            <span class="detail-value">${associado.contaCorrente || '-'}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+}
+
+// Função para gerar HTML dos serviços - VERSÃO COMPLETA
+function gerarHtmlServicosCompleto(servicos, valorTotal) {
+    let servicosHtml = '';
+    
+    // Verifica se tem serviços
+    if (!servicos.social && !servicos.juridico) {
+        return `
+            <div class="empty-state" style="padding: 2rem; text-align: center; color: var(--gray-500);">
+                <i class="fas fa-info-circle" style="font-size: 2rem; margin-bottom: 1rem; opacity: 0.3;"></i>
+                <p>Nenhum serviço ativo encontrado</p>
+                <small>Este associado não possui serviços contratados</small>
+            </div>
+        `;
+    }
+
+    servicosHtml += '<div class="servicos-container" style="display: flex; flex-direction: column; gap: 1.5rem;">';
+
+    // Serviço Social
+    if (servicos.social) {
+        const social = servicos.social;
+        const dataAdesao = new Date(social.data_adesao).toLocaleDateString('pt-BR');
+        const valorBase = parseFloat(social.valor_base || 173.10);
+        const desconto = ((valorBase - parseFloat(social.valor_aplicado)) / valorBase * 100).toFixed(0);
+        
+        servicosHtml += `
+            <div class="servico-card" style="
+                background: linear-gradient(135deg, var(--success) 0%, #00a847 100%);
+                padding: 1.5rem;
+                border-radius: 16px;
+                color: white;
+                position: relative;
+                overflow: hidden;
+                box-shadow: 0 8px 24px rgba(0, 200, 83, 0.3);
+            ">
+                <div style="position: absolute; top: -20px; right: -20px; font-size: 5rem; opacity: 0.1;">
+                    <i class="fas fa-heart"></i>
+                </div>
+                <div style="position: relative; z-index: 1;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem;">
+                        <div style="flex: 1;">
+                            <h4 style="margin: 0; font-size: 1.3rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">
+                                <i class="fas fa-heart"></i>
+                                Serviço Social
+                            </h4>
+                            <div style="display: flex; align-items: center; gap: 1rem; margin-top: 0.75rem; flex-wrap: wrap;">
+                                <span style="background: rgba(255,255,255,0.25); padding: 0.375rem 0.875rem; border-radius: 20px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">
+                                    OBRIGATÓRIO
+                                </span>
+                                <span style="font-size: 0.875rem; opacity: 0.9;">
+                                    <i class="fas fa-calendar-alt" style="margin-right: 0.25rem;"></i>
+                                    Desde ${dataAdesao}
+                                </span>
+                                ${desconto > 0 ? `
+                                <span style="background: rgba(255,255,255,0.25); padding: 0.375rem 0.875rem; border-radius: 20px; font-size: 0.75rem; font-weight: 600;">
+                                    <i class="fas fa-percentage" style="margin-right: 0.25rem;"></i>
+                                    ${desconto}% desconto
+                                </span>
+                                ` : ''}
+                            </div>
+                        </div>
+                        <div style="text-align: right; min-width: 120px;">
+                            <div style="font-size: 1.8rem; font-weight: 800; margin-bottom: 0.25rem;">
+                                R$ ${parseFloat(social.valor_aplicado).toFixed(2).replace('.', ',')}
+                            </div>
+                            <div style="font-size: 0.75rem; opacity: 0.9; background: rgba(255,255,255,0.2); padding: 0.25rem 0.5rem; border-radius: 8px;">
+                                ${parseFloat(social.percentual_aplicado).toFixed(0)}% do valor base
+                            </div>
+                        </div>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.15); padding: 1rem; border-radius: 8px; font-size: 0.875rem; line-height: 1.5;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                            <span>Valor base:</span>
+                            <span style="font-weight: 600;">R$ ${valorBase.toFixed(2).replace('.', ',')}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span>Observação:</span>
+                            <span style="font-weight: 600; max-width: 200px; text-align: right;">
+                                ${social.observacao || 'Serviço social básico'}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    // Serviço Jurídico
+    if (servicos.juridico) {
+        const juridico = servicos.juridico;
+        const dataAdesao = new Date(juridico.data_adesao).toLocaleDateString('pt-BR');
+        const valorBase = parseFloat(juridico.valor_base || 43.28);
+        const desconto = ((valorBase - parseFloat(juridico.valor_aplicado)) / valorBase * 100).toFixed(0);
+        
+        servicosHtml += `
+            <div class="servico-card" style="
+                background: linear-gradient(135deg, var(--info) 0%, #0097a7 100%);
+                padding: 1.5rem;
+                border-radius: 16px;
+                color: white;
+                position: relative;
+                overflow: hidden;
+                box-shadow: 0 8px 24px rgba(0, 184, 212, 0.3);
+            ">
+                <div style="position: absolute; top: -20px; right: -20px; font-size: 5rem; opacity: 0.1;">
+                    <i class="fas fa-balance-scale"></i>
+                </div>
+                <div style="position: relative; z-index: 1;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem;">
+                        <div style="flex: 1;">
+                            <h4 style="margin: 0; font-size: 1.3rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">
+                                <i class="fas fa-balance-scale"></i>
+                                Serviço Jurídico
+                            </h4>
+                            <div style="display: flex; align-items: center; gap: 1rem; margin-top: 0.75rem; flex-wrap: wrap;">
+                                <span style="background: rgba(255,255,255,0.25); padding: 0.375rem 0.875rem; border-radius: 20px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">
+                                    OPCIONAL
+                                </span>
+                                <span style="font-size: 0.875rem; opacity: 0.9;">
+                                    <i class="fas fa-calendar-alt" style="margin-right: 0.25rem;"></i>
+                                    Desde ${dataAdesao}
+                                </span>
+                                ${desconto > 0 ? `
+                                <span style="background: rgba(255,255,255,0.25); padding: 0.375rem 0.875rem; border-radius: 20px; font-size: 0.75rem; font-weight: 600;">
+                                    <i class="fas fa-percentage" style="margin-right: 0.25rem;"></i>
+                                    ${desconto}% desconto
+                                </span>
+                                ` : ''}
+                            </div>
+                        </div>
+                        <div style="text-align: right; min-width: 120px;">
+                            <div style="font-size: 1.8rem; font-weight: 800; margin-bottom: 0.25rem;">
+                                R$ ${parseFloat(juridico.valor_aplicado).toFixed(2).replace('.', ',')}
+                            </div>
+                            <div style="font-size: 0.75rem; opacity: 0.9; background: rgba(255,255,255,0.2); padding: 0.25rem 0.5rem; border-radius: 8px;">
+                                ${parseFloat(juridico.percentual_aplicado).toFixed(0)}% do valor base
+                            </div>
+                        </div>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.15); padding: 1rem; border-radius: 8px; font-size: 0.875rem; line-height: 1.5;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                            <span>Valor base:</span>
+                            <span style="font-weight: 600;">R$ ${valorBase.toFixed(2).replace('.', ',')}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span>Observação:</span>
+                            <span style="font-weight: 600; max-width: 200px; text-align: right;">
+                                ${juridico.observacao || 'Serviço jurídico opcional'}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    servicosHtml += '</div>';
+    return servicosHtml;
+}
+
+// Função para gerar HTML do histórico
+function gerarHtmlHistorico(historico) {
+    if (!historico || historico.length === 0) {
+        return '';
+    }
+
+    let historicoHtml = '<div class="historico-container" style="display: flex; flex-direction: column; gap: 1rem;">';
+
+    historico.slice(0, 5).forEach(item => { // Mostra apenas os últimos 5
+        const data = new Date(item.data_alteracao).toLocaleDateString('pt-BR');
+        const hora = new Date(item.data_alteracao).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        
+        let icone = 'fa-edit';
+        let cor = 'var(--info)';
+        let titulo = item.tipo_alteracao;
+        
+        if (item.tipo_alteracao === 'ADESAO') {
+            icone = 'fa-plus-circle';
+            cor = 'var(--success)';
+            titulo = 'Adesão';
+        } else if (item.tipo_alteracao === 'CANCELAMENTO') {
+            icone = 'fa-times-circle';
+            cor = 'var(--danger)';
+            titulo = 'Cancelamento';
+        } else if (item.tipo_alteracao === 'ALTERACAO_VALOR') {
+            icone = 'fa-exchange-alt';
+            cor = 'var(--warning)';
+            titulo = 'Alteração de Valor';
         }
+
+        historicoHtml += `
+            <div style="
+                background: var(--gray-100);
+                padding: 1rem;
+                border-radius: 12px;
+                border-left: 4px solid ${cor};
+                display: flex;
+                align-items: flex-start;
+                gap: 1rem;
+            ">
+                <div style="
+                    width: 40px;
+                    height: 40px;
+                    background: ${cor};
+                    color: white;
+                    border-radius: 50%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    flex-shrink: 0;
+                ">
+                    <i class="fas ${icone}"></i>
+                </div>
+                <div style="flex: 1;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
+                        <h5 style="margin: 0; font-weight: 600; color: var(--dark);">
+                            ${titulo} - ${item.servico_nome}
+                        </h5>
+                        <small style="color: var(--gray-500); font-size: 0.75rem;">
+                            ${data} às ${hora}
+                        </small>
+                    </div>
+                    <div style="font-size: 0.875rem; color: var(--gray-600); margin-bottom: 0.5rem;">
+                        ${item.motivo || 'Sem observações'}
+                    </div>
+                    ${item.valor_anterior && item.valor_novo ? `
+                        <div style="display: flex; gap: 1rem; font-size: 0.75rem;">
+                            <span style="color: var(--danger);">
+                                De: R$ ${parseFloat(item.valor_anterior).toFixed(2).replace('.', ',')}
+                            </span>
+                            <span style="color: var(--success);">
+                                Para: R$ ${parseFloat(item.valor_novo).toFixed(2).replace('.', ',')}
+                            </span>
+                        </div>
+                    ` : ''}
+                    ${item.funcionario_nome ? `
+                        <div style="font-size: 0.75rem; color: var(--gray-500); margin-top: 0.5rem;">
+                            <i class="fas fa-user" style="margin-right: 0.25rem;"></i>
+                            Por: ${item.funcionario_nome}
+                        </div>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+    });
+
+    historicoHtml += '</div>';
+    return historicoHtml;
+}
+
+// Função para buscar serviços do associado (mantém a mesma)
+function buscarServicosAssociado(associadoId) {
+    return fetch(`../api/buscar_servicos_associado.php?associado_id=${associadoId}`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            return response.json();
+        });
+}
 
         // Preenche tab Contato
         function preencherTabContato(associado) {
@@ -3009,7 +3450,7 @@ try {
             event.stopPropagation();
 
             // Redireciona para a página de edição
-            window.location.href = `../pages/editarAssociado.php?id=${id}`;
+            window.location.href = `cadastroForm.php?id=${id}`;
         }
 
         // Função para excluir associado
