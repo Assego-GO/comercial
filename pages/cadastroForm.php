@@ -52,8 +52,23 @@ try {
     $stmt->execute();
     $servicos = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
-    // Buscar tipos de associado únicos
-    $stmt = $db->prepare("SELECT DISTINCT tipo_associado FROM Regras_Contribuicao ORDER BY tipo_associado");
+    // Buscar tipos de associado únicos ordenados
+    $stmt = $db->prepare("
+        SELECT DISTINCT tipo_associado 
+        FROM Regras_Contribuicao 
+        ORDER BY 
+            CASE 
+                WHEN tipo_associado = 'Contribuinte' THEN 1
+                WHEN tipo_associado = 'Aluno' THEN 2
+                WHEN tipo_associado = 'Soldado 1ª Classe' THEN 3
+                WHEN tipo_associado = 'Soldado 2ª Classe' THEN 4
+                WHEN tipo_associado = 'Agregado' THEN 5
+                WHEN tipo_associado = 'Remido 50%' THEN 6
+                WHEN tipo_associado = 'Remido' THEN 7
+                WHEN tipo_associado = 'Benemerito' THEN 8
+                ELSE 9
+            END
+    ");
     $stmt->execute();
     $tiposAssociado = $stmt->fetchAll(PDO::FETCH_COLUMN);
     
@@ -67,6 +82,41 @@ try {
     ");
     $stmt->execute();
     $regrasContribuicao = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    // Se não há dados, cria os dados padrão
+    if (empty($servicos) || empty($tiposAssociado) || empty($regrasContribuicao)) {
+        // Chama a API para criar dados padrão
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, (isset($_SERVER['HTTPS']) ? 'https' : 'http') . '://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['REQUEST_URI']) . '/../api/buscar_dados_servicos.php');
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+        $response = curl_exec($ch);
+        curl_close($ch);
+        
+        if ($response) {
+            $data = json_decode($response, true);
+            if ($data && $data['status'] === 'success') {
+                // Recarrega os dados após criação
+                $stmt = $db->prepare("SELECT id, nome, valor_base FROM Servicos WHERE ativo = 1 ORDER BY nome");
+                $stmt->execute();
+                $servicos = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                
+                $stmt = $db->prepare("SELECT DISTINCT tipo_associado FROM Regras_Contribuicao ORDER BY tipo_associado");
+                $stmt->execute();
+                $tiposAssociado = $stmt->fetchAll(PDO::FETCH_COLUMN);
+                
+                $stmt = $db->prepare("
+                    SELECT rc.tipo_associado, rc.servico_id, rc.percentual_valor, rc.opcional, s.nome as servico_nome 
+                    FROM Regras_Contribuicao rc 
+                    INNER JOIN Servicos s ON rc.servico_id = s.id 
+                    WHERE s.ativo = 1
+                    ORDER BY rc.tipo_associado, s.nome
+                ");
+                $stmt->execute();
+                $regrasContribuicao = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            }
+        }
+    }
     
 } catch (Exception $e) {
     error_log("Erro ao buscar dados para serviços: " . $e->getMessage());
@@ -1666,7 +1716,6 @@ try {
     <script>
 // JavaScript Completo com FALLBACKS - substitua o JavaScript do cadastroForm.php
 
-// Configuração inicial
 const isEdit = <?php echo $isEdit ? 'true' : 'false'; ?>;
 const associadoId = <?php echo $associadoId ? $associadoId : 'null'; ?>;
 
@@ -1678,87 +1727,174 @@ let dependenteIndex = <?php echo isset($associadoData['dependentes']) ? count($a
 // Dados carregados dos serviços (para edição)
 let servicosCarregados = null;
 
-// Dados de serviços com fallback
+// VARIÁVEIS GLOBAIS PARA DADOS DOS SERVIÇOS
 let regrasContribuicao = [];
 let servicosData = [];
+let tiposAssociadoData = [];
+let dadosCarregados = false;
 
 // Inicialização
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Iniciando formulário de cadastro...');
     
-    // Carrega dados de serviços se não estiverem disponíveis
-    if (typeof window.regrasContribuicao !== 'undefined') {
-        regrasContribuicao = window.regrasContribuicao;
-        servicosData = window.servicosData;
-        console.log('Dados carregados do PHP:', {regrasContribuicao, servicosData});
-    } else {
-        console.warn('Dados não encontrados, carregando via AJAX...');
-        carregarDadosServicos();
-    }
-    
-    // Máscaras
-    $('#cpf').mask('000.000.000-00');
-    $('#telefone').mask('(00) 00000-0000');
-    $('#cep').mask('00000-000');
-    
-    // Select2
-    $('.form-select').select2({
-        language: 'pt-BR',
-        theme: 'default',
-        width: '100%'
-    });
-    
-    // Preview de foto
-    document.getElementById('foto').addEventListener('change', function(e) {
-        const file = e.target.files[0];
-        if (file) {
-            if (file.size > 5 * 1024 * 1024) {
-                showAlert('Arquivo muito grande! O tamanho máximo é 5MB.', 'error');
-                e.target.value = '';
-                return;
+    // PRIMEIRA COISA: Carrega dados de serviços do banco
+    carregarDadosServicos()
+        .then(() => {
+            console.log('✓ Dados de serviços carregados, continuando inicialização...');
+            
+            // Máscaras
+            $('#cpf').mask('000.000.000-00');
+            $('#telefone').mask('(00) 00000-0000');
+            $('#cep').mask('00000-000');
+            
+            // Select2
+            $('.form-select').select2({
+                language: 'pt-BR',
+                theme: 'default',
+                width: '100%'
+            });
+            
+            // Preview de foto
+            document.getElementById('foto').addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    if (file.size > 5 * 1024 * 1024) {
+                        showAlert('Arquivo muito grande! O tamanho máximo é 5MB.', 'error');
+                        e.target.value = '';
+                        return;
+                    }
+                    
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        document.getElementById('photoPreview').innerHTML = 
+                            `<img src="${e.target.result}" alt="Preview">`;
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+            
+            // Validação em tempo real
+            setupRealtimeValidation();
+            
+            // Carrega dados dos serviços se estiver editando
+            if (isEdit && associadoId) {
+                carregarServicosAssociado();
             }
             
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                document.getElementById('photoPreview').innerHTML = 
-                    `<img src="${e.target.result}" alt="Preview">`;
-            };
-            reader.readAsDataURL(file);
-        }
-    });
-    
-    // Validação em tempo real
-    setupRealtimeValidation();
-    
-    // Carrega dados dos serviços se estiver editando
-    if (isEdit && associadoId) {
-        carregarServicosAssociado();
-    }
-    
-    // Atualiza interface
-    updateProgressBar();
-    updateNavigationButtons();
+            // Atualiza interface
+            updateProgressBar();
+            updateNavigationButtons();
+            
+        })
+        .catch(error => {
+            console.error('Erro ao carregar dados de serviços:', error);
+            showAlert('Erro ao carregar dados do sistema. Algumas funcionalidades podem não funcionar.', 'warning');
+        });
 });
 
-// NOVA FUNÇÃO: Carrega dados de serviços via AJAX se necessário
+// FUNÇÃO CORRIGIDA: Carrega dados de serviços via AJAX
 function carregarDadosServicos() {
-    fetch('../api/buscar_dados_servicos.php')
-        .then(response => response.json())
+    console.log('=== CARREGANDO DADOS DE SERVIÇOS DO BANCO ===');
+    
+    return fetch('../api/buscar_dados_servicos.php')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            return response.json();
+        })
         .then(data => {
+            console.log('Resposta da API de serviços:', data);
+            
             if (data.status === 'success') {
+                // CARREGA DADOS REAIS DO BANCO
                 regrasContribuicao = data.regras || [];
                 servicosData = data.servicos || [];
-                console.log('Dados carregados via AJAX:', {regrasContribuicao, servicosData});
+                tiposAssociadoData = data.tipos_associado || [];
+                dadosCarregados = true;
+                
+                console.log('✓ Dados carregados do banco:');
+                console.log('- Serviços:', servicosData.length);
+                console.log('- Regras:', regrasContribuicao.length);
+                console.log('- Tipos:', tiposAssociadoData.length);
+                
+                // Preenche o select de tipos de associado
+                preencherSelectTiposAssociado();
+                
+                return true;
+                
             } else {
-                console.error('Erro ao carregar dados de serviços');
-                // Dados hardcoded como fallback
-                useHardcodedData();
+                console.error('API retornou erro:', data.message);
+                throw new Error(data.message || 'Erro na API');
             }
         })
         .catch(error => {
-            console.error('Erro na requisição:', error);
-            useHardcodedData();
+            console.error('Erro ao carregar dados de serviços:', error);
+            
+            // FALLBACK: Usa dados básicos se falhar
+            console.warn('Usando dados de fallback básicos...');
+            
+            servicosData = [
+                {id: "1", nome: "Social", valor_base: "173.10", obrigatorio: true},
+                {id: "2", nome: "Jurídico", valor_base: "43.28", obrigatorio: false}
+            ];
+            
+            regrasContribuicao = [
+                {tipo_associado: "Contribuinte", servico_id: "1", percentual_valor: "100.00"},
+                {tipo_associado: "Contribuinte", servico_id: "2", percentual_valor: "100.00"},
+                {tipo_associado: "Aluno", servico_id: "1", percentual_valor: "50.00"},
+                {tipo_associado: "Aluno", servico_id: "2", percentual_valor: "100.00"},
+                {tipo_associado: "Soldado 2ª Classe", servico_id: "1", percentual_valor: "50.00"},
+                {tipo_associado: "Soldado 2ª Classe", servico_id: "2", percentual_valor: "100.00"},
+                {tipo_associado: "Soldado 1ª Classe", servico_id: "1", percentual_valor: "100.00"},
+                {tipo_associado: "Soldado 1ª Classe", servico_id: "2", percentual_valor: "100.00"},
+                {tipo_associado: "Agregado", servico_id: "1", percentual_valor: "50.00"},
+                {tipo_associado: "Agregado", servico_id: "2", percentual_valor: "100.00"},
+                {tipo_associado: "Remido", servico_id: "1", percentual_valor: "0.00"},
+                {tipo_associado: "Remido", servico_id: "2", percentual_valor: "100.00"},
+                {tipo_associado: "Remido 50%", servico_id: "1", percentual_valor: "50.00"},
+                {tipo_associado: "Remido 50%", servico_id: "2", percentual_valor: "100.00"},
+                {tipo_associado: "Benemerito", servico_id: "1", percentual_valor: "0.00"},
+                {tipo_associado: "Benemerito", servico_id: "2", percentual_valor: "100.00"}
+            ];
+            
+            tiposAssociadoData = ["Contribuinte", "Aluno", "Soldado 2ª Classe", "Soldado 1ª Classe", "Agregado", "Remido 50%", "Remido", "Benemerito"];
+            
+            dadosCarregados = true;
+            preencherSelectTiposAssociado();
+            
+            console.log('✓ Dados de fallback carregados');
+            return true;
         });
+}
+
+
+function preencherSelectTiposAssociado() {
+    const select = document.getElementById('tipoAssociadoServico');
+    if (!select) {
+        console.warn('Select tipoAssociadoServico não encontrado');
+        return;
+    }
+    
+    // Limpa opções existentes (exceto a primeira)
+    while (select.children.length > 1) {
+        select.removeChild(select.lastChild);
+    }
+    
+    // Adiciona tipos do banco
+    tiposAssociadoData.forEach(tipo => {
+        const option = document.createElement('option');
+        option.value = tipo;
+        option.textContent = tipo;
+        select.appendChild(option);
+    });
+    
+    console.log(`✓ Select preenchido com ${tiposAssociadoData.length} tipos de associado`);
+    
+    // Atualiza Select2 se estiver inicializado
+    if (typeof $ !== 'undefined' && $('#tipoAssociadoServico').hasClass('select2-hidden-accessible')) {
+        $('#tipoAssociadoServico').trigger('change');
+    }
 }
 
 // Dados hardcoded como último recurso
@@ -1771,8 +1907,8 @@ function useHardcodedData() {
     ];
     
     regrasContribuicao = [
-        {tipo_associado: "Contribuinte", servico_id: "1", percentual_valor: "100.00"},
-        {tipo_associado: "Contribuinte", servico_id: "2", percentual_valor: "100.00"},
+        {tipo_associado: "Contribuente", servico_id: "1", percentual_valor: "100.00"},
+        {tipo_associado: "Contribuente", servico_id: "2", percentual_valor: "100.00"},
         {tipo_associado: "Aluno", servico_id: "1", percentual_valor: "50.00"},
         {tipo_associado: "Aluno", servico_id: "2", percentual_valor: "100.00"},
         {tipo_associado: "Soldado 2ª Classe", servico_id: "1", percentual_valor: "50.00"},
@@ -2228,7 +2364,13 @@ function removerDependente(button) {
 }
 
 function calcularServicos() {
-    console.log('=== CALCULANDO SERVIÇOS (VERSÃO CORRIGIDA) ===');
+    console.log('=== CALCULANDO SERVIÇOS (USANDO DADOS DO BANCO) ===');
+    
+    if (!dadosCarregados) {
+        console.warn('Dados ainda não carregados, aguardando...');
+        setTimeout(calcularServicos, 500);
+        return;
+    }
     
     const tipoAssociadoEl = document.getElementById('tipoAssociadoServico');
     const servicoJuridicoEl = document.getElementById('servicoJuridico');
@@ -2241,15 +2383,14 @@ function calcularServicos() {
     const tipoAssociado = tipoAssociadoEl.value;
     const servicoJuridicoChecked = servicoJuridicoEl.checked;
     
-    console.log('Tipo associado:', tipoAssociado);
-    console.log('Jurídico selecionado:', servicoJuridicoChecked);
+    console.log('Calculando para:', {tipoAssociado, servicoJuridicoChecked});
     
     if (!tipoAssociado) {
         resetarCalculos();
         return;
     }
     
-    // Buscar regras para o tipo de associado selecionado
+    // Buscar regras para o tipo de associado selecionado USANDO DADOS DO BANCO
     const regrasSocial = regrasContribuicao.filter(r => 
         r.tipo_associado === tipoAssociado && r.servico_id == 1
     );
@@ -2257,7 +2398,7 @@ function calcularServicos() {
         r.tipo_associado === tipoAssociado && r.servico_id == 2
     );
     
-    console.log('Regras encontradas:', {regrasSocial, regrasJuridico});
+    console.log('Regras encontradas no banco:', {regrasSocial, regrasJuridico});
     
     let valorTotalGeral = 0;
     
@@ -2269,14 +2410,12 @@ function calcularServicos() {
         const percentual = parseFloat(regra.percentual_valor);
         const valorFinal = (valorBase * percentual) / 100;
         
-        console.log('Cálculo Social:', {valorBase, percentual, valorFinal});
+        console.log('Cálculo Social (do banco):', {valorBase, percentual, valorFinal});
         
         // Atualiza elementos do DOM
         updateElementSafe('valorBaseSocial', valorBase.toFixed(2));
         updateElementSafe('percentualSocial', percentual.toFixed(0));
         updateElementSafe('valorFinalSocial', valorFinal.toFixed(2));
-        
-        // CORREÇÃO: Sempre define o valor, mesmo sendo 0 para isentos
         updateElementSafe('valorSocial', valorFinal.toFixed(2), 'value');
         updateElementSafe('percentualAplicadoSocial', percentual.toFixed(2), 'value');
         
@@ -2291,7 +2430,7 @@ function calcularServicos() {
         const percentual = parseFloat(regra.percentual_valor);
         const valorFinal = (valorBase * percentual) / 100;
         
-        console.log('Cálculo Jurídico:', {valorBase, percentual, valorFinal});
+        console.log('Cálculo Jurídico (do banco):', {valorBase, percentual, valorFinal});
         
         updateElementSafe('valorBaseJuridico', valorBase.toFixed(2));
         updateElementSafe('percentualJuridico', percentual.toFixed(0));
@@ -2311,7 +2450,7 @@ function calcularServicos() {
     // Atualizar total geral
     updateElementSafe('valorTotalGeral', valorTotalGeral.toFixed(2));
     
-    console.log('Valor total calculado:', valorTotalGeral);
+    console.log('Valor total calculado (do banco):', valorTotalGeral);
     console.log('=== FIM CÁLCULO SERVIÇOS ===');
 }
 
@@ -2773,6 +2912,35 @@ function showAlert(message, type = 'info') {
             setTimeout(() => alert.remove(), 300);
         }
     }, 5000);
+}
+
+
+function resetarCalculos() {
+    console.log('Resetando cálculos...');
+    
+    // Valores base dos serviços vindos do banco
+    const servicoSocial = servicosData.find(s => s.id == 1);
+    const servicoJuridico = servicosData.find(s => s.id == 2);
+    
+    const valorBaseSocial = servicoSocial ? parseFloat(servicoSocial.valor_base).toFixed(2) : '173,10';
+    const valorBaseJuridico = servicoJuridico ? parseFloat(servicoJuridico.valor_base).toFixed(2) : '43,28';
+    
+    // Social
+    updateElementSafe('valorBaseSocial', valorBaseSocial);
+    updateElementSafe('percentualSocial', '0');
+    updateElementSafe('valorFinalSocial', '0,00');
+    updateElementSafe('valorSocial', '0', 'value');
+    updateElementSafe('percentualAplicadoSocial', '0', 'value');
+    
+    // Jurídico
+    updateElementSafe('valorBaseJuridico', valorBaseJuridico);
+    updateElementSafe('percentualJuridico', '0');
+    updateElementSafe('valorFinalJuridico', '0,00');
+    updateElementSafe('valorJuridico', '0', 'value');
+    updateElementSafe('percentualAplicadoJuridico', '0', 'value');
+    
+    // Total
+    updateElementSafe('valorTotalGeral', '0,00');
 }
 
 // Inicializar após tudo carregado

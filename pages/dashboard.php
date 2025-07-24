@@ -2901,18 +2901,6 @@ function preencherTabFinanceiro(associado) {
                     ${servicosHtml}
                 </div>
 
-                ${historicoHtml ? `
-                <!-- Histórico de Alterações -->
-                <div class="detail-section">
-                    <div class="section-header">
-                        <div class="section-icon">
-                            <i class="fas fa-history"></i>
-                        </div>
-                        <h3 class="section-title">Histórico de Alterações</h3>
-                    </div>
-                    ${historicoHtml}
-                </div>
-                ` : ''}
 
                 <!-- Dados Bancários -->
                 <div class="detail-section">
