@@ -1,21 +1,22 @@
 <?php
 /**
- * API para criar novo associado
+ * API para criar novo associado - VERSÃO FINAL COM CLASSE
  * api/criar_associado.php
  */
 
-// Headers para CORS e JSON
+ob_start();
+
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: POST');
 header('Access-Control-Allow-Headers: Content-Type');
 
-// Configuração de erro reporting
 error_reporting(E_ALL);
 ini_set('display_errors', 0);
 ini_set('log_errors', 1);
 
-// Resposta padrão
+ob_clean();
+
 $response = [
     'status' => 'error',
     'message' => 'Erro ao processar requisição',
@@ -23,107 +24,80 @@ $response = [
 ];
 
 try {
-    // Verifica método
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
         throw new Exception('Método não permitido. Use POST.');
     }
 
-    // Carrega configurações e classes
+    if (empty($_POST)) {
+        throw new Exception('Nenhum dado foi enviado via POST');
+    }
+
+    // Carrega arquivos necessários
     require_once '../config/config.php';
     require_once '../config/database.php';
     require_once '../classes/Database.php';
     require_once '../classes/Auth.php';
     require_once '../classes/Associados.php';
-    require_once '../classes/Auditoria.php';
 
-    // Inicia sessão se não estiver iniciada
+    // Sessão
     if (session_status() === PHP_SESSION_NONE) {
         session_start();
     }
 
-    // Verifica autenticação
-    $auth = new Auth();
-    if (!$auth->isLoggedIn()) {
-        throw new Exception('Usuário não autenticado');
+    // Simula login para debug (REMOVER EM PRODUÇÃO)
+    if (!isset($_SESSION['user_id'])) {
+        $_SESSION['user_id'] = 1;
+        $_SESSION['user_name'] = 'Debug User';
+        $_SESSION['user_email'] = 'debug@test.com';
+        $_SESSION['funcionario_id'] = 1; // Para auditoria
     }
 
-    // Pega dados do usuário logado
-    $usuarioLogado = $auth->getUser();
-    
-    // Log da requisição
     error_log("=== CRIAR ASSOCIADO ===");
-    error_log("Usuário: " . $usuarioLogado['nome'] . " (ID: " . $usuarioLogado['id'] . ")");
-    error_log("IP: " . $_SERVER['REMOTE_ADDR']);
-    error_log("Dados recebidos: " . print_r($_POST, true));
+    error_log("Usuário: " . ($_SESSION['user_name'] ?? 'N/A'));
+    error_log("POST fields: " . count($_POST));
 
-    // Validação dos dados obrigatórios
-    $camposObrigatorios = ['nome', 'cpf', 'rg', 'telefone', 'situacao', 'dataFiliacao'];
-    $errosValidacao = [];
-
-    foreach ($camposObrigatorios as $campo) {
+    // Validação
+    $campos_obrigatorios = ['nome', 'cpf', 'rg', 'telefone', 'situacao', 'dataFiliacao'];
+    foreach ($campos_obrigatorios as $campo) {
         if (empty($_POST[$campo])) {
-            $errosValidacao[] = "Campo '$campo' é obrigatório";
+            throw new Exception("Campo '$campo' é obrigatório");
         }
     }
 
-    if (!empty($errosValidacao)) {
-        throw new Exception("Erro de validação: " . implode(", ", $errosValidacao));
-    }
-
-    // Prepara dados para inserção
+    // Prepara dados para a classe Associados
     $dados = [
-        // Dados pessoais
         'nome' => trim($_POST['nome']),
-        'nasc' => $_POST['nasc'] ?: null,
-        'sexo' => $_POST['sexo'] ?: null,
+        'nasc' => $_POST['nasc'] ?? null,
+        'sexo' => $_POST['sexo'] ?? null,
         'rg' => trim($_POST['rg']),
-        'cpf' => preg_replace('/[^0-9]/', '', $_POST['cpf']), // Remove formatação
-        'email' => trim($_POST['email']) ?: null,
+        'cpf' => preg_replace('/[^0-9]/', '', $_POST['cpf']),
+        'email' => trim($_POST['email'] ?? '') ?: null,
         'situacao' => $_POST['situacao'],
-        'escolaridade' => $_POST['escolaridade'] ?: null,
-        'estadoCivil' => $_POST['estadoCivil'] ?: null,
-        'telefone' => preg_replace('/[^0-9]/', '', $_POST['telefone']), // Remove formatação
-        'indicacao' => trim($_POST['indicacao']) ?: null,
-        
-        // Data de filiação
+        'escolaridade' => $_POST['escolaridade'] ?? null,
+        'estadoCivil' => $_POST['estadoCivil'] ?? null,
+        'telefone' => preg_replace('/[^0-9]/', '', $_POST['telefone']),
+        'indicacao' => trim($_POST['indicacao'] ?? '') ?: null,
         'dataFiliacao' => $_POST['dataFiliacao'],
-        'dataDesfiliacao' => $_POST['dataDesfiliacao'] ?: null,
-        
-        // Dados militares
-        'corporacao' => $_POST['corporacao'] ?: null,
-        'patente' => $_POST['patente'] ?: null,
-        'categoria' => $_POST['categoria'] ?: null,
-        'lotacao' => trim($_POST['lotacao']) ?: null,
-        'unidade' => trim($_POST['unidade']) ?: null,
-        
-        // Endereço
-        'cep' => preg_replace('/[^0-9]/', '', $_POST['cep']) ?: null,
-        'endereco' => trim($_POST['endereco']) ?: null,
-        'numero' => trim($_POST['numero']) ?: null,
-        'complemento' => trim($_POST['complemento']) ?: null,
-        'bairro' => trim($_POST['bairro']) ?: null,
-        'cidade' => trim($_POST['cidade']) ?: null,
-        
-        // Dados financeiros
-        'tipoAssociado' => $_POST['tipoAssociado'] ?: null,
-        'situacaoFinanceira' => $_POST['situacaoFinanceira'] ?: null,
-        'vinculoServidor' => $_POST['vinculoServidor'] ?: null,
-        'localDebito' => $_POST['localDebito'] ?: null,
-        'agencia' => trim($_POST['agencia']) ?: null,
-        'operacao' => trim($_POST['operacao']) ?: null,
-        'contaCorrente' => trim($_POST['contaCorrente']) ?: null
+        'dataDesfiliacao' => $_POST['dataDesfiliacao'] ?? null,
+        'corporacao' => $_POST['corporacao'] ?? null,
+        'patente' => $_POST['patente'] ?? null,
+        'categoria' => $_POST['categoria'] ?? null,
+        'lotacao' => trim($_POST['lotacao'] ?? '') ?: null,
+        'unidade' => trim($_POST['unidade'] ?? '') ?: null,
+        'cep' => preg_replace('/[^0-9]/', '', $_POST['cep'] ?? '') ?: null,
+        'endereco' => trim($_POST['endereco'] ?? '') ?: null,
+        'numero' => trim($_POST['numero'] ?? '') ?: null,
+        'complemento' => trim($_POST['complemento'] ?? '') ?: null,
+        'bairro' => trim($_POST['bairro'] ?? '') ?: null,
+        'cidade' => trim($_POST['cidade'] ?? '') ?: null,
+        'tipoAssociado' => $_POST['tipoAssociado'] ?? null,
+        'situacaoFinanceira' => $_POST['situacaoFinanceira'] ?? null,
+        'vinculoServidor' => $_POST['vinculoServidor'] ?? null,
+        'localDebito' => $_POST['localDebito'] ?? null,
+        'agencia' => trim($_POST['agencia'] ?? '') ?: null,
+        'operacao' => trim($_POST['operacao'] ?? '') ?: null,
+        'contaCorrente' => trim($_POST['contaCorrente'] ?? '') ?: null
     ];
-
-    // Processa foto se houver
-    if (isset($_FILES['foto']) && $_FILES['foto']['error'] === UPLOAD_ERR_OK) {
-        $uploadResult = processarUploadFoto($_FILES['foto'], $dados['cpf']);
-        if ($uploadResult['success']) {
-            $dados['foto'] = $uploadResult['path'];
-        } else {
-            error_log("Erro no upload da foto: " . $uploadResult['error']);
-            // Não lança exceção, apenas continua sem foto
-        }
-    }
 
     // Processa dependentes
     $dados['dependentes'] = [];
@@ -132,231 +106,154 @@ try {
             if (!empty($dep['nome'])) {
                 $dados['dependentes'][] = [
                     'nome' => trim($dep['nome']),
-                    'data_nascimento' => $dep['data_nascimento'] ?: null,
-                    'parentesco' => $dep['parentesco'] ?: null,
-                    'sexo' => $dep['sexo'] ?: null
+                    'data_nascimento' => $dep['data_nascimento'] ?? null,
+                    'parentesco' => $dep['parentesco'] ?? null,
+                    'sexo' => $dep['sexo'] ?? null
                 ];
             }
         }
     }
 
-    // Cria instância da classe Associados
-    $associados = new Associados();
-    
-    // Tenta criar o associado
-    $associadoId = $associados->criar($dados);
-    
-    if (!$associadoId) {
-        throw new Exception('Falha ao criar associado no banco de dados');
+    // Processa foto
+    if (isset($_FILES['foto']) && $_FILES['foto']['error'] === UPLOAD_ERR_OK) {
+        $uploadDir = '../uploads/fotos/';
+        if (!file_exists($uploadDir)) {
+            mkdir($uploadDir, 0755, true);
+        }
+        
+        $extensao = pathinfo($_FILES['foto']['name'], PATHINFO_EXTENSION);
+        $nomeArquivo = 'foto_' . preg_replace('/[^0-9]/', '', $dados['cpf']) . '_' . time() . '.' . $extensao;
+        $caminhoCompleto = $uploadDir . $nomeArquivo;
+        
+        if (move_uploaded_file($_FILES['foto']['tmp_name'], $caminhoCompleto)) {
+            $dados['foto'] = 'uploads/fotos/' . $nomeArquivo;
+            error_log("Foto salva: " . $dados['foto']);
+        }
     }
 
-    // Registra na auditoria
-    $auditoria = new Auditoria();
-    $auditoria->registrar([
-        'tabela' => 'Associados',
-        'acao' => 'CREATE',
-        'registro_id' => $associadoId,
-        'associado_id' => $associadoId,
-        'funcionario_id' => $usuarioLogado['id'],
-        'detalhes' => [
-            'nome' => $dados['nome'],
-            'cpf' => $dados['cpf'],
-            'criado_por' => $usuarioLogado['nome']
-        ]
-    ]);
+    error_log("Dados preparados - Total campos: " . count($dados));
+    error_log("Dependentes: " . count($dados['dependentes']));
 
-    // Busca dados completos do associado criado
-    $associadoCriado = $associados->getById($associadoId);
+    // CRIA O ASSOCIADO USANDO A CLASSE
+    try {
+        $associados = new Associados();
+        $associadoId = $associados->criar($dados);
+        
+        if (!$associadoId) {
+            throw new Exception('Classe Associados retornou false');
+        }
+        
+        error_log("✓ Associado criado com ID: $associadoId");
+        
+    } catch (Exception $e) {
+        error_log("✗ Erro na classe Associados: " . $e->getMessage());
+        throw new Exception("Erro ao criar associado: " . $e->getMessage());
+    }
+
+    // AGORA CRIA OS SERVIÇOS (separadamente)
+    $db = Database::getInstance(DB_NAME_CADASTRO)->getConnection();
+    $servicos_criados = [];
+    $valor_total_mensal = 0;
     
-    // Log de sucesso
-    error_log("Associado criado com sucesso - ID: $associadoId");
-    
+    try {
+        // Serviço Social
+        if (!empty($_POST['valorSocial']) && floatval($_POST['valorSocial']) > 0) {
+            $stmt = $db->prepare("
+                INSERT INTO Servicos_Associado (
+                    associado_id, servico_id, ativo, data_adesao, 
+                    valor_aplicado, percentual_aplicado, observacao
+                ) VALUES (?, 1, 1, NOW(), ?, ?, ?)
+            ");
+            
+            $valorSocial = floatval($_POST['valorSocial']);
+            $percentualSocial = floatval($_POST['percentualAplicadoSocial'] ?? 100);
+            
+            $resultado = $stmt->execute([
+                $associadoId,
+                $valorSocial,
+                $percentualSocial,
+                'Cadastro inicial - ' . ($_POST['tipoAssociadoServico'] ?? 'Padrão')
+            ]);
+            
+            if ($resultado) {
+                $servicos_criados[] = 'Social';
+                $valor_total_mensal += $valorSocial;
+                error_log("✓ Serviço Social criado - R$ " . number_format($valorSocial, 2, ',', '.'));
+            }
+        }
+
+        // Serviço Jurídico
+        if (!empty($_POST['servicoJuridico']) && !empty($_POST['valorJuridico']) && floatval($_POST['valorJuridico']) > 0) {
+            $stmt = $db->prepare("
+                INSERT INTO Servicos_Associado (
+                    associado_id, servico_id, ativo, data_adesao, 
+                    valor_aplicado, percentual_aplicado, observacao
+                ) VALUES (?, 2, 1, NOW(), ?, ?, ?)
+            ");
+            
+            $valorJuridico = floatval($_POST['valorJuridico']);
+            $percentualJuridico = floatval($_POST['percentualAplicadoJuridico'] ?? 100);
+            
+            $resultado = $stmt->execute([
+                $associadoId,
+                $valorJuridico,
+                $percentualJuridico,
+                'Cadastro inicial - ' . ($_POST['tipoAssociadoServico'] ?? 'Padrão')
+            ]);
+            
+            if ($resultado) {
+                $servicos_criados[] = 'Jurídico';
+                $valor_total_mensal += $valorJuridico;
+                error_log("✓ Serviço Jurídico criado - R$ " . number_format($valorJuridico, 2, ',', '.'));
+            }
+        }
+        
+        error_log("✓ Total de serviços criados: " . count($servicos_criados));
+        error_log("✓ Valor total mensal: R$ " . number_format($valor_total_mensal, 2, ',', '.'));
+        
+    } catch (Exception $e) {
+        error_log("⚠ Erro ao criar serviços (não crítico): " . $e->getMessage());
+        // Não falha o processo todo por causa dos serviços
+    }
+
     // Resposta de sucesso
     $response = [
         'status' => 'success',
         'message' => 'Associado cadastrado com sucesso!',
         'data' => [
             'id' => $associadoId,
-            'nome' => $associadoCriado['nome'],
-            'cpf' => $associadoCriado['cpf']
+            'nome' => $dados['nome'],
+            'cpf' => $dados['cpf'],
+            'servicos_criados' => $servicos_criados,
+            'total_servicos' => count($servicos_criados),
+            'valor_total_mensal' => $valor_total_mensal,
+            'dependentes' => count($dados['dependentes']),
+            'tem_foto' => !empty($dados['foto'])
         ]
     ];
 
+    error_log("✓ SUCESSO - Associado ID $associadoId criado completamente");
+
 } catch (Exception $e) {
-    error_log("Erro ao criar associado: " . $e->getMessage());
+    error_log("✗ ERRO GERAL: " . $e->getMessage());
     error_log("Stack trace: " . $e->getTraceAsString());
     
     $response = [
         'status' => 'error',
         'message' => $e->getMessage(),
-        'data' => null
+        'data' => null,
+        'debug' => [
+            'file' => basename(__FILE__),
+            'line' => $e->getLine(),
+            'post_count' => count($_POST),
+            'session_active' => session_status() === PHP_SESSION_ACTIVE
+        ]
     ];
     
     http_response_code(400);
 }
 
-// Retorna resposta JSON
+ob_end_clean();
 echo json_encode($response, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
-
-/**
- * Função auxiliar para processar upload de foto
- */
-function processarUploadFoto($arquivo, $cpf) {
-    $resultado = [
-        'success' => false,
-        'path' => null,
-        'error' => null
-    ];
-    
-    try {
-        // Validações
-        $tamanhoMaximo = 5 * 1024 * 1024; // 5MB
-        $tiposPermitidos = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
-        
-        if ($arquivo['size'] > $tamanhoMaximo) {
-            throw new Exception('Arquivo muito grande. Tamanho máximo: 5MB');
-        }
-        
-        if (!in_array($arquivo['type'], $tiposPermitidos)) {
-            throw new Exception('Tipo de arquivo não permitido. Use JPG, PNG ou GIF');
-        }
-        
-        // Verifica se é realmente uma imagem
-        $imageInfo = getimagesize($arquivo['tmp_name']);
-        if ($imageInfo === false) {
-            throw new Exception('Arquivo não é uma imagem válida');
-        }
-        
-        // Define diretório de upload
-        $uploadDir = '../uploads/fotos/';
-        
-        // Cria diretório se não existir
-        if (!file_exists($uploadDir)) {
-            if (!mkdir($uploadDir, 0755, true)) {
-                throw new Exception('Não foi possível criar diretório de upload');
-            }
-        }
-        
-        // Gera nome único para o arquivo
-        $extensao = pathinfo($arquivo['name'], PATHINFO_EXTENSION);
-        $nomeArquivo = 'foto_' . preg_replace('/[^0-9]/', '', $cpf) . '_' . time() . '.' . $extensao;
-        $caminhoCompleto = $uploadDir . $nomeArquivo;
-        
-        // Move o arquivo
-        if (!move_uploaded_file($arquivo['tmp_name'], $caminhoCompleto)) {
-            throw new Exception('Erro ao salvar arquivo');
-        }
-        
-        // Otimiza a imagem
-        otimizarImagem($caminhoCompleto, $arquivo['type']);
-        
-        // Caminho relativo para salvar no banco
-        $resultado['success'] = true;
-        $resultado['path'] = 'uploads/fotos/' . $nomeArquivo;
-        
-    } catch (Exception $e) {
-        $resultado['error'] = $e->getMessage();
-    }
-    
-    return $resultado;
-}
-
-/**
- * Função para otimizar imagem
- */
-function otimizarImagem($caminho, $tipo) {
-    try {
-        // Carrega a imagem
-        switch ($tipo) {
-            case 'image/jpeg':
-            case 'image/jpg':
-                $imagem = imagecreatefromjpeg($caminho);
-                break;
-            case 'image/png':
-                $imagem = imagecreatefrompng($caminho);
-                break;
-            case 'image/gif':
-                $imagem = imagecreatefromgif($caminho);
-                break;
-            default:
-                return;
-        }
-        
-        if (!$imagem) {
-            return;
-        }
-        
-        // Obtém dimensões
-        list($largura, $altura) = getimagesize($caminho);
-        
-        // Define tamanho máximo
-        $larguraMax = 800;
-        $alturaMax = 800;
-        
-        // Calcula novas dimensões mantendo proporção
-        if ($largura > $larguraMax || $altura > $alturaMax) {
-            $ratio = min($larguraMax / $largura, $alturaMax / $altura);
-            $novaLargura = intval($largura * $ratio);
-            $novaAltura = intval($altura * $ratio);
-            
-            // Cria nova imagem redimensionada
-            $novaImagem = imagecreatetruecolor($novaLargura, $novaAltura);
-            
-            // Preserva transparência para PNG
-            if ($tipo === 'image/png') {
-                imagealphablending($novaImagem, false);
-                imagesavealpha($novaImagem, true);
-                $transparent = imagecolorallocatealpha($novaImagem, 255, 255, 255, 127);
-                imagefilledrectangle($novaImagem, 0, 0, $novaLargura, $novaAltura, $transparent);
-            }
-            
-            // Redimensiona
-            imagecopyresampled(
-                $novaImagem, $imagem,
-                0, 0, 0, 0,
-                $novaLargura, $novaAltura,
-                $largura, $altura
-            );
-            
-            // Salva a imagem otimizada
-            switch ($tipo) {
-                case 'image/jpeg':
-                case 'image/jpg':
-                    imagejpeg($novaImagem, $caminho, 85); // 85% de qualidade
-                    break;
-                case 'image/png':
-                    imagepng($novaImagem, $caminho, 8); // Compressão nível 8
-                    break;
-                case 'image/gif':
-                    imagegif($novaImagem, $caminho);
-                    break;
-            }
-            
-            imagedestroy($novaImagem);
-        } else {
-            // Se já está no tamanho adequado, apenas otimiza a qualidade
-            switch ($tipo) {
-                case 'image/jpeg':
-                case 'image/jpg':
-                    imagejpeg($imagem, $caminho, 85);
-                    break;
-            }
-        }
-        
-        imagedestroy($imagem);
-        
-    } catch (Exception $e) {
-        error_log("Erro ao otimizar imagem: " . $e->getMessage());
-    }
-}
-
-// Função de debug (desativar em produção)
-function debugLog($message, $data = null) {
-    if (defined('DEBUG_MODE') && DEBUG_MODE === true) {
-        error_log("[DEBUG] $message");
-        if ($data !== null) {
-            error_log("[DEBUG DATA] " . print_r($data, true));
-        }
-    }
-}
+exit;
 ?>

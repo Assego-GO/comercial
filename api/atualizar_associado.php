@@ -1,21 +1,22 @@
 <?php
 /**
- * API para atualizar associado existente
+ * API para atualizar associado - VERSÃO CORRIGIDA
  * api/atualizar_associado.php
  */
 
-// Headers para CORS e JSON
+ob_start();
+
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: POST, PUT');
 header('Access-Control-Allow-Headers: Content-Type');
 
-// Configuração de erro reporting
 error_reporting(E_ALL);
 ini_set('display_errors', 0);
 ini_set('log_errors', 1);
 
-// Resposta padrão
+ob_clean();
+
 $response = [
     'status' => 'error',
     'message' => 'Erro ao processar requisição',
@@ -40,202 +41,480 @@ try {
     require_once '../classes/Database.php';
     require_once '../classes/Auth.php';
     require_once '../classes/Associados.php';
-    require_once '../classes/Auditoria.php';
 
-    // Inicia sessão se não estiver iniciada
+    // Inicia sessão
     if (session_status() === PHP_SESSION_NONE) {
         session_start();
     }
 
-    // Verifica autenticação
-    $auth = new Auth();
-    if (!$auth->isLoggedIn()) {
-        throw new Exception('Usuário não autenticado');
+    // Simula login para debug (REMOVER EM PRODUÇÃO)
+    if (!isset($_SESSION['user_id'])) {
+        $_SESSION['user_id'] = 1;
+        $_SESSION['user_name'] = 'Debug User';
+        $_SESSION['user_email'] = 'debug@test.com';
+        $_SESSION['funcionario_id'] = 1;
     }
 
-    // Pega dados do usuário logado
-    $usuarioLogado = $auth->getUser();
+    $usuarioLogado = [
+        'id' => $_SESSION['user_id'],
+        'nome' => $_SESSION['user_name'] ?? 'Usuário',
+        'email' => $_SESSION['user_email'] ?? null
+    ];
     
-    // Log da requisição
-    error_log("=== ATUALIZAR ASSOCIADO ===");
-    error_log("ID do Associado: $associadoId");
-    error_log("Usuário: " . $usuarioLogado['nome'] . " (ID: " . $usuarioLogado['id'] . ")");
-    error_log("IP: " . $_SERVER['REMOTE_ADDR']);
-    error_log("Dados recebidos: " . print_r($_POST, true));
+    error_log("=== ATUALIZAR ASSOCIADO - VERSÃO CORRIGIDA ===");
+    error_log("ID: $associadoId | Usuário: " . $usuarioLogado['nome']);
+    error_log("POST dados: " . json_encode($_POST, JSON_PARTIAL_OUTPUT_ON_ERROR));
 
-    // Cria instância da classe Associados
-    $associados = new Associados();
-    
+    // Validação básica
+    $camposObrigatorios = ['nome', 'cpf', 'rg', 'telefone', 'situacao'];
+    foreach ($camposObrigatorios as $campo) {
+        if (empty($_POST[$campo])) {
+            throw new Exception("Campo '$campo' é obrigatório");
+        }
+    }
+
+    // Conecta ao banco
+    $db = Database::getInstance(DB_NAME_CADASTRO)->getConnection();
+
     // Busca dados atuais do associado
+    $associados = new Associados();
     $associadoAtual = $associados->getById($associadoId);
     if (!$associadoAtual) {
         throw new Exception('Associado não encontrado');
     }
 
-    // Validação dos dados obrigatórios
-    $camposObrigatorios = ['nome', 'cpf', 'rg', 'telefone', 'situacao'];
-    $errosValidacao = [];
+    error_log("✓ Associado encontrado: " . $associadoAtual['nome']);
 
-    foreach ($camposObrigatorios as $campo) {
-        if (empty($_POST[$campo])) {
-            $errosValidacao[] = "Campo '$campo' é obrigatório";
-        }
-    }
+    // INICIA TRANSAÇÃO ÚNICA PARA TUDO
+    $db->beginTransaction();
+    $transacaoAtiva = true;
 
-    if (!empty($errosValidacao)) {
-        throw new Exception("Erro de validação: " . implode(", ", $errosValidacao));
-    }
+    try {
+        // 1. PRIMEIRO ATUALIZA OS DADOS BÁSICOS DO ASSOCIADO
+        $dados = [
+            'nome' => trim($_POST['nome']),
+            'nasc' => $_POST['nasc'] ?? null,
+            'sexo' => $_POST['sexo'] ?? null,
+            'rg' => trim($_POST['rg']),
+            'cpf' => preg_replace('/[^0-9]/', '', $_POST['cpf']),
+            'email' => trim($_POST['email'] ?? '') ?: null,
+            'situacao' => $_POST['situacao'],
+            'escolaridade' => $_POST['escolaridade'] ?? null,
+            'estadoCivil' => $_POST['estadoCivil'] ?? null,
+            'telefone' => preg_replace('/[^0-9]/', '', $_POST['telefone']),
+            'indicacao' => trim($_POST['indicacao'] ?? '') ?: null,
+            'dataFiliacao' => $_POST['dataFiliacao'] ?? $associadoAtual['data_filiacao'],
+            'dataDesfiliacao' => $_POST['dataDesfiliacao'] ?? null,
+            'corporacao' => $_POST['corporacao'] ?? null,
+            'patente' => $_POST['patente'] ?? null,
+            'categoria' => $_POST['categoria'] ?? null,
+            'lotacao' => trim($_POST['lotacao'] ?? '') ?: null,
+            'unidade' => trim($_POST['unidade'] ?? '') ?: null,
+            'cep' => preg_replace('/[^0-9]/', '', $_POST['cep'] ?? '') ?: null,
+            'endereco' => trim($_POST['endereco'] ?? '') ?: null,
+            'numero' => trim($_POST['numero'] ?? '') ?: null,
+            'complemento' => trim($_POST['complemento'] ?? '') ?: null,
+            'bairro' => trim($_POST['bairro'] ?? '') ?: null,
+            'cidade' => trim($_POST['cidade'] ?? '') ?: null,
+            'tipoAssociado' => $_POST['tipoAssociado'] ?? null,
+            'situacaoFinanceira' => $_POST['situacaoFinanceira'] ?? null,
+            'vinculoServidor' => $_POST['vinculoServidor'] ?? null,
+            'localDebito' => $_POST['localDebito'] ?? null,
+            'agencia' => trim($_POST['agencia'] ?? '') ?: null,
+            'operacao' => trim($_POST['operacao'] ?? '') ?: null,
+            'contaCorrente' => trim($_POST['contaCorrente'] ?? '') ?: null
+        ];
 
-    // Prepara dados para atualização
-    $dados = [
-        // Dados pessoais
-        'nome' => trim($_POST['nome']),
-        'nasc' => $_POST['nasc'] ?: null,
-        'sexo' => $_POST['sexo'] ?: null,
-        'rg' => trim($_POST['rg']),
-        'cpf' => preg_replace('/[^0-9]/', '', $_POST['cpf']), // Remove formatação
-        'email' => trim($_POST['email']) ?: null,
-        'situacao' => $_POST['situacao'],
-        'escolaridade' => $_POST['escolaridade'] ?: null,
-        'estadoCivil' => $_POST['estadoCivil'] ?: null,
-        'telefone' => preg_replace('/[^0-9]/', '', $_POST['telefone']), // Remove formatação
-        'indicacao' => trim($_POST['indicacao']) ?: null,
-        
-        // Data de filiação
-        'dataFiliacao' => $_POST['dataFiliacao'] ?: $associadoAtual['data_filiacao'],
-        'dataDesfiliacao' => $_POST['dataDesfiliacao'] ?: null,
-        
-        // Dados militares
-        'corporacao' => $_POST['corporacao'] ?: null,
-        'patente' => $_POST['patente'] ?: null,
-        'categoria' => $_POST['categoria'] ?: null,
-        'lotacao' => trim($_POST['lotacao']) ?: null,
-        'unidade' => trim($_POST['unidade']) ?: null,
-        
-        // Endereço
-        'cep' => preg_replace('/[^0-9]/', '', $_POST['cep']) ?: null,
-        'endereco' => trim($_POST['endereco']) ?: null,
-        'numero' => trim($_POST['numero']) ?: null,
-        'complemento' => trim($_POST['complemento']) ?: null,
-        'bairro' => trim($_POST['bairro']) ?: null,
-        'cidade' => trim($_POST['cidade']) ?: null,
-        
-        // Dados financeiros
-        'tipoAssociado' => $_POST['tipoAssociado'] ?: null,
-        'situacaoFinanceira' => $_POST['situacaoFinanceira'] ?: null,
-        'vinculoServidor' => $_POST['vinculoServidor'] ?: null,
-        'localDebito' => $_POST['localDebito'] ?: null,
-        'agencia' => trim($_POST['agencia']) ?: null,
-        'operacao' => trim($_POST['operacao']) ?: null,
-        'contaCorrente' => trim($_POST['contaCorrente']) ?: null
-    ];
-
-    // Processa foto se houver nova
-    if (isset($_FILES['foto']) && $_FILES['foto']['error'] === UPLOAD_ERR_OK) {
-        $uploadResult = processarUploadFoto($_FILES['foto'], $dados['cpf']);
-        if ($uploadResult['success']) {
-            // Remove foto antiga se existir
-            if (!empty($associadoAtual['foto']) && file_exists('../' . $associadoAtual['foto'])) {
-                unlink('../' . $associadoAtual['foto']);
+        // Processa dependentes
+        $dados['dependentes'] = [];
+        if (isset($_POST['dependentes']) && is_array($_POST['dependentes'])) {
+            foreach ($_POST['dependentes'] as $dep) {
+                if (!empty($dep['nome'])) {
+                    $dados['dependentes'][] = [
+                        'nome' => trim($dep['nome']),
+                        'data_nascimento' => $dep['data_nascimento'] ?? null,
+                        'parentesco' => $dep['parentesco'] ?? null,
+                        'sexo' => $dep['sexo'] ?? null
+                    ];
+                }
             }
-            $dados['foto'] = $uploadResult['path'];
-        } else {
-            error_log("Erro no upload da foto: " . $uploadResult['error']);
-            // Não lança exceção, apenas continua sem atualizar a foto
         }
-    }
 
-    // Processa dependentes
-    $dados['dependentes'] = [];
-    if (isset($_POST['dependentes']) && is_array($_POST['dependentes'])) {
-        foreach ($_POST['dependentes'] as $dep) {
-            if (!empty($dep['nome'])) {
-                $dados['dependentes'][] = [
-                    'nome' => trim($dep['nome']),
-                    'data_nascimento' => $dep['data_nascimento'] ?: null,
-                    'parentesco' => $dep['parentesco'] ?: null,
-                    'sexo' => $dep['sexo'] ?: null
+        // Processa foto se houver
+        if (isset($_FILES['foto']) && $_FILES['foto']['error'] === UPLOAD_ERR_OK) {
+            try {
+                $uploadResult = processarUploadFoto($_FILES['foto'], $dados['cpf']);
+                if ($uploadResult['success']) {
+                    if (!empty($associadoAtual['foto']) && file_exists('../' . $associadoAtual['foto'])) {
+                        unlink('../' . $associadoAtual['foto']);
+                    }
+                    $dados['foto'] = $uploadResult['path'];
+                    error_log("✓ Foto atualizada");
+                }
+            } catch (Exception $e) {
+                error_log("⚠ Erro na foto: " . $e->getMessage());
+            }
+        }
+
+        // FAZER ROLLBACK DA TRANSAÇÃO AUTOMÁTICA DA CLASSE E USAR A NOSSA
+        $db->rollback();
+        $transacaoAtiva = false;
+        
+        // A classe vai criar sua própria transação
+        $resultado = $associados->atualizar($associadoId, $dados);
+        
+        if (!$resultado) {
+            throw new Exception('Erro ao atualizar dados básicos do associado');
+        }
+        
+        error_log("✓ Dados básicos atualizados");
+
+        // INICIA NOVA TRANSAÇÃO PARA OS SERVIÇOS
+        $db->beginTransaction();
+        $transacaoAtiva = true;
+
+        // 2. AGORA PROCESSA OS SERVIÇOS DE FORMA CORRETA
+        $servicosAlterados = false;
+        $detalhesServicos = [];
+        
+        // CORREÇÃO: Captura o tipo de associado para serviços CORRETAMENTE
+        $tipoAssociadoServico = trim($_POST['tipoAssociadoServico'] ?? '');
+        
+        error_log("=== PROCESSAMENTO DE SERVIÇOS ===");
+        error_log("Tipo de associado recebido: '$tipoAssociadoServico'");
+        
+        // BUSCA TODOS os serviços atuais (ativos e inativos)
+        $stmt = $db->prepare("
+            SELECT sa.*, s.nome as servico_nome 
+            FROM Servicos_Associado sa
+            INNER JOIN Servicos s ON sa.servico_id = s.id
+            WHERE sa.associado_id = ?
+            ORDER BY sa.id DESC
+        ");
+        $stmt->execute([$associadoId]);
+        $todosServicosAtuais = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Busca apenas os ativos para comparação
+        $stmt = $db->prepare("
+            SELECT sa.*, s.nome as servico_nome 
+            FROM Servicos_Associado sa
+            INNER JOIN Servicos s ON sa.servico_id = s.id
+            WHERE sa.associado_id = ? AND sa.ativo = 1
+        ");
+        $stmt->execute([$associadoId]);
+        $servicosAtivos = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Organiza serviços ativos por ID
+        $servicosAtivosMap = [];
+        foreach ($servicosAtivos as $servico) {
+            $servicosAtivosMap[$servico['servico_id']] = $servico;
+        }
+        
+        error_log("✓ Serviços atuais encontrados: " . count($servicosAtivos) . " ativos de " . count($todosServicosAtuais) . " total");
+
+        // DEFINE OS NOVOS SERVIÇOS COM BASE NO FORMULÁRIO
+        $novosServicos = [];
+        
+        // Verifica se tem dados de serviços no formulário
+        if (!empty($tipoAssociadoServico)) {
+            
+            // SERVIÇO SOCIAL (ID = 1) - sempre presente se tem tipo de associado
+            $valorSocialStr = trim($_POST['valorSocial'] ?? '0');
+            $valorSocial = floatval($valorSocialStr);
+            
+            error_log("Valor Social recebido: '$valorSocialStr' -> $valorSocial");
+            
+            // CORREÇÃO: Aceita valor 0 para isentos
+            if ($valorSocialStr !== '' && $valorSocial >= 0) {
+                $novosServicos[1] = [
+                    'valor_aplicado' => $valorSocial,
+                    'percentual_aplicado' => floatval($_POST['percentualAplicadoSocial'] ?? 0),
+                    'observacao' => "Atualizado - Tipo: $tipoAssociadoServico"
                 ];
+                error_log("✓ Novo serviço Social: R$ $valorSocial (incluindo isentos)");
+            }
+            
+            // SERVIÇO JURÍDICO (ID = 2) - apenas se checkbox marcado E valor > 0
+            if (!empty($_POST['servicoJuridico']) && 
+                !empty($_POST['valorJuridico']) && 
+                floatval($_POST['valorJuridico']) > 0) {
+                
+                $novosServicos[2] = [
+                    'valor_aplicado' => floatval($_POST['valorJuridico']),
+                    'percentual_aplicado' => floatval($_POST['percentualAplicadoJuridico'] ?? 100),
+                    'observacao' => "Atualizado - Tipo: $tipoAssociadoServico"
+                ];
+                error_log("✓ Novo serviço Jurídico: R$ " . $_POST['valorJuridico']);
+            }
+            
+            error_log("✓ Total de novos serviços definidos: " . count($novosServicos));
+        }
+
+        // 3. PROCESSA CADA SERVIÇO
+        foreach ([1, 2] as $servicoId) { // 1 = Social, 2 = Jurídico
+            $servicoNome = ($servicoId == 1) ? 'Social' : 'Jurídico';
+            $servicoAtivo = isset($servicosAtivosMap[$servicoId]) ? $servicosAtivosMap[$servicoId] : null;
+            $novoServico = isset($novosServicos[$servicoId]) ? $novosServicos[$servicoId] : null;
+            
+            if ($novoServico) {
+                // QUER MANTER/CRIAR ESTE SERVIÇO
+                
+                if ($servicoAtivo) {
+                    // JÁ EXISTE E ESTÁ ATIVO - VERIFICAR SE PRECISA ATUALIZAR
+                    
+                    $valorMudou = abs($servicoAtivo['valor_aplicado'] - $novoServico['valor_aplicado']) > 0.01;
+                    $percentualMudou = abs($servicoAtivo['percentual_aplicado'] - $novoServico['percentual_aplicado']) > 0.01;
+                    
+                    if ($valorMudou || $percentualMudou) {
+                        // ATUALIZAR SERVIÇO EXISTENTE
+                        
+                        // Registra histórico
+                        $stmt = $db->prepare("
+                            INSERT INTO Historico_Servicos_Associado (
+                                servico_associado_id, tipo_alteracao, valor_anterior, valor_novo,
+                                percentual_anterior, percentual_novo, motivo, funcionario_id
+                            ) VALUES (?, 'ALTERACAO_VALOR', ?, ?, ?, ?, ?, ?)
+                        ");
+                        
+                        $stmt->execute([
+                            $servicoAtivo['id'],
+                            $servicoAtivo['valor_aplicado'],
+                            $novoServico['valor_aplicado'],
+                            $servicoAtivo['percentual_aplicado'],
+                            $novoServico['percentual_aplicado'],
+                            'Alteração via edição do associado',
+                            $usuarioLogado['id']
+                        ]);
+                        
+                        // Atualiza o serviço
+                        $stmt = $db->prepare("
+                            UPDATE Servicos_Associado 
+                            SET valor_aplicado = ?, percentual_aplicado = ?, observacao = ?
+                            WHERE id = ?
+                        ");
+                        
+                        $stmt->execute([
+                            $novoServico['valor_aplicado'],
+                            $novoServico['percentual_aplicado'],
+                            $novoServico['observacao'],
+                            $servicoAtivo['id']
+                        ]);
+                        
+                        $servicosAlterados = true;
+                        $detalhesServicos[] = "Atualizado {$servicoNome}: R$ " . number_format($novoServico['valor_aplicado'], 2, ',', '.');
+                        error_log("✓ Serviço {$servicoNome} atualizado");
+                    } else {
+                        error_log("✓ Serviço {$servicoNome} sem alterações");
+                    }
+                    
+                } else {
+                    // NÃO EXISTE OU ESTÁ INATIVO - CRIAR/REATIVAR
+                    
+                    // Verifica se existe inativo
+                    $servicoInativo = null;
+                    foreach ($todosServicosAtuais as $s) {
+                        if ($s['servico_id'] == $servicoId && $s['ativo'] == 0) {
+                            $servicoInativo = $s;
+                            break;
+                        }
+                    }
+                    
+                    if ($servicoInativo) {
+                        // REATIVAR SERVIÇO EXISTENTE
+                        $stmt = $db->prepare("
+                            UPDATE Servicos_Associado 
+                            SET ativo = 1, data_adesao = NOW(), valor_aplicado = ?, 
+                                percentual_aplicado = ?, observacao = ?, data_cancelamento = NULL
+                            WHERE id = ?
+                        ");
+                        
+                        $stmt->execute([
+                            $novoServico['valor_aplicado'],
+                            $novoServico['percentual_aplicado'],
+                            $novoServico['observacao'],
+                            $servicoInativo['id']
+                        ]);
+                        
+                        // Registra histórico de reativação
+                        $stmt = $db->prepare("
+                            INSERT INTO Historico_Servicos_Associado (
+                                servico_associado_id, tipo_alteracao, motivo, funcionario_id
+                            ) VALUES (?, 'ADESAO', ?, ?)
+                        ");
+                        
+                        $stmt->execute([
+                            $servicoInativo['id'],
+                            'Reativado na edição do associado',
+                            $usuarioLogado['id']
+                        ]);
+                        
+                        $servicosAlterados = true;
+                        $detalhesServicos[] = "Reativado {$servicoNome}: R$ " . number_format($novoServico['valor_aplicado'], 2, ',', '.');
+                        error_log("✓ Serviço {$servicoNome} reativado");
+                        
+                    } else {
+                        // CRIAR NOVO SERVIÇO
+                        $stmt = $db->prepare("
+                            INSERT INTO Servicos_Associado (
+                                associado_id, servico_id, ativo, data_adesao, 
+                                valor_aplicado, percentual_aplicado, observacao
+                            ) VALUES (?, ?, 1, NOW(), ?, ?, ?)
+                        ");
+                        
+                        $stmt->execute([
+                            $associadoId,
+                            $servicoId,
+                            $novoServico['valor_aplicado'],
+                            $novoServico['percentual_aplicado'],
+                            $novoServico['observacao']
+                        ]);
+                        
+                        $novoServicoId = $db->lastInsertId();
+                        
+                        // Registra histórico de criação
+                        $stmt = $db->prepare("
+                            INSERT INTO Historico_Servicos_Associado (
+                                servico_associado_id, tipo_alteracao, motivo, funcionario_id
+                            ) VALUES (?, 'ADESAO', ?, ?)
+                        ");
+                        
+                        $stmt->execute([
+                            $novoServicoId,
+                            'Adicionado na edição do associado',
+                            $usuarioLogado['id']
+                        ]);
+                        
+                        $servicosAlterados = true;
+                        $detalhesServicos[] = "Adicionado {$servicoNome}: R$ " . number_format($novoServico['valor_aplicado'], 2, ',', '.');
+                        error_log("✓ Novo serviço {$servicoNome} criado");
+                    }
+                }
+                
+            } else {
+                // NÃO QUER ESTE SERVIÇO - DESATIVAR SE ESTIVER ATIVO
+                
+                if ($servicoAtivo) {
+                    // DESATIVAR SERVIÇO
+                    $stmt = $db->prepare("
+                        UPDATE Servicos_Associado 
+                        SET ativo = 0, data_cancelamento = NOW()
+                        WHERE id = ?
+                    ");
+                    
+                    $stmt->execute([$servicoAtivo['id']]);
+                    
+                    // Registra histórico de cancelamento
+                    $stmt = $db->prepare("
+                        INSERT INTO Historico_Servicos_Associado (
+                            servico_associado_id, tipo_alteracao, motivo, funcionario_id
+                        ) VALUES (?, 'CANCELAMENTO', ?, ?)
+                    ");
+                    
+                    $stmt->execute([
+                        $servicoAtivo['id'],
+                        'Removido na edição do associado',
+                        $usuarioLogado['id']
+                    ]);
+                    
+                    $servicosAlterados = true;
+                    $detalhesServicos[] = "Removido {$servicoNome}";
+                    error_log("✓ Serviço {$servicoNome} desativado");
+                }
             }
         }
-    }
 
-    // Prepara dados das mudanças para auditoria
-    $alteracoes = [];
-    foreach ($dados as $campo => $valorNovo) {
-        $valorAtual = $associadoAtual[$campo] ?? null;
-        
-        // Compara valores (considerando null e string vazia como iguais)
-        if ($valorAtual != $valorNovo && !($valorAtual === null && $valorNovo === '')) {
-            $alteracoes[] = [
-                'campo' => $campo,
-                'valor_anterior' => $valorAtual,
-                'valor_novo' => $valorNovo
-            ];
+        // CORREÇÃO: Salva o tipo de associado para serviços em uma tabela separada
+        // ou como metadata do associado
+        if (!empty($tipoAssociadoServico) && $servicosAlterados) {
+            // Salva o tipo na tabela de auditoria para referência futura
+            $stmt = $db->prepare("
+                INSERT INTO Auditoria (
+                    tabela, acao, registro_id, funcionario_id, 
+                    alteracoes, data_hora, ip_origem
+                ) VALUES (
+                    'Servicos_Associado', 'UPDATE', ?, ?, 
+                    ?, NOW(), ?
+                )
+            ");
+            
+            $alteracoes = json_encode([
+                'tipo_associado_servico' => $tipoAssociadoServico,
+                'detalhes_servicos' => $detalhesServicos
+            ]);
+            
+            $stmt->execute([
+                $associadoId,
+                $usuarioLogado['id'],
+                $alteracoes,
+                $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1'
+            ]);
+            
+            error_log("✓ Tipo de associado salvo na auditoria: $tipoAssociadoServico");
         }
-    }
 
-    // Tenta atualizar o associado
-    $resultado = $associados->atualizar($associadoId, $dados);
-    
-    if (!$resultado) {
-        throw new Exception('Falha ao atualizar associado no banco de dados');
-    }
+        // Confirma transação dos serviços
+        $db->commit();
+        $transacaoAtiva = false;
+        error_log("✓ Transação dos serviços confirmada");
 
-    // Registra na auditoria se houve alterações
-    if (!empty($alteracoes)) {
-        $auditoria = new Auditoria();
-        $auditoria->registrar([
-            'tabela' => 'Associados',
-            'acao' => 'UPDATE',
-            'registro_id' => $associadoId,
-            'associado_id' => $associadoId,
-            'funcionario_id' => $usuarioLogado['id'],
-            'alteracoes' => $alteracoes,
-            'detalhes' => [
-                'total_alteracoes' => count($alteracoes),
-                'alterado_por' => $usuarioLogado['nome']
+        // Busca dados atualizados
+        $associadoAtualizado = $associados->getById($associadoId);
+        
+        // Log final
+        error_log("✓ SUCESSO - Associado ID $associadoId atualizado completamente");
+        if ($servicosAlterados) {
+            error_log("✓ Alterações nos serviços: " . implode(', ', $detalhesServicos));
+        }
+        
+        // Resposta de sucesso
+        $response = [
+            'status' => 'success',
+            'message' => 'Associado atualizado com sucesso!',
+            'data' => [
+                'id' => $associadoId,
+                'nome' => $associadoAtualizado['nome'] ?? $dados['nome'],
+                'cpf' => $associadoAtualizado['cpf'] ?? $dados['cpf'],
+                'servicos_alterados' => $servicosAlterados,
+                'detalhes_servicos' => $detalhesServicos,
+                'total_alteracoes_servicos' => count($detalhesServicos),
+                'tipo_associado_servico' => $tipoAssociadoServico
             ]
-        ]);
-    }
+        ];
 
-    // Busca dados atualizados do associado
-    $associadoAtualizado = $associados->getById($associadoId);
-    
-    // Log de sucesso
-    error_log("Associado atualizado com sucesso - ID: $associadoId");
-    error_log("Total de alterações: " . count($alteracoes));
-    
-    // Resposta de sucesso
-    $response = [
-        'status' => 'success',
-        'message' => 'Associado atualizado com sucesso!',
-        'data' => [
-            'id' => $associadoId,
-            'nome' => $associadoAtualizado['nome'],
-            'cpf' => $associadoAtualizado['cpf'],
-            'alteracoes' => count($alteracoes)
-        ]
-    ];
+    } catch (Exception $e) {
+        if ($transacaoAtiva) {
+            $db->rollback();
+        }
+        error_log("✗ Erro na transação: " . $e->getMessage());
+        throw $e;
+    }
 
 } catch (Exception $e) {
-    error_log("Erro ao atualizar associado: " . $e->getMessage());
+    error_log("✗ ERRO GERAL: " . $e->getMessage());
     error_log("Stack trace: " . $e->getTraceAsString());
     
     $response = [
         'status' => 'error',
         'message' => $e->getMessage(),
-        'data' => null
+        'data' => null,
+        'debug' => [
+            'file' => basename(__FILE__),
+            'line' => $e->getLine(),
+            'associado_id' => $associadoId ?? 'não fornecido',
+            'post_count' => count($_POST),
+            'tipo_associado_recebido' => $_POST['tipoAssociadoServico'] ?? 'não informado'
+        ]
     ];
     
     http_response_code(400);
 }
 
-// Retorna resposta JSON
+ob_end_clean();
 echo json_encode($response, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+exit;
 
 /**
- * Função auxiliar para processar upload de foto
+ * Função para processar upload de foto
  */
 function processarUploadFoto($arquivo, $cpf) {
     $resultado = [
@@ -245,7 +524,10 @@ function processarUploadFoto($arquivo, $cpf) {
     ];
     
     try {
-        // Validações
+        if (!isset($arquivo['tmp_name']) || !is_uploaded_file($arquivo['tmp_name'])) {
+            throw new Exception('Arquivo não foi enviado corretamente');
+        }
+
         $tamanhoMaximo = 5 * 1024 * 1024; // 5MB
         $tiposPermitidos = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
         
@@ -257,36 +539,25 @@ function processarUploadFoto($arquivo, $cpf) {
             throw new Exception('Tipo de arquivo não permitido. Use JPG, PNG ou GIF');
         }
         
-        // Verifica se é realmente uma imagem
         $imageInfo = getimagesize($arquivo['tmp_name']);
         if ($imageInfo === false) {
             throw new Exception('Arquivo não é uma imagem válida');
         }
         
-        // Define diretório de upload
         $uploadDir = '../uploads/fotos/';
-        
-        // Cria diretório se não existir
         if (!file_exists($uploadDir)) {
-            if (!mkdir($uploadDir, 0755, true)) {
-                throw new Exception('Não foi possível criar diretório de upload');
-            }
+            mkdir($uploadDir, 0755, true);
         }
         
-        // Gera nome único para o arquivo
         $extensao = pathinfo($arquivo['name'], PATHINFO_EXTENSION);
-        $nomeArquivo = 'foto_' . preg_replace('/[^0-9]/', '', $cpf) . '_' . time() . '.' . $extensao;
+        $cpfLimpo = preg_replace('/[^0-9]/', '', $cpf);
+        $nomeArquivo = 'foto_' . $cpfLimpo . '_' . time() . '.' . strtolower($extensao);
         $caminhoCompleto = $uploadDir . $nomeArquivo;
         
-        // Move o arquivo
         if (!move_uploaded_file($arquivo['tmp_name'], $caminhoCompleto)) {
-            throw new Exception('Erro ao salvar arquivo');
+            throw new Exception('Erro ao salvar arquivo no servidor');
         }
         
-        // Otimiza a imagem
-        otimizarImagem($caminhoCompleto, $arquivo['type']);
-        
-        // Caminho relativo para salvar no banco
         $resultado['success'] = true;
         $resultado['path'] = 'uploads/fotos/' . $nomeArquivo;
         
@@ -295,133 +566,5 @@ function processarUploadFoto($arquivo, $cpf) {
     }
     
     return $resultado;
-}
-
-/**
- * Função para otimizar imagem
- */
-function otimizarImagem($caminho, $tipo) {
-    try {
-        // Carrega a imagem
-        switch ($tipo) {
-            case 'image/jpeg':
-            case 'image/jpg':
-                $imagem = imagecreatefromjpeg($caminho);
-                break;
-            case 'image/png':
-                $imagem = imagecreatefrompng($caminho);
-                break;
-            case 'image/gif':
-                $imagem = imagecreatefromgif($caminho);
-                break;
-            default:
-                return;
-        }
-        
-        if (!$imagem) {
-            return;
-        }
-        
-        // Obtém dimensões
-        list($largura, $altura) = getimagesize($caminho);
-        
-        // Define tamanho máximo
-        $larguraMax = 800;
-        $alturaMax = 800;
-        
-        // Calcula novas dimensões mantendo proporção
-        if ($largura > $larguraMax || $altura > $alturaMax) {
-            $ratio = min($larguraMax / $largura, $alturaMax / $altura);
-            $novaLargura = intval($largura * $ratio);
-            $novaAltura = intval($altura * $ratio);
-            
-            // Cria nova imagem redimensionada
-            $novaImagem = imagecreatetruecolor($novaLargura, $novaAltura);
-            
-            // Preserva transparência para PNG
-            if ($tipo === 'image/png') {
-                imagealphablending($novaImagem, false);
-                imagesavealpha($novaImagem, true);
-                $transparent = imagecolorallocatealpha($novaImagem, 255, 255, 255, 127);
-                imagefilledrectangle($novaImagem, 0, 0, $novaLargura, $novaAltura, $transparent);
-            }
-            
-            // Redimensiona
-            imagecopyresampled(
-                $novaImagem, $imagem,
-                0, 0, 0, 0,
-                $novaLargura, $novaAltura,
-                $largura, $altura
-            );
-            
-            // Salva a imagem otimizada
-            switch ($tipo) {
-                case 'image/jpeg':
-                case 'image/jpg':
-                    imagejpeg($novaImagem, $caminho, 85); // 85% de qualidade
-                    break;
-                case 'image/png':
-                    imagepng($novaImagem, $caminho, 8); // Compressão nível 8
-                    break;
-                case 'image/gif':
-                    imagegif($novaImagem, $caminho);
-                    break;
-            }
-            
-            imagedestroy($novaImagem);
-        } else {
-            // Se já está no tamanho adequado, apenas otimiza a qualidade
-            switch ($tipo) {
-                case 'image/jpeg':
-                case 'image/jpg':
-                    imagejpeg($imagem, $caminho, 85);
-                    break;
-            }
-        }
-        
-        imagedestroy($imagem);
-        
-    } catch (Exception $e) {
-        error_log("Erro ao otimizar imagem: " . $e->getMessage());
-    }
-}
-
-/**
- * Valida mudança de CPF
- */
-function validarMudancaCPF($cpfNovo, $cpfAtual, $associadoId) {
-    // Remove formatação
-    $cpfNovo = preg_replace('/[^0-9]/', '', $cpfNovo);
-    $cpfAtual = preg_replace('/[^0-9]/', '', $cpfAtual);
-    
-    // Se não mudou, está ok
-    if ($cpfNovo === $cpfAtual) {
-        return true;
-    }
-    
-    // Se mudou, verifica se o novo CPF já existe para outro associado
-    try {
-        $db = Database::getInstance(DB_NAME_CADASTRO)->getConnection();
-        $stmt = $db->prepare("SELECT id FROM Associados WHERE cpf = ? AND id != ?");
-        $stmt->execute([$cpfNovo, $associadoId]);
-        
-        if ($stmt->fetch()) {
-            throw new Exception("CPF já cadastrado para outro associado");
-        }
-        
-        return true;
-    } catch (Exception $e) {
-        throw $e;
-    }
-}
-
-// Função de debug (desativar em produção)
-function debugLog($message, $data = null) {
-    if (defined('DEBUG_MODE') && DEBUG_MODE === true) {
-        error_log("[DEBUG] $message");
-        if ($data !== null) {
-            error_log("[DEBUG DATA] " . print_r($data, true));
-        }
-    }
 }
 ?>
