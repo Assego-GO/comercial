@@ -3071,12 +3071,6 @@ function gerarHtmlServicosCompleto(servicos, valorTotal) {
                             <span>Valor base:</span>
                             <span style="font-weight: 600;">R$ ${valorBase.toFixed(2).replace('.', ',')}</span>
                         </div>
-                        <div style="display: flex; justify-content: space-between;">
-                            <span>Observação:</span>
-                            <span style="font-weight: 600; max-width: 200px; text-align: right;">
-                                ${social.observacao || 'Serviço social básico'}
-                            </span>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -3140,12 +3134,7 @@ function gerarHtmlServicosCompleto(servicos, valorTotal) {
                             <span>Valor base:</span>
                             <span style="font-weight: 600;">R$ ${valorBase.toFixed(2).replace('.', ',')}</span>
                         </div>
-                        <div style="display: flex; justify-content: space-between;">
-                            <span>Observação:</span>
-                            <span style="font-weight: 600; max-width: 200px; text-align: right;">
-                                ${juridico.observacao || 'Serviço jurídico opcional'}
-                            </span>
-                        </div>
+                        
                     </div>
                 </div>
             </div>
