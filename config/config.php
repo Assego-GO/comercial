@@ -5,12 +5,15 @@
  */
 
 // Informações do sistema
+
 define('SISTEMA_NOME', 'Sistema Comercial Assego');
 define('SISTEMA_VERSAO', '1.0.0');
 define('SISTEMA_EMPRESA', 'ASSEGO');
 
 // URLs base
+
 define('BASE_URL', 'http://172.16.253.44/matheus/comercial'); // Ajuste conforme seu ambiente
+
 define('ASSETS_URL', BASE_URL . '/assets');
 define('UPLOADS_URL', BASE_URL . '/uploads');
 
@@ -39,3 +42,6 @@ define('AUTOSAVE_INTERVALO', 300); // 5 minutos em segundos
 // Modo debug (desativar em produção)
 define('DEBUG_MODE', true);
 
+
+define('CLOUDFLARE_TURNSTILE_SITE_KEY', getenv('CLOUDFLARE_TURNSTILE_SITE_KEY') ?: '1x00000000000000000000AA');
+define('CLOUDFLARE_TURNSTILE_SECRET_KEY', getenv('CLOUDFLARE_TURNSTILE_SECRET_KEY') ?: '1x0000000000000000000000000000000AA');

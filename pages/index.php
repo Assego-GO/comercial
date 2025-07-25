@@ -1,6 +1,6 @@
 <?php
 /**
- * Página de Login
+ * Página de Login com Cloudflare Turnstile
  * index.php
  */
 
@@ -11,6 +11,150 @@ require_once '../config/database.php';
 // Incluir classes
 require_once '../classes/Database.php';
 require_once '../classes/Auth.php';
+
+/**
+ * Validador do Cloudflare Turnstile
+ */
+class TurnstileValidator {
+    
+    private $secretKey;
+    private $verifyUrl = 'https://challenges.cloudflare.com/turnstile/v0/siteverify';
+    
+    public function __construct($secretKey = null) {
+        $this->secretKey = $secretKey ?: CLOUDFLARE_TURNSTILE_SECRET_KEY;
+    }
+    
+    /**
+     * Valida o token do Turnstile
+     * 
+     * @param string $token Token retornado pelo widget
+     * @param string $remoteIp IP do usuário (opcional)
+     * @return array Resultado da validação
+     */
+    public function verify($token, $remoteIp = null) {
+        if (empty($token)) {
+            return [
+                'success' => false,
+                'message' => 'Token do Turnstile não fornecido.',
+                'error_codes' => ['missing-input-response']
+            ];
+        }
+        
+        // Preparar dados para envio
+        $postData = [
+            'secret' => $this->secretKey,
+            'response' => $token,
+        ];
+        
+        // Adicionar IP se fornecido
+        if ($remoteIp) {
+            $postData['remoteip'] = $remoteIp;
+        }
+        
+        // Configurar cURL
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $this->verifyUrl);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($postData));
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'Content-Type: application/x-www-form-urlencoded'
+        ]);
+        
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlError = curl_error($ch);
+        curl_close($ch);
+        
+        // Verificar erros de cURL
+        if ($curlError) {
+            return [
+                'success' => false,
+                'message' => 'Erro na comunicação com o Turnstile: ' . $curlError,
+                'error_codes' => ['curl-error']
+            ];
+        }
+        
+        // Verificar código HTTP
+        if ($httpCode !== 200) {
+            return [
+                'success' => false,
+                'message' => 'Erro HTTP na verificação do Turnstile: ' . $httpCode,
+                'error_codes' => ['http-error-' . $httpCode]
+            ];
+        }
+        
+        // Decodificar resposta JSON
+        $result = json_decode($response, true);
+        
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            return [
+                'success' => false,
+                'message' => 'Resposta inválida do Turnstile.',
+                'error_codes' => ['invalid-json']
+            ];
+        }
+        
+        // Processar resultado
+        if ($result['success']) {
+            return [
+                'success' => true,
+                'message' => 'Verificação do Turnstile bem-sucedida.',
+                'challenge_ts' => $result['challenge_ts'] ?? null,
+                'hostname' => $result['hostname'] ?? null
+            ];
+        } else {
+            $errorCodes = $result['error-codes'] ?? ['unknown-error'];
+            $errorMessage = $this->getErrorMessage($errorCodes);
+            
+            return [
+                'success' => false,
+                'message' => $errorMessage,
+                'error_codes' => $errorCodes
+            ];
+        }
+    }
+    
+    /**
+     * Converte códigos de erro em mensagens amigáveis
+     * 
+     * @param array $errorCodes
+     * @return string
+     */
+    private function getErrorMessage($errorCodes) {
+        $messages = [
+            'missing-input-secret' => 'Chave secreta não configurada.',
+            'invalid-input-secret' => 'Chave secreta inválida.',
+            'missing-input-response' => 'Token de verificação não fornecido.',
+            'invalid-input-response' => 'Token de verificação inválido.',
+            'bad-request' => 'Requisição mal formada.',
+            'timeout-or-duplicate' => 'Token expirado ou já utilizado.',
+            'internal-error' => 'Erro interno do Turnstile.',
+            'unknown-error' => 'Erro desconhecido na verificação.'
+        ];
+        
+        $userMessages = [];
+        foreach ($errorCodes as $code) {
+            $userMessages[] = $messages[$code] ?? 'Erro de verificação: ' . $code;
+        }
+        
+        return implode(' ', $userMessages);
+    }
+    
+    /**
+     * Verifica se o Turnstile está configurado
+     * 
+     * @return bool
+     */
+    public static function isConfigured() {
+        return !empty(CLOUDFLARE_TURNSTILE_SITE_KEY) && 
+               !empty(CLOUDFLARE_TURNSTILE_SECRET_KEY) &&
+               CLOUDFLARE_TURNSTILE_SITE_KEY !== 'your_site_key_here' &&
+               CLOUDFLARE_TURNSTILE_SECRET_KEY !== 'your_secret_key_here';
+    }
+}
 
 // Criar instância da classe Auth
 $auth = new Auth();
@@ -37,19 +181,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = filter_input(INPUT_POST, 'email', FILTER_SANITIZE_EMAIL);
     $senha = $_POST['senha'] ?? '';
     $lembrar = isset($_POST['lembrar']);
+    $turnstileToken = $_POST['cf-turnstile-response'] ?? '';
     
     if (empty($email) || empty($senha)) {
         $erro = 'Por favor, preencha todos os campos.';
     } else {
-        $resultado = $auth->login($email, $senha);
+        // Validar Turnstile primeiro
+        $turnstileValidator = new TurnstileValidator();
+        $turnstileResult = $turnstileValidator->verify($turnstileToken, $_SERVER['REMOTE_ADDR']);
         
-        if ($resultado['success']) {
-            // Redirecionar para página solicitada ou dashboard
-            $redirect = $_GET['redirect'] ?? BASE_URL . '/pages/dashboard.php';
-            header('Location: ' . $redirect);
-            exit;
+        if (!$turnstileResult['success']) {
+            $erro = 'Verificação de segurança falhou: ' . $turnstileResult['message'];
         } else {
-            $erro = $resultado['message'];
+            // Prosseguir com o login
+            $resultado = $auth->login($email, $senha);
+            
+            if ($resultado['success']) {
+                // Redirecionar para página solicitada ou dashboard
+                $redirect = $_GET['redirect'] ?? BASE_URL . '/pages/dashboard.php';
+                header('Location: ' . $redirect);
+                exit;
+            } else {
+                $erro = $resultado['message'];
+            }
         }
     }
 }
@@ -69,6 +223,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     <!-- Custom Styles -->
     <link rel="stylesheet" href="estilizacao/login-style.css">
+    
+    <!-- Cloudflare Turnstile -->
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
     
     <!-- Tailwind Config -->
     <script>
@@ -205,6 +362,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         </div>
                     </div>
                     
+                    <!-- Cloudflare Turnstile -->
+                    <div class="form-group relative">
+                        <div class="turnstile-container bg-white/5 backdrop-blur-sm border border-white/20 rounded-xl p-4 flex justify-center">
+                            <div class="cf-turnstile" 
+                                 data-sitekey="<?php echo CLOUDFLARE_TURNSTILE_SITE_KEY; ?>"
+                                 data-theme="light"
+                                 data-size="normal"
+                                 data-callback="onTurnstileSuccess"
+                                 data-error-callback="onTurnstileError"
+                                 data-expired-callback="onTurnstileExpired">
+                            </div>
+                        </div>
+                        <div id="turnstile-error" class="text-red-400 text-sm mt-2 hidden">
+                            <i class="fas fa-exclamation-triangle mr-1"></i>
+                            <span>Verificação de segurança necessária</span>
+                        </div>
+                    </div>
+                    
                     <!-- Remember Me -->
                     <div class="form-check flex items-center">
                         <input type="checkbox" 
@@ -217,7 +392,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                     
                     <!-- Submit Button -->
-                    <button type="submit" class="btn-login w-full bg-gradient-to-r from-sky-600 to-blue-800 hover:from-sky-700 hover:to-blue-900 text-white font-bold py-4 px-8 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg focus:outline-none focus:ring-4 focus:ring-sky-500/50 relative overflow-hidden group">
+                    <button type="submit" id="submitBtn" class="btn-login w-full bg-gradient-to-r from-sky-600 to-blue-800 hover:from-sky-700 hover:to-blue-900 text-white font-bold py-4 px-8 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg focus:outline-none focus:ring-4 focus:ring-sky-500/50 relative overflow-hidden group" disabled>
                         <span class="relative z-10 flex items-center justify-center">
                             <i class="fas fa-sign-in-alt mr-3"></i>
                             ACESSAR SISTEMA
@@ -243,6 +418,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <p class="text-xs text-gray-500">
                         Versão <?php echo SISTEMA_VERSAO ?? '1.0.0'; ?>
                     </p>
+                    <div class="flex items-center justify-center mt-2 text-xs text-gray-500">
+                        <i class="fas fa-shield-alt mr-1"></i>
+                        <span>Protegido por Cloudflare</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -258,6 +437,68 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     <!-- Scripts -->
     <script src="js/login-script.js"></script>
+    
+    <!-- Turnstile Integration Scripts -->
+    <script>
+        let turnstileVerified = false;
+        
+        // Callback para sucesso do Turnstile
+        function onTurnstileSuccess(token) {
+            console.log('Turnstile verificado com sucesso');
+            turnstileVerified = true;
+            document.getElementById('submitBtn').disabled = false;
+            document.getElementById('submitBtn').classList.remove('opacity-50', 'cursor-not-allowed');
+            document.getElementById('turnstile-error').classList.add('hidden');
+        }
+        
+        // Callback para erro do Turnstile
+        function onTurnstileError(error) {
+            console.error('Erro no Turnstile:', error);
+            turnstileVerified = false;
+            document.getElementById('submitBtn').disabled = true;
+            document.getElementById('submitBtn').classList.add('opacity-50', 'cursor-not-allowed');
+            document.getElementById('turnstile-error').classList.remove('hidden');
+        }
+        
+        // Callback para expiração do Turnstile
+        function onTurnstileExpired() {
+            console.log('Turnstile expirado');
+            turnstileVerified = false;
+            document.getElementById('submitBtn').disabled = true;
+            document.getElementById('submitBtn').classList.add('opacity-50', 'cursor-not-allowed');
+            document.getElementById('turnstile-error').classList.remove('hidden');
+            document.getElementById('turnstile-error').querySelector('span').textContent = 'Verificação expirada, clique novamente';
+        }
+        
+        // Validação do formulário
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            if (!turnstileVerified) {
+                e.preventDefault();
+                document.getElementById('turnstile-error').classList.remove('hidden');
+                document.getElementById('turnstile-error').querySelector('span').textContent = 'Complete a verificação de segurança';
+                
+                // Animar o widget Turnstile
+                const turnstileWidget = document.querySelector('.cf-turnstile');
+                if (turnstileWidget) {
+                    turnstileWidget.style.transform = 'scale(1.05)';
+                    turnstileWidget.style.boxShadow = '0 0 20px rgba(239, 68, 68, 0.5)';
+                    setTimeout(() => {
+                        turnstileWidget.style.transform = 'scale(1)';
+                        turnstileWidget.style.boxShadow = 'none';
+                    }, 300);
+                }
+                
+                return false;
+            }
+        });
+        
+        // Inicializar estado do botão
+        document.addEventListener('DOMContentLoaded', function() {
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+        });
+    </script>
     
     <!-- Auto-hide messages after 5 seconds -->
     <script>
