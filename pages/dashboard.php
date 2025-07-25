@@ -1741,6 +1741,14 @@ try {
                         <span class="nav-tab-text">Associados</span>
                     </a>
                 </li>
+                <li class="nav-tab-item">
+                    <a href="documentos.php" class="nav-tab-link">
+                        <div class="nav-tab-icon">
+                            <i class="fas fa-folder-open"></i>
+                        </div>
+                        <span class="nav-tab-text">Documentos</span>
+                    </a>
+                </li>
                 <?php if ($auth->isDiretor()): ?>
                     <li class="nav-tab-item">
                         <a href="funcionarios.php" class="nav-tab-link">
@@ -2303,10 +2311,6 @@ try {
             });
         }
 
-        // [Resto das funções permanece igual...]
-        // Copie todas as outras funções do seu código original aqui
-        // (preencherFiltros, calcularPaginacao, renderizarTabela, etc.)
-
         // Preenche os filtros dinâmicos
         function preencherFiltros() {
             console.log('Preenchendo filtros...');
@@ -2532,8 +2536,6 @@ try {
             renderizarPagina();
         }
 
-        // [Copie aqui todas as outras funções do código original]
-        // visualizarAssociado, atualizarHeaderModal, preencherTabVisaoGeral, etc.
         // Função para visualizar detalhes do associado
         function visualizarAssociado(id) {
             console.log('Visualizando associado ID:', id);
