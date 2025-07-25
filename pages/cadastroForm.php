@@ -1244,34 +1244,34 @@ try {
                             <span class="form-error">Por favor, insira a data de filiação</span>
                         </div>
 
-                        <div class="form-group full-width">
-                            <label class="form-label">
-                                Foto do Associado
-                            </label>
-                            <div class="photo-upload-container">
-                                <div class="photo-preview" id="photoPreview">
-                                    <?php if (isset($associadoData['foto']) && $associadoData['foto']): ?>
-                                        <img src="<?php echo $associadoData['foto']; ?>" alt="Foto do associado">
-                                    <?php else: ?>
-                                        <div class="photo-preview-placeholder">
-                                            <i class="fas fa-camera"></i>
-                                            <p>Sem foto</p>
-                                        </div>
-                                    <?php endif; ?>
-                                </div>
-                                <div>
-                                    <input type="file" name="foto" id="foto" accept="image/*" style="display: none;">
-                                    <button type="button" class="photo-upload-btn" onclick="document.getElementById('foto').click();">
-                                        <i class="fas fa-upload"></i>
-                                        Escolher Foto
-                                    </button>
-                                    <p class="text-muted mt-2" style="font-size: 0.75rem;">
-                                        Formatos aceitos: JPG, PNG, GIF<br>
-                                        Tamanho máximo: 5MB
-                                    </p>
-                                </div>
+                       <div class="form-group full-width">
+                        <label class="form-label">
+                            Foto do Associado <span class="required">*</span>
+                        </label>
+                        <div class="photo-upload-container">
+                            <div class="photo-preview" id="photoPreview">
+                                <?php if (isset($associadoData['foto']) && $associadoData['foto']): ?>
+                                    <img src="<?php echo $associadoData['foto']; ?>" alt="Foto do associado">
+                                <?php else: ?>
+                                    <div class="photo-preview-placeholder">
+                                        <i class="fas fa-camera"></i>
+                                        <p>Sem foto</p>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                            <div>
+                                <input type="file" name="foto" id="foto" accept="image/*" style="display: none;" required>
+                                <button type="button" class="photo-upload-btn" onclick="document.getElementById('foto').click();">
+                                    <i class="fas fa-upload"></i>
+                                    Escolher Foto
+                                </button>
+                                <p class="text-muted mt-2" style="font-size: 0.75rem;">
+                                    Formatos aceitos: JPG, PNG, GIF<br>
+                                    Tamanho máximo: 5MB
+                                </p>
                             </div>
                         </div>
+                    </div>
                     </div>
                 </div>
 
@@ -2153,6 +2153,12 @@ function validarStepAtual() {
             cpfField.classList.add('error');
             isValid = false;
             showAlert('CPF inválido!', 'error');
+        }
+
+        const fotoField = document.getElementById('foto');
+        if (!fotoField.files || fotoField.files.length === 0) {
+            showAlert('Por favor, adicione uma foto do associado!', 'error');
+            isValid = false;
         }
         
         // Valida email
