@@ -5,6 +5,7 @@
  */
 
 // Informações do sistema
+
 define('SISTEMA_NOME', 'Sistema Comercial Assego');
 define('SISTEMA_VERSAO', '1.0.0');
 define('SISTEMA_EMPRESA', 'ASSEGO');
