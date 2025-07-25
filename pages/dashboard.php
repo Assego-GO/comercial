@@ -1383,6 +1383,7 @@ $headerComponent = HeaderComponent::create([
         
         <!-- NOVO: Header Component -->
         <?php $headerComponent->render(); ?>
+           
 
         <!-- Content Area -->
         <div class="content-area">
