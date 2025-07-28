@@ -1,2 +1,63 @@
 [25-Jul-2025 15:12:34 America/Sao_Paulo] Login bem-sucedido - Funcionário ID: 112 - IP: 172.16.1.214
 [25-Jul-2025 15:27:45 America/Sao_Paulo] Login bem-sucedido - Funcionário ID: 112 - IP: 172.16.1.214
+[28-Jul-2025 09:46:59 America/Sao_Paulo] Login bem-sucedido - Funcionário ID: 112 - IP: 172.16.1.121
+[28-Jul-2025 09:48:47 America/Sao_Paulo] Login bem-sucedido - Funcionário ID: 112 - IP: 172.16.1.121
+[28-Jul-2025 09:52:47 America/Sao_Paulo] PHP Fatal error:  Uncaught Error: Call to undefined method LoginRateLimit::recordGlobalAttempt() in /var/www/html/gabriel/comercial/pages/index.php:184
+Stack trace:
+#0 /var/www/html/gabriel/comercial/pages/index.php(485): LoginRateLimit->recordFailedAttempt()
+#1 {main}
+  thrown in /var/www/html/gabriel/comercial/pages/index.php on line 184
+[28-Jul-2025 09:53:22 America/Sao_Paulo] PHP Fatal error:  Uncaught Error: Call to undefined method LoginRateLimit::recordGlobalAttempt() in /var/www/html/gabriel/comercial/pages/index.php:184
+Stack trace:
+#0 /var/www/html/gabriel/comercial/pages/index.php(485): LoginRateLimit->recordFailedAttempt()
+#1 {main}
+  thrown in /var/www/html/gabriel/comercial/pages/index.php on line 184
+[28-Jul-2025 09:53:25 America/Sao_Paulo] PHP Fatal error:  Uncaught Error: Call to undefined method LoginRateLimit::recordGlobalAttempt() in /var/www/html/gabriel/comercial/pages/index.php:184
+Stack trace:
+#0 /var/www/html/gabriel/comercial/pages/index.php(485): LoginRateLimit->recordFailedAttempt()
+#1 {main}
+  thrown in /var/www/html/gabriel/comercial/pages/index.php on line 184
+[28-Jul-2025 09:54:22 America/Sao_Paulo] PHP Fatal error:  Uncaught Error: Call to undefined method LoginRateLimit::recordGlobalAttempt() in /var/www/html/gabriel/comercial/pages/index.php:184
+Stack trace:
+#0 /var/www/html/gabriel/comercial/pages/index.php(485): LoginRateLimit->recordFailedAttempt()
+#1 {main}
+  thrown in /var/www/html/gabriel/comercial/pages/index.php on line 184
+[28-Jul-2025 09:54:33 America/Sao_Paulo] PHP Fatal error:  Uncaught Error: Call to undefined method LoginRateLimit::recordGlobalAttempt() in /var/www/html/gabriel/comercial/pages/index.php:184
+Stack trace:
+#0 /var/www/html/gabriel/comercial/pages/index.php(485): LoginRateLimit->recordFailedAttempt()
+#1 {main}
+  thrown in /var/www/html/gabriel/comercial/pages/index.php on line 184
+[28-Jul-2025 09:54:52 America/Sao_Paulo] PHP Fatal error:  Uncaught Error: Call to undefined method LoginRateLimit::recordGlobalAttempt() in /var/www/html/gabriel/comercial/pages/index.php:184
+Stack trace:
+#0 /var/www/html/gabriel/comercial/pages/index.php(485): LoginRateLimit->recordFailedAttempt()
+#1 {main}
+  thrown in /var/www/html/gabriel/comercial/pages/index.php on line 184
+[28-Jul-2025 09:55:24 America/Sao_Paulo] PHP Fatal error:  Uncaught Error: Call to undefined method LoginRateLimit::recordGlobalAttempt() in /var/www/html/gabriel/comercial/pages/index.php:184
+Stack trace:
+#0 /var/www/html/gabriel/comercial/pages/index.php(485): LoginRateLimit->recordFailedAttempt()
+#1 {main}
+  thrown in /var/www/html/gabriel/comercial/pages/index.php on line 184
+[28-Jul-2025 09:56:11 America/Sao_Paulo] PHP Fatal error:  Uncaught Error: Call to undefined method LoginRateLimit::recordGlobalAttempt() in /var/www/html/gabriel/comercial/pages/index.php:184
+Stack trace:
+#0 /var/www/html/gabriel/comercial/pages/index.php(485): LoginRateLimit->recordFailedAttempt()
+#1 {main}
+  thrown in /var/www/html/gabriel/comercial/pages/index.php on line 184
+[28-Jul-2025 10:00:23 America/Sao_Paulo] Login bem-sucedido - Funcionário ID: 112 - IP: 172.16.1.121
+[28-Jul-2025 10:26:35 America/Sao_Paulo] Login bem-sucedido - Funcionário ID: 112 - IP: 172.16.1.121
+[28-Jul-2025 10:29:39 America/Sao_Paulo] Login bem-sucedido - Funcionário ID: 112 - IP: 172.16.1.121
+[28-Jul-2025 10:42:19 America/Sao_Paulo] PHP Fatal error:  Uncaught Error: Call to undefined method LoginRateLimit::recordGlobalAttempt() in /var/www/html/gabriel/comercial/pages/index.php:184
+Stack trace:
+#0 /var/www/html/gabriel/comercial/pages/index.php(496): LoginRateLimit->recordFailedAttempt()
+#1 {main}
+  thrown in /var/www/html/gabriel/comercial/pages/index.php on line 184
+[28-Jul-2025 10:52:00 America/Sao_Paulo] Login bem-sucedido - Funcionário ID: 112 - IP: 172.16.1.121
+[28-Jul-2025 11:15:57 America/Sao_Paulo] Login bem-sucedido - Funcionário ID: 112 - IP: 172.16.1.121
+[28-Jul-2025 11:17:08 America/Sao_Paulo] PHP Fatal error:  Uncaught Error: Using $this when not in object context in /var/www/html/gabriel/comercial/pages/index.php:645
+Stack trace:
+#0 {main}
+  thrown in /var/www/html/gabriel/comercial/pages/index.php on line 645
+[28-Jul-2025 11:17:26 America/Sao_Paulo] PHP Fatal error:  Uncaught Error: Using $this when not in object context in /var/www/html/gabriel/comercial/pages/index.php:645
+Stack trace:
+#0 {main}
+  thrown in /var/www/html/gabriel/comercial/pages/index.php on line 645
+[28-Jul-2025 11:19:27 America/Sao_Paulo] Login bem-sucedido - Funcionário ID: 112 - IP: 172.16.1.121
