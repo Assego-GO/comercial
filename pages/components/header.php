@@ -380,7 +380,14 @@ class HeaderComponent {
             'icon' => 'fas fa-chart-line',
             'href' => 'relatorios.php'
         ];
-        
+
+        $tabs[] = [
+            'id' => 'presidencia',
+            'label' => 'Presidência',
+            'icon' => 'fas fa-landmark',
+            'href' => 'presidencia.php'
+        ];
+
         $tabs[] = [
             'id' => 'documentos',
             'label' => 'Documentos',
