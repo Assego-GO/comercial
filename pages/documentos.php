@@ -38,7 +38,7 @@ try {
     $documentos = new Documentos();
     $stats = $documentos->getEstatisticas();
     $statsFluxo = $documentos->getEstatisticasFluxo();
-    
+
     $totalDocumentos = $stats['total_documentos'] ?? 0;
     $docsVerificados = $stats['verificados'] ?? 0;
     $docsPendentes = $stats['pendentes'] ?? 0;
@@ -89,12 +89,18 @@ $headerComponent = HeaderComponent::create([
 
     <!-- jQuery PRIMEIRO -->
     <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
-    
+
     <!-- CSS do Header Component -->
     <?php $headerComponent->renderCSS(); ?>
 
     <!-- Custom CSS -->
     <style>
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--gray-100);
+            color: var(--dark);
+            overflow-x: hidden;
+        }
         /* Main Content */
         .main-wrapper {
             min-height: 100vh;
@@ -286,6 +292,7 @@ $headerComponent = HeaderComponent::create([
                 opacity: 0;
                 transform: translateY(10px);
             }
+
             to {
                 opacity: 1;
                 transform: translateY(0);
@@ -915,11 +922,13 @@ $headerComponent = HeaderComponent::create([
                         <p class="page-subtitle">Faça upload, visualize e gerencie documentos dos associados</p>
                     </div>
                     <div class="d-flex gap-2">
-                        <button class="btn-modern btn-secondary" data-bs-toggle="modal" data-bs-target="#fichaVirtualModal">
+                        <button class="btn-modern btn-secondary" data-bs-toggle="modal"
+                            data-bs-target="#fichaVirtualModal">
                             <i class="fas fa-file-alt"></i>
                             Gerar Ficha Virtual
                         </button>
-                        <button class="btn-modern btn-primary" data-bs-toggle="modal" data-bs-target="#uploadFichaModal">
+                        <button class="btn-modern btn-primary" data-bs-toggle="modal"
+                            data-bs-target="#uploadFichaModal">
                             <i class="fas fa-file-upload"></i>
                             Upload Ficha Associação
                         </button>
@@ -934,9 +943,10 @@ $headerComponent = HeaderComponent::create([
                         <div class="stat-card">
                             <div class="stat-header">
                                 <div>
-                                    <div class="stat-value"><?php echo number_format($status['total'] ?? 0, 0, ',', '.'); ?></div>
+                                    <div class="stat-value"><?php echo number_format($status['total'] ?? 0, 0, ',', '.'); ?>
+                                    </div>
                                     <div class="stat-label">
-                                        <?php 
+                                        <?php
                                         $labels = [
                                             'DIGITALIZADO' => 'Aguardando Envio',
                                             'AGUARDANDO_ASSINATURA' => 'Para Assinatura',
@@ -947,23 +957,23 @@ $headerComponent = HeaderComponent::create([
                                         ?>
                                     </div>
                                 </div>
-                                <div class="stat-icon <?php 
-                                    echo match($status['status_fluxo']) {
-                                        'DIGITALIZADO' => 'info',
-                                        'AGUARDANDO_ASSINATURA' => 'warning',
-                                        'ASSINADO' => 'success',
-                                        'FINALIZADO' => 'primary',
-                                        default => 'secondary'
-                                    };
+                                <div class="stat-icon <?php
+                                echo match ($status['status_fluxo']) {
+                                    'DIGITALIZADO' => 'info',
+                                    'AGUARDANDO_ASSINATURA' => 'warning',
+                                    'ASSINADO' => 'success',
+                                    'FINALIZADO' => 'primary',
+                                    default => 'secondary'
+                                };
                                 ?>">
-                                    <i class="fas <?php 
-                                        echo match($status['status_fluxo']) {
-                                            'DIGITALIZADO' => 'fa-upload',
-                                            'AGUARDANDO_ASSINATURA' => 'fa-clock',
-                                            'ASSINADO' => 'fa-check',
-                                            'FINALIZADO' => 'fa-flag-checkered',
-                                            default => 'fa-file'
-                                        };
+                                    <i class="fas <?php
+                                    echo match ($status['status_fluxo']) {
+                                        'DIGITALIZADO' => 'fa-upload',
+                                        'AGUARDANDO_ASSINATURA' => 'fa-clock',
+                                        'ASSINADO' => 'fa-check',
+                                        'FINALIZADO' => 'fa-flag-checkered',
+                                        default => 'fa-file'
+                                    };
                                     ?>"></i>
                                 </div>
                             </div>
@@ -1123,7 +1133,8 @@ $headerComponent = HeaderComponent::create([
     </div>
 
     <!-- Modal de Upload de Ficha de Associação -->
-    <div class="modal fade" id="uploadFichaModal" tabindex="-1" aria-labelledby="uploadFichaModalLabel" aria-hidden="true">
+    <div class="modal fade" id="uploadFichaModal" tabindex="-1" aria-labelledby="uploadFichaModalLabel"
+        aria-hidden="true">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
@@ -1140,21 +1151,24 @@ $headerComponent = HeaderComponent::create([
                             <select class="form-select" id="fichaAssociadoSelect" required>
                                 <option value="">Selecione o associado</option>
                             </select>
-                            <small class="text-muted">Selecione o associado para o qual está fazendo upload da ficha</small>
+                            <small class="text-muted">Selecione o associado para o qual está fazendo upload da
+                                ficha</small>
                         </div>
 
                         <div class="mb-4">
                             <label class="form-label">Origem do Documento *</label>
                             <div class="d-flex gap-3">
                                 <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="tipoOrigem" id="origemFisico" value="FISICO" checked>
+                                    <input class="form-check-input" type="radio" name="tipoOrigem" id="origemFisico"
+                                        value="FISICO" checked>
                                     <label class="form-check-label" for="origemFisico">
                                         <i class="fas fa-paper-plane me-1"></i>
                                         Físico (Digitalizado)
                                     </label>
                                 </div>
                                 <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="tipoOrigem" id="origemVirtual" value="VIRTUAL">
+                                    <input class="form-check-input" type="radio" name="tipoOrigem" id="origemVirtual"
+                                        value="VIRTUAL">
                                     <label class="form-check-label" for="origemVirtual">
                                         <i class="fas fa-laptop me-1"></i>
                                         Virtual (Gerado no sistema)
@@ -1186,7 +1200,8 @@ $headerComponent = HeaderComponent::create([
                             <i class="fas fa-info-circle me-2"></i>
                             <div>
                                 <strong>Fluxo de Assinatura:</strong><br>
-                                Após o upload, a ficha será enviada para a presidência assinar e depois retornará ao comercial.
+                                Após o upload, a ficha será enviada para a presidência assinar e depois retornará ao
+                                comercial.
                             </div>
                         </div>
                     </form>
@@ -1205,7 +1220,8 @@ $headerComponent = HeaderComponent::create([
     </div>
 
     <!-- Modal de Gerar Ficha Virtual -->
-    <div class="modal fade" id="fichaVirtualModal" tabindex="-1" aria-labelledby="fichaVirtualModalLabel" aria-hidden="true">
+    <div class="modal fade" id="fichaVirtualModal" tabindex="-1" aria-labelledby="fichaVirtualModalLabel"
+        aria-hidden="true">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
@@ -1229,7 +1245,8 @@ $headerComponent = HeaderComponent::create([
                             <i class="fas fa-info-circle me-2"></i>
                             <div>
                                 <strong>Processo Virtual:</strong><br>
-                                A ficha será gerada automaticamente com os dados do associado e seguirá o mesmo fluxo de assinatura.
+                                A ficha será gerada automaticamente com os dados do associado e seguirá o mesmo fluxo de
+                                assinatura.
                             </div>
                         </div>
 
@@ -1297,7 +1314,8 @@ $headerComponent = HeaderComponent::create([
     </div>
 
     <!-- Modal de Assinatura -->
-    <div class="modal fade" id="assinaturaModal" tabindex="-1" aria-labelledby="assinaturaModalLabel" aria-hidden="true">
+    <div class="modal fade" id="assinaturaModal" tabindex="-1" aria-labelledby="assinaturaModalLabel"
+        aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
@@ -1310,13 +1328,14 @@ $headerComponent = HeaderComponent::create([
                 <div class="modal-body">
                     <form id="assinaturaForm">
                         <input type="hidden" id="assinaturaDocumentoId">
-                        
+
                         <div class="mb-4">
                             <label class="form-label">Arquivo Assinado (opcional)</label>
                             <div class="upload-area small" id="uploadAssinaturaArea" style="padding: 2rem;">
                                 <i class="fas fa-file-signature upload-icon" style="font-size: 2rem;"></i>
                                 <h6 class="upload-title" style="font-size: 1rem;">Upload do documento assinado</h6>
-                                <p class="upload-subtitle" style="font-size: 0.75rem;">Se desejar, faça upload do PDF assinado</p>
+                                <p class="upload-subtitle" style="font-size: 0.75rem;">Se desejar, faça upload do PDF
+                                    assinado</p>
                                 <input type="file" id="assinaturaFileInput" class="d-none" accept=".pdf">
                             </div>
                         </div>
@@ -1376,20 +1395,20 @@ $headerComponent = HeaderComponent::create([
 
         // Configurar tabs
         function configurarTabs() {
-            $('.content-tab').on('click', function() {
+            $('.content-tab').on('click', function () {
                 const tab = $(this).data('tab');
-                
+
                 // Atualizar tabs
                 $('.content-tab').removeClass('active');
                 $(this).addClass('active');
-                
+
                 // Atualizar panels
                 $('.tab-panel').removeClass('active');
                 $(`#${tab}-panel`).addClass('active');
-                
+
                 // Carregar conteúdo da tab
                 tabAtual = tab;
-                switch(tab) {
+                switch (tab) {
                     case 'fluxo':
                         carregarDocumentosFluxo();
                         break;
@@ -1397,10 +1416,10 @@ $headerComponent = HeaderComponent::create([
                         carregarDocumentos();
                         break;
                     case 'pendentes':
-                        carregarDocumentos({verificado: 'nao'}, 'documentosPendentesList');
+                        carregarDocumentos({ verificado: 'nao' }, 'documentosPendentesList');
                         break;
                     case 'verificados':
-                        carregarDocumentos({verificado: 'sim'}, 'documentosVerificadosList');
+                        carregarDocumentos({ verificado: 'sim' }, 'documentosVerificadosList');
                         break;
                 }
             });
@@ -1419,7 +1438,7 @@ $headerComponent = HeaderComponent::create([
                     ...Array.from(document.querySelectorAll('[class*="user"]')),
                     ...Array.from(document.querySelectorAll('[id*="user"]')),
                     // Por conteúdo (procura elementos que contenham "LUIS FILIPE")
-                    ...Array.from(document.querySelectorAll('*')).filter(el => 
+                    ...Array.from(document.querySelectorAll('*')).filter(el =>
                         el.textContent && el.textContent.includes('LUIS FILIPE')
                     ),
                     // Elementos com dropdown do Bootstrap
@@ -1435,21 +1454,21 @@ $headerComponent = HeaderComponent::create([
 
                 for (const elemento of possiveisElementos) {
                     if (!elemento) continue;
-                    
+
                     // Procura pelo dropdown associado
                     let dropdown = null;
-                    
+
                     // Métodos para encontrar o dropdown
                     const metodosDropdown = [
                         // Por aria-controls
-                        () => elemento.getAttribute('aria-controls') ? 
-                              document.getElementById(elemento.getAttribute('aria-controls')) : null,
+                        () => elemento.getAttribute('aria-controls') ?
+                            document.getElementById(elemento.getAttribute('aria-controls')) : null,
                         // Por data-bs-target  
-                        () => elemento.getAttribute('data-bs-target') ? 
-                              document.querySelector(elemento.getAttribute('data-bs-target')) : null,
+                        () => elemento.getAttribute('data-bs-target') ?
+                            document.querySelector(elemento.getAttribute('data-bs-target')) : null,
                         // Próximo elemento com classe dropdown
-                        () => elemento.nextElementSibling?.classList.contains('dropdown-menu') ? 
-                              elemento.nextElementSibling : null,
+                        () => elemento.nextElementSibling?.classList.contains('dropdown-menu') ?
+                            elemento.nextElementSibling : null,
                         // Filho direto com classe dropdown
                         () => elemento.querySelector('.dropdown-menu'),
                         // Irmão com classe dropdown
@@ -1458,7 +1477,7 @@ $headerComponent = HeaderComponent::create([
                         () => {
                             const rect = elemento.getBoundingClientRect();
                             const elementoAbaixo = document.elementFromPoint(
-                                rect.left + rect.width/2, 
+                                rect.left + rect.width / 2,
                                 rect.bottom + 10
                             );
                             return elementoAbaixo?.closest('.dropdown-menu');
@@ -1478,23 +1497,23 @@ $headerComponent = HeaderComponent::create([
                     // Se encontrou um par válido, configura
                     if (dropdown && elemento !== dropdown) {
                         console.log('✓ Configurando dropdown do usuário:', elemento, dropdown);
-                        
+
                         // Remove listeners anteriores se existirem
                         elemento.removeEventListener('click', handleUserMenuClick);
                         document.removeEventListener('click', handleDocumentClick);
-                        
+
                         // Adiciona novos listeners
                         elemento.addEventListener('click', handleUserMenuClick);
                         document.addEventListener('click', handleDocumentClick);
-                        
+
                         // Armazena referências globais
                         window.userMenuElement = elemento;
                         window.userDropdownElement = dropdown;
-                        
+
                         return true; // Sucesso
                     }
                 }
-                
+
                 return false; // Não encontrou
             }
 
@@ -1502,15 +1521,15 @@ $headerComponent = HeaderComponent::create([
             function handleUserMenuClick(e) {
                 e.preventDefault();
                 e.stopPropagation();
-                
+
                 if (window.userDropdownElement) {
                     const isVisible = window.userDropdownElement.classList.contains('show');
-                    
+
                     // Fecha todos os dropdowns primeiro
                     document.querySelectorAll('.dropdown-menu.show').forEach(menu => {
                         menu.classList.remove('show');
                     });
-                    
+
                     // Alterna o estado do dropdown atual
                     if (!isVisible) {
                         window.userDropdownElement.classList.add('show');
@@ -1520,8 +1539,8 @@ $headerComponent = HeaderComponent::create([
             }
 
             function handleDocumentClick(e) {
-                if (window.userDropdownElement && 
-                    !window.userMenuElement?.contains(e.target) && 
+                if (window.userDropdownElement &&
+                    !window.userMenuElement?.contains(e.target) &&
                     !window.userDropdownElement.contains(e.target)) {
                     window.userDropdownElement.classList.remove('show');
                     window.userDropdownElement.style.display = '';
@@ -1595,7 +1614,7 @@ $headerComponent = HeaderComponent::create([
         // Carregar documentos em fluxo
         function carregarDocumentosFluxo(filtros = {}) {
             const container = $('#documentosFluxoList');
-            
+
             // Mostra loading
             container.html(`
                 <div class="col-12 text-center py-5">
@@ -1618,7 +1637,7 @@ $headerComponent = HeaderComponent::create([
                         </div>
                     `);
                 }
-            }).fail(function() {
+            }).fail(function () {
                 container.html(`
                     <div class="col-12">
                         <div class="empty-state">
@@ -1749,8 +1768,8 @@ $headerComponent = HeaderComponent::create([
         // Obter ações do fluxo baseado no status
         function getAcoesFluxo(doc) {
             let acoes = '';
-            
-            switch(doc.status_fluxo) {
+
+            switch (doc.status_fluxo) {
                 case 'DIGITALIZADO':
                     acoes = `
                         <button class="btn-modern btn-warning btn-sm" onclick="enviarParaAssinatura(${doc.id})" title="Enviar para Assinatura">
@@ -1759,11 +1778,11 @@ $headerComponent = HeaderComponent::create([
                         </button>
                     `;
                     break;
-                    
+
                 case 'AGUARDANDO_ASSINATURA':
                     // Verificar se usuário tem permissão para assinar
                     <?php if ($auth->isDiretor() || $usuarioLogado['departamento_id'] == 2): ?>
-                    acoes = `
+                        acoes = `
                         <button class="btn-modern btn-success btn-sm" onclick="abrirModalAssinatura(${doc.id})" title="Assinar">
                             <i class="fas fa-signature"></i>
                             Assinar
@@ -1771,7 +1790,7 @@ $headerComponent = HeaderComponent::create([
                     `;
                     <?php endif; ?>
                     break;
-                    
+
                 case 'ASSINADO':
                     acoes = `
                         <button class="btn-modern btn-success btn-sm" onclick="finalizarProcesso(${doc.id})" title="Finalizar">
@@ -1781,7 +1800,7 @@ $headerComponent = HeaderComponent::create([
                     `;
                     break;
             }
-            
+
             return acoes;
         }
 
@@ -1803,7 +1822,7 @@ $headerComponent = HeaderComponent::create([
                     url: '../api/documentos/documentos_enviar_assinatura.php',
                     type: 'POST',
                     contentType: 'application/json',
-                    data: JSON.stringify({ 
+                    data: JSON.stringify({
                         documento_id: documentoId,
                         observacao: 'Documento enviado para assinatura'
                     }),
@@ -1836,21 +1855,21 @@ $headerComponent = HeaderComponent::create([
         function assinarDocumento() {
             const documentoId = $('#assinaturaDocumentoId').val();
             const observacao = $('#assinaturaObservacao').val();
-            
+
             const formData = new FormData();
             formData.append('documento_id', documentoId);
             formData.append('observacao', observacao);
-            
+
             if (arquivoAssinaturaSelecionado) {
                 formData.append('arquivo_assinado', arquivoAssinaturaSelecionado);
             }
-            
+
             // Mostra loading no botão
             const btnAssinar = event.target;
             const btnText = btnAssinar.innerHTML;
             btnAssinar.disabled = true;
             btnAssinar.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Assinando...';
-            
+
             $.ajax({
                 url: '../api/documentos/documentos_assinar.php',
                 type: 'POST',
@@ -1884,7 +1903,7 @@ $headerComponent = HeaderComponent::create([
                     url: '../api/documentos/documentos_finalizar.php',
                     type: 'POST',
                     contentType: 'application/json',
-                    data: JSON.stringify({ 
+                    data: JSON.stringify({
                         documento_id: documentoId,
                         observacao: 'Processo finalizado'
                     }),
@@ -1920,14 +1939,14 @@ $headerComponent = HeaderComponent::create([
         function renderizarHistorico(historico) {
             const container = $('#historicoContent');
             container.empty();
-            
+
             if (historico.length === 0) {
                 container.html('<p class="text-muted text-center">Nenhum histórico disponível</p>');
                 return;
             }
-            
+
             const timeline = $('<div class="timeline"></div>');
-            
+
             historico.forEach(item => {
                 const timelineItem = `
                     <div class="timeline-item">
@@ -1949,7 +1968,7 @@ $headerComponent = HeaderComponent::create([
                 `;
                 timeline.append(timelineItem);
             });
-            
+
             container.append(timeline);
         }
 
@@ -2016,18 +2035,18 @@ $headerComponent = HeaderComponent::create([
         // Processar arquivo de ficha
         function handleFichaFile(file) {
             if (!file) return;
-            
+
             // Verificar se é PDF
             if (file.type !== 'application/pdf') {
                 alert('Por favor, selecione apenas arquivos PDF');
                 return;
             }
-            
+
             arquivoFichaSelecionado = file;
-            
+
             const filesList = $('#fichaFilesList');
             filesList.empty();
-            
+
             filesList.append(`
                 <div class="file-item">
                     <div class="file-item-info">
@@ -2049,18 +2068,18 @@ $headerComponent = HeaderComponent::create([
         // Processar arquivo de assinatura
         function handleAssinaturaFile(file) {
             if (!file) return;
-            
+
             // Verificar se é PDF
             if (file.type !== 'application/pdf') {
                 alert('Por favor, selecione apenas arquivos PDF');
                 return;
             }
-            
+
             arquivoAssinaturaSelecionado = file;
-            
+
             const filesList = $('#assinaturaFilesList');
             filesList.empty();
-            
+
             filesList.append(`
                 <div class="file-item">
                     <div class="file-item-info">
@@ -2148,22 +2167,22 @@ $headerComponent = HeaderComponent::create([
         // Gerar ficha virtual
         function gerarFichaVirtual() {
             const associadoId = $('#virtualAssociadoSelect').val();
-            
+
             if (!associadoId) {
                 alert('Por favor, selecione um associado');
                 return;
             }
-            
+
             if (!confirm('Confirma a geração da ficha virtual?\n\nA ficha será gerada com os dados atuais do associado.')) {
                 return;
             }
-            
+
             // Mostra loading no botão
             const btnGerar = event.target;
             const btnText = btnGerar.innerHTML;
             btnGerar.disabled = true;
             btnGerar.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Gerando...';
-            
+
             $.ajax({
                 url: '../api/documentos/documentos_gerar_ficha_virtual.php',
                 type: 'POST',
@@ -2173,7 +2192,7 @@ $headerComponent = HeaderComponent::create([
                     if (response.status === 'success') {
                         alert('Ficha virtual gerada com sucesso!\n\nAgora você pode fazer o upload dela.');
                         $('#fichaVirtualModal').modal('hide');
-                        
+
                         // Abrir modal de upload com o associado já selecionado
                         $('#fichaAssociadoSelect').val(associadoId);
                         $('input[name="tipoOrigem"][value="VIRTUAL"]').prop('checked', true);
@@ -2193,28 +2212,28 @@ $headerComponent = HeaderComponent::create([
         }
 
         // Atualizar preview do associado
-        $('#virtualAssociadoSelect').on('change', function() {
+        $('#virtualAssociadoSelect').on('change', function () {
             const associadoId = $(this).val();
-            
+
             if (!associadoId) {
                 $('#previewAssociado').addClass('d-none');
                 return;
             }
-            
+
             // Buscar dados do associado selecionado
             const option = $(this).find('option:selected');
             const texto = option.text();
-            
+
             // Extrair nome e CPF do texto da opção
             const partes = texto.split(' - CPF: ');
             const nome = partes[0];
             const cpf = partes[1] || '';
-            
+
             $('#previewNome').text(nome);
             $('#previewCPF').text(cpf);
             $('#previewRG').text('-'); // Seria necessário buscar via API
             $('#previewEmail').text('-'); // Seria necessário buscar via API
-            
+
             $('#previewAssociado').removeClass('d-none');
         });
 
@@ -2224,7 +2243,7 @@ $headerComponent = HeaderComponent::create([
                 if (response.status === 'success') {
                     const selectFicha = $('#fichaAssociadoSelect');
                     const selectVirtual = $('#virtualAssociadoSelect');
-                    
+
                     selectFicha.empty().append('<option value="">Selecione o associado</option>');
                     selectVirtual.empty().append('<option value="">Selecione o associado</option>');
 
@@ -2241,7 +2260,7 @@ $headerComponent = HeaderComponent::create([
         // Carregar documentos (tab todos)
         function carregarDocumentos(filtros = {}, containerId = 'documentosList') {
             const container = $('#' + containerId);
-            
+
             // Mostra loading
             container.html(`
                 <div class="col-12 text-center py-5">
@@ -2264,7 +2283,7 @@ $headerComponent = HeaderComponent::create([
                         </div>
                     `);
                 }
-            }).fail(function() {
+            }).fail(function () {
                 container.html(`
                     <div class="col-12">
                         <div class="empty-state">
@@ -2298,7 +2317,7 @@ $headerComponent = HeaderComponent::create([
             documentos.forEach(doc => {
                 // Pular fichas de associação na listagem geral
                 if (doc.tipo_documento === 'ficha_associacao') return;
-                
+
                 const iconClass = getIconClass(doc.extensao);
                 const badge = doc.verificado == 1
                     ? '<span class="status-badge assinado"><i class="fas fa-check me-1"></i>Verificado</span>'
