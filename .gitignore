@@ -1,6 +1,11 @@
 config/
-
+uploads/
 pages/security/
 logs/error.log
 pages/tmp/security/
 data/rate_limit/
+
+logs/
+pages/tmp/security/
+
+

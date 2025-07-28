@@ -380,7 +380,14 @@ class HeaderComponent {
             'icon' => 'fas fa-chart-line',
             'href' => 'relatorios.php'
         ];
-        
+
+        $tabs[] = [
+            'id' => 'presidencia',
+            'label' => 'Presidência',
+            'icon' => 'fas fa-landmark',
+            'href' => 'presidencia.php'
+        ];
+
         $tabs[] = [
             'id' => 'documentos',
             'label' => 'Documentos',
@@ -588,8 +595,8 @@ if (basename(__FILE__) == basename($_SERVER['SCRIPT_NAME'])) {
             <div style="background: white; padding: 2rem; border-radius: 12px; margin-top: 1rem;">
                 <h3>Como usar:</h3>
                 <pre style="background: #f5f5f5; padding: 1rem; border-radius: 8px; overflow-x: auto;"><code>&lt;?php
-require_once 'components/Header.php';
 
+require_once 'components/header.php';
 // Uso simples
 renderHeader([
     'usuario' => $usuarioLogado,
