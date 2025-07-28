@@ -1,2 +1,6 @@
 config/
-uploads
+uploads/
+pages/security/
+logs/
+pages/tmp/security/
+
