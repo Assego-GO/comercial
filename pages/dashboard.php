@@ -721,7 +721,7 @@ $headerComponent = HeaderComponent::create([
             border-color: var(--primary);
         }
 
-        /* Modal Customizado Melhorado */
+              /* Modal Container */
         .modal-custom {
             display: none;
             position: fixed;
@@ -753,27 +753,18 @@ $headerComponent = HeaderComponent::create([
             animation: slideUp 0.3s ease;
             display: flex;
             flex-direction: column;
+            position: relative; /* IMPORTANTE */
         }
 
-        @keyframes slideUp {
-            from {
-                transform: translateY(50px);
-                opacity: 0;
-            }
-
-            to {
-                transform: translateY(0);
-                opacity: 1;
-            }
-        }
-
-        /* Header Redesenhado */
+        /* CORREÇÃO: Header com z-index correto */
         .modal-header-custom {
             padding: 1.5rem 2rem;
             background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
             color: var(--white);
             position: relative;
             overflow: hidden;
+            z-index: 10; /* ADICIONADO: Garante que o header fique acima */
+            flex-shrink: 0; /* ADICIONADO: Impede que o header seja comprimido */
         }
 
         .modal-header-custom::before {
@@ -785,6 +776,7 @@ $headerComponent = HeaderComponent::create([
             height: 200%;
             background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
             animation: pulse 4s ease-in-out infinite;
+            z-index: 1; /* CORREÇÃO: z-index menor que o conteúdo */
         }
 
         .modal-header-content {
@@ -792,7 +784,7 @@ $headerComponent = HeaderComponent::create([
             align-items: center;
             justify-content: space-between;
             position: relative;
-            z-index: 1;
+            z-index: 2; /* CORREÇÃO: Garante que o conteúdo fique acima do ::before */
         }
 
         .modal-header-info {
@@ -813,6 +805,7 @@ $headerComponent = HeaderComponent::create([
             flex-shrink: 0;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
             position: relative;
+            z-index: 3; /* ADICIONADO */
         }
 
         .modal-avatar-header img {
@@ -838,6 +831,217 @@ $headerComponent = HeaderComponent::create([
             font-weight: 700;
             margin: 0 0 0.25rem 0;
             color: var(--white);
+            z-index: 3; /* ADICIONADO */
+            position: relative;
+        }
+
+        .modal-header-meta {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            font-size: 0.875rem;
+            opacity: 0.9;
+            z-index: 3; /* ADICIONADO */
+            position: relative;
+        }
+
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 0.375rem;
+        }
+
+        .meta-item i {
+            font-size: 0.75rem;
+        }
+
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.375rem;
+            padding: 0.375rem 0.875rem;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            backdrop-filter: blur(10px);
+            z-index: 3; /* ADICIONADO */
+            position: relative;
+        }
+
+        .status-pill.active {
+            background: rgba(0, 200, 83, 0.2);
+            color: #00ff6a;
+        }
+
+        .status-pill.inactive {
+            background: rgba(255, 59, 48, 0.2);
+            color: #ff6b6b;
+        }
+
+        .modal-close-custom {
+            width: 40px;
+            height: 40px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: var(--white);
+            z-index: 4; /* ADICIONADO: Maior z-index para o botão de fechar */
+            position: relative;
+        }
+
+        .modal-close-custom:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.1);
+        }
+
+        /* CORREÇÃO: Tabs Navigation - z-index menor que o header */
+        .modal-tabs {
+            background: var(--gray-100);
+            padding: 0.5rem;
+            display: flex;
+            gap: 0.5rem;
+            overflow-x: auto;
+            border-bottom: 1px solid var(--gray-200);
+            z-index: 5; /* CORREÇÃO: z-index menor que o header */
+            position: relative;
+            flex-shrink: 0; /* ADICIONADO: Impede que as tabs sejam comprimidas */
+        }
+
+        .tab-button {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            background: transparent;
+            color: var(--gray-600);
+            font-weight: 600;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-radius: 12px;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            position: relative;
+        }
+
+        .tab-button:hover {
+            background: var(--white);
+            color: var(--gray-700);
+        }
+
+        .tab-button.active {
+            background: var(--white);
+            color: var(--primary);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        .tab-button i {
+            font-size: 1rem;
+        }
+
+        /* CORREÇÃO: Modal Body com overflow correto */
+        .modal-body-custom {
+            padding: 0;
+            overflow-y: auto;
+            flex: 1;
+            background: var(--white);
+            z-index: 1; /* ADICIONADO: z-index menor */
+            position: relative;
+        }
+
+        .tab-content {
+            display: none;
+            animation: fadeInTab 0.3s ease;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeInTab {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 0.1;
+                transform: scale(1);
+            }
+            50% {
+                opacity: 0.2;
+                transform: scale(1.05);
+            }
+        }
+
+        /* ADICIONADO: Media Query para responsividade */
+        @media (max-width: 768px) {
+            .modal-content-custom {
+                max-width: 100%;
+                margin: 1rem;
+                max-height: calc(100vh - 2rem);
+            }
+
+            .modal-header-info {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1rem;
+            }
+
+            .modal-tabs {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            .modal-header-custom {
+                padding: 1rem 1.5rem;
+            }
+
+            .modal-avatar-header {
+                width: 60px;
+                height: 60px;
+            }
+
+            .modal-avatar-header-placeholder {
+                font-size: 1.5rem;
+            }
+
+            .modal-header-text h2 {
+                font-size: 1.25rem;
+            }
         }
 
         .modal-header-meta {
