@@ -1,4 +1,5 @@
 config/
 
-security/
+pages/security/
 logs/
+pages/tmp/security/
