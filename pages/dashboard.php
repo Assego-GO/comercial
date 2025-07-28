@@ -2064,7 +2064,9 @@ $headerComponent = HeaderComponent::create([
 
                 if (associado.cpf) {
                     const cpfNormalizado = normalizarCPF(associado.cpf);
-                    const fotoUrl = `https://assegonaopara.com.br/QRV/images/fotos/${cpfNormalizado}.jpg`;
+                    const fotoUrl = associado.foto
+                    ? `../${associado.foto}`
+                    : `https://assegonaopara.com.br/QRV/images/fotos/${cpfNormalizado}.jpg`;
 
                     fotoHtml = `
                 <img src="${fotoUrl}" 
@@ -2215,7 +2217,9 @@ $headerComponent = HeaderComponent::create([
             const modalAvatar = document.getElementById('modalAvatarHeader');
             if (associado.cpf) {
                 const cpfNormalizado = normalizarCPF(associado.cpf);
-                const fotoUrl = `https://assegonaopara.com.br/QRV/images/fotos/${cpfNormalizado}.jpg`;
+                const fotoUrl = associado.foto
+                    ? `../${associado.foto}`
+                    : `https://assegonaopara.com.br/QRV/images/fotos/${cpfNormalizado}.jpg`;
 
                 modalAvatar.innerHTML = `
             <img src="${fotoUrl}" 
