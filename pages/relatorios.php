@@ -11,6 +11,9 @@ require_once '../classes/Database.php';
 require_once '../classes/Auth.php';
 require_once '../classes/Relatorios.php';
 
+// NOVO: Include do componente Header
+require_once './components/header.php';
+
 // Inicia autenticação
 $auth = new Auth();
 
@@ -38,6 +41,19 @@ try {
     error_log("Erro ao buscar dados: " . $e->getMessage());
     $estatisticas = $modelosDisponiveis = $historicoRecente = [];
 }
+
+// Cria instância do Header Component
+$headerComponent = HeaderComponent::create([
+    'usuario' => [
+        'nome' => $usuarioLogado['nome'],
+        'cargo' => $usuarioLogado['cargo'] ?? 'Funcionário',
+        'avatar' => $usuarioLogado['avatar'] ?? null
+    ],
+    'isDiretor' => $auth->isDiretor(),
+    'activeTab' => 'relatorios',
+    'notificationCount' => 0,
+    'showSearch' => true
+]);
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -62,47 +78,14 @@ try {
     <!-- AOS Animation -->
     <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
 
-    <!-- jQuery -->
+    <!-- jQuery PRIMEIRO -->
     <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+
+    <!-- CSS do Header Component -->
+    <?php $headerComponent->renderCSS(); ?>
 
     <!-- Custom CSS -->
     <style>
-        :root {
-            --primary: #0056D2;
-            --primary-dark: #003A8C;
-            --primary-light: #E8F1FF;
-            --secondary: #FFB800;
-            --secondary-dark: #CC9200;
-            --success: #00C853;
-            --danger: #FF3B30;
-            --warning: #FF9500;
-            --info: #00B8D4;
-            --dark: #1C1C1E;
-            --gray-100: #F7F7F7;
-            --gray-200: #E5E5E7;
-            --gray-300: #D1D1D6;
-            --gray-400: #C7C7CC;
-            --gray-500: #8E8E93;
-            --gray-600: #636366;
-            --gray-700: #48484A;
-            --gray-800: #3A3A3C;
-            --gray-900: #2C2C2E;
-            --white: #FFFFFF;
-
-            --header-height: 70px;
-
-            --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
-            --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.24);
-            --shadow-lg: 0 10px 20px rgba(0, 0, 0, 0.12), 0 4px 8px rgba(0, 0, 0, 0.24);
-            --shadow-xl: 0 20px 40px rgba(0, 0, 0, 0.12), 0 8px 16px rgba(0, 0, 0, 0.24);
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
         body {
             font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
             background-color: var(--gray-100);
@@ -110,237 +93,29 @@ try {
             overflow-x: hidden;
         }
 
-        /* Reutiliza estilos do dashboard */
+        /* Scrollbar personalizada */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--gray-100);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--gray-400);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--gray-500);
+        }
+
+        /* Main Content */
         .main-wrapper {
             min-height: 100vh;
             background: var(--gray-100);
-        }
-
-        .main-header {
-            background: var(--white);
-            height: var(--header-height);
-            padding: 0 2rem;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            box-shadow: var(--shadow-sm);
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
-
-        .header-left {
-            display: flex;
-            align-items: center;
-            gap: 2rem;
-        }
-
-        .logo-section {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        .logo-text {
-            color: var(--primary);
-            font-size: 1.5rem;
-            font-weight: 800;
-            margin: 0;
-            letter-spacing: -0.5px;
-        }
-
-        .system-subtitle {
-            color: var(--gray-500);
-            font-size: 0.875rem;
-            margin: 0;
-            font-weight: 500;
-        }
-
-        .header-right {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        .header-btn {
-            width: 40px;
-            height: 40px;
-            border: none;
-            background: var(--gray-100);
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            position: relative;
-            color: var(--gray-600);
-        }
-
-        .header-btn:hover {
-            background: var(--primary-light);
-            color: var(--primary);
-        }
-
-        .user-menu {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            padding: 0.5rem;
-            background: var(--gray-100);
-            border-radius: 12px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            position: relative;
-        }
-
-        .user-menu:hover {
-            background: var(--gray-200);
-        }
-
-        .user-avatar {
-            width: 40px;
-            height: 40px;
-            background: var(--primary);
-            color: var(--white);
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 600;
-        }
-
-        .user-info {
-            text-align: right;
-        }
-
-        .user-name {
-            font-weight: 600;
-            font-size: 0.875rem;
-            color: var(--dark);
-            margin: 0;
-        }
-
-        .user-role {
-            font-size: 0.75rem;
-            color: var(--gray-500);
-            margin: 0;
-        }
-
-        .dropdown-menu-custom {
-            position: absolute;
-            top: calc(100% + 10px);
-            right: 0;
-            background: var(--white);
-            border-radius: 12px;
-            box-shadow: var(--shadow-lg);
-            min-width: 200px;
-            padding: 0.5rem;
-            opacity: 0;
-            visibility: hidden;
-            transform: translateY(-10px);
-            transition: all 0.3s ease;
-            z-index: 1000;
-        }
-
-        .dropdown-menu-custom.show {
-            opacity: 1;
-            visibility: visible;
-            transform: translateY(0);
-        }
-
-        .dropdown-item-custom {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            padding: 0.75rem 1rem;
-            border-radius: 8px;
-            color: var(--gray-700);
-            text-decoration: none;
-            transition: all 0.2s ease;
-        }
-
-        .dropdown-item-custom:hover {
-            background: var(--gray-100);
-            color: var(--primary);
-        }
-
-        .dropdown-divider-custom {
-            height: 1px;
-            background: var(--gray-200);
-            margin: 0.5rem 0;
-        }
-
-        /* Navigation Tabs */
-        .nav-tabs-container {
-            background: var(--white);
-            box-shadow: var(--shadow-sm);
-            position: sticky;
-            top: var(--header-height);
-            z-index: 99;
-            border-bottom: 1px solid var(--gray-200);
-        }
-
-        .nav-tabs-modern {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 0.5rem 2rem;
-            margin: 0;
-            list-style: none;
-            gap: 1rem;
-        }
-
-        .nav-tab-item {
-            margin: 0;
-        }
-
-        .nav-tab-link {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 1rem 2rem;
-            color: var(--gray-600);
-            text-decoration: none;
-            border: none;
-            background: var(--gray-100);
-            cursor: pointer;
-            transition: all 0.3s ease;
-            position: relative;
-            border-radius: 12px;
-            min-width: 120px;
-        }
-
-        .nav-tab-link:hover {
-            background: var(--gray-200);
-            color: var(--gray-700);
-        }
-
-        .nav-tab-link.active {
-            background: var(--primary);
-            color: var(--white);
-            box-shadow: 0 4px 12px rgba(0, 86, 210, 0.25);
-        }
-
-        .nav-tab-icon {
-            width: 40px;
-            height: 40px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.125rem;
-            margin-bottom: 0.375rem;
-            transition: all 0.3s ease;
-        }
-
-        .nav-tab-link.active .nav-tab-icon {
-            color: var(--white);
-        }
-
-        .nav-tab-text {
-            font-weight: 600;
-            font-size: 0.8125rem;
-            transition: all 0.3s ease;
         }
 
         /* Content Area */
@@ -561,6 +336,11 @@ try {
             color: var(--danger);
         }
 
+        .report-icon.info {
+            background: rgba(0, 184, 212, 0.1);
+            color: var(--info);
+        }
+
         .report-title {
             font-size: 1rem;
             font-weight: 700;
@@ -581,208 +361,6 @@ try {
             justify-content: space-between;
             font-size: 0.75rem;
             color: var(--gray-500);
-        }
-
-        .report-badge {
-            padding: 0.25rem 0.625rem;
-            background: var(--primary-light);
-            color: var(--primary);
-            border-radius: 6px;
-            font-weight: 600;
-            font-size: 0.625rem;
-            text-transform: uppercase;
-        }
-
-        /* Quick Actions */
-        .quick-actions {
-            display: flex;
-            gap: 0.5rem;
-            margin-top: 1rem;
-            padding-top: 1rem;
-            border-top: 1px solid var(--gray-200);
-        }
-
-        .quick-action {
-            flex: 1;
-            padding: 0.5rem 0.75rem;
-            background: var(--white);
-            border: 1.5px solid var(--gray-200);
-            border-radius: 8px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            color: var(--gray-600);
-            text-align: center;
-            transition: all 0.2s ease;
-            cursor: pointer;
-            text-decoration: none;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.375rem;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .quick-action::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(135deg, transparent, rgba(0, 86, 210, 0.1));
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-
-        .quick-action:hover {
-            background: var(--primary);
-            color: var(--white);
-            border-color: var(--primary);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0, 86, 210, 0.2);
-        }
-
-        .quick-action:hover::before {
-            opacity: 1;
-        }
-
-        .quick-action:active {
-            transform: translateY(0);
-            box-shadow: 0 2px 4px rgba(0, 86, 210, 0.2);
-        }
-
-        .quick-action i {
-            font-size: 0.875rem;
-        }
-
-        /* Model Actions */
-        .model-actions {
-            display: flex;
-            gap: 0.375rem;
-            margin-top: 1rem;
-            padding-top: 1rem;
-            border-top: 1px solid var(--gray-200);
-        }
-
-        .model-action {
-            flex: 1;
-            padding: 0.5rem;
-            background: transparent;
-            border: 1.5px solid transparent;
-            border-radius: 8px;
-            font-size: 0.6875rem;
-            font-weight: 600;
-            color: var(--gray-600);
-            text-align: center;
-            transition: all 0.2s ease;
-            cursor: pointer;
-            text-decoration: none;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.25rem;
-            position: relative;
-        }
-
-        .model-action:hover {
-            background: var(--gray-100);
-            border-color: var(--gray-300);
-        }
-
-        .model-action.primary {
-            background: var(--primary-light);
-            color: var(--primary);
-            border-color: var(--primary-light);
-        }
-
-        .model-action.primary:hover {
-            background: var(--primary);
-            color: var(--white);
-            border-color: var(--primary);
-            transform: translateY(-1px);
-            box-shadow: 0 2px 8px rgba(0, 86, 210, 0.2);
-        }
-
-        .model-action.danger {
-            color: var(--danger);
-        }
-
-        .model-action.danger:hover {
-            background: var(--danger);
-            color: var(--white);
-            border-color: var(--danger);
-        }
-
-        .model-action i {
-            font-size: 0.75rem;
-        }
-
-        /* Report Card Actions */
-        .report-card-footer {
-            margin-top: auto;
-            padding-top: 1rem;
-        }
-
-        .report-actions-row {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 0.5rem;
-            margin-top: 0.75rem;
-        }
-
-        .report-action-btn {
-            padding: 0.625rem 0.75rem;
-            background: var(--white);
-            border: 1.5px solid var(--gray-200);
-            border-radius: 8px;
-            font-size: 0.7rem;
-            font-weight: 600;
-            color: var(--gray-700);
-            text-align: center;
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-            cursor: pointer;
-            text-decoration: none;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 0.25rem;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .report-action-btn i {
-            font-size: 1rem;
-            margin-bottom: 0.125rem;
-            transition: transform 0.2s ease;
-        }
-
-        .report-action-btn span {
-            display: block;
-            font-size: 0.625rem;
-            opacity: 0.8;
-        }
-
-        .report-action-btn:hover {
-            background: var(--primary);
-            color: var(--white);
-            border-color: var(--primary);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0, 86, 210, 0.2);
-        }
-
-        .report-action-btn:hover i {
-            transform: scale(1.1);
-        }
-
-        .report-action-btn.secondary:hover {
-            background: var(--gray-700);
-            border-color: var(--gray-700);
-        }
-
-        .report-action-btn.info:hover {
-            background: var(--info);
-            border-color: var(--info);
         }
 
         /* Quick Report Actions */
@@ -851,6 +429,68 @@ try {
 
         .quick-report-action:hover i {
             transform: rotate(5deg) scale(1.1);
+        }
+
+        /* Model Actions */
+        .model-actions {
+            display: flex;
+            gap: 0.375rem;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--gray-200);
+        }
+
+        .model-action {
+            flex: 1;
+            padding: 0.5rem;
+            background: transparent;
+            border: 1.5px solid transparent;
+            border-radius: 8px;
+            font-size: 0.6875rem;
+            font-weight: 600;
+            color: var(--gray-600);
+            text-align: center;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.25rem;
+            position: relative;
+        }
+
+        .model-action:hover {
+            background: var(--gray-100);
+            border-color: var(--gray-300);
+        }
+
+        .model-action.primary {
+            background: var(--primary-light);
+            color: var(--primary);
+            border-color: var(--primary-light);
+        }
+
+        .model-action.primary:hover {
+            background: var(--primary);
+            color: var(--white);
+            border-color: var(--primary);
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0, 86, 210, 0.2);
+        }
+
+        .model-action.danger {
+            color: var(--danger);
+        }
+
+        .model-action.danger:hover {
+            background: var(--danger);
+            color: var(--white);
+            border-color: var(--danger);
+        }
+
+        .model-action i {
+            font-size: 0.75rem;
         }
 
         /* Recent Activity */
@@ -944,6 +584,15 @@ try {
 
         .modal-content-custom.large {
             max-width: 800px;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
         }
 
         @keyframes slideUp {
@@ -1350,7 +999,9 @@ try {
         }
 
         @keyframes spin {
-            to { transform: rotate(360deg); }
+            to { 
+                transform: rotate(360deg); 
+            }
         }
 
         .loading-text {
@@ -1428,10 +1079,8 @@ try {
 
         /* Responsive */
         @media (max-width: 768px) {
-            .nav-tabs-modern {
-                overflow-x: auto;
-                justify-content: flex-start;
-                padding: 0 1rem;
+            .stats-grid {
+                grid-template-columns: 1fr;
             }
 
             .report-grid {
@@ -1445,10 +1094,7 @@ try {
             .modal-content-custom {
                 max-width: 100%;
                 margin: 1rem;
-            }
-
-            .quick-actions {
-                flex-direction: column;
+                max-height: calc(100vh - 2rem);
             }
 
             .date-range-simple {
@@ -1467,90 +1113,9 @@ try {
 
     <!-- Main Content -->
     <div class="main-wrapper">
-        <!-- Header -->
-        <header class="main-header">
-            <div class="header-left">
-                <div class="logo-section">
-                    <div style="width: 40px; height: 40px; background: var(--primary); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white; font-weight: 800;">
-                        A
-                    </div>
-                    <div>
-                        <h1 class="logo-text">ASSEGO</h1>
-                        <p class="system-subtitle">Sistema de Gestão</p>
-                    </div>
-                </div>
-            </div>
-
-            <div class="header-right">
-                <button class="header-btn">
-                    <i class="fas fa-search"></i>
-                </button>
-                <button class="header-btn">
-                    <i class="fas fa-bell"></i>
-                </button>
-                <div class="user-menu" id="userMenu">
-                    <div class="user-info">
-                        <p class="user-name"><?php echo htmlspecialchars($usuarioLogado['nome']); ?></p>
-                        <p class="user-role"><?php echo htmlspecialchars($usuarioLogado['cargo'] ?? 'Funcionário'); ?></p>
-                    </div>
-                    <div class="user-avatar">
-                        <?php echo strtoupper(substr($usuarioLogado['nome'], 0, 1)); ?>
-                    </div>
-                    <i class="fas fa-chevron-down ms-2" style="font-size: 0.75rem; color: var(--gray-500);"></i>
-
-                    <!-- Dropdown Menu -->
-                    <div class="dropdown-menu-custom" id="userDropdown">
-                        <a href="perfil.php" class="dropdown-item-custom">
-                            <i class="fas fa-user"></i>
-                            <span>Meu Perfil</span>
-                        </a>
-                        <?php if ($auth->isDiretor()): ?>
-                        <a href="configuracoes.php" class="dropdown-item-custom">
-                            <i class="fas fa-cog"></i>
-                            <span>Configurações</span>
-                        </a>
-                        <?php endif; ?>
-                        <div class="dropdown-divider-custom"></div>
-                        <a href="logout.php" class="dropdown-item-custom">
-                            <i class="fas fa-sign-out-alt"></i>
-                            <span>Sair</span>
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </header>
-
-        <!-- Navigation Tabs -->
-        <nav class="nav-tabs-container">
-            <ul class="nav-tabs-modern">
-                <li class="nav-tab-item">
-                    <a href="dashboard.php" class="nav-tab-link">
-                        <div class="nav-tab-icon">
-                            <i class="fas fa-users"></i>
-                        </div>
-                        <span class="nav-tab-text">Associados</span>
-                    </a>
-                </li>
-                <?php if ($auth->isDiretor()): ?>
-                <li class="nav-tab-item">
-                    <a href="funcionarios.php" class="nav-tab-link">
-                        <div class="nav-tab-icon">
-                            <i class="fas fa-user-tie"></i>
-                        </div>
-                        <span class="nav-tab-text">Funcionários</span>
-                    </a>
-                </li>
-                <?php endif; ?>
-                <li class="nav-tab-item">
-                    <a href="relatorios.php" class="nav-tab-link active">
-                        <div class="nav-tab-icon">
-                            <i class="fas fa-chart-line"></i>
-                        </div>
-                        <span class="nav-tab-text">Relatórios</span>
-                    </a>
-                </li>
-            </ul>
-        </nav>
+        
+        <!-- NOVO: Header Component -->
+        <?php $headerComponent->render(); ?>
 
         <!-- Content Area -->
         <div class="content-area">

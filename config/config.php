@@ -5,12 +5,14 @@
  */
 
 // Informações do sistema
+
 define('SISTEMA_NOME', 'Sistema Comercial Assego');
 define('SISTEMA_VERSAO', '1.0.0');
 define('SISTEMA_EMPRESA', 'ASSEGO');
 
-// URLs base
-define('BASE_URL', 'http://172.16.253.44/victor/comercial'); // Ajuste conforme seu ambiente
+// URLs borreca
+define('BASE_URL', 'http://172.16.253.44/luis/comercial'); // Ajuste conforme seu ambientei
+
 define('ASSETS_URL', BASE_URL . '/assets');
 define('UPLOADS_URL', BASE_URL . '/uploads');
 
