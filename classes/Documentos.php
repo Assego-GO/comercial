@@ -614,6 +614,323 @@ class Documentos {
     }
     
     /**
+     * Estatísticas específicas para a presidência
+     */
+    public function getEstatisticasPresidencia() {
+        try {
+            $stats = [];
+            
+            // Documentos aguardando assinatura
+            $stmt = $this->db->query("
+                SELECT COUNT(*) as total 
+                FROM Documentos_Associado 
+                WHERE status_fluxo = 'AGUARDANDO_ASSINATURA'
+                AND tipo_documento IN ('ficha_associacao', 'contrato_associacao')
+            ");
+            $result = $stmt->fetch();
+            $stats['aguardando_assinatura'] = $result['total'] ?? 0;
+            
+            // Documentos assinados hoje
+            $stmt = $this->db->query("
+                SELECT COUNT(*) as total 
+                FROM Documentos_Associado 
+                WHERE DATE(data_assinatura) = CURDATE() 
+                AND status_fluxo IN ('ASSINADO', 'FINALIZADO')
+                AND tipo_documento IN ('ficha_associacao', 'contrato_associacao')
+            ");
+            $result = $stmt->fetch();
+            $stats['assinados_hoje'] = $result['total'] ?? 0;
+            
+            // Documentos assinados no mês
+            $stmt = $this->db->query("
+                SELECT COUNT(*) as total 
+                FROM Documentos_Associado 
+                WHERE MONTH(data_assinatura) = MONTH(CURDATE()) 
+                AND YEAR(data_assinatura) = YEAR(CURDATE())
+                AND status_fluxo IN ('ASSINADO', 'FINALIZADO')
+                AND tipo_documento IN ('ficha_associacao', 'contrato_associacao')
+            ");
+            $result = $stmt->fetch();
+            $stats['assinados_mes'] = $result['total'] ?? 0;
+            
+            // Tempo médio de assinatura (em horas)
+            $stmt = $this->db->query("
+                SELECT AVG(TIMESTAMPDIFF(HOUR, data_envio_assinatura, data_assinatura)) as media
+                FROM Documentos_Associado
+                WHERE data_assinatura IS NOT NULL
+                AND data_envio_assinatura IS NOT NULL
+                AND tipo_documento IN ('ficha_associacao', 'contrato_associacao')
+            ");
+            $result = $stmt->fetch();
+            $stats['tempo_medio_assinatura'] = round($result['media'] ?? 24, 1);
+            
+            // Documentos urgentes (mais de 3 dias aguardando)
+            $stmt = $this->db->query("
+                SELECT COUNT(*) as total 
+                FROM Documentos_Associado 
+                WHERE status_fluxo = 'AGUARDANDO_ASSINATURA'
+                AND DATEDIFF(NOW(), data_envio_assinatura) > 3
+                AND tipo_documento IN ('ficha_associacao', 'contrato_associacao')
+            ");
+            $result = $stmt->fetch();
+            $stats['urgentes'] = $result['total'] ?? 0;
+            
+            // Taxa de processamento (últimos 30 dias)
+            $stmt = $this->db->query("
+                SELECT 
+                    COUNT(CASE WHEN status_fluxo IN ('ASSINADO', 'FINALIZADO') THEN 1 END) as assinados,
+                    COUNT(*) as total
+                FROM Documentos_Associado
+                WHERE data_envio_assinatura >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+                AND tipo_documento IN ('ficha_associacao', 'contrato_associacao')
+            ");
+            $result = $stmt->fetch();
+            $stats['taxa_processamento'] = $result['total'] > 0 
+                ? round(($result['assinados'] / $result['total']) * 100, 1) 
+                : 0;
+            
+            return $stats;
+            
+        } catch (PDOException $e) {
+            error_log("Erro ao buscar estatísticas da presidência: " . $e->getMessage());
+            return [];
+        }
+    }
+    
+    /**
+     * Listar documentos para a presidência com filtros específicos
+     */
+    public function listarDocumentosPresidencia($filtros = []) {
+        try {
+            $sql = "
+                SELECT 
+                    d.*,
+                    a.nome as associado_nome,
+                    a.cpf as associado_cpf,
+                    a.rg as associado_rg,
+                    a.email as associado_email,
+                    a.telefone as associado_telefone,
+                    m.corporacao,
+                    m.patente,
+                    m.unidade,
+                    dept.nome as departamento_atual_nome,
+                    f_upload.nome as funcionario_upload,
+                    DATEDIFF(NOW(), d.data_envio_assinatura) as dias_em_processo,
+                    CASE 
+                        WHEN DATEDIFF(NOW(), d.data_envio_assinatura) > 3 THEN 1 
+                        ELSE 0 
+                    END as urgente
+                FROM Documentos_Associado d
+                JOIN Associados a ON d.associado_id = a.id
+                LEFT JOIN Militar m ON a.id = m.associado_id
+                LEFT JOIN Departamentos dept ON d.departamento_atual = dept.id
+                LEFT JOIN Funcionarios f_upload ON d.funcionario_id = f_upload.id
+                WHERE d.tipo_documento IN ('ficha_associacao', 'contrato_associacao')
+            ";
+            
+            $params = [];
+            
+            // Filtro principal - status
+            if (!empty($filtros['status'])) {
+                $sql .= " AND d.status_fluxo = ?";
+                $params[] = $filtros['status'];
+            } else {
+                // Por padrão, mostrar apenas aguardando assinatura
+                $sql .= " AND d.status_fluxo = 'AGUARDANDO_ASSINATURA'";
+            }
+            
+            // Filtro por urgência
+            if (!empty($filtros['urgencia'])) {
+                if ($filtros['urgencia'] === 'urgente') {
+                    $sql .= " AND DATEDIFF(NOW(), d.data_envio_assinatura) > 3";
+                } else {
+                    $sql .= " AND DATEDIFF(NOW(), d.data_envio_assinatura) <= 3";
+                }
+            }
+            
+            // Filtro por origem
+            if (!empty($filtros['origem'])) {
+                $sql .= " AND d.tipo_origem = ?";
+                $params[] = $filtros['origem'];
+            }
+            
+            // Busca por nome ou CPF
+            if (!empty($filtros['busca'])) {
+                $sql .= " AND (a.nome LIKE ? OR a.cpf LIKE ?)";
+                $busca = "%{$filtros['busca']}%";
+                $params[] = $busca;
+                $params[] = str_replace(['.', '-'], '', $busca); // Remove formatação do CPF
+            }
+            
+            // Ordenação - urgentes primeiro
+            $sql .= " ORDER BY 
+                urgente DESC,
+                d.data_envio_assinatura ASC";
+            
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute($params);
+            
+            return $stmt->fetchAll();
+            
+        } catch (PDOException $e) {
+            error_log("Erro ao listar documentos da presidência: " . $e->getMessage());
+            return [];
+        }
+    }
+    
+    /**
+     * Assinar múltiplos documentos em lote
+     */
+    public function assinarDocumentosLote($documentosIds, $observacao = null) {
+        try {
+            $this->db->beginTransaction();
+            
+            $assinados = 0;
+            $erros = [];
+            
+            foreach ($documentosIds as $documentoId) {
+                try {
+                    // Usar o método existente de assinatura individual
+                    $this->assinarDocumento($documentoId, null, $observacao);
+                    $assinados++;
+                } catch (Exception $e) {
+                    $erros[] = "Documento ID {$documentoId}: " . $e->getMessage();
+                }
+            }
+            
+            $this->db->commit();
+            
+            return [
+                'assinados' => $assinados,
+                'total' => count($documentosIds),
+                'erros' => $erros
+            ];
+            
+        } catch (Exception $e) {
+            $this->db->rollBack();
+            throw $e;
+        }
+    }
+    
+    /**
+     * Obter histórico de assinaturas do funcionário
+     */
+    public function getHistoricoAssinaturas($funcionarioId = null, $periodo = 30) {
+        try {
+            $sql = "
+                SELECT 
+                    d.id,
+                    d.data_assinatura,
+                    a.nome as associado_nome,
+                    a.cpf as associado_cpf,
+                    d.tipo_origem,
+                    TIMESTAMPDIFF(HOUR, d.data_envio_assinatura, d.data_assinatura) as tempo_processamento
+                FROM Documentos_Associado d
+                JOIN Associados a ON d.associado_id = a.id
+                WHERE d.assinado_por = ?
+                AND d.data_assinatura >= DATE_SUB(CURDATE(), INTERVAL ? DAY)
+                ORDER BY d.data_assinatura DESC
+            ";
+            
+            $funcionarioId = $funcionarioId ?? $_SESSION['funcionario_id'];
+            
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([$funcionarioId, $periodo]);
+            
+            return $stmt->fetchAll();
+            
+        } catch (PDOException $e) {
+            error_log("Erro ao buscar histórico de assinaturas: " . $e->getMessage());
+            return [];
+        }
+    }
+    
+    /**
+     * Relatório de produtividade da presidência
+     */
+    public function getRelatorioProdutividade($dataInicio = null, $dataFim = null) {
+        try {
+            if (!$dataInicio) {
+                $dataInicio = date('Y-m-01'); // Primeiro dia do mês
+            }
+            if (!$dataFim) {
+                $dataFim = date('Y-m-t'); // Último dia do mês
+            }
+            
+            $relatorio = [];
+            
+            // Total de documentos processados no período
+            $stmt = $this->db->prepare("
+                SELECT 
+                    COUNT(*) as total_processados,
+                    AVG(TIMESTAMPDIFF(HOUR, data_envio_assinatura, data_assinatura)) as tempo_medio,
+                    MIN(TIMESTAMPDIFF(HOUR, data_envio_assinatura, data_assinatura)) as tempo_minimo,
+                    MAX(TIMESTAMPDIFF(HOUR, data_envio_assinatura, data_assinatura)) as tempo_maximo
+                FROM Documentos_Associado
+                WHERE data_assinatura BETWEEN ? AND ?
+                AND status_fluxo IN ('ASSINADO', 'FINALIZADO')
+                AND tipo_documento IN ('ficha_associacao', 'contrato_associacao')
+            ");
+            $stmt->execute([$dataInicio, $dataFim . ' 23:59:59']);
+            $relatorio['resumo'] = $stmt->fetch();
+            
+            // Por funcionário
+            $stmt = $this->db->prepare("
+                SELECT 
+                    f.nome as funcionario,
+                    COUNT(*) as total_assinados,
+                    AVG(TIMESTAMPDIFF(HOUR, d.data_envio_assinatura, d.data_assinatura)) as tempo_medio
+                FROM Documentos_Associado d
+                JOIN Funcionarios f ON d.assinado_por = f.id
+                WHERE d.data_assinatura BETWEEN ? AND ?
+                AND d.status_fluxo IN ('ASSINADO', 'FINALIZADO')
+                AND d.tipo_documento IN ('ficha_associacao', 'contrato_associacao')
+                GROUP BY f.id
+                ORDER BY total_assinados DESC
+            ");
+            $stmt->execute([$dataInicio, $dataFim . ' 23:59:59']);
+            $relatorio['por_funcionario'] = $stmt->fetchAll();
+            
+            // Por dia da semana
+            $stmt = $this->db->prepare("
+                SELECT 
+                    DAYNAME(data_assinatura) as dia_semana,
+                    DAYOFWEEK(data_assinatura) as dia_numero,
+                    COUNT(*) as total
+                FROM Documentos_Associado
+                WHERE data_assinatura BETWEEN ? AND ?
+                AND status_fluxo IN ('ASSINADO', 'FINALIZADO')
+                AND tipo_documento IN ('ficha_associacao', 'contrato_associacao')
+                GROUP BY DAYOFWEEK(data_assinatura)
+                ORDER BY dia_numero
+            ");
+            $stmt->execute([$dataInicio, $dataFim . ' 23:59:59']);
+            $relatorio['por_dia_semana'] = $stmt->fetchAll();
+            
+            // Por origem
+            $stmt = $this->db->prepare("
+                SELECT 
+                    tipo_origem,
+                    COUNT(*) as total,
+                    AVG(TIMESTAMPDIFF(HOUR, data_envio_assinatura, data_assinatura)) as tempo_medio
+                FROM Documentos_Associado
+                WHERE data_assinatura BETWEEN ? AND ?
+                AND status_fluxo IN ('ASSINADO', 'FINALIZADO')
+                AND tipo_documento IN ('ficha_associacao', 'contrato_associacao')
+                GROUP BY tipo_origem
+            ");
+            $stmt->execute([$dataInicio, $dataFim . ' 23:59:59']);
+            $relatorio['por_origem'] = $stmt->fetchAll();
+            
+            return $relatorio;
+            
+        } catch (PDOException $e) {
+            error_log("Erro ao gerar relatório de produtividade: " . $e->getMessage());
+            return [];
+        }
+    }
+    
+    /**
      * Registrar histórico do fluxo
      */
     private function registrarHistoricoFluxo($documentoId, $statusAnterior, $statusNovo, $deptOrigem, $deptDestino, $observacao) {
@@ -1216,6 +1533,438 @@ class Documentos {
             ];
         }
         return $tipos;
+    }
+    
+    /**
+     * Criar lote de documentos
+     */
+    public function criarLote($observacao = null) {
+        try {
+            $stmt = $this->db->prepare("
+                INSERT INTO Lotes_Documentos (funcionario_id, observacao) 
+                VALUES (?, ?)
+            ");
+            
+            $stmt->execute([
+                $_SESSION['funcionario_id'] ?? null,
+                $observacao
+            ]);
+            
+            return $this->db->lastInsertId();
+            
+        } catch (PDOException $e) {
+            error_log("Erro ao criar lote: " . $e->getMessage());
+            throw $e;
+        }
+    }
+    
+    /**
+     * Adicionar documento ao lote
+     */
+    public function adicionarAoLote($loteId, $associadoId) {
+        try {
+            $stmt = $this->db->prepare("
+                INSERT INTO Detalhes_Lote (lote_id, associado_id, status) 
+                VALUES (?, ?, 'PENDENTE')
+            ");
+            
+            $stmt->execute([$loteId, $associadoId]);
+            return true;
+            
+        } catch (PDOException $e) {
+            error_log("Erro ao adicionar ao lote: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Listar lotes de documentos
+     */
+    public function listarLotes($filtros = []) {
+        try {
+            $sql = "
+                SELECT 
+                    l.*,
+                    f.nome as funcionario_nome,
+                    COUNT(dl.id) as total_documentos,
+                    SUM(CASE WHEN dl.status = 'ASSINADO' THEN 1 ELSE 0 END) as assinados,
+                    SUM(CASE WHEN dl.status = 'PENDENTE' THEN 1 ELSE 0 END) as pendentes
+                FROM Lotes_Documentos l
+                LEFT JOIN Funcionarios f ON l.funcionario_id = f.id
+                LEFT JOIN Detalhes_Lote dl ON l.id = dl.lote_id
+                WHERE 1=1
+            ";
+            
+            $params = [];
+            
+            if (!empty($filtros['status'])) {
+                $sql .= " AND l.status = ?";
+                $params[] = $filtros['status'];
+            }
+            
+            if (!empty($filtros['periodo'])) {
+                switch($filtros['periodo']) {
+                    case 'hoje':
+                        $sql .= " AND DATE(l.data_geracao) = CURDATE()";
+                        break;
+                    case 'semana':
+                        $sql .= " AND l.data_geracao >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)";
+                        break;
+                    case 'mes':
+                        $sql .= " AND l.data_geracao >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)";
+                        break;
+                }
+            }
+            
+            $sql .= " GROUP BY l.id ORDER BY l.data_geracao DESC";
+            
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute($params);
+            
+            return $stmt->fetchAll();
+            
+        } catch (PDOException $e) {
+            error_log("Erro ao listar lotes: " . $e->getMessage());
+            return [];
+        }
+    }
+    
+    /**
+     * Obter detalhes do lote
+     */
+    public function getDetalhesLote($loteId) {
+        try {
+            // Informações do lote
+            $stmt = $this->db->prepare("
+                SELECT l.*, f.nome as funcionario_nome
+                FROM Lotes_Documentos l
+                LEFT JOIN Funcionarios f ON l.funcionario_id = f.id
+                WHERE l.id = ?
+            ");
+            $stmt->execute([$loteId]);
+            $lote = $stmt->fetch();
+            
+            if (!$lote) {
+                return false;
+            }
+            
+            // Documentos do lote
+            $stmt = $this->db->prepare("
+                SELECT 
+                    dl.*,
+                    a.nome as associado_nome,
+                    a.cpf as associado_cpf,
+                    d.nome_arquivo,
+                    d.caminho_arquivo
+                FROM Detalhes_Lote dl
+                JOIN Associados a ON dl.associado_id = a.id
+                LEFT JOIN Documentos_Associado d ON dl.associado_id = d.associado_id 
+                    AND d.tipo_documento = 'ficha_associacao'
+                    AND d.lote_id = ?
+                WHERE dl.lote_id = ?
+                ORDER BY a.nome
+            ");
+            $stmt->execute([$loteId, $loteId]);
+            $lote['documentos'] = $stmt->fetchAll();
+            
+            return $lote;
+            
+        } catch (PDOException $e) {
+            error_log("Erro ao buscar detalhes do lote: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Atualizar status do documento no lote
+     */
+    public function atualizarStatusLote($loteId, $associadoId, $status, $observacao = null) {
+        try {
+            $stmt = $this->db->prepare("
+                UPDATE Detalhes_Lote 
+                SET status = ?,
+                    data_retorno = NOW(),
+                    observacao = ?
+                WHERE lote_id = ? AND associado_id = ?
+            ");
+            
+            $stmt->execute([$status, $observacao, $loteId, $associadoId]);
+            return true;
+            
+        } catch (PDOException $e) {
+            error_log("Erro ao atualizar status do lote: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Verificar integridade do arquivo
+     */
+    public function verificarIntegridade($id) {
+        try {
+            $documento = $this->getById($id);
+            if (!$documento) {
+                return ['status' => false, 'mensagem' => 'Documento não encontrado'];
+            }
+            
+            $caminhoCompleto = dirname(__DIR__) . '/' . $documento['caminho_arquivo'];
+            
+            // Verificar se arquivo existe
+            if (!file_exists($caminhoCompleto)) {
+                return ['status' => false, 'mensagem' => 'Arquivo não encontrado no servidor'];
+            }
+            
+            // Verificar hash
+            $hashAtual = hash_file('sha256', $caminhoCompleto);
+            if ($hashAtual !== $documento['hash_arquivo']) {
+                return ['status' => false, 'mensagem' => 'Arquivo foi modificado'];
+            }
+            
+            return ['status' => true, 'mensagem' => 'Arquivo íntegro'];
+            
+        } catch (Exception $e) {
+            error_log("Erro ao verificar integridade: " . $e->getMessage());
+            return ['status' => false, 'mensagem' => 'Erro ao verificar arquivo'];
+        }
+    }
+    
+    /**
+     * Limpar arquivos órfãos
+     */
+    public function limparArquivosOrfaos() {
+        try {
+            $contador = 0;
+            
+            // Buscar todos os caminhos de arquivo no banco
+            $stmt = $this->db->query("
+                SELECT caminho_arquivo, arquivo_assinado 
+                FROM Documentos_Associado
+            ");
+            $documentos = $stmt->fetchAll();
+            
+            $arquivosValidos = [];
+            foreach ($documentos as $doc) {
+                if ($doc['caminho_arquivo']) {
+                    $arquivosValidos[] = basename($doc['caminho_arquivo']);
+                }
+                if ($doc['arquivo_assinado']) {
+                    $arquivosValidos[] = basename($doc['arquivo_assinado']);
+                }
+            }
+            
+            // Percorrer diretórios de upload
+            $iterator = new RecursiveIteratorIterator(
+                new RecursiveDirectoryIterator($this->uploadDir),
+                RecursiveIteratorIterator::SELF_FIRST
+            );
+            
+            foreach ($iterator as $file) {
+                if ($file->isFile()) {
+                    $nomeArquivo = $file->getFilename();
+                    if (!in_array($nomeArquivo, $arquivosValidos)) {
+                        // Arquivo órfão encontrado
+                        unlink($file->getPathname());
+                        $contador++;
+                        error_log("Arquivo órfão removido: " . $file->getPathname());
+                    }
+                }
+            }
+            
+            return $contador;
+            
+        } catch (Exception $e) {
+            error_log("Erro ao limpar arquivos órfãos: " . $e->getMessage());
+            return 0;
+        }
+    }
+    
+    /**
+     * Exportar relatório de documentos
+     */
+    public function exportarRelatorio($filtros = [], $formato = 'csv') {
+        try {
+            // Buscar documentos com filtros
+            $documentos = $this->listar($filtros);
+            
+            switch ($formato) {
+                case 'csv':
+                    return $this->exportarCSV($documentos);
+                case 'pdf':
+                    return $this->exportarPDF($documentos);
+                default:
+                    throw new Exception("Formato de exportação não suportado");
+            }
+            
+        } catch (Exception $e) {
+            error_log("Erro ao exportar relatório: " . $e->getMessage());
+            throw $e;
+        }
+    }
+    
+    /**
+     * Exportar para CSV
+     */
+    private function exportarCSV($documentos) {
+        $filename = 'documentos_' . date('Y-m-d_H-i-s') . '.csv';
+        
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        
+        $output = fopen('php://output', 'w');
+        
+        // BOM para UTF-8
+        fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF));
+        
+        // Cabeçalho
+        fputcsv($output, [
+            'ID',
+            'Associado',
+            'CPF',
+            'Tipo Documento',
+            'Nome Arquivo',
+            'Data Upload',
+            'Verificado',
+            'Status Fluxo',
+            'Funcionário'
+        ], ';');
+        
+        // Dados
+        foreach ($documentos as $doc) {
+            fputcsv($output, [
+                $doc['id'],
+                $doc['associado_nome'],
+                $this->formatarCPF($doc['associado_cpf']),
+                $doc['tipo_documento_nome'],
+                $doc['nome_arquivo'],
+                date('d/m/Y H:i', strtotime($doc['data_upload'])),
+                $doc['verificado'] ? 'Sim' : 'Não',
+                $doc['status_fluxo'] ?? '-',
+                $doc['funcionario_nome'] ?? '-'
+            ], ';');
+        }
+        
+        fclose($output);
+        exit;
+    }
+    
+    /**
+     * Exportar para PDF (placeholder)
+     */
+    private function exportarPDF($documentos) {
+        // Implementar com biblioteca como TCPDF ou DomPDF
+        throw new Exception("Exportação PDF ainda não implementada");
+    }
+    
+    /**
+     * Buscar documentos duplicados
+     */
+    public function buscarDuplicados() {
+        try {
+            $stmt = $this->db->query("
+                SELECT 
+                    hash_arquivo,
+                    COUNT(*) as total,
+                    GROUP_CONCAT(DISTINCT associado_id) as associados,
+                    GROUP_CONCAT(nome_arquivo SEPARATOR ', ') as arquivos
+                FROM Documentos_Associado
+                GROUP BY hash_arquivo
+                HAVING total > 1
+                ORDER BY total DESC
+            ");
+            
+            return $stmt->fetchAll();
+            
+        } catch (PDOException $e) {
+            error_log("Erro ao buscar duplicados: " . $e->getMessage());
+            return [];
+        }
+    }
+    
+    /**
+     * Obter resumo por associado
+     */
+    public function getResumoAssociado($associadoId) {
+        try {
+            $resumo = [];
+            
+            // Total de documentos
+            $stmt = $this->db->prepare("
+                SELECT COUNT(*) as total 
+                FROM Documentos_Associado 
+                WHERE associado_id = ?
+            ");
+            $stmt->execute([$associadoId]);
+            $result = $stmt->fetch();
+            $resumo['total'] = $result['total'];
+            
+            // Por tipo
+            $stmt = $this->db->prepare("
+                SELECT tipo_documento, COUNT(*) as quantidade
+                FROM Documentos_Associado
+                WHERE associado_id = ?
+                GROUP BY tipo_documento
+            ");
+            $stmt->execute([$associadoId]);
+            $resumo['por_tipo'] = $stmt->fetchAll();
+            
+            // Verificados vs Pendentes
+            $stmt = $this->db->prepare("
+                SELECT 
+                    SUM(CASE WHEN verificado = 1 THEN 1 ELSE 0 END) as verificados,
+                    SUM(CASE WHEN verificado = 0 THEN 1 ELSE 0 END) as pendentes
+                FROM Documentos_Associado
+                WHERE associado_id = ?
+            ");
+            $stmt->execute([$associadoId]);
+            $result = $stmt->fetch();
+            $resumo['verificados'] = $result['verificados'];
+            $resumo['pendentes'] = $result['pendentes'];
+            
+            // Último upload
+            $stmt = $this->db->prepare("
+                SELECT MAX(data_upload) as ultimo_upload
+                FROM Documentos_Associado
+                WHERE associado_id = ?
+            ");
+            $stmt->execute([$associadoId]);
+            $result = $stmt->fetch();
+            $resumo['ultimo_upload'] = $result['ultimo_upload'];
+            
+            return $resumo;
+            
+        } catch (PDOException $e) {
+            error_log("Erro ao buscar resumo do associado: " . $e->getMessage());
+            return [];
+        }
+    }
+    
+    /**
+     * Verificar documentos obrigatórios
+     */
+    public function verificarDocumentosObrigatorios($associadoId) {
+        $obrigatorios = ['rg', 'cpf', 'comprovante_residencia', 'ficha_associacao'];
+        
+        try {
+            $stmt = $this->db->prepare("
+                SELECT DISTINCT tipo_documento
+                FROM Documentos_Associado
+                WHERE associado_id = ? AND verificado = 1
+            ");
+            $stmt->execute([$associadoId]);
+            
+            $documentosEnviados = array_column($stmt->fetchAll(), 'tipo_documento');
+            $faltando = array_diff($obrigatorios, $documentosEnviados);
+            
+            return [
+                'completo' => empty($faltando),
+                'faltando' => $faltando,
+                'porcentagem' => round((count($documentosEnviados) / count($obrigatorios)) * 100)
+            ];
+            
+        } catch (PDOException $e) {
+            error_log("Erro ao verificar documentos obrigatórios: " . $e->getMessage());
+            return ['completo' => false, 'faltando' => $obrigatorios, 'porcentagem' => 0];
+        }
     }
 }
 ?>
