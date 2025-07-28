@@ -1,20 +1,386 @@
 <?php
-/**
- * Página de Login com Cloudflare Turnstile
- * index.php
- */
 
-// Incluir configurações
 require_once '../config/config.php';
 require_once '../config/database.php';
 
-// Incluir classes
 require_once '../classes/Database.php';
 require_once '../classes/Auth.php';
 
 /**
- * Validador do Cloudflare Turnstile
+ * Classe para gerenciar Rate Limiting de tentativas de login
  */
+class LoginRateLimit {
+    private $maxAttempts = 100;// mudar em produção
+    private $lockoutTime = 9; // mudar em produção
+    private $globalMaxAttempts = 500; 
+    private $globalLockoutTime = 18; // mudar em produção
+    private $minTimeBetweenAttempts = 0.5; 
+    private $dataFile;
+    private $globalFile;
+    
+    public function __construct() {
+        // Criar diretório para armazenar dados se não existir
+        $dataDir = '../data/rate_limit';
+        if (!is_dir($dataDir)) {
+            mkdir($dataDir, 0755, true);
+        }
+        $this->dataFile = $dataDir . '/login_attempts.json';
+        $this->globalFile = $dataDir . '/global_attempts.json';
+    }
+    
+    /**
+     * Carrega dados de tentativas do arquivo
+     */
+    private function loadAttempts() {
+        if (!file_exists($this->dataFile)) {
+            return [];
+        }
+        
+        $data = file_get_contents($this->dataFile);
+        $attempts = json_decode($data, true);
+        
+        return is_array($attempts) ? $attempts : [];
+    }
+    
+    /**
+     * Salva dados de tentativas no arquivo
+     */
+    private function saveAttempts($attempts) {
+        file_put_contents($this->dataFile, json_encode($attempts, JSON_PRETTY_PRINT));
+    }
+    
+    /**
+     * Carrega dados globais de tentativas
+     */
+    private function loadGlobalAttempts() {
+        if (!file_exists($this->globalFile)) {
+            return ['attempts' => 0, 'last_attempt' => 0, 'ips' => []];
+        }
+        
+        $data = file_get_contents($this->globalFile);
+        $attempts = json_decode($data, true);
+        
+        return is_array($attempts) ? $attempts : ['attempts' => 0, 'last_attempt' => 0, 'ips' => []];
+    }
+    
+    /**
+     * Salva dados globais de tentativas
+     */
+    private function saveGlobalAttempts($attempts) {
+        file_put_contents($this->globalFile, json_encode($attempts, JSON_PRETTY_PRINT));
+    }
+    
+    /**
+     * Registra uma tentativa global (MÉTODO QUE ESTAVA FALTANDO)
+     */
+    private function recordGlobalAttempt($ip) {
+        $globalData = $this->loadGlobalAttempts();
+        $currentTime = time();
+        
+        // Incrementar contador global
+        $globalData['attempts']++;
+        $globalData['last_attempt'] = $currentTime;
+        
+        // Registrar IP único
+        if (!in_array($ip, $globalData['ips'])) {
+            $globalData['ips'][] = $ip;
+        }
+        
+        // Salvar dados globais
+        $this->saveGlobalAttempts($globalData);
+        
+        return $globalData;
+    }
+    
+    /**
+     * Verifica se o sistema está em bloqueio global
+     */
+    public function isGloballyBlocked() {
+        $globalData = $this->loadGlobalAttempts();
+        $currentTime = time();
+        
+        // Se passou do tempo de bloqueio global, resetar
+        if (($currentTime - $globalData['last_attempt']) >= $this->globalLockoutTime) {
+            if ($globalData['attempts'] >= $this->globalMaxAttempts) {
+                // Resetar contador global
+                $globalData = ['attempts' => 0, 'last_attempt' => 0, 'ips' => []];
+                $this->saveGlobalAttempts($globalData);
+            }
+            return false;
+        }
+        
+        // Verificar se atingiu o limite global
+        if ($globalData['attempts'] >= $this->globalMaxAttempts) {
+            return [
+                'blocked' => true,
+                'attempts' => $globalData['attempts'],
+                'time_remaining' => $this->globalLockoutTime - ($currentTime - $globalData['last_attempt']),
+                'unique_ips' => count($globalData['ips'])
+            ];
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Verifica se a tentativa é muito rápida
+     */
+    public function isTooFast($email, $ip) {
+        $attempts = $this->loadAttempts();
+        $key = $this->generateKey($email, $ip);
+        $currentTime = microtime(true);
+        
+        if (isset($attempts[$key])) {
+            $lastAttemptTime = $attempts[$key]['last_attempt_precise'] ?? $attempts[$key]['last_attempt'];
+            $timeDiff = $currentTime - $lastAttemptTime;
+            
+            if ($timeDiff < $this->minTimeBetweenAttempts) {
+                return [
+                    'too_fast' => true,
+                    'time_diff' => $timeDiff,
+                    'required_wait' => $this->minTimeBetweenAttempts - $timeDiff
+                ];
+            }
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Limpa tentativas expiradas
+     */
+    private function cleanExpiredAttempts($attempts) {
+        $currentTime = time();
+        $cleaned = [];
+        
+        foreach ($attempts as $key => $data) {
+            if (($currentTime - $data['last_attempt']) < $this->lockoutTime) {
+                $cleaned[$key] = $data;
+            }
+        }
+        
+        return $cleaned;
+    }
+    
+    /**
+     * Gera chave única baseada no IP e email
+     */
+    private function generateKey($email, $ip) {
+        return md5($email . '|' . $ip);
+    }
+    
+    /**
+     * Verifica se o usuário está bloqueado
+     */
+    public function isBlocked($email, $ip) {
+        $attempts = $this->loadAttempts();
+        $attempts = $this->cleanExpiredAttempts($attempts);
+        
+        $key = $this->generateKey($email, $ip);
+        
+        if (!isset($attempts[$key])) {
+            return false;
+        }
+        
+        $userData = $attempts[$key];
+        $currentTime = time();
+        
+        // Se passou do tempo de bloqueio, libera o usuário
+        if (($currentTime - $userData['last_attempt']) >= $this->lockoutTime) {
+            unset($attempts[$key]);
+            $this->saveAttempts($attempts);
+            return false;
+        }
+        
+        // Se atingiu o máximo de tentativas e ainda está no período de bloqueio
+        if ($userData['attempts'] >= $this->maxAttempts) {
+            return [
+                'blocked' => true,
+                'attempts' => $userData['attempts'],
+                'last_attempt' => $userData['last_attempt'],
+                'time_remaining' => $this->lockoutTime - ($currentTime - $userData['last_attempt'])
+            ];
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Registra uma tentativa de login falhada
+     */
+    public function recordFailedAttempt($email, $ip) {
+        // Registrar tentativa global
+        $globalData = $this->recordGlobalAttempt($ip);
+        
+        $attempts = $this->loadAttempts();
+        $attempts = $this->cleanExpiredAttempts($attempts);
+        
+        $key = $this->generateKey($email, $ip);
+        $currentTime = time();
+        $preciseTime = microtime(true);
+        
+        if (!isset($attempts[$key])) {
+            $attempts[$key] = [
+                'email' => $email,
+                'ip' => $ip,
+                'attempts' => 0,
+                'first_attempt' => $currentTime,
+                'last_attempt' => $currentTime,
+                'last_attempt_precise' => $preciseTime
+            ];
+        }
+        
+        $attempts[$key]['attempts']++;
+        $attempts[$key]['last_attempt'] = $currentTime;
+        $attempts[$key]['last_attempt_precise'] = $preciseTime;
+        
+        $this->saveAttempts($attempts);
+        
+        return [
+            'attempts' => $attempts[$key]['attempts'],
+            'max_attempts' => $this->maxAttempts,
+            'remaining' => max(0, $this->maxAttempts - $attempts[$key]['attempts']),
+            'global_attempts' => $globalData['attempts'],
+            'global_max' => $this->globalMaxAttempts
+        ];
+    }
+    
+    /**
+     * Limpa tentativas após login bem-sucedido
+     */
+    public function clearAttempts($email, $ip) {
+        $attempts = $this->loadAttempts();
+        $key = $this->generateKey($email, $ip);
+        
+        if (isset($attempts[$key])) {
+            unset($attempts[$key]);
+            $this->saveAttempts($attempts);
+        }
+        
+        // Não limpar tentativas globais - elas continuam para proteção geral
+    }
+    
+    /**
+     * Retorna informações sobre as tentativas atuais
+     */
+    public function getAttemptInfo($email, $ip) {
+        $attempts = $this->loadAttempts();
+        $attempts = $this->cleanExpiredAttempts($attempts);
+        
+        $key = $this->generateKey($email, $ip);
+        
+        if (!isset($attempts[$key])) {
+            return [
+                'attempts' => 0,
+                'max_attempts' => $this->maxAttempts,
+                'remaining' => $this->maxAttempts
+            ];
+        }
+        
+        $userData = $attempts[$key];
+        return [
+            'attempts' => $userData['attempts'],
+            'max_attempts' => $this->maxAttempts,
+            'remaining' => max(0, $this->maxAttempts - $userData['attempts']),
+            'last_attempt' => $userData['last_attempt']
+        ];
+    }
+    
+    /**
+     * Formata tempo restante para exibição
+     */
+    public static function formatTimeRemaining($seconds) {
+        if ($seconds <= 0) return '0 segundos';
+        
+        $minutes = floor($seconds / 60);
+        $remainingSeconds = $seconds % 60;
+        
+        if ($minutes > 0) {
+            return $minutes . ' minuto' . ($minutes != 1 ? 's' : '') . 
+                   ($remainingSeconds > 0 ? ' e ' . $remainingSeconds . ' segundo' . ($remainingSeconds != 1 ? 's' : '') : '');
+        } else {
+            return $remainingSeconds . ' segundo' . ($remainingSeconds != 1 ? 's' : '');
+        }
+    }
+}
+
+/**
+ * Classe para validação de campos honeypot (proteção contra bots)
+ */
+class HoneypotValidator {
+    
+    /**
+     * Valida os campos honeypot
+     * 
+     * @param array $postData Dados do POST
+     * @return array Resultado da validação
+     */
+    public static function validate($postData) {
+        $errors = [];
+        
+        // Campos honeypot que devem estar vazios
+        $honeypotFields = [
+            'username',      // Campo username falso
+            'phone',         // Campo telefone falso
+            'website',       // Campo website falso
+            'company',       // Campo empresa falso
+            'address'        // Campo endereço falso
+        ];
+        
+        // Verificar se algum campo honeypot foi preenchido
+        foreach ($honeypotFields as $field) {
+            if (!empty($postData[$field])) {
+                $errors[] = "Campo {$field} foi preenchido (possível bot)";
+            }
+        }
+        
+        // Campo de tempo - deve ser preenchido e ter um valor mínimo
+        $formTime = $postData['form_time'] ?? '';
+        if (empty($formTime)) {
+            $errors[] = "Campo de tempo não encontrado";
+        } else {
+            $submitTime = time();
+            $timeDiff = $submitTime - (int)$formTime;
+            
+            // Tempo mínimo de 3 segundos para preencher o formulário
+            if ($timeDiff < 3) {
+                $errors[] = "Formulário preenchido muito rapidamente ({$timeDiff}s)";
+            }
+            
+            // Tempo máximo de 1 hora
+            if ($timeDiff > 3600) {
+                $errors[] = "Formulário expirado (mais de 1 hora)";
+            }
+        }
+        
+        // Verificar se o JavaScript está habilitado através do campo oculto
+        $jsEnabled = $postData['js_enabled'] ?? '';
+        if ($jsEnabled !== '1') {
+            $errors[] = "JavaScript não está habilitado ou campo não foi preenchido";
+        }
+        
+        return [
+            'valid' => empty($errors),
+            'errors' => $errors,
+            'is_bot' => !empty($errors)
+        ];
+    }
+    
+    /**
+     * Gera um token único para o formulário
+     */
+    public static function generateToken() {
+        return bin2hex(random_bytes(16));
+    }
+    
+    /**
+     * Valida o token do formulário
+     */
+    public static function validateToken($token, $sessionToken) {
+        return !empty($token) && !empty($sessionToken) && hash_equals($sessionToken, $token);
+    }
+}
+
 class TurnstileValidator {
     
     private $secretKey;
@@ -156,8 +522,19 @@ class TurnstileValidator {
     }
 }
 
-// Criar instância da classe Auth
+// Inicializar classes
 $auth = new Auth();
+$rateLimit = new LoginRateLimit();
+
+// Inicializar sessão para honeypot
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+// Gerar token para honeypot se não existir
+if (!isset($_SESSION['honeypot_token'])) {
+    $_SESSION['honeypot_token'] = HoneypotValidator::generateToken();
+}
 
 // Se já estiver logado, redirecionar
 if ($auth->isLoggedIn()) {
@@ -176,36 +553,107 @@ if (isset($_GET['mensagem']) && isset($_GET['tipo'])) {
 // Processar login
 $erro = '';
 $sucesso = '';
+$userIP = $_SERVER['REMOTE_ADDR'];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = filter_input(INPUT_POST, 'email', FILTER_SANITIZE_EMAIL);
     $senha = $_POST['senha'] ?? '';
     $lembrar = isset($_POST['lembrar']);
     $turnstileToken = $_POST['cf-turnstile-response'] ?? '';
+    $honeypotToken = $_POST['honeypot_token'] ?? '';
     
     if (empty($email) || empty($senha)) {
         $erro = 'Por favor, preencha todos os campos.';
     } else {
-        // Validar Turnstile primeiro
-        $turnstileValidator = new TurnstileValidator();
-        $turnstileResult = $turnstileValidator->verify($turnstileToken, $_SERVER['REMOTE_ADDR']);
+        // Validar honeypot primeiro
+        $honeypotResult = HoneypotValidator::validate($_POST);
         
-        if (!$turnstileResult['success']) {
-            $erro = 'Verificação de segurança falhou: ' . $turnstileResult['message'];
-        } else {
-            // Prosseguir com o login
-            $resultado = $auth->login($email, $senha);
+        if (!$honeypotResult['valid']) {
+            // Log da tentativa de bot
+            error_log("Possível bot detectado no login - IP: {$userIP}, Email: {$email}, Erros: " . implode(', ', $honeypotResult['errors']));
             
-            if ($resultado['success']) {
-                // Redirecionar para página solicitada ou dashboard
-                $redirect = $_GET['redirect'] ?? BASE_URL . '/pages/dashboard.php';
-                header('Location: ' . $redirect);
-                exit;
+            // Registrar como tentativa falhada mas não mostrar erro específico
+            $attemptInfo = $rateLimit->recordFailedAttempt($email, $userIP);
+            
+            // Dar uma resposta genérica para não revelar o honeypot
+            $erro = 'Erro na validação do formulário. Tente novamente.';
+            
+            // Opcional: banir IP temporariamente se for claramente um bot
+            if (count($honeypotResult['errors']) > 2) {
+                // Criar arquivo de IPs banidos se não existir
+                $bannedIpsFile = '../data/rate_limit/banned_ips.json';
+                $bannedIps = [];
+                if (file_exists($bannedIpsFile)) {
+                    $bannedIps = json_decode(file_get_contents($bannedIpsFile), true) ?: [];
+                }
+                
+                $bannedIps[$userIP] = [
+                    'banned_at' => time(),
+                    'reason' => 'Honeypot detection',
+                    'errors' => $honeypotResult['errors']
+                ];
+                
+                file_put_contents($bannedIpsFile, json_encode($bannedIps, JSON_PRETTY_PRINT));
+            }
+        } else {
+            // Validar token do honeypot
+            if (!HoneypotValidator::validateToken($honeypotToken, $_SESSION['honeypot_token'])) {
+                $erro = 'Token de segurança inválido. Recarregue a página.';
             } else {
-                $erro = $resultado['message'];
+                // Verificar se o usuário está bloqueado
+                $blockStatus = $rateLimit->isBlocked($email, $userIP);
+                
+                if ($blockStatus && $blockStatus['blocked']) {
+                    $timeRemaining = LoginRateLimit::formatTimeRemaining($blockStatus['time_remaining']);
+                    $erro = "Muitas tentativas de login falhadas. Tente novamente em {$timeRemaining}. " .
+                           "({$blockStatus['attempts']} tentativas registradas)";
+                } else {
+                    // Validar Turnstile
+                    $turnstileValidator = new TurnstileValidator();
+                    $turnstileResult = $turnstileValidator->verify($turnstileToken, $userIP);
+                    
+                    if (!$turnstileResult['success']) {
+                        $erro = 'Verificação de segurança falhou: ' . $turnstileResult['message'];
+                        
+                        // Também registrar como tentativa falhada se Turnstile falhar
+                        $attemptInfo = $rateLimit->recordFailedAttempt($email, $userIP);
+                        if ($attemptInfo['remaining'] > 0) {
+                            $erro .= " (Restam {$attemptInfo['remaining']} tentativas)";
+                        }
+                    } else {
+                        // Prosseguir com o login
+                        $resultado = $auth->login($email, $senha);
+                        
+                        if ($resultado['success']) {
+                            // Login bem-sucedido - limpar tentativas e regenerar token
+                            $rateLimit->clearAttempts($email, $userIP);
+                            $_SESSION['honeypot_token'] = HoneypotValidator::generateToken();
+                            
+                            // Redirecionar para página solicitada ou dashboard
+                            $redirect = $_GET['redirect'] ?? BASE_URL . '/pages/dashboard.php';
+                            header('Location: ' . $redirect);
+                            exit;
+                        } else {
+                            // Login falhou - registrar tentativa
+                            $attemptInfo = $rateLimit->recordFailedAttempt($email, $userIP);
+                            
+                            if ($attemptInfo['remaining'] > 0) {
+                                $erro = $resultado['message'] . " (Restam {$attemptInfo['remaining']} tentativas)";
+                            } else {
+                                $erro = "Credenciais inválidas. Você atingiu o limite de tentativas e foi temporariamente bloqueado por 15 minutos.";
+                            }
+                        }
+                    }
+                }
             }
         }
     }
+}
+
+// Obter informações atuais de tentativas para exibir aviso se necessário
+$currentAttempts = null;
+if (!empty($_POST['email'])) {
+    $currentAttempts = $rateLimit->getAttemptInfo($_POST['email'], $userIP);
 }
 ?>
 <!DOCTYPE html>
@@ -257,6 +705,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
     </script>
+    
+    <style>
+        /* Honeypot styles - campos completamente ocultos */
+        .honeypot {
+            position: absolute !important;
+            left: -9999px !important;
+            top: -9999px !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+            width: 0 !important;
+            height: 0 !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            border: none !important;
+            font-size: 0 !important;
+            tab-index: -1;
+            z-index: -1;
+        }
+    </style>
 </head>
 <body class="min-h-screen overflow-hidden relative">
     <!-- Galaxy Background -->
@@ -330,13 +797,58 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                 <?php endif; ?>
                 
+                <?php if ($currentAttempts && $currentAttempts['attempts'] > 0 && !$erro): ?>
+                    <div class="alert-warning bg-yellow-500/10 backdrop-blur-sm border border-yellow-500/20 text-yellow-300 px-4 py-3 rounded-xl mb-6 flex items-center" role="alert">
+                        <i class="fas fa-exclamation-triangle mr-3 text-yellow-400"></i>
+                        <span>
+                            Atenção: <?php echo $currentAttempts['attempts']; ?> tentativa(s) de login registrada(s). 
+                            Restam <?php echo $currentAttempts['remaining']; ?> tentativa(s) antes do bloqueio temporário.
+                        </span>
+                    </div>
+                <?php endif; ?>
+                
                 <form method="POST" action="" id="loginForm" class="space-y-6">
+                    <!-- Campos Honeypot (Ocultos) -->
+                    <div class="honeypot">
+                        <label for="username">Nome de usuário (não preencha)</label>
+                        <input type="text" id="username" name="username" tabindex="-1" autocomplete="off">
+                    </div>
+                    
+                    <div class="honeypot">
+                        <label for="phone">Telefone (não preencha)</label>
+                        <input type="tel" id="phone" name="phone" tabindex="-1" autocomplete="off">
+                    </div>
+                    
+                    <div class="honeypot">
+                        <label for="website">Website (não preencha)</label>
+                        <input type="url" id="website" name="website" tabindex="-1" autocomplete="off">
+                    </div>
+                    
+                    <div class="honeypot">
+                        <label for="company">Empresa (não preencha)</label>
+                        <input type="text" id="company" name="company" tabindex="-1" autocomplete="off">
+                    </div>
+                    
+                    <div class="honeypot">
+                        <label for="address">Endereço (não preencha)</label>
+                        <input type="text" id="address" name="address" tabindex="-1" autocomplete="off">
+                    </div>
+                    
+                    <!-- Campo de tempo oculto -->
+                    <input type="hidden" name="form_time" value="<?php echo time(); ?>">
+                    
+                    <!-- Campo para verificar se JavaScript está habilitado -->
+                    <input type="hidden" name="js_enabled" id="js_enabled" value="0">
+                    
+                    <!-- Token de segurança -->
+                    <input type="hidden" name="honeypot_token" value="<?php echo $_SESSION['honeypot_token']; ?>">
+                    
                     <!-- Email Field -->
                     <div class="form-group relative">
                         <div class="input-wrapper">
                             <i class="fas fa-envelope input-icon"></i>
                             <input type="email" 
-                                   class="form-input w-full bg-white/5 backdrop-blur-sm border border-white/20 rounded-xl px-12 py-4 text-white placeholder-gray-300 focus:border-sky-400 focus:bg-white/10 transition-all duration-300"
+                                   class="form-input w-full bg-white/5 backdrop-blur-sm border border-white/20 rounded-xl px-12 py-4 text-black placeholder-gray-300 focus:border-sky-400 focus:bg-white/10 transition-all duration-300"
                                    id="email" 
                                    name="email" 
                                    placeholder="Seu Email"
@@ -351,12 +863,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <div class="input-wrapper">
                             <i class="fas fa-lock input-icon"></i>
                             <input type="password" 
-                                   class="form-input w-full bg-white/5 backdrop-blur-sm border border-white/20 rounded-xl px-12 py-4 pr-16 text-white placeholder-gray-300 focus:border-sky-400 focus:bg-white/10 transition-all duration-300"
+                                   class="form-input w-full bg-white/5 backdrop-blur-sm border border-white/20 rounded-xl px-12 py-4 pr-16 text-black placeholder-gray-300 focus:border-sky-400 focus:bg-white/10 transition-all duration-300"
                                    id="senha" 
                                    name="senha" 
                                    placeholder="Sua Senha"
                                    required>
-                            <button type="button" class="password-toggle absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition-colors" onclick="togglePassword()">
+                            <button type="button" class="password-toggle absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-black transition-colors" onclick="togglePassword()">
                                 <i class="fas fa-eye" id="toggleIcon"></i>
                             </button>
                         </div>
@@ -420,7 +932,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </p>
                     <div class="flex items-center justify-center mt-2 text-xs text-gray-500">
                         <i class="fas fa-shield-alt mr-1"></i>
-                        <span>Protegido por Cloudflare</span>
+                        <span>Protegido por Cloudflare + Honeypot</span>
                     </div>
                 </div>
             </div>
@@ -438,9 +950,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <!-- Scripts -->
     <script src="js/login-script.js"></script>
     
-    <!-- Turnstile Integration Scripts -->
+    <!-- Honeypot + Turnstile Integration Scripts -->
     <script>
         let turnstileVerified = false;
+        
+        // Marcar que JavaScript está habilitado
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('js_enabled').value = '1';
+            
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+        });
         
         // Callback para sucesso do Turnstile
         function onTurnstileSuccess(token) {
@@ -490,13 +1011,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 
                 return false;
             }
+            
+            // Mostrar loading overlay
+            document.getElementById('loadingOverlay').classList.remove('hidden');
         });
         
-        // Inicializar estado do botão
-        document.addEventListener('DOMContentLoaded', function() {
-            const submitBtn = document.getElementById('submitBtn');
-            submitBtn.disabled = true;
-            submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+        // Função para alternar visibilidade da senha
+        function togglePassword() {
+            const passwordInput = document.getElementById('senha');
+            const toggleIcon = document.getElementById('toggleIcon');
+            
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                toggleIcon.classList.remove('fa-eye');
+                toggleIcon.classList.add('fa-eye-slash');
+            } else {
+                passwordInput.type = 'password';
+                toggleIcon.classList.remove('fa-eye-slash');
+                toggleIcon.classList.add('fa-eye');
+            }
+        }
+        
+        // Proteção adicional contra bots - verificar comportamento do mouse
+        let mouseMovements = 0;
+        document.addEventListener('mousemove', function() {
+            mouseMovements++;
+        });
+        
+        // Adicionar campo oculto com movimentos do mouse
+        document.getElementById('loginForm').addEventListener('submit', function() {
+            const mouseField = document.createElement('input');
+            mouseField.type = 'hidden';
+            mouseField.name = 'mouse_movements';
+            mouseField.value = mouseMovements;
+            this.appendChild(mouseField);
         });
     </script>
     
@@ -504,15 +1052,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <script>
         // Auto-hide logout messages
         setTimeout(function() {
-            const alerts = document.querySelectorAll('.alert-message');
+            const alerts = document.querySelectorAll('.alert-message, .alert-warning');
             alerts.forEach(function(alert) {
-                alert.style.transition = 'opacity 0.5s ease-out';
-                alert.style.opacity = '0';
-                setTimeout(function() {
-                    alert.style.display = 'none';
-                }, 500);
+                if (!alert.classList.contains('alert-error')) {
+                    alert.style.transition = 'opacity 0.5s ease-out';
+                    alert.style.opacity = '0';
+                    setTimeout(function() {
+                        alert.style.display = 'none';
+                    }, 500);
+                }
             });
         }, 5000);
     </script>
 </body>
-</html> 
+</html>
