@@ -15,9 +15,6 @@ require_once '../classes/Auth.php';
 require_once '../classes/Funcionarios.php';
 require_once '../classes/Documentos.php';
 
-// CORREÇÃO: Incluir a classe HeaderComponent ANTES de tentar usá-la
-require_once './components/header.php';
-
 // Inicia autenticação
 $auth = new Auth();
 
@@ -48,20 +45,6 @@ try {
     error_log("Erro ao buscar estatísticas de documentos: " . $e->getMessage());
     $totalDocumentos = $docsVerificados = $docsPendentes = $uploadsHoje = 0;
 }
-
-// Cria instância do Header Component
-$headerComponent = HeaderComponent::create([
-    'usuario' => [
-        'nome' => $usuarioLogado['nome'],
-        'cargo' => $usuarioLogado['cargo'] ?? 'Funcionário',
-        'avatar' => $usuarioLogado['avatar'] ?? null
-    ],
-    'isDiretor' => $auth->isDiretor(),
-    'activeTab' => 'documentos', // CORREÇÃO: mudei de 'associados' para 'documentos'
-    'notificationCount' => 0,
-    'showSearch' => true
-]);
-
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -89,12 +72,44 @@ $headerComponent = HeaderComponent::create([
 
     <!-- jQuery PRIMEIRO -->
     <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
-    
-    <!-- CSS do Header Component -->
-    <?php $headerComponent->renderCSS(); ?>
 
     <!-- Custom CSS -->
     <style>
+        :root {
+            --primary: #0056D2;
+            --primary-dark: #003A8C;
+            --primary-light: #E8F1FF;
+            --secondary: #FFB800;
+            --secondary-dark: #CC9200;
+            --success: #00C853;
+            --danger: #FF3B30;
+            --warning: #FF9500;
+            --info: #00B8D4;
+            --dark: #1C1C1E;
+            --gray-100: #F7F7F7;
+            --gray-200: #E5E5E7;
+            --gray-300: #D1D1D6;
+            --gray-400: #C7C7CC;
+            --gray-500: #8E8E93;
+            --gray-600: #636366;
+            --gray-700: #48484A;
+            --gray-800: #3A3A3C;
+            --gray-900: #2C2C2E;
+            --white: #FFFFFF;
+
+            --header-height: 70px;
+
+            --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+            --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.24);
+            --shadow-lg: 0 10px 20px rgba(0, 0, 0, 0.12), 0 4px 8px rgba(0, 0, 0, 0.24);
+            --shadow-xl: 0 20px 40px rgba(0, 0, 0, 0.12), 0 8px 16px rgba(0, 0, 0, 0.24);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
         body {
             font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -102,10 +117,240 @@ $headerComponent = HeaderComponent::create([
             color: var(--dark);
             overflow-x: hidden;
         }
+
+        /* Scrollbar personalizada */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--gray-100);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--gray-400);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--gray-500);
+        }
+
+        /* Navigation Tabs */
+        .nav-tabs-container {
+            background: var(--white);
+            box-shadow: var(--shadow-sm);
+            position: sticky;
+            top: var(--header-height);
+            z-index: 99;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .nav-tabs-modern {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.5rem 2rem;
+            margin: 0;
+            list-style: none;
+            gap: 1rem;
+        }
+
+        .nav-tab-item {
+            margin: 0;
+        }
+
+        .nav-tab-link {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 1rem 2rem;
+            color: var(--gray-600);
+            text-decoration: none;
+            border: none;
+            background: var(--gray-100);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            border-radius: 12px;
+            min-width: 120px;
+        }
+
+        .nav-tab-link:hover {
+            background: var(--gray-200);
+            color: var(--gray-700);
+        }
+
+        .nav-tab-link.active {
+            background: var(--primary);
+            color: var(--white);
+            box-shadow: 0 4px 12px rgba(0, 86, 210, 0.25);
+        }
+
+        .nav-tab-icon {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.125rem;
+            margin-bottom: 0.375rem;
+            transition: all 0.3s ease;
+        }
+
+        .nav-tab-link.active .nav-tab-icon {
+            color: var(--white);
+        }
+
+        .nav-tab-text {
+            font-weight: 600;
+            font-size: 0.8125rem;
+            transition: all 0.3s ease;
+        }
+
         /* Main Content */
         .main-wrapper {
             min-height: 100vh;
             background: var(--gray-100);
+        }
+
+        /* Header */
+        .main-header {
+            background: var(--white);
+            height: var(--header-height);
+            padding: 0 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: var(--shadow-sm);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+        }
+
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .logo-text {
+            color: var(--primary);
+            font-size: 1.5rem;
+            font-weight: 800;
+            margin: 0;
+            letter-spacing: -0.5px;
+        }
+
+        .system-subtitle {
+            color: var(--gray-500);
+            font-size: 0.875rem;
+            margin: 0;
+            font-weight: 500;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .header-btn {
+            width: 40px;
+            height: 40px;
+            border: none;
+            background: var(--gray-100);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+            color: var(--gray-600);
+        }
+
+        .header-btn:hover {
+            background: var(--primary-light);
+            color: var(--primary);
+        }
+
+        .notification-badge {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            width: 8px;
+            height: 8px;
+            background: var(--danger);
+            border-radius: 50%;
+            border: 2px solid var(--white);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7);
+            }
+
+            70% {
+                box-shadow: 0 0 0 8px rgba(220, 53, 69, 0);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(220, 53, 69, 0);
+            }
+        }
+
+        .user-menu {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.5rem;
+            background: var(--gray-100);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .user-menu:hover {
+            background: var(--gray-200);
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            background: var(--primary);
+            color: var(--white);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+        }
+
+        .user-info {
+            text-align: right;
+        }
+
+        .user-name {
+            font-weight: 600;
+            font-size: 0.875rem;
+            color: var(--dark);
+            margin: 0;
+        }
+
+        .user-role {
+            font-size: 0.75rem;
+            color: var(--gray-500);
+            margin: 0;
         }
 
         /* Content Area */
@@ -862,6 +1107,51 @@ $headerComponent = HeaderComponent::create([
             color: var(--white);
         }
 
+        /* Dropdown Menu */
+        .dropdown-menu-custom {
+            position: absolute;
+            top: calc(100% + 10px);
+            right: 0;
+            background: var(--white);
+            border-radius: 12px;
+            box-shadow: var(--shadow-lg);
+            min-width: 200px;
+            padding: 0.5rem;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+
+        .dropdown-menu-custom.show {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .dropdown-item-custom {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            color: var(--gray-700);
+            text-decoration: none;
+            transition: all 0.2s ease;
+        }
+
+        .dropdown-item-custom:hover {
+            background: var(--gray-100);
+            color: var(--primary);
+        }
+
+        .dropdown-divider-custom {
+            height: 1px;
+            background: var(--gray-200);
+            margin: 0.5rem 0;
+        }
+
         /* Loading */
         .loading-spinner {
             width: 50px;
@@ -881,6 +1171,17 @@ $headerComponent = HeaderComponent::create([
 
         /* Responsive */
         @media (max-width: 768px) {
+            .nav-tabs-modern {
+                overflow-x: auto;
+                justify-content: flex-start;
+                padding: 0 1rem;
+            }
+
+            .nav-tab-link {
+                min-width: 100px;
+                padding: 1rem;
+            }
+
             .stats-grid {
                 grid-template-columns: 1fr 1fr;
             }
@@ -897,20 +1198,116 @@ $headerComponent = HeaderComponent::create([
                 width: 100%;
             }
 
+            .user-info {
+                display: none;
+            }
+
             .content-tab-list {
                 overflow-x: auto;
                 -webkit-overflow-scrolling: touch;
             }
         }
     </style>
-
 </head>
 
 <body>
     <!-- Main Content -->
     <div class="main-wrapper">
-        <!-- Header Component -->
-        <?php $headerComponent->render(); ?>
+        <!-- Header -->
+        <header class="main-header">
+            <div class="header-left">
+                <div class="logo-section">
+                    <div
+                        style="width: 40px; height: 40px; background: var(--primary); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white; font-weight: 800;">
+                        A
+                    </div>
+                    <div>
+                        <h1 class="logo-text" style="margin-bottom: -2px;">ASSEGO</h1>
+                        <p class="system-subtitle">Sistema de Gestão</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="header-right">
+                <button class="header-btn">
+                    <i class="fas fa-search"></i>
+                </button>
+                <button class="header-btn">
+                    <i class="fas fa-bell"></i>
+                    <span class="notification-badge"></span>
+                </button>
+                <div class="user-menu" id="userMenu">
+                    <div class="user-info">
+                        <p class="user-name"><?php echo htmlspecialchars($usuarioLogado['nome']); ?></p>
+                        <p class="user-role"><?php echo htmlspecialchars($usuarioLogado['cargo'] ?? 'Funcionário'); ?>
+                        </p>
+                    </div>
+                    <div class="user-avatar">
+                        <?php echo strtoupper(substr($usuarioLogado['nome'], 0, 1)); ?>
+                    </div>
+                    <i class="fas fa-chevron-down ms-2" style="font-size: 0.75rem; color: var(--gray-500);"></i>
+
+                    <!-- Dropdown Menu -->
+                    <div class="dropdown-menu-custom" id="userDropdown">
+                        <a href="perfil.php" class="dropdown-item-custom">
+                            <i class="fas fa-user"></i>
+                            <span>Meu Perfil</span>
+                        </a>
+                        <?php if ($auth->isDiretor()): ?>
+                            <a href="configuracoes.php" class="dropdown-item-custom">
+                                <i class="fas fa-cog"></i>
+                                <span>Configurações</span>
+                            </a>
+                        <?php endif; ?>
+                        <div class="dropdown-divider-custom"></div>
+                        <a href="logout.php" class="dropdown-item-custom">
+                            <i class="fas fa-sign-out-alt"></i>
+                            <span>Sair</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Navigation Tabs -->
+        <nav class="nav-tabs-container">
+            <ul class="nav-tabs-modern">
+                <li class="nav-tab-item">
+                    <a href="dashboard.php" class="nav-tab-link">
+                        <div class="nav-tab-icon">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <span class="nav-tab-text">Associados</span>
+                    </a>
+                </li>
+                <li class="nav-tab-item">
+                    <a href="#" class="nav-tab-link active">
+                        <div class="nav-tab-icon">
+                            <i class="fas fa-folder-open"></i>
+                        </div>
+                        <span class="nav-tab-text">Documentos</span>
+                    </a>
+                </li>
+                <?php if ($auth->isDiretor()): ?>
+                    <li class="nav-tab-item">
+                        <a href="funcionarios.php" class="nav-tab-link">
+                            <div class="nav-tab-icon">
+                                <i class="fas fa-user-tie"></i>
+                            </div>
+                            <span class="nav-tab-text">Funcionários</span>
+                        </a>
+                    </li>
+                <?php endif; ?>
+                <li class="nav-tab-item">
+                    <a href="relatorios.php" class="nav-tab-link">
+                        <div class="nav-tab-icon">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <span class="nav-tab-text">Relatórios</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
 
         <!-- Content Area -->
         <div class="content-area">
@@ -1354,8 +1751,6 @@ $headerComponent = HeaderComponent::create([
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
 
-    <!-- JavaScript do Header Component -->
-    <?php $headerComponent->renderJS(); ?>
     <script>
         // Inicializa AOS
         AOS.init({
@@ -1413,155 +1808,22 @@ $headerComponent = HeaderComponent::create([
             });
         }
 
-        // CORREÇÃO: Configurar menu do usuário com abordagem mais específica
+        // Configurar menu do usuário
         function configurarUserMenu() {
-            // Função para tentar configurar o dropdown
-            function tentarConfigurarDropdown() {
-                // Procura por todos os elementos que podem ser o botão do usuário
-                const possiveisElementos = [
-                    // Por ID
-                    document.getElementById('userMenu'),
-                    document.getElementById('user-menu'),
-                    // Por classe ou atributo que contenha o nome do usuário
-                    ...Array.from(document.querySelectorAll('[class*="user"]')),
-                    ...Array.from(document.querySelectorAll('[id*="user"]')),
-                    // Por conteúdo (procura elementos que contenham "LUIS FILIPE")
-                    ...Array.from(document.querySelectorAll('*')).filter(el => 
-                        el.textContent && el.textContent.includes('LUIS FILIPE')
-                    ),
-                    // Elementos com dropdown do Bootstrap
-                    ...Array.from(document.querySelectorAll('[data-bs-toggle="dropdown"]')),
-                    // Elementos clickáveis na área do header
-                    ...Array.from(document.querySelectorAll('button, [role="button"], .btn')).filter(el => {
-                        const rect = el.getBoundingClientRect();
-                        return rect.top < 100; // Elementos no topo da página (header)
-                    })
-                ];
+            const userMenu = document.getElementById('userMenu');
+            const userDropdown = document.getElementById('userDropdown');
 
-                console.log('Elementos encontrados para teste:', possiveisElementos.length);
+            if (userMenu && userDropdown) {
+                userMenu.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    userDropdown.classList.toggle('show');
+                });
 
-                for (const elemento of possiveisElementos) {
-                    if (!elemento) continue;
-                    
-                    // Procura pelo dropdown associado
-                    let dropdown = null;
-                    
-                    // Métodos para encontrar o dropdown
-                    const metodosDropdown = [
-                        // Por aria-controls
-                        () => elemento.getAttribute('aria-controls') ? 
-                              document.getElementById(elemento.getAttribute('aria-controls')) : null,
-                        // Por data-bs-target  
-                        () => elemento.getAttribute('data-bs-target') ? 
-                              document.querySelector(elemento.getAttribute('data-bs-target')) : null,
-                        // Próximo elemento com classe dropdown
-                        () => elemento.nextElementSibling?.classList.contains('dropdown-menu') ? 
-                              elemento.nextElementSibling : null,
-                        // Filho direto com classe dropdown
-                        () => elemento.querySelector('.dropdown-menu'),
-                        // Irmão com classe dropdown
-                        () => elemento.parentNode?.querySelector('.dropdown-menu'),
-                        // Por posição (elemento abaixo do botão)
-                        () => {
-                            const rect = elemento.getBoundingClientRect();
-                            const elementoAbaixo = document.elementFromPoint(
-                                rect.left + rect.width/2, 
-                                rect.bottom + 10
-                            );
-                            return elementoAbaixo?.closest('.dropdown-menu');
-                        }
-                    ];
-
-                    // Tenta cada método para encontrar o dropdown
-                    for (const metodo of metodosDropdown) {
-                        try {
-                            dropdown = metodo();
-                            if (dropdown) break;
-                        } catch (e) {
-                            // Ignora erros e continua tentando
-                        }
-                    }
-
-                    // Se encontrou um par válido, configura
-                    if (dropdown && elemento !== dropdown) {
-                        console.log('✓ Configurando dropdown do usuário:', elemento, dropdown);
-                        
-                        // Remove listeners anteriores se existirem
-                        elemento.removeEventListener('click', handleUserMenuClick);
-                        document.removeEventListener('click', handleDocumentClick);
-                        
-                        // Adiciona novos listeners
-                        elemento.addEventListener('click', handleUserMenuClick);
-                        document.addEventListener('click', handleDocumentClick);
-                        
-                        // Armazena referências globais
-                        window.userMenuElement = elemento;
-                        window.userDropdownElement = dropdown;
-                        
-                        return true; // Sucesso
-                    }
-                }
-                
-                return false; // Não encontrou
+                // Fecha dropdown ao clicar fora
+                document.addEventListener('click', function () {
+                    userDropdown.classList.remove('show');
+                });
             }
-
-            // Handlers para o menu
-            function handleUserMenuClick(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                
-                if (window.userDropdownElement) {
-                    const isVisible = window.userDropdownElement.classList.contains('show');
-                    
-                    // Fecha todos os dropdowns primeiro
-                    document.querySelectorAll('.dropdown-menu.show').forEach(menu => {
-                        menu.classList.remove('show');
-                    });
-                    
-                    // Alterna o estado do dropdown atual
-                    if (!isVisible) {
-                        window.userDropdownElement.classList.add('show');
-                        window.userDropdownElement.style.display = 'block';
-                    }
-                }
-            }
-
-            function handleDocumentClick(e) {
-                if (window.userDropdownElement && 
-                    !window.userMenuElement?.contains(e.target) && 
-                    !window.userDropdownElement.contains(e.target)) {
-                    window.userDropdownElement.classList.remove('show');
-                    window.userDropdownElement.style.display = '';
-                }
-            }
-
-            // Tenta configurar imediatamente
-            if (!tentarConfigurarDropdown()) {
-                // Se não conseguiu, tenta novamente após um delay
-                setTimeout(() => {
-                    if (!tentarConfigurarDropdown()) {
-                        // Última tentativa após mais tempo
-                        setTimeout(() => {
-                            if (!tentarConfigurarDropdown()) {
-                                console.log('⚠ Não foi possível configurar o dropdown do usuário automaticamente');
-                                console.log('💡 Verificar se o HeaderComponent está usando data-bs-toggle="dropdown"');
-                            }
-                        }, 2000);
-                    }
-                }, 1000);
-            }
-
-            // Também configura dropdowns padrão do Bootstrap como fallback
-            setTimeout(() => {
-                if (typeof bootstrap !== 'undefined') {
-                    // Reinicializa dropdowns do Bootstrap
-                    const dropdownElementList = [].slice.call(document.querySelectorAll('[data-bs-toggle="dropdown"]'));
-                    dropdownElementList.map(function (dropdownToggleEl) {
-                        return new bootstrap.Dropdown(dropdownToggleEl);
-                    });
-                    console.log('✓ Dropdowns do Bootstrap reinicializados');
-                }
-            }, 1500);
         }
 
         // Carregar estatísticas

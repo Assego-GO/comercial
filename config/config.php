@@ -12,7 +12,7 @@ define('SISTEMA_EMPRESA', 'ASSEGO');
 
 // URLs base
 
-define('BASE_URL', 'http://172.16.253.44/luis/comercial'); // Ajuste conforme seu ambiente
+define('BASE_URL', 'http://172.16.253.44/matheus/comercial'); // Ajuste conforme seu ambiente
 
 define('ASSETS_URL', BASE_URL . '/assets');
 define('UPLOADS_URL', BASE_URL . '/uploads');
