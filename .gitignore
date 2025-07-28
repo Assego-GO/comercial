@@ -1,7 +1,7 @@
 config/
 uploads/
 pages/security/
-logs/error.log
+logs/
 pages/tmp/security/
 data/rate_limit/
 
