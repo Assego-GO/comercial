@@ -95,6 +95,13 @@ $headerComponent = HeaderComponent::create([
 
     <!-- Custom CSS -->
     <style>
+
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--gray-100);
+            color: var(--dark);
+            overflow-x: hidden;
+        }
         /* Main Content */
         .main-wrapper {
             min-height: 100vh;
