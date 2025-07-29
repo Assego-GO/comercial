@@ -947,10 +947,6 @@ $headerComponent = HeaderComponent::create([
             <div class="quick-actions" data-aos="fade-up" data-aos-delay="100">
                 <h3 class="quick-actions-title">Ações Rápidas</h3>
                 <div class="quick-actions-grid">
-                    <button class="quick-action-btn" onclick="assinarTodos()">
-                        <i class="fas fa-signature quick-action-icon"></i>
-                        Assinar em Lote
-                    </button>
                     <button class="quick-action-btn" onclick="abrirRelatorios()">
                         <i class="fas fa-chart-line quick-action-icon"></i>
                         Relatórios
