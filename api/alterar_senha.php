@@ -105,7 +105,6 @@ try {
     ]);
     
 } catch (Exception $e) {
-    error_log("Erro ao alterar senha: " . $e->getMessage());
     http_response_code(400);
     echo json_encode([
         'status' => 'error',

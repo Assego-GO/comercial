@@ -746,9 +746,9 @@ if (!empty($_POST['email'])) {
                 <div class="absolute inset-0 bg-gradient-to-br from-sky-500/20 to-blue-600/20 animate-pulse-slow"></div>
                 
                 <div class="logo-container relative z-10 mb-6">
-                    <div class="logo w-20 h-20 bg-white/20 backdrop-blur-sm rounded-full mx-auto flex items-center justify-center text-4xl animate-float border border-white/30">
-                        <i class="fas fa-shield-alt text-white"></i>
-                    </div>
+                 <div class="logo w-40 h-40 bg-white/20 backdrop-blur-sm rounded-full mx-auto flex items-center justify-center text-4xl animate-float border border-white/30">
+                <img src="./img/logoassego.png" alt="Logo" class="w-36 h-36 object-cover rounded-full">
+                </div>
                 </div>
                 
                 <h1 class="text-3xl font-bold mb-2 animate-glow relative z-10">
