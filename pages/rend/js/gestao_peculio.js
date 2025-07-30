@@ -5,6 +5,7 @@ window.Peculio = {
     isPresidencia: false,
     dadosMultiplos: null,
     listaTodosPeculios: null,
+    dadosRelatorio: null, // NOVO: armazena dados do último relatório gerado
 
     init(config = {}) {
         this.temPermissao = config.temPermissao || false;
@@ -21,8 +22,579 @@ window.Peculio = {
 
         this.attachEventListeners();
         this.adicionarEstilosMelhorados();
+        this.initRelatorioListeners(); // NOVO: inicializa listeners do modal de relatório
         this.showNotification('Gestão de Pecúlio carregada!', 'success', 2000);
     },
+
+    // ========================================
+    // FUNÇÕES DE RELATÓRIO - NOVAS
+    // ========================================
+
+    abrirModalRelatorio() {
+        const modal = new bootstrap.Modal(document.getElementById('modalRelatorioPeculio'));
+        modal.show();
+        this.atualizarPreviewCount();
+    },
+
+    initRelatorioListeners() {
+        // Toggle do período
+        const usarPeriodo = document.getElementById('usarPeriodo');
+        if (usarPeriodo) {
+            usarPeriodo.addEventListener('change', (e) => {
+                document.getElementById('periodoFields').style.display = e.target.checked ? 'block' : 'none';
+            });
+        }
+
+        // Atualizar preview quando mudar tipo de relatório
+        document.querySelectorAll('input[name="tipoRelatorio"]').forEach(radio => {
+            radio.addEventListener('change', () => this.atualizarPreviewCount());
+        });
+
+        // Atualizar preview quando mudar período
+        ['dataInicioPeriodo', 'dataFimPeriodo', 'tipoDataPeriodo'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.addEventListener('change', () => this.atualizarPreviewCount());
+            }
+        });
+    },
+
+    async atualizarPreviewCount() {
+        const previewEl = document.getElementById('previewCount');
+        if (!previewEl) return;
+
+        previewEl.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Calculando...';
+
+        try {
+            const filtros = this.coletarFiltrosRelatorio();
+            const response = await fetch('../api/peculio/contar_relatorio.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(filtros)
+            });
+
+            const result = await response.json();
+            
+            if (result.status === 'success') {
+                const count = result.data.total || 0;
+                const valorTotal = this.formatarMoeda(result.data.valor_total || 0);
+                previewEl.innerHTML = `<strong>${count}</strong> registro(s) encontrado(s) | Total: <strong>${valorTotal}</strong>`;
+            } else {
+                previewEl.innerHTML = 'Erro ao calcular';
+            }
+        } catch (error) {
+            console.error('Erro ao contar registros:', error);
+            previewEl.innerHTML = 'Não foi possível calcular';
+        }
+    },
+
+    coletarFiltrosRelatorio() {
+        const tipoRelatorio = document.querySelector('input[name="tipoRelatorio"]:checked')?.value || 'todos';
+        const usarPeriodo = document.getElementById('usarPeriodo')?.checked || false;
+        
+        const filtros = {
+            tipo: tipoRelatorio,
+            ordenar_por: document.getElementById('ordenarPor')?.value || 'nome',
+            formato: document.getElementById('formatoRelatorio')?.value || 'html',
+            campos: this.coletarCamposSelecionados()
+        };
+
+        if (usarPeriodo) {
+            filtros.periodo = {
+                tipo_data: document.getElementById('tipoDataPeriodo')?.value || 'data_prevista',
+                data_inicio: document.getElementById('dataInicioPeriodo')?.value || null,
+                data_fim: document.getElementById('dataFimPeriodo')?.value || null
+            };
+        }
+
+        return filtros;
+    },
+
+    coletarCamposSelecionados() {
+        const campos = ['nome']; // sempre incluir nome
+        
+        if (document.getElementById('campoRG')?.checked) campos.push('rg');
+        if (document.getElementById('campoCPF')?.checked) campos.push('cpf');
+        if (document.getElementById('campoTelefone')?.checked) campos.push('telefone');
+        if (document.getElementById('campoEmail')?.checked) campos.push('email');
+        if (document.getElementById('campoValor')?.checked) campos.push('valor');
+        if (document.getElementById('campoDataPrevista')?.checked) campos.push('data_prevista');
+        if (document.getElementById('campoDataRecebimento')?.checked) campos.push('data_recebimento');
+        if (document.getElementById('campoStatus')?.checked) campos.push('status');
+        
+        return campos;
+    },
+
+    definirPeriodo(tipo) {
+        const hoje = new Date();
+        let dataInicio, dataFim;
+
+        switch(tipo) {
+            case 'mes_atual':
+                dataInicio = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+                dataFim = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0);
+                break;
+            case 'mes_anterior':
+                dataInicio = new Date(hoje.getFullYear(), hoje.getMonth() - 1, 1);
+                dataFim = new Date(hoje.getFullYear(), hoje.getMonth(), 0);
+                break;
+            case 'trimestre':
+                const trimestre = Math.floor(hoje.getMonth() / 3);
+                dataInicio = new Date(hoje.getFullYear(), trimestre * 3, 1);
+                dataFim = new Date(hoje.getFullYear(), (trimestre + 1) * 3, 0);
+                break;
+            case 'ano_atual':
+                dataInicio = new Date(hoje.getFullYear(), 0, 1);
+                dataFim = new Date(hoje.getFullYear(), 11, 31);
+                break;
+        }
+
+        document.getElementById('dataInicioPeriodo').value = this.formatarDataParaInput(dataInicio);
+        document.getElementById('dataFimPeriodo').value = this.formatarDataParaInput(dataFim);
+        
+        this.atualizarPreviewCount();
+        this.showNotification(`Período definido: ${tipo.replace('_', ' ')}`, 'info', 2000);
+    },
+
+    async previewRelatorio() {
+        const btnPreview = document.querySelector('[onclick="Peculio.previewRelatorio()"]');
+        this.setBtnLoading(btnPreview, true);
+
+        try {
+            const filtros = this.coletarFiltrosRelatorio();
+            filtros.formato = 'html'; // forçar HTML para preview
+            
+            const response = await fetch('../api/peculio/gerar_relatorio.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(filtros)
+            });
+
+            const result = await response.json();
+
+            if (result.status === 'success') {
+                this.dadosRelatorio = result.data;
+                this.exibirPreviewRelatorio(result.data, filtros);
+            } else {
+                this.showNotification(result.message || 'Erro ao gerar preview', 'error');
+            }
+        } catch (error) {
+            console.error('Erro ao gerar preview:', error);
+            this.showNotification('Erro ao gerar preview do relatório', 'error');
+        } finally {
+            this.setBtnLoading(btnPreview, false);
+        }
+    },
+
+    exibirPreviewRelatorio(dados, filtros) {
+        const { registros, estatisticas } = dados;
+        const campos = filtros.campos;
+        
+        // Gerar título baseado no tipo
+        const titulos = {
+            'todos': 'Relatório Geral de Pecúlios',
+            'recebidos': 'Relatório de Pecúlios Recebidos',
+            'pendentes': 'Relatório de Pecúlios Pendentes',
+            'sem_data': 'Relatório de Pecúlios Sem Data Definida',
+            'vencidos': 'Relatório de Pecúlios Vencidos',
+            'proximos': 'Relatório de Pecúlios - Próximos 30 Dias'
+        };
+        
+        const titulo = titulos[filtros.tipo] || 'Relatório de Pecúlios';
+        document.getElementById('tituloPreviewRelatorio').textContent = titulo;
+
+        // Gerar HTML do relatório
+        let html = `
+            <div class="relatorio-container">
+                <div class="relatorio-header">
+                    <div class="relatorio-logo">
+                        <i class="fas fa-piggy-bank"></i>
+                    </div>
+                    <h1 class="relatorio-titulo">${titulo}</h1>
+                    <p class="relatorio-subtitulo">ASSEGO - Associação dos Servidores da Segurança de Goiás</p>
+                </div>
+                
+                <div class="relatorio-info">
+                    <div class="relatorio-info-item">
+                        <i class="fas fa-calendar"></i>
+                        <span>Gerado em: ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}</span>
+                    </div>
+                    <div class="relatorio-info-item">
+                        <i class="fas fa-filter"></i>
+                        <span>Tipo: ${titulo}</span>
+                    </div>
+                    ${filtros.periodo ? `
+                    <div class="relatorio-info-item">
+                        <i class="fas fa-calendar-alt"></i>
+                        <span>Período: ${this.formatarData(filtros.periodo.data_inicio)} a ${this.formatarData(filtros.periodo.data_fim)}</span>
+                    </div>
+                    ` : ''}
+                    <div class="relatorio-info-item">
+                        <i class="fas fa-sort"></i>
+                        <span>Ordenação: ${this.getOrdenacaoLabel(filtros.ordenar_por)}</span>
+                    </div>
+                </div>
+                
+                <div class="relatorio-estatisticas">
+                    <div class="stat-box">
+                        <div class="stat-box-valor">${estatisticas.total}</div>
+                        <div class="stat-box-label">Total de Registros</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-valor">${estatisticas.pendentes}</div>
+                        <div class="stat-box-label">Pendentes</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-valor">${estatisticas.recebidos}</div>
+                        <div class="stat-box-label">Recebidos</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-valor">${this.formatarMoeda(estatisticas.valor_total)}</div>
+                        <div class="stat-box-label">Valor Total</div>
+                    </div>
+                </div>
+                
+                <div class="relatorio-tabela-container">
+                    <table class="relatorio-tabela">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                ${campos.includes('nome') ? '<th>Nome</th>' : ''}
+                                ${campos.includes('rg') ? '<th>RG</th>' : ''}
+                                ${campos.includes('cpf') ? '<th>CPF</th>' : ''}
+                                ${campos.includes('telefone') ? '<th>Telefone</th>' : ''}
+                                ${campos.includes('email') ? '<th>E-mail</th>' : ''}
+                                ${campos.includes('valor') ? '<th>Valor</th>' : ''}
+                                ${campos.includes('data_prevista') ? '<th>Data Prevista</th>' : ''}
+                                ${campos.includes('data_recebimento') ? '<th>Data Recebimento</th>' : ''}
+                                ${campos.includes('status') ? '<th>Status</th>' : ''}
+                            </tr>
+                        </thead>
+                        <tbody>
+        `;
+
+        if (registros && registros.length > 0) {
+            registros.forEach((registro, index) => {
+                const statusClass = this.getStatusClass(registro);
+                const statusLabel = this.getStatusLabel(registro);
+                
+                html += `
+                    <tr>
+                        <td>${index + 1}</td>
+                        ${campos.includes('nome') ? `<td><strong>${registro.nome || '-'}</strong></td>` : ''}
+                        ${campos.includes('rg') ? `<td>${registro.rg || '-'}</td>` : ''}
+                        ${campos.includes('cpf') ? `<td>${registro.cpf || '-'}</td>` : ''}
+                        ${campos.includes('telefone') ? `<td>${registro.telefone || '-'}</td>` : ''}
+                        ${campos.includes('email') ? `<td>${registro.email || '-'}</td>` : ''}
+                        ${campos.includes('valor') ? `<td>${this.formatarMoeda(registro.valor)}</td>` : ''}
+                        ${campos.includes('data_prevista') ? `<td>${this.formatarData(registro.data_prevista)}</td>` : ''}
+                        ${campos.includes('data_recebimento') ? `<td>${this.formatarData(registro.data_recebimento)}</td>` : ''}
+                        ${campos.includes('status') ? `<td><span class="status-badge ${statusClass}">${statusLabel}</span></td>` : ''}
+                    </tr>
+                `;
+            });
+        } else {
+            const colSpan = campos.length + 1;
+            html += `
+                <tr>
+                    <td colspan="${colSpan}" style="text-align: center; padding: 2rem;">
+                        <i class="fas fa-inbox fa-3x text-muted mb-3" style="display: block;"></i>
+                        Nenhum registro encontrado com os filtros selecionados
+                    </td>
+                </tr>
+            `;
+        }
+
+        html += `
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="relatorio-footer">
+                    <p>Relatório gerado automaticamente pelo Sistema de Gestão de Pecúlios - ASSEGO</p>
+                    <p>Total de registros: ${registros?.length || 0} | Gerado em: ${new Date().toLocaleString('pt-BR')}</p>
+                </div>
+            </div>
+        `;
+
+        document.getElementById('conteudoPreviewRelatorio').innerHTML = html;
+
+        // Fechar modal de configuração e abrir preview
+        const modalConfig = bootstrap.Modal.getInstance(document.getElementById('modalRelatorioPeculio'));
+        if (modalConfig) modalConfig.hide();
+
+        const modalPreview = new bootstrap.Modal(document.getElementById('modalPreviewRelatorio'));
+        modalPreview.show();
+    },
+
+    getStatusClass(registro) {
+        if (registro.data_recebimento && registro.data_recebimento !== '0000-00-00') {
+            return 'status-recebido';
+        }
+        if (!registro.data_prevista || registro.data_prevista === '0000-00-00') {
+            return 'status-sem-data';
+        }
+        const hoje = new Date();
+        const dataPrevista = new Date(registro.data_prevista);
+        if (dataPrevista < hoje) {
+            return 'status-vencido';
+        }
+        return 'status-pendente';
+    },
+
+    getStatusLabel(registro) {
+        if (registro.data_recebimento && registro.data_recebimento !== '0000-00-00') {
+            return '✓ Recebido';
+        }
+        if (!registro.data_prevista || registro.data_prevista === '0000-00-00') {
+            return '? Sem Data';
+        }
+        const hoje = new Date();
+        const dataPrevista = new Date(registro.data_prevista);
+        if (dataPrevista < hoje) {
+            return '⚠ Vencido';
+        }
+        return '⏳ Pendente';
+    },
+
+    getOrdenacaoLabel(ordenacao) {
+        const labels = {
+            'nome': 'Nome (A-Z)',
+            'nome_desc': 'Nome (Z-A)',
+            'data_prevista': 'Data Prevista (Antiga → Recente)',
+            'data_prevista_desc': 'Data Prevista (Recente → Antiga)',
+            'data_recebimento': 'Data Recebimento (Antiga → Recente)',
+            'data_recebimento_desc': 'Data Recebimento (Recente → Antiga)',
+            'valor': 'Valor (Menor → Maior)',
+            'valor_desc': 'Valor (Maior → Menor)'
+        };
+        return labels[ordenacao] || ordenacao;
+    },
+
+    async gerarRelatorio() {
+        const formato = document.getElementById('formatoRelatorio')?.value || 'html';
+        
+        if (formato === 'html') {
+            // Para HTML, apenas mostra o preview
+            await this.previewRelatorio();
+            return;
+        }
+
+        const btnGerar = document.querySelector('[onclick="Peculio.gerarRelatorio()"]');
+        this.setBtnLoading(btnGerar, true);
+
+        try {
+            const filtros = this.coletarFiltrosRelatorio();
+            
+            const response = await fetch('../api/peculio/gerar_relatorio.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(filtros)
+            });
+
+            if (formato === 'pdf') {
+                // Para PDF, espera um blob
+                const blob = await response.blob();
+                this.downloadArquivo(blob, `relatorio_peculios_${Date.now()}.pdf`, 'application/pdf');
+            } else if (formato === 'excel' || formato === 'csv') {
+                const blob = await response.blob();
+                const ext = formato === 'excel' ? 'xlsx' : 'csv';
+                const mime = formato === 'excel' ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' : 'text/csv';
+                this.downloadArquivo(blob, `relatorio_peculios_${Date.now()}.${ext}`, mime);
+            } else {
+                const result = await response.json();
+                if (result.status === 'success') {
+                    this.showNotification('Relatório gerado com sucesso!', 'success');
+                } else {
+                    this.showNotification(result.message || 'Erro ao gerar relatório', 'error');
+                }
+            }
+        } catch (error) {
+            console.error('Erro ao gerar relatório:', error);
+            this.showNotification('Erro ao gerar relatório', 'error');
+        } finally {
+            this.setBtnLoading(btnGerar, false);
+        }
+    },
+
+    downloadArquivo(blob, filename, mimeType) {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        this.showNotification(`Arquivo ${filename} baixado!`, 'success');
+    },
+
+    imprimirRelatorio() {
+        const conteudo = document.getElementById('conteudoPreviewRelatorio');
+        if (!conteudo) return;
+
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(`
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Relatório de Pecúlios - ASSEGO</title>
+                <style>
+                    * { margin: 0; padding: 0; box-sizing: border-box; }
+                    body { font-family: Arial, sans-serif; }
+                    .relatorio-container { max-width: 100%; }
+                    .relatorio-header { background: #7c3aed; color: white; padding: 1.5rem; text-align: center; }
+                    .relatorio-titulo { font-size: 1.5rem; margin-bottom: 0.5rem; }
+                    .relatorio-info { display: flex; flex-wrap: wrap; gap: 1rem; padding: 1rem; background: #f5f5f5; border-bottom: 1px solid #ddd; }
+                    .relatorio-info-item { font-size: 0.85rem; }
+                    .relatorio-estatisticas { display: flex; gap: 1rem; padding: 1rem; justify-content: center; }
+                    .stat-box { text-align: center; padding: 0.5rem 1rem; border: 1px solid #ddd; border-radius: 5px; }
+                    .stat-box-valor { font-size: 1.5rem; font-weight: bold; color: #7c3aed; }
+                    .stat-box-label { font-size: 0.75rem; color: #666; }
+                    .relatorio-tabela { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+                    .relatorio-tabela th { background: #7c3aed; color: white; padding: 0.5rem; text-align: left; }
+                    .relatorio-tabela td { padding: 0.5rem; border-bottom: 1px solid #ddd; }
+                    .relatorio-tabela tr:nth-child(even) { background: #f9f9f9; }
+                    .status-badge { padding: 0.2rem 0.5rem; border-radius: 3px; font-size: 0.75rem; }
+                    .status-recebido { background: #d4edda; color: #155724; }
+                    .status-pendente { background: #fff3cd; color: #856404; }
+                    .status-vencido { background: #f8d7da; color: #721c24; }
+                    .status-sem-data { background: #e2e3e5; color: #383d41; }
+                    .relatorio-footer { text-align: center; padding: 1rem; font-size: 0.8rem; color: #666; border-top: 1px solid #ddd; }
+                    @media print {
+                        .relatorio-header { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                        .relatorio-tabela th { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                    }
+                </style>
+            </head>
+            <body>
+                ${conteudo.innerHTML}
+            </body>
+            </html>
+        `);
+        printWindow.document.close();
+        printWindow.focus();
+        setTimeout(() => {
+            printWindow.print();
+            printWindow.close();
+        }, 500);
+    },
+
+    async exportarPDF() {
+        this.showNotification('Preparando PDF...', 'info', 2000);
+        
+        // Usar a API para gerar PDF
+        const filtros = this.coletarFiltrosRelatorio();
+        filtros.formato = 'pdf';
+        
+        try {
+            const response = await fetch('../api/peculio/gerar_relatorio.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(filtros)
+            });
+
+            if (response.headers.get('content-type')?.includes('application/pdf')) {
+                const blob = await response.blob();
+                this.downloadArquivo(blob, `relatorio_peculios_${Date.now()}.pdf`, 'application/pdf');
+            } else {
+                // Fallback: usar impressão
+                this.imprimirRelatorio();
+            }
+        } catch (error) {
+            console.error('Erro ao exportar PDF:', error);
+            // Fallback: usar impressão
+            this.imprimirRelatorio();
+        }
+    },
+
+    async exportarExcel() {
+        this.showNotification('Preparando Excel...', 'info', 2000);
+        
+        const filtros = this.coletarFiltrosRelatorio();
+        filtros.formato = 'excel';
+        
+        try {
+            const response = await fetch('../api/peculio/gerar_relatorio.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(filtros)
+            });
+
+            const contentType = response.headers.get('content-type');
+            
+            if (contentType?.includes('spreadsheet') || contentType?.includes('octet-stream')) {
+                const blob = await response.blob();
+                this.downloadArquivo(blob, `relatorio_peculios_${Date.now()}.xlsx`, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+            } else {
+                // Fallback: gerar CSV manualmente
+                this.exportarCSVManual();
+            }
+        } catch (error) {
+            console.error('Erro ao exportar Excel:', error);
+            this.exportarCSVManual();
+        }
+    },
+
+    exportarCSVManual() {
+        if (!this.dadosRelatorio || !this.dadosRelatorio.registros) {
+            this.showNotification('Nenhum dado para exportar. Gere um preview primeiro.', 'warning');
+            return;
+        }
+
+        const registros = this.dadosRelatorio.registros;
+        const campos = this.coletarCamposSelecionados();
+        
+        // Cabeçalho
+        const headers = campos.map(campo => {
+            const labels = {
+                'nome': 'Nome',
+                'rg': 'RG',
+                'cpf': 'CPF',
+                'telefone': 'Telefone',
+                'email': 'E-mail',
+                'valor': 'Valor',
+                'data_prevista': 'Data Prevista',
+                'data_recebimento': 'Data Recebimento',
+                'status': 'Status'
+            };
+            return labels[campo] || campo;
+        });
+        
+        let csv = headers.join(';') + '\n';
+        
+        // Dados
+        registros.forEach(registro => {
+            const linha = campos.map(campo => {
+                let valor = registro[campo] || '';
+                
+                if (campo === 'valor') {
+                    valor = parseFloat(valor || 0).toFixed(2).replace('.', ',');
+                } else if (campo === 'data_prevista' || campo === 'data_recebimento') {
+                    valor = this.formatarData(valor);
+                } else if (campo === 'status') {
+                    valor = this.getStatusLabel(registro);
+                }
+                
+                // Escapar aspas e adicionar aspas se necessário
+                if (typeof valor === 'string' && (valor.includes(';') || valor.includes('"') || valor.includes('\n'))) {
+                    valor = '"' + valor.replace(/"/g, '""') + '"';
+                }
+                
+                return valor;
+            });
+            csv += linha.join(';') + '\n';
+        });
+        
+        // Download
+        const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+        this.downloadArquivo(blob, `relatorio_peculios_${Date.now()}.csv`, 'text/csv');
+    },
+
+    // ========================================
+    // FUNÇÕES ORIGINAIS (mantidas)
+    // ========================================
 
     adicionarEstilosMelhorados() {
         const style = document.createElement('style');
@@ -243,13 +815,6 @@ window.Peculio = {
                 color: #6c757d;
                 font-size: 0.9rem;
                 font-weight: 600;
-            }
-
-            .filtros-lista {
-                display: flex;
-                gap: 0.5rem;
-                margin-bottom: 1rem;
-                flex-wrap: wrap;
             }
 
             .filtro-btn {
@@ -1028,6 +1593,9 @@ window.Peculio = {
     formatarDataParaInput(data) {
         if (!data || data === '0000-00-00') return '';
         try {
+            if (data instanceof Date) {
+                return data.toISOString().split('T')[0];
+            }
             return new Date(data + 'T00:00:00').toISOString().split('T')[0];
         } catch (e) {
             return '';
