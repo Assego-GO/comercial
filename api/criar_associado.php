@@ -1,6 +1,6 @@
 <?php
 /**
- * API para criar novo associado - VERSÃO FINAL COM CLASSE
+ * API para criar novo associado - VERSÃO CORRIGIDA SEM CONFLITO DE TRANSAÇÕES
  * api/criar_associado.php
  */
 
@@ -38,25 +38,27 @@ try {
     require_once '../classes/Database.php';
     require_once '../classes/Auth.php';
     require_once '../classes/Associados.php';
+    require_once '../classes/Documentos.php';
 
     // Sessão
     if (session_status() === PHP_SESSION_NONE) {
         session_start();
     }
 
-    // Simula login para debug (REMOVER EM PRODUÇÃO)
-    if (!isset($_SESSION['user_id'])) {
+    // Verifica autenticação
+    $auth = new Auth();
+    if (!$auth->isLoggedIn()) {
+        // Para desenvolvimento - remover em produção
         $_SESSION['user_id'] = 1;
-        $_SESSION['user_name'] = 'Debug User';
-        $_SESSION['user_email'] = 'debug@test.com';
-        $_SESSION['funcionario_id'] = 1; // Para auditoria
+        $_SESSION['funcionario_id'] = 1;
+        $_SESSION['user_name'] = 'Sistema';
     }
 
-    error_log("=== CRIAR ASSOCIADO ===");
+    error_log("=== CRIAR PRÉ-CADASTRO COM FLUXO INTEGRADO ===");
     error_log("Usuário: " . ($_SESSION['user_name'] ?? 'N/A'));
     error_log("POST fields: " . count($_POST));
 
-    // Validação
+    // Validação básica
     $campos_obrigatorios = ['nome', 'cpf', 'rg', 'telefone', 'situacao', 'dataFiliacao'];
     foreach ($campos_obrigatorios as $campo) {
         if (empty($_POST[$campo])) {
@@ -64,7 +66,12 @@ try {
         }
     }
 
-    // Prepara dados para a classe Associados
+    // Verifica se tem documento anexado (ficha assinada)
+    if (!isset($_FILES['ficha_assinada']) || $_FILES['ficha_assinada']['error'] !== UPLOAD_ERR_OK) {
+        throw new Exception("É obrigatório anexar a ficha de filiação assinada pelo associado");
+    }
+
+    // Prepara dados do associado
     $dados = [
         'nome' => trim($_POST['nome']),
         'nasc' => $_POST['nasc'] ?? null,
@@ -79,17 +86,20 @@ try {
         'indicacao' => trim($_POST['indicacao'] ?? '') ?: null,
         'dataFiliacao' => $_POST['dataFiliacao'],
         'dataDesfiliacao' => $_POST['dataDesfiliacao'] ?? null,
+        // Dados militares
         'corporacao' => $_POST['corporacao'] ?? null,
         'patente' => $_POST['patente'] ?? null,
         'categoria' => $_POST['categoria'] ?? null,
         'lotacao' => trim($_POST['lotacao'] ?? '') ?: null,
         'unidade' => trim($_POST['unidade'] ?? '') ?: null,
+        // Endereço
         'cep' => preg_replace('/[^0-9]/', '', $_POST['cep'] ?? '') ?: null,
         'endereco' => trim($_POST['endereco'] ?? '') ?: null,
         'numero' => trim($_POST['numero'] ?? '') ?: null,
         'complemento' => trim($_POST['complemento'] ?? '') ?: null,
         'bairro' => trim($_POST['bairro'] ?? '') ?: null,
         'cidade' => trim($_POST['cidade'] ?? '') ?: null,
+        // Financeiro
         'tipoAssociado' => $_POST['tipoAssociado'] ?? null,
         'situacaoFinanceira' => $_POST['situacaoFinanceira'] ?? null,
         'vinculoServidor' => $_POST['vinculoServidor'] ?? null,
@@ -114,7 +124,7 @@ try {
         }
     }
 
-    // Processa foto
+    // Processa foto do associado
     if (isset($_FILES['foto']) && $_FILES['foto']['error'] === UPLOAD_ERR_OK) {
         $uploadDir = '../uploads/fotos/';
         if (!file_exists($uploadDir)) {
@@ -127,37 +137,83 @@ try {
         
         if (move_uploaded_file($_FILES['foto']['tmp_name'], $caminhoCompleto)) {
             $dados['foto'] = 'uploads/fotos/' . $nomeArquivo;
-            error_log("Foto salva: " . $dados['foto']);
+            error_log("✓ Foto do associado salva: " . $dados['foto']);
         }
     }
 
-    error_log("Dados preparados - Total campos: " . count($dados));
-    error_log("Dependentes: " . count($dados['dependentes']));
+    // IMPORTANTE: A classe Associados já gerencia sua própria transação
+    // Não devemos iniciar outra transação aqui
+    
+    $associados = new Associados();
+    $documentos = new Documentos();
+    
+    // PASSO 1: CRIA O PRÉ-CADASTRO (com transação interna)
+    $associadoId = $associados->criar($dados);
+    
+    if (!$associadoId) {
+        throw new Exception('Erro ao criar pré-cadastro');
+    }
+    
+    error_log("✓ Pré-cadastro criado com ID: $associadoId");
 
-    // CRIA O ASSOCIADO USANDO A CLASSE
+    // PASSO 2: PROCESSA O DOCUMENTO (transação separada)
+    $documentoId = null;
+    $statusFluxo = 'DIGITALIZADO';
+    $enviarAutomaticamente = isset($_POST['enviar_presidencia']) && $_POST['enviar_presidencia'] == '1';
+    
     try {
-        $associados = new Associados();
-        $associadoId = $associados->criar($dados);
+        // Upload do documento (tem sua própria transação)
+        $documentoId = $documentos->uploadDocumentoAssociacao(
+            $associadoId,
+            $_FILES['ficha_assinada'],
+            'FISICO',
+            'Ficha de filiação assinada - Anexada durante pré-cadastro'
+        );
         
-        if (!$associadoId) {
-            throw new Exception('Classe Associados retornou false');
+        error_log("✓ Ficha assinada anexada com ID: $documentoId");
+        
+        // PASSO 3: ENVIAR PARA PRESIDÊNCIA SE SOLICITADO
+        if ($enviarAutomaticamente) {
+            try {
+                // Envia documento para assinatura (transação separada)
+                $documentos->enviarParaAssinatura(
+                    $documentoId,
+                    "Pré-cadastro realizado - Enviado automaticamente para assinatura"
+                );
+                
+                // Atualiza status do pré-cadastro (transação separada)
+                $associados->enviarParaPresidencia(
+                    $associadoId, 
+                    "Documentação enviada automaticamente para aprovação"
+                );
+                
+                $statusFluxo = 'AGUARDANDO_ASSINATURA';
+                error_log("✓ Documento enviado para presidência assinar");
+                
+            } catch (Exception $e) {
+                // Não é erro crítico - documento foi criado
+                error_log("⚠ Aviso ao enviar para presidência: " . $e->getMessage());
+            }
         }
-        
-        error_log("✓ Associado criado com ID: $associadoId");
         
     } catch (Exception $e) {
-        error_log("✗ Erro na classe Associados: " . $e->getMessage());
-        throw new Exception("Erro ao criar associado: " . $e->getMessage());
+        // Se falhar o documento, ainda temos o associado criado
+        error_log("⚠ Erro ao processar documento: " . $e->getMessage());
+        // Continua o processo...
     }
 
-    // AGORA CRIA OS SERVIÇOS (separadamente)
-    $db = Database::getInstance(DB_NAME_CADASTRO)->getConnection();
+    // PASSO 4: CRIA OS SERVIÇOS (transação separada)
     $servicos_criados = [];
     $valor_total_mensal = 0;
     
     try {
+        $db = Database::getInstance(DB_NAME_CADASTRO)->getConnection();
+        $db->beginTransaction();
+        
+        $tipoAssociadoServico = $_POST['tipoAssociadoServico'] ?? 'Contribuinte';
+        
         // Serviço Social
-        if (!empty($_POST['valorSocial']) && floatval($_POST['valorSocial']) > 0) {
+        if (isset($_POST['valorSocial']) && floatval($_POST['valorSocial']) >= 0) {
             $stmt = $db->prepare("
                 INSERT INTO Servicos_Associado (
                     associado_id, servico_id, ativo, data_adesao, 
@@ -168,22 +224,22 @@ try {
             $valorSocial = floatval($_POST['valorSocial']);
             $percentualSocial = floatval($_POST['percentualAplicadoSocial'] ?? 100);
             
-            $resultado = $stmt->execute([
+            $stmt->execute([
                 $associadoId,
                 $valorSocial,
                 $percentualSocial,
-                'Cadastro inicial - ' . ($_POST['tipoAssociadoServico'] ?? 'Padrão')
+                "Pré-cadastro - Tipo: {$tipoAssociadoServico}"
             ]);
             
-            if ($resultado) {
-                $servicos_criados[] = 'Social';
-                $valor_total_mensal += $valorSocial;
-                error_log("✓ Serviço Social criado - R$ " . number_format($valorSocial, 2, ',', '.'));
-            }
+            $servicos_criados[] = 'Social';
+            $valor_total_mensal += $valorSocial;
+            error_log("✓ Serviço Social: R$ " . number_format($valorSocial, 2, ',', '.'));
         }
 
         // Serviço Jurídico
-        if (!empty($_POST['servicoJuridico']) && !empty($_POST['valorJuridico']) && floatval($_POST['valorJuridico']) > 0) {
+        if (isset($_POST['servicoJuridico']) && $_POST['servicoJuridico'] == '2' && 
+            isset($_POST['valorJuridico']) && floatval($_POST['valorJuridico']) > 0) {
+            
             $stmt = $db->prepare("
                 INSERT INTO Servicos_Associado (
                     associado_id, servico_id, ativo, data_adesao, 
@@ -194,45 +250,62 @@ try {
             $valorJuridico = floatval($_POST['valorJuridico']);
             $percentualJuridico = floatval($_POST['percentualAplicadoJuridico'] ?? 100);
             
-            $resultado = $stmt->execute([
+            $stmt->execute([
                 $associadoId,
                 $valorJuridico,
                 $percentualJuridico,
-                'Cadastro inicial - ' . ($_POST['tipoAssociadoServico'] ?? 'Padrão')
+                "Pré-cadastro - Tipo: {$tipoAssociadoServico}"
             ]);
             
-            if ($resultado) {
-                $servicos_criados[] = 'Jurídico';
-                $valor_total_mensal += $valorJuridico;
-                error_log("✓ Serviço Jurídico criado - R$ " . number_format($valorJuridico, 2, ',', '.'));
-            }
+            $servicos_criados[] = 'Jurídico';
+            $valor_total_mensal += $valorJuridico;
+            error_log("✓ Serviço Jurídico: R$ " . number_format($valorJuridico, 2, ',', '.'));
         }
         
-        error_log("✓ Total de serviços criados: " . count($servicos_criados));
-        error_log("✓ Valor total mensal: R$ " . number_format($valor_total_mensal, 2, ',', '.'));
+        $db->commit();
         
     } catch (Exception $e) {
-        error_log("⚠ Erro ao criar serviços (não crítico): " . $e->getMessage());
-        // Não falha o processo todo por causa dos serviços
+        if (isset($db) && $db->inTransaction()) {
+            $db->rollBack();
+        }
+        error_log("⚠ Erro ao criar serviços: " . $e->getMessage());
+        // Continua - não é crítico
     }
 
-    // Resposta de sucesso
+    // Monta resposta de sucesso
     $response = [
         'status' => 'success',
-        'message' => 'Associado cadastrado com sucesso!',
+        'message' => 'Pré-cadastro realizado com sucesso!',
         'data' => [
             'id' => $associadoId,
             'nome' => $dados['nome'],
             'cpf' => $dados['cpf'],
-            'servicos_criados' => $servicos_criados,
-            'total_servicos' => count($servicos_criados),
-            'valor_total_mensal' => $valor_total_mensal,
-            'dependentes' => count($dados['dependentes']),
-            'tem_foto' => !empty($dados['foto'])
+            'pre_cadastro' => true,
+            'fluxo_documento' => [
+                'documento_id' => $documentoId,
+                'status' => $statusFluxo,
+                'enviado_presidencia' => $enviarAutomaticamente && $documentoId,
+                'mensagem' => $documentoId 
+                    ? ($enviarAutomaticamente 
+                        ? 'Documento enviado para assinatura na presidência' 
+                        : 'Documento aguardando envio manual para presidência')
+                    : 'Documento não foi processado'
+            ],
+            'servicos' => [
+                'lista' => $servicos_criados,
+                'total' => count($servicos_criados),
+                'valor_mensal' => number_format($valor_total_mensal, 2, ',', '.')
+            ],
+            'extras' => [
+                'dependentes' => count($dados['dependentes']),
+                'tem_foto' => !empty($dados['foto']),
+                'tem_ficha_assinada' => $documentoId !== null
+            ]
         ]
     ];
 
-    error_log("✓ SUCESSO - Associado ID $associadoId criado completamente");
+    error_log("=== PRÉ-CADASTRO CONCLUÍDO COM SUCESSO ===");
+    error_log("ID: {$associadoId} | Documento: " . ($documentoId ?? 'N/A') . " | Status: {$statusFluxo}");
 
 } catch (Exception $e) {
     error_log("✗ ERRO GERAL: " . $e->getMessage());
@@ -245,7 +318,8 @@ try {
         'debug' => [
             'file' => basename(__FILE__),
             'line' => $e->getLine(),
-            'post_count' => count($_POST),
+            'post_count' => count($_POST ?? []),
+            'files_count' => count($_FILES ?? []),
             'session_active' => session_status() === PHP_SESSION_ACTIVE
         ]
     ];
@@ -253,6 +327,7 @@ try {
     http_response_code(400);
 }
 
+// Limpa buffer e envia resposta
 ob_end_clean();
 echo json_encode($response, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
 exit;

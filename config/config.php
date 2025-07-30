@@ -11,7 +11,7 @@ define('SISTEMA_VERSAO', '1.0.0');
 define('SISTEMA_EMPRESA', 'ASSEGO');
 
 // URLs borreca
-define('BASE_URL', 'http://172.16.253.44/luis/comercial'); // Ajuste conforme seu ambientei
+define('BASE_URL', 'http://172.16.253.44/matheus/comercial'); // Ajuste conforme seu ambientei
 
 define('ASSETS_URL', BASE_URL . '/assets');
 define('UPLOADS_URL', BASE_URL . '/uploads');
