@@ -1165,11 +1165,11 @@ $headerComponent = HeaderComponent::create([
 
         // ===== MAPEAMENTO DE ABAS PARA SCRIPTS =====
         const TAB_SCRIPTS = {
-            'gestao-peculio': './rend/js/gestao_peculio.js',
-            'lista-inadimplentes': './rend/js/lista_inadimplentes.js',
-            'neoconsig': './rend/js/neoconsig.js',
-            'importar-asaas': './rend/js/importar_asaas.js',
-            'verificar-associados': './rend/js/verificar_associados.js' // NEW
+            'gestao-peculio': './rend/js/gestao_peculio.js?v=' + Date.now(),
+            'lista-inadimplentes': './rend/js/lista_inadimplentes.js?v=' + Date.now(),
+            'neoconsig': './rend/js/neoconsig.js?v=' + Date.now(),
+            'importar-asaas': './rend/js/importar_asaas.js?v=' + Date.now(),
+            'verificar-associados': './rend/js/verificar_associados.js?v=' + Date.now()
         };
 
         // ===== HELPER PARA CARREGAR SCRIPTS =====
