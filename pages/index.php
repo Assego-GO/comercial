@@ -752,10 +752,10 @@ if (!empty($_POST['email'])) {
                 </div>
                 
                 <h1 class="text-3xl font-bold mb-2 animate-glow relative z-10">
-                    <?php echo SISTEMA_NOME ?? 'Sistema Comercial'; ?>
+                    <?php echo SISTEMA_NOME ?? 'Sistema De Gestão'; ?>
                 </h1>
                 <p class="text-sky-100 text-sm font-medium relative z-10">
-                    Área Do Comercial Da Assego
+                    Área De Gestão Da Assego
                 </p>
             </div>
             
