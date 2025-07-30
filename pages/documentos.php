@@ -1,7 +1,10 @@
 <?php
 /**
- * Página de Gerenciamento de Documentos com Fluxo de Assinatura
- * pages/documentos.php
+ * Página de Gerenciamento do Fluxo de Assinatura - VERSÃO SIMPLIFICADA
+ * pages/documentos_fluxo.php
+ * 
+ * Esta página agora serve APENAS para gerenciar o fluxo de assinatura
+ * dos documentos que já foram anexados durante o pré-cadastro
  */
 
 // Tratamento de erros para debug
@@ -31,22 +34,14 @@ if (!$auth->isLoggedIn()) {
 $usuarioLogado = $auth->getUser();
 
 // Define o título da página
-$page_title = 'Documentos - ASSEGO';
+$page_title = 'Fluxo de Assinatura - ASSEGO';
 
-// Busca estatísticas de documentos
+// Busca estatísticas de documentos em fluxo
 try {
     $documentos = new Documentos();
-    $stats = $documentos->getEstatisticas();
     $statsFluxo = $documentos->getEstatisticasFluxo();
-
-    $totalDocumentos = $stats['total_documentos'] ?? 0;
-    $docsVerificados = $stats['verificados'] ?? 0;
-    $docsPendentes = $stats['pendentes'] ?? 0;
-    $uploadsHoje = $stats['uploads_hoje'] ?? 0;
-
 } catch (Exception $e) {
-    error_log("Erro ao buscar estatísticas de documentos: " . $e->getMessage());
-    $totalDocumentos = $docsVerificados = $docsPendentes = $uploadsHoje = 0;
+    error_log("Erro ao buscar estatísticas de fluxo: " . $e->getMessage());
 }
 
 // Cria instância do Header Component
@@ -57,7 +52,7 @@ $headerComponent = HeaderComponent::create([
         'avatar' => $usuarioLogado['avatar'] ?? null
     ],
     'isDiretor' => $auth->isDiretor(),
-    'activeTab' => 'documentos', // CORREÇÃO: mudei de 'associados' para 'documentos'
+    'activeTab' => 'documentos',
     'notificationCount' => 0,
     'showSearch' => true
 ]);
@@ -101,6 +96,7 @@ $headerComponent = HeaderComponent::create([
             color: var(--dark);
             overflow-x: hidden;
         }
+        
         /* Main Content */
         .main-wrapper {
             min-height: 100vh;
@@ -222,83 +218,6 @@ $headerComponent = HeaderComponent::create([
             margin-bottom: 0.375rem;
         }
 
-        /* Content Tabs */
-        .content-tabs {
-            background: var(--white);
-            border-radius: 16px;
-            padding: 0.5rem;
-            margin-bottom: 2rem;
-            box-shadow: var(--shadow-sm);
-        }
-
-        .content-tab-list {
-            display: flex;
-            gap: 0.5rem;
-            overflow-x: auto;
-        }
-
-        .content-tab {
-            padding: 0.75rem 1.5rem;
-            border-radius: 12px;
-            background: transparent;
-            border: none;
-            cursor: pointer;
-            font-weight: 600;
-            font-size: 0.875rem;
-            color: var(--gray-600);
-            transition: all 0.2s ease;
-            white-space: nowrap;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .content-tab:hover {
-            background: var(--gray-100);
-            color: var(--gray-800);
-        }
-
-        .content-tab.active {
-            background: var(--primary);
-            color: var(--white);
-        }
-
-        .content-tab-badge {
-            background: var(--gray-200);
-            color: var(--gray-700);
-            padding: 0.125rem 0.5rem;
-            border-radius: 20px;
-            font-size: 0.75rem;
-            font-weight: 600;
-        }
-
-        .content-tab.active .content-tab-badge {
-            background: rgba(255, 255, 255, 0.3);
-            color: var(--white);
-        }
-
-        /* Tab Panels */
-        .tab-panel {
-            display: none;
-        }
-
-        .tab-panel.active {
-            display: block;
-            animation: fadeIn 0.3s ease;
-        }
-
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(10px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
         /* Actions Bar */
         .actions-bar {
             background: var(--white);
@@ -313,7 +232,6 @@ $headerComponent = HeaderComponent::create([
             flex-wrap: wrap;
             gap: 1rem;
             align-items: flex-end;
-            margin-bottom: 1rem;
         }
 
         .filter-group {
@@ -357,6 +275,7 @@ $headerComponent = HeaderComponent::create([
             display: flex;
             gap: 0.75rem;
             justify-content: flex-end;
+            margin-top: 1rem;
         }
 
         .btn-modern {
@@ -412,19 +331,19 @@ $headerComponent = HeaderComponent::create([
             background: #E68900;
         }
 
-        .btn-danger {
-            background: var(--danger);
+        .btn-info {
+            background: var(--info);
             color: var(--white);
         }
 
-        .btn-danger:hover {
-            background: #E6332A;
+        .btn-info:hover {
+            background: #0097A7;
         }
 
         /* Document Cards Grid */
         .documents-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
             gap: 1.5rem;
         }
 
@@ -466,21 +385,6 @@ $headerComponent = HeaderComponent::create([
         .document-icon.pdf {
             background: rgba(220, 53, 69, 0.1);
             color: #dc3545;
-        }
-
-        .document-icon.image {
-            background: rgba(0, 123, 255, 0.1);
-            color: #007bff;
-        }
-
-        .document-icon.doc {
-            background: rgba(40, 167, 69, 0.1);
-            color: #28a745;
-        }
-
-        .document-icon.default {
-            background: var(--gray-100);
-            color: var(--gray-600);
         }
 
         .document-info {
@@ -637,48 +541,6 @@ $headerComponent = HeaderComponent::create([
             background: var(--success);
         }
 
-        /* Upload Area */
-        .upload-area {
-            border: 2px dashed var(--gray-300);
-            border-radius: 16px;
-            padding: 3rem;
-            text-align: center;
-            background: var(--gray-100);
-            transition: all 0.3s ease;
-            cursor: pointer;
-            position: relative;
-        }
-
-        .upload-area:hover {
-            border-color: var(--primary);
-            background: var(--primary-light);
-        }
-
-        .upload-area.dragging {
-            border-color: var(--primary);
-            background: var(--primary-light);
-            transform: scale(1.02);
-        }
-
-        .upload-icon {
-            font-size: 3rem;
-            color: var(--gray-400);
-            margin-bottom: 1rem;
-        }
-
-        .upload-title {
-            font-size: 1.125rem;
-            font-weight: 600;
-            color: var(--dark);
-            margin-bottom: 0.5rem;
-        }
-
-        .upload-subtitle {
-            font-size: 0.875rem;
-            color: var(--gray-500);
-            margin-bottom: 0;
-        }
-
         /* Timeline */
         .timeline {
             position: relative;
@@ -804,7 +666,7 @@ $headerComponent = HeaderComponent::create([
             box-shadow: 0 0 0 0.2rem rgba(0, 86, 210, 0.1);
         }
 
-        /* File List */
+        /* File Item */
         .file-item {
             background: var(--gray-100);
             border-radius: 12px;
@@ -862,6 +724,48 @@ $headerComponent = HeaderComponent::create([
             color: var(--white);
         }
 
+        /* Upload Area */
+        .upload-area {
+            border: 2px dashed var(--gray-300);
+            border-radius: 16px;
+            padding: 3rem;
+            text-align: center;
+            background: var(--gray-100);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .upload-area:hover {
+            border-color: var(--primary);
+            background: var(--primary-light);
+        }
+
+        .upload-area.dragging {
+            border-color: var(--primary);
+            background: var(--primary-light);
+            transform: scale(1.02);
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            color: var(--gray-400);
+            margin-bottom: 1rem;
+        }
+
+        .upload-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--dark);
+            margin-bottom: 0.5rem;
+        }
+
+        .upload-subtitle {
+            font-size: 0.875rem;
+            color: var(--gray-500);
+            margin-bottom: 0;
+        }
+
         /* Loading */
         .loading-spinner {
             width: 50px;
@@ -877,6 +781,22 @@ $headerComponent = HeaderComponent::create([
             to {
                 transform: rotate(360deg);
             }
+        }
+
+        /* Alert Info */
+        .alert-info-custom {
+            background: var(--info);
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .alert-info-custom i {
+            font-size: 1.5rem;
         }
 
         /* Responsive */
@@ -896,11 +816,6 @@ $headerComponent = HeaderComponent::create([
             .filter-group {
                 width: 100%;
             }
-
-            .content-tab-list {
-                overflow-x: auto;
-                -webkit-overflow-scrolling: touch;
-            }
         }
     </style>
 
@@ -916,25 +831,29 @@ $headerComponent = HeaderComponent::create([
         <div class="content-area">
             <!-- Page Title -->
             <div class="page-header mb-4" data-aos="fade-right">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h1 class="page-title">Gerenciamento de Documentos</h1>
-                        <p class="page-subtitle">Faça upload, visualize e gerencie documentos dos associados</p>
-                    </div>
-                    <div class="d-flex gap-2">
-                        <button class="btn-modern btn-secondary" data-bs-toggle="modal"
-                            data-bs-target="#fichaVirtualModal">
-                            <i class="fas fa-file-alt"></i>
-                            Gerar Ficha Virtual
-                        </button>
-                        <button class="btn-modern btn-primary" data-bs-toggle="modal"
-                            data-bs-target="#uploadFichaModal">
-                            <i class="fas fa-file-upload"></i>
-                            Upload Ficha Associação
-                        </button>
-                    </div>
+                <div>
+                    <h1 class="page-title">Fluxo de Assinatura de Documentos</h1>
+                    <p class="page-subtitle">Gerencie o processo de assinatura das fichas de filiação</p>
                 </div>
             </div>
+
+            <!-- Alert Informativo -->
+            <div class="alert-info-custom" data-aos="fade-up">
+                <i class="fas fa-info-circle"></i>
+                <div>
+                    <strong>Como funciona o fluxo:</strong><br>
+                    1. Ficha é anexada durante o pré-cadastro → 2. Envio para presidência → 3. Assinatura → 4. Retorno ao comercial → 5. Aprovação do pré-cadastro
+                </div>
+            </div>
+            
+            <?php if (isset($_GET['novo']) && $_GET['novo'] == '1'): ?>
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                <i class="fas fa-check-circle me-2"></i>
+                <strong>Pré-cadastro criado com sucesso!</strong> 
+                A ficha de filiação foi anexada e está aguardando envio para assinatura.
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            <?php endif; ?>
 
             <!-- Stats Grid -->
             <div class="stats-grid" data-aos="fade-up">
@@ -949,7 +868,7 @@ $headerComponent = HeaderComponent::create([
                                         <?php
                                         $labels = [
                                             'DIGITALIZADO' => 'Aguardando Envio',
-                                            'AGUARDANDO_ASSINATURA' => 'Para Assinatura',
+                                            'AGUARDANDO_ASSINATURA' => 'Na Presidência',
                                             'ASSINADO' => 'Assinados',
                                             'FINALIZADO' => 'Finalizados'
                                         ];
@@ -982,308 +901,52 @@ $headerComponent = HeaderComponent::create([
                 <?php endif; ?>
             </div>
 
-            <!-- Content Tabs -->
-            <div class="content-tabs" data-aos="fade-up" data-aos-delay="100">
-                <div class="content-tab-list">
-                    <button class="content-tab active" data-tab="fluxo">
-                        <i class="fas fa-exchange-alt"></i>
-                        Fluxo de Assinatura
-                        <span class="content-tab-badge" id="badgeFluxo">0</span>
+            <!-- Filters -->
+            <div class="actions-bar" data-aos="fade-up" data-aos-delay="200">
+                <div class="filters-row">
+                    <div class="filter-group">
+                        <label class="filter-label">Status do Fluxo</label>
+                        <select class="filter-select" id="filtroStatusFluxo">
+                            <option value="">Todos os Status</option>
+                            <option value="DIGITALIZADO">Aguardando Envio</option>
+                            <option value="AGUARDANDO_ASSINATURA">Na Presidência</option>
+                            <option value="ASSINADO">Assinados</option>
+                            <option value="FINALIZADO">Finalizados</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-group">
+                        <label class="filter-label">Buscar Associado</label>
+                        <input type="text" class="filter-input" id="filtroBuscaFluxo" 
+                               placeholder="Nome ou CPF do associado">
+                    </div>
+
+                    <div class="filter-group">
+                        <label class="filter-label">Período</label>
+                        <select class="filter-select" id="filtroPeriodo">
+                            <option value="">Todo período</option>
+                            <option value="hoje">Hoje</option>
+                            <option value="semana">Esta semana</option>
+                            <option value="mes">Este mês</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="actions-row">
+                    <button class="btn-modern btn-secondary" onclick="limparFiltros()">
+                        <i class="fas fa-eraser"></i>
+                        Limpar Filtros
                     </button>
-                    <button class="content-tab" data-tab="todos">
-                        <i class="fas fa-folder"></i>
-                        Todos os Documentos
-                        <span class="content-tab-badge" id="badgeTodos"><?php echo $totalDocumentos; ?></span>
-                    </button>
-                    <button class="content-tab" data-tab="pendentes">
-                        <i class="fas fa-clock"></i>
-                        Pendentes
-                        <span class="content-tab-badge" id="badgePendentes"><?php echo $docsPendentes; ?></span>
-                    </button>
-                    <button class="content-tab" data-tab="verificados">
-                        <i class="fas fa-check-circle"></i>
-                        Verificados
-                        <span class="content-tab-badge" id="badgeVerificados"><?php echo $docsVerificados; ?></span>
+                    <button class="btn-modern btn-primary" onclick="aplicarFiltros()">
+                        <i class="fas fa-filter"></i>
+                        Aplicar Filtros
                     </button>
                 </div>
             </div>
 
-            <!-- Tab Panels -->
-            <div id="tabPanels">
-                <!-- Fluxo de Assinatura Panel -->
-                <div class="tab-panel active" id="fluxo-panel">
-                    <!-- Filters -->
-                    <div class="actions-bar" data-aos="fade-up" data-aos-delay="200">
-                        <div class="filters-row">
-                            <div class="filter-group">
-                                <label class="filter-label">Status do Fluxo</label>
-                                <select class="filter-select" id="filtroStatusFluxo">
-                                    <option value="">Todos</option>
-                                    <option value="DIGITALIZADO">Aguardando Envio</option>
-                                    <option value="AGUARDANDO_ASSINATURA">Para Assinatura</option>
-                                    <option value="ASSINADO">Assinados</option>
-                                    <option value="FINALIZADO">Finalizados</option>
-                                </select>
-                            </div>
-
-                            <div class="filter-group">
-                                <label class="filter-label">Origem</label>
-                                <select class="filter-select" id="filtroOrigem">
-                                    <option value="">Todas</option>
-                                    <option value="FISICO">Físico</option>
-                                    <option value="VIRTUAL">Virtual</option>
-                                </select>
-                            </div>
-
-                            <div class="filter-group">
-                                <label class="filter-label">Buscar Associado</label>
-                                <input type="text" class="filter-input" id="filtroBuscaFluxo" placeholder="Nome ou CPF">
-                            </div>
-                        </div>
-
-                        <div class="actions-row">
-                            <button class="btn-modern btn-secondary" onclick="limparFiltrosFluxo()">
-                                <i class="fas fa-eraser"></i>
-                                Limpar Filtros
-                            </button>
-                            <button class="btn-modern btn-primary" onclick="aplicarFiltrosFluxo()">
-                                <i class="fas fa-filter"></i>
-                                Aplicar Filtros
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Documents in Flow -->
-                    <div class="documents-grid" id="documentosFluxoList" data-aos="fade-up" data-aos-delay="300">
-                        <!-- Documentos em fluxo serão carregados aqui -->
-                    </div>
-                </div>
-
-                <!-- Todos os Documentos Panel -->
-                <div class="tab-panel" id="todos-panel">
-                    <!-- Filters -->
-                    <div class="actions-bar" data-aos="fade-up" data-aos-delay="200">
-                        <div class="filters-row">
-                            <div class="filter-group">
-                                <label class="filter-label">Associado</label>
-                                <input type="text" class="filter-input" id="filtroAssociado" placeholder="Nome ou CPF">
-                            </div>
-
-                            <div class="filter-group">
-                                <label class="filter-label">Tipo de Documento</label>
-                                <select class="filter-select" id="filtroTipo">
-                                    <option value="">Todos</option>
-                                </select>
-                            </div>
-
-                            <div class="filter-group">
-                                <label class="filter-label">Status</label>
-                                <select class="filter-select" id="filtroStatus">
-                                    <option value="">Todos</option>
-                                    <option value="1">Verificado</option>
-                                    <option value="0">Pendente</option>
-                                </select>
-                            </div>
-
-                            <div class="filter-group">
-                                <label class="filter-label">Período</label>
-                                <select class="filter-select" id="filtroPeriodo">
-                                    <option value="">Todo período</option>
-                                    <option value="hoje">Hoje</option>
-                                    <option value="semana">Esta semana</option>
-                                    <option value="mes">Este mês</option>
-                                    <option value="ano">Este ano</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="actions-row">
-                            <button class="btn-modern btn-secondary" onclick="limparFiltros()">
-                                <i class="fas fa-eraser"></i>
-                                Limpar Filtros
-                            </button>
-                            <button class="btn-modern btn-primary" onclick="aplicarFiltros()">
-                                <i class="fas fa-filter"></i>
-                                Aplicar Filtros
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Documents Grid -->
-                    <div class="documents-grid" id="documentosList">
-                        <!-- Documentos serão carregados aqui -->
-                    </div>
-                </div>
-
-                <!-- Pendentes Panel -->
-                <div class="tab-panel" id="pendentes-panel">
-                    <div class="documents-grid" id="documentosPendentesList">
-                        <!-- Documentos pendentes serão carregados aqui -->
-                    </div>
-                </div>
-
-                <!-- Verificados Panel -->
-                <div class="tab-panel" id="verificados-panel">
-                    <div class="documents-grid" id="documentosVerificadosList">
-                        <!-- Documentos verificados serão carregados aqui -->
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal de Upload de Ficha de Associação -->
-    <div class="modal fade" id="uploadFichaModal" tabindex="-1" aria-labelledby="uploadFichaModalLabel"
-        aria-hidden="true">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="uploadFichaModalLabel">
-                        <i class="fas fa-file-upload me-2" style="color: var(--primary);"></i>
-                        Upload de Ficha de Associação
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="uploadFichaForm">
-                        <div class="mb-4">
-                            <label class="form-label">Associado *</label>
-                            <select class="form-select" id="fichaAssociadoSelect" required>
-                                <option value="">Selecione o associado</option>
-                            </select>
-                            <small class="text-muted">Selecione o associado para o qual está fazendo upload da
-                                ficha</small>
-                        </div>
-
-                        <div class="mb-4">
-                            <label class="form-label">Origem do Documento *</label>
-                            <div class="d-flex gap-3">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="tipoOrigem" id="origemFisico"
-                                        value="FISICO" checked>
-                                    <label class="form-check-label" for="origemFisico">
-                                        <i class="fas fa-paper-plane me-1"></i>
-                                        Físico (Digitalizado)
-                                    </label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="tipoOrigem" id="origemVirtual"
-                                        value="VIRTUAL">
-                                    <label class="form-check-label" for="origemVirtual">
-                                        <i class="fas fa-laptop me-1"></i>
-                                        Virtual (Gerado no sistema)
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="mb-4">
-                            <label class="form-label">Arquivo da Ficha *</label>
-                            <div class="upload-area" id="uploadFichaArea">
-                                <i class="fas fa-cloud-upload-alt upload-icon"></i>
-                                <h6 class="upload-title">Arraste o arquivo aqui ou clique para selecionar</h6>
-                                <p class="upload-subtitle">Formato aceito: PDF</p>
-                                <p class="upload-subtitle">Tamanho máximo: 10MB</p>
-                                <input type="file" id="fichaFileInput" class="d-none" accept=".pdf">
-                            </div>
-                        </div>
-
-                        <div id="fichaFilesList" class="mb-4"></div>
-
-                        <div class="mb-4">
-                            <label class="form-label">Observações (opcional)</label>
-                            <textarea class="form-control" id="fichaObservacao" rows="3"
-                                placeholder="Adicione observações sobre a ficha..."></textarea>
-                        </div>
-
-                        <div class="alert alert-info d-flex align-items-center">
-                            <i class="fas fa-info-circle me-2"></i>
-                            <div>
-                                <strong>Fluxo de Assinatura:</strong><br>
-                                Após o upload, a ficha será enviada para a presidência assinar e depois retornará ao
-                                comercial.
-                            </div>
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn-modern btn-secondary" data-bs-dismiss="modal">
-                        Cancelar
-                    </button>
-                    <button type="button" class="btn-modern btn-primary" onclick="realizarUploadFicha()">
-                        <i class="fas fa-upload me-2"></i>
-                        Fazer Upload
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal de Gerar Ficha Virtual -->
-    <div class="modal fade" id="fichaVirtualModal" tabindex="-1" aria-labelledby="fichaVirtualModalLabel"
-        aria-hidden="true">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="fichaVirtualModalLabel">
-                        <i class="fas fa-file-alt me-2" style="color: var(--primary);"></i>
-                        Gerar Ficha Virtual de Associação
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="fichaVirtualForm">
-                        <div class="mb-4">
-                            <label class="form-label">Associado *</label>
-                            <select class="form-select" id="virtualAssociadoSelect" required>
-                                <option value="">Selecione o associado</option>
-                            </select>
-                            <small class="text-muted">A ficha será gerada com os dados do associado selecionado</small>
-                        </div>
-
-                        <div class="alert alert-info d-flex align-items-center">
-                            <i class="fas fa-info-circle me-2"></i>
-                            <div>
-                                <strong>Processo Virtual:</strong><br>
-                                A ficha será gerada automaticamente com os dados do associado e seguirá o mesmo fluxo de
-                                assinatura.
-                            </div>
-                        </div>
-
-                        <div id="previewAssociado" class="d-none">
-                            <h6 class="mb-3">Dados que serão incluídos na ficha:</h6>
-                            <div class="bg-light rounded p-3">
-                                <div class="row g-3">
-                                    <div class="col-md-6">
-                                        <strong>Nome:</strong>
-                                        <p class="mb-0" id="previewNome">-</p>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <strong>CPF:</strong>
-                                        <p class="mb-0" id="previewCPF">-</p>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <strong>RG:</strong>
-                                        <p class="mb-0" id="previewRG">-</p>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <strong>Email:</strong>
-                                        <p class="mb-0" id="previewEmail">-</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn-modern btn-secondary" data-bs-dismiss="modal">
-                        Cancelar
-                    </button>
-                    <button type="button" class="btn-modern btn-primary" onclick="gerarFichaVirtual()">
-                        <i class="fas fa-file-alt me-2"></i>
-                        Gerar Ficha
-                    </button>
-                </div>
+            <!-- Documents in Flow -->
+            <div class="documents-grid" id="documentosFluxoList" data-aos="fade-up" data-aos-delay="300">
+                <!-- Documentos em fluxo serão carregados aqui -->
             </div>
         </div>
     </div>
@@ -1334,8 +997,7 @@ $headerComponent = HeaderComponent::create([
                             <div class="upload-area small" id="uploadAssinaturaArea" style="padding: 2rem;">
                                 <i class="fas fa-file-signature upload-icon" style="font-size: 2rem;"></i>
                                 <h6 class="upload-title" style="font-size: 1rem;">Upload do documento assinado</h6>
-                                <p class="upload-subtitle" style="font-size: 0.75rem;">Se desejar, faça upload do PDF
-                                    assinado</p>
+                                <p class="upload-subtitle" style="font-size: 0.75rem;">Se desejar, faça upload do PDF assinado</p>
                                 <input type="file" id="assinaturaFileInput" class="d-none" accept=".pdf">
                             </div>
                         </div>
@@ -1368,6 +1030,7 @@ $headerComponent = HeaderComponent::create([
 
     <!-- JavaScript do Header Component -->
     <?php $headerComponent->renderJS(); ?>
+    
     <script>
         // Inicializa AOS
         AOS.init({
@@ -1376,240 +1039,14 @@ $headerComponent = HeaderComponent::create([
         });
 
         // Variáveis globais
-        let arquivoFichaSelecionado = null;
         let arquivoAssinaturaSelecionado = null;
-        let tiposDocumentos = [];
-        let tabAtual = 'fluxo';
+        let filtrosAtuais = {};
 
         // Inicialização
         $(document).ready(function () {
-            carregarEstatisticas();
-            carregarTiposDocumentos();
             carregarDocumentosFluxo();
-            carregarAssociados();
-            configurarUploadFicha();
             configurarUploadAssinatura();
-            configurarUserMenu();
-            configurarTabs();
         });
-
-        // Configurar tabs
-        function configurarTabs() {
-            $('.content-tab').on('click', function () {
-                const tab = $(this).data('tab');
-
-                // Atualizar tabs
-                $('.content-tab').removeClass('active');
-                $(this).addClass('active');
-
-                // Atualizar panels
-                $('.tab-panel').removeClass('active');
-                $(`#${tab}-panel`).addClass('active');
-
-                // Carregar conteúdo da tab
-                tabAtual = tab;
-                switch (tab) {
-                    case 'fluxo':
-                        carregarDocumentosFluxo();
-                        break;
-                    case 'todos':
-                        carregarDocumentos();
-                        break;
-                    case 'pendentes':
-                        carregarDocumentos({ verificado: 'nao' }, 'documentosPendentesList');
-                        break;
-                    case 'verificados':
-                        carregarDocumentos({ verificado: 'sim' }, 'documentosVerificadosList');
-                        break;
-                }
-            });
-        }
-
-        // CORREÇÃO: Configurar menu do usuário com abordagem mais específica
-        function configurarUserMenu() {
-            // Função para tentar configurar o dropdown
-            function tentarConfigurarDropdown() {
-                // Procura por todos os elementos que podem ser o botão do usuário
-                const possiveisElementos = [
-                    // Por ID
-                    document.getElementById('userMenu'),
-                    document.getElementById('user-menu'),
-                    // Por classe ou atributo que contenha o nome do usuário
-                    ...Array.from(document.querySelectorAll('[class*="user"]')),
-                    ...Array.from(document.querySelectorAll('[id*="user"]')),
-                    // Por conteúdo (procura elementos que contenham "LUIS FILIPE")
-                    ...Array.from(document.querySelectorAll('*')).filter(el =>
-                        el.textContent && el.textContent.includes('LUIS FILIPE')
-                    ),
-                    // Elementos com dropdown do Bootstrap
-                    ...Array.from(document.querySelectorAll('[data-bs-toggle="dropdown"]')),
-                    // Elementos clickáveis na área do header
-                    ...Array.from(document.querySelectorAll('button, [role="button"], .btn')).filter(el => {
-                        const rect = el.getBoundingClientRect();
-                        return rect.top < 100; // Elementos no topo da página (header)
-                    })
-                ];
-
-                console.log('Elementos encontrados para teste:', possiveisElementos.length);
-
-                for (const elemento of possiveisElementos) {
-                    if (!elemento) continue;
-
-                    // Procura pelo dropdown associado
-                    let dropdown = null;
-
-                    // Métodos para encontrar o dropdown
-                    const metodosDropdown = [
-                        // Por aria-controls
-                        () => elemento.getAttribute('aria-controls') ?
-                            document.getElementById(elemento.getAttribute('aria-controls')) : null,
-                        // Por data-bs-target  
-                        () => elemento.getAttribute('data-bs-target') ?
-                            document.querySelector(elemento.getAttribute('data-bs-target')) : null,
-                        // Próximo elemento com classe dropdown
-                        () => elemento.nextElementSibling?.classList.contains('dropdown-menu') ?
-                            elemento.nextElementSibling : null,
-                        // Filho direto com classe dropdown
-                        () => elemento.querySelector('.dropdown-menu'),
-                        // Irmão com classe dropdown
-                        () => elemento.parentNode?.querySelector('.dropdown-menu'),
-                        // Por posição (elemento abaixo do botão)
-                        () => {
-                            const rect = elemento.getBoundingClientRect();
-                            const elementoAbaixo = document.elementFromPoint(
-                                rect.left + rect.width / 2,
-                                rect.bottom + 10
-                            );
-                            return elementoAbaixo?.closest('.dropdown-menu');
-                        }
-                    ];
-
-                    // Tenta cada método para encontrar o dropdown
-                    for (const metodo of metodosDropdown) {
-                        try {
-                            dropdown = metodo();
-                            if (dropdown) break;
-                        } catch (e) {
-                            // Ignora erros e continua tentando
-                        }
-                    }
-
-                    // Se encontrou um par válido, configura
-                    if (dropdown && elemento !== dropdown) {
-                        console.log('✓ Configurando dropdown do usuário:', elemento, dropdown);
-
-                        // Remove listeners anteriores se existirem
-                        elemento.removeEventListener('click', handleUserMenuClick);
-                        document.removeEventListener('click', handleDocumentClick);
-
-                        // Adiciona novos listeners
-                        elemento.addEventListener('click', handleUserMenuClick);
-                        document.addEventListener('click', handleDocumentClick);
-
-                        // Armazena referências globais
-                        window.userMenuElement = elemento;
-                        window.userDropdownElement = dropdown;
-
-                        return true; // Sucesso
-                    }
-                }
-
-                return false; // Não encontrou
-            }
-
-            // Handlers para o menu
-            function handleUserMenuClick(e) {
-                e.preventDefault();
-                e.stopPropagation();
-
-                if (window.userDropdownElement) {
-                    const isVisible = window.userDropdownElement.classList.contains('show');
-
-                    // Fecha todos os dropdowns primeiro
-                    document.querySelectorAll('.dropdown-menu.show').forEach(menu => {
-                        menu.classList.remove('show');
-                    });
-
-                    // Alterna o estado do dropdown atual
-                    if (!isVisible) {
-                        window.userDropdownElement.classList.add('show');
-                        window.userDropdownElement.style.display = 'block';
-                    }
-                }
-            }
-
-            function handleDocumentClick(e) {
-                if (window.userDropdownElement &&
-                    !window.userMenuElement?.contains(e.target) &&
-                    !window.userDropdownElement.contains(e.target)) {
-                    window.userDropdownElement.classList.remove('show');
-                    window.userDropdownElement.style.display = '';
-                }
-            }
-
-            // Tenta configurar imediatamente
-            if (!tentarConfigurarDropdown()) {
-                // Se não conseguiu, tenta novamente após um delay
-                setTimeout(() => {
-                    if (!tentarConfigurarDropdown()) {
-                        // Última tentativa após mais tempo
-                        setTimeout(() => {
-                            if (!tentarConfigurarDropdown()) {
-                                console.log('⚠ Não foi possível configurar o dropdown do usuário automaticamente');
-                                console.log('💡 Verificar se o HeaderComponent está usando data-bs-toggle="dropdown"');
-                            }
-                        }, 2000);
-                    }
-                }, 1000);
-            }
-
-            // Também configura dropdowns padrão do Bootstrap como fallback
-            setTimeout(() => {
-                if (typeof bootstrap !== 'undefined') {
-                    // Reinicializa dropdowns do Bootstrap
-                    const dropdownElementList = [].slice.call(document.querySelectorAll('[data-bs-toggle="dropdown"]'));
-                    dropdownElementList.map(function (dropdownToggleEl) {
-                        return new bootstrap.Dropdown(dropdownToggleEl);
-                    });
-                    console.log('✓ Dropdowns do Bootstrap reinicializados');
-                }
-            }, 1500);
-        }
-
-        // Carregar estatísticas
-        function carregarEstatisticas() {
-            $.get('../api/documentos/documentos_estatisticas.php', function (response) {
-                if (response.status === 'success') {
-                    // Atualizar badges se necessário
-                    if (response.data.fluxo && response.data.fluxo.por_status) {
-                        let totalFluxo = 0;
-                        response.data.fluxo.por_status.forEach(status => {
-                            totalFluxo += parseInt(status.total);
-                        });
-                        $('#badgeFluxo').text(totalFluxo);
-                    }
-                }
-            });
-        }
-
-        // Carregar tipos de documentos
-        function carregarTiposDocumentos() {
-            $.get('../api/documentos/documentos_tipos.php', function (response) {
-                if (response.status === 'success') {
-                    tiposDocumentos = response.tipos_documentos;
-
-                    // Preencher select de filtros
-                    const filtroTipo = $('#filtroTipo');
-                    filtroTipo.empty().append('<option value="">Todos</option>');
-
-                    tiposDocumentos.forEach(tipo => {
-                        if (tipo.codigo !== 'ficha_associacao') { // Não mostrar ficha no filtro geral
-                            filtroTipo.append(`<option value="${tipo.codigo}">${tipo.nome}</option>`);
-                        }
-                    });
-                }
-            });
-        }
 
         // Carregar documentos em fluxo
         function carregarDocumentosFluxo(filtros = {}) {
@@ -1661,7 +1098,7 @@ $headerComponent = HeaderComponent::create([
                         <div class="empty-state">
                             <i class="fas fa-exchange-alt"></i>
                             <h5>Nenhum documento em fluxo</h5>
-                            <p>Faça upload de fichas de associação para iniciar o processo</p>
+                            <p>Os documentos anexados durante o pré-cadastro aparecerão aqui</p>
                         </div>
                     </div>
                 `);
@@ -1682,8 +1119,8 @@ $headerComponent = HeaderComponent::create([
                                 <i class="fas fa-file-pdf"></i>
                             </div>
                             <div class="document-info">
-                                <h6 class="document-title">Ficha de Associação</h6>
-                                <p class="document-subtitle">${doc.tipo_origem === 'VIRTUAL' ? 'Virtual' : 'Físico'}</p>
+                                <h6 class="document-title">Ficha de Filiação</h6>
+                                <p class="document-subtitle">${doc.tipo_origem === 'VIRTUAL' ? 'Gerada no Sistema' : 'Digitalizada'}</p>
                             </div>
                         </div>
                         
@@ -1698,11 +1135,11 @@ $headerComponent = HeaderComponent::create([
                             </div>
                             <div class="meta-item">
                                 <i class="fas fa-building"></i>
-                                <span>${doc.departamento_atual_nome || 'Não definido'}</span>
+                                <span>${doc.departamento_atual_nome || 'Comercial'}</span>
                             </div>
                             <div class="meta-item">
                                 <i class="fas fa-calendar"></i>
-                                <span>${formatarData(doc.data_upload)}</span>
+                                <span>Cadastrado em ${formatarData(doc.data_upload)}</span>
                             </div>
                             ${doc.dias_em_processo > 0 ? `
                                 <div class="meta-item">
@@ -1748,7 +1185,7 @@ $headerComponent = HeaderComponent::create([
                         <div class="document-actions">
                             <button class="btn-modern btn-primary btn-sm" onclick="downloadDocumento(${doc.id})" title="Download">
                                 <i class="fas fa-download"></i>
-                                Download
+                                Baixar
                             </button>
                             
                             ${getAcoesFluxo(doc)}
@@ -1774,13 +1211,13 @@ $headerComponent = HeaderComponent::create([
                     acoes = `
                         <button class="btn-modern btn-warning btn-sm" onclick="enviarParaAssinatura(${doc.id})" title="Enviar para Assinatura">
                             <i class="fas fa-paper-plane"></i>
-                            Enviar p/ Assinatura
+                            Enviar
                         </button>
                     `;
                     break;
 
                 case 'AGUARDANDO_ASSINATURA':
-                    // Verificar se usuário tem permissão para assinar
+                    // Verificar se usuário tem permissão para assinar (apenas presidência)
                     <?php if ($auth->isDiretor() || $usuarioLogado['departamento_id'] == 2): ?>
                         acoes = `
                         <button class="btn-modern btn-success btn-sm" onclick="abrirModalAssinatura(${doc.id})" title="Assinar">
@@ -1793,7 +1230,7 @@ $headerComponent = HeaderComponent::create([
 
                 case 'ASSINADO':
                     acoes = `
-                        <button class="btn-modern btn-success btn-sm" onclick="finalizarProcesso(${doc.id})" title="Finalizar">
+                        <button class="btn-modern btn-info btn-sm" onclick="finalizarProcesso(${doc.id})" title="Finalizar">
                             <i class="fas fa-flag-checkered"></i>
                             Finalizar
                         </button>
@@ -1829,8 +1266,7 @@ $headerComponent = HeaderComponent::create([
                     success: function (response) {
                         if (response.status === 'success') {
                             alert('Documento enviado para assinatura com sucesso!');
-                            carregarDocumentosFluxo();
-                            carregarEstatisticas();
+                            carregarDocumentosFluxo(filtrosAtuais);
                         } else {
                             alert('Erro: ' + response.message);
                         }
@@ -1858,7 +1294,7 @@ $headerComponent = HeaderComponent::create([
 
             const formData = new FormData();
             formData.append('documento_id', documentoId);
-            formData.append('observacao', observacao);
+            formData.append('observacao', observacao || 'Documento assinado pela presidência');
 
             if (arquivoAssinaturaSelecionado) {
                 formData.append('arquivo_assinado', arquivoAssinaturaSelecionado);
@@ -1880,8 +1316,7 @@ $headerComponent = HeaderComponent::create([
                     if (response.status === 'success') {
                         alert('Documento assinado com sucesso!');
                         $('#assinaturaModal').modal('hide');
-                        carregarDocumentosFluxo();
-                        carregarEstatisticas();
+                        carregarDocumentosFluxo(filtrosAtuais);
                     } else {
                         alert('Erro: ' + response.message);
                     }
@@ -1898,20 +1333,19 @@ $headerComponent = HeaderComponent::create([
 
         // Finalizar processo
         function finalizarProcesso(documentoId) {
-            if (confirm('Deseja finalizar o processo deste documento?\n\nO documento será marcado como concluído.')) {
+            if (confirm('Deseja finalizar o processo deste documento?\n\nO documento retornará ao comercial e o pré-cadastro poderá ser aprovado.')) {
                 $.ajax({
                     url: '../api/documentos/documentos_finalizar.php',
                     type: 'POST',
                     contentType: 'application/json',
                     data: JSON.stringify({
                         documento_id: documentoId,
-                        observacao: 'Processo finalizado'
+                        observacao: 'Processo finalizado - Documento pronto para aprovação do pré-cadastro'
                     }),
                     success: function (response) {
                         if (response.status === 'success') {
-                            alert('Processo finalizado com sucesso!');
-                            carregarDocumentosFluxo();
-                            carregarEstatisticas();
+                            alert('Processo finalizado com sucesso!\n\nO pré-cadastro já pode ser aprovado.');
+                            carregarDocumentosFluxo(filtrosAtuais);
                         } else {
                             alert('Erro: ' + response.message);
                         }
@@ -1972,40 +1406,12 @@ $headerComponent = HeaderComponent::create([
             container.append(timeline);
         }
 
-        // Configurar área de upload de ficha
-        function configurarUploadFicha() {
-            const uploadArea = document.getElementById('uploadFichaArea');
-            const fileInput = document.getElementById('fichaFileInput');
-
-            // Clique para selecionar
-            uploadArea.addEventListener('click', () => fileInput.click());
-
-            // Arrastar e soltar
-            uploadArea.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                uploadArea.classList.add('dragging');
-            });
-
-            uploadArea.addEventListener('dragleave', () => {
-                uploadArea.classList.remove('dragging');
-            });
-
-            uploadArea.addEventListener('drop', (e) => {
-                e.preventDefault();
-                uploadArea.classList.remove('dragging');
-                handleFichaFile(e.dataTransfer.files[0]);
-            });
-
-            // Seleção de arquivo
-            fileInput.addEventListener('change', (e) => {
-                handleFichaFile(e.target.files[0]);
-            });
-        }
-
         // Configurar área de upload de assinatura
         function configurarUploadAssinatura() {
             const uploadArea = document.getElementById('uploadAssinaturaArea');
             const fileInput = document.getElementById('assinaturaFileInput');
+
+            if (!uploadArea || !fileInput) return;
 
             // Clique para selecionar
             uploadArea.addEventListener('click', () => fileInput.click());
@@ -2030,39 +1436,6 @@ $headerComponent = HeaderComponent::create([
             fileInput.addEventListener('change', (e) => {
                 handleAssinaturaFile(e.target.files[0]);
             });
-        }
-
-        // Processar arquivo de ficha
-        function handleFichaFile(file) {
-            if (!file) return;
-
-            // Verificar se é PDF
-            if (file.type !== 'application/pdf') {
-                alert('Por favor, selecione apenas arquivos PDF');
-                return;
-            }
-
-            arquivoFichaSelecionado = file;
-
-            const filesList = $('#fichaFilesList');
-            filesList.empty();
-
-            filesList.append(`
-                <div class="file-item">
-                    <div class="file-item-info">
-                        <div class="file-item-icon">
-                            <i class="fas fa-file-pdf"></i>
-                        </div>
-                        <div>
-                            <div class="file-item-name">${file.name}</div>
-                            <div class="file-item-size">${formatBytes(file.size)}</div>
-                        </div>
-                    </div>
-                    <button type="button" class="btn-remove" onclick="removerArquivoFicha()">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-            `);
         }
 
         // Processar arquivo de assinatura
@@ -2098,13 +1471,6 @@ $headerComponent = HeaderComponent::create([
             `);
         }
 
-        // Remover arquivo de ficha
-        function removerArquivoFicha() {
-            arquivoFichaSelecionado = null;
-            $('#fichaFilesList').empty();
-            $('#fichaFileInput').val('');
-        }
-
         // Remover arquivo de assinatura
         function removerArquivoAssinatura() {
             arquivoAssinaturaSelecionado = null;
@@ -2112,283 +1478,32 @@ $headerComponent = HeaderComponent::create([
             $('#assinaturaFileInput').val('');
         }
 
-        // Realizar upload de ficha
-        function realizarUploadFicha() {
-            const associadoId = $('#fichaAssociadoSelect').val();
-            const tipoOrigem = $('input[name="tipoOrigem"]:checked').val();
-            const observacao = $('#fichaObservacao').val();
+        // Aplicar filtros
+        function aplicarFiltros() {
+            filtrosAtuais = {};
 
-            if (!associadoId || !arquivoFichaSelecionado) {
-                alert('Por favor, preencha todos os campos obrigatórios');
-                return;
-            }
+            const status = $('#filtroStatusFluxo').val();
+            if (status) filtrosAtuais.status = status;
 
-            const formData = new FormData();
-            formData.append('associado_id', associadoId);
-            formData.append('tipo_origem', tipoOrigem);
-            formData.append('observacao', observacao);
-            formData.append('documento', arquivoFichaSelecionado);
+            const busca = $('#filtroBuscaFluxo').val().trim();
+            if (busca) filtrosAtuais.busca = busca;
 
-            // Mostra loading no botão
-            const btnUpload = event.target;
-            const btnText = btnUpload.innerHTML;
-            btnUpload.disabled = true;
-            btnUpload.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Enviando...';
+            const periodo = $('#filtroPeriodo').val();
+            if (periodo) filtrosAtuais.periodo = periodo;
 
-            $.ajax({
-                url: '../api/documentos/documentos_ficha_upload.php',
-                type: 'POST',
-                data: formData,
-                processData: false,
-                contentType: false,
-                success: function (response) {
-                    if (response.status === 'success') {
-                        alert('Ficha de associação enviada com sucesso!\n\nEla seguirá o fluxo de assinatura.');
-                        $('#uploadFichaModal').modal('hide');
-                        $('#uploadFichaForm')[0].reset();
-                        arquivoFichaSelecionado = null;
-                        $('#fichaFilesList').empty();
-                        carregarDocumentosFluxo();
-                        carregarEstatisticas();
-                    } else {
-                        alert('Erro: ' + response.message);
-                    }
-                },
-                error: function () {
-                    alert('Erro ao fazer upload. Por favor, tente novamente.');
-                },
-                complete: function () {
-                    btnUpload.disabled = false;
-                    btnUpload.innerHTML = btnText;
-                }
-            });
+            carregarDocumentosFluxo(filtrosAtuais);
         }
 
-        // Gerar ficha virtual
-        function gerarFichaVirtual() {
-            const associadoId = $('#virtualAssociadoSelect').val();
-
-            if (!associadoId) {
-                alert('Por favor, selecione um associado');
-                return;
-            }
-
-            if (!confirm('Confirma a geração da ficha virtual?\n\nA ficha será gerada com os dados atuais do associado.')) {
-                return;
-            }
-
-            // Mostra loading no botão
-            const btnGerar = event.target;
-            const btnText = btnGerar.innerHTML;
-            btnGerar.disabled = true;
-            btnGerar.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Gerando...';
-
-            $.ajax({
-                url: '../api/documentos/documentos_gerar_ficha_virtual.php',
-                type: 'POST',
-                contentType: 'application/json',
-                data: JSON.stringify({ associado_id: associadoId }),
-                success: function (response) {
-                    if (response.status === 'success') {
-                        alert('Ficha virtual gerada com sucesso!\n\nAgora você pode fazer o upload dela.');
-                        $('#fichaVirtualModal').modal('hide');
-
-                        // Abrir modal de upload com o associado já selecionado
-                        $('#fichaAssociadoSelect').val(associadoId);
-                        $('input[name="tipoOrigem"][value="VIRTUAL"]').prop('checked', true);
-                        $('#uploadFichaModal').modal('show');
-                    } else {
-                        alert('Erro: ' + response.message);
-                    }
-                },
-                error: function () {
-                    alert('Erro ao gerar ficha virtual');
-                },
-                complete: function () {
-                    btnGerar.disabled = false;
-                    btnGerar.innerHTML = btnText;
-                }
-            });
-        }
-
-        // Atualizar preview do associado
-        $('#virtualAssociadoSelect').on('change', function () {
-            const associadoId = $(this).val();
-
-            if (!associadoId) {
-                $('#previewAssociado').addClass('d-none');
-                return;
-            }
-
-            // Buscar dados do associado selecionado
-            const option = $(this).find('option:selected');
-            const texto = option.text();
-
-            // Extrair nome e CPF do texto da opção
-            const partes = texto.split(' - CPF: ');
-            const nome = partes[0];
-            const cpf = partes[1] || '';
-
-            $('#previewNome').text(nome);
-            $('#previewCPF').text(cpf);
-            $('#previewRG').text('-'); // Seria necessário buscar via API
-            $('#previewEmail').text('-'); // Seria necessário buscar via API
-
-            $('#previewAssociado').removeClass('d-none');
-        });
-
-        // Carregar associados
-        function carregarAssociados() {
-            $.get('../api/carregar_associados.php', function (response) {
-                if (response.status === 'success') {
-                    const selectFicha = $('#fichaAssociadoSelect');
-                    const selectVirtual = $('#virtualAssociadoSelect');
-
-                    selectFicha.empty().append('<option value="">Selecione o associado</option>');
-                    selectVirtual.empty().append('<option value="">Selecione o associado</option>');
-
-                    response.dados.forEach(associado => {
-                        const cpfFormatado = formatarCPF(associado.cpf);
-                        const option = `<option value="${associado.id}">${associado.nome} - CPF: ${cpfFormatado}</option>`;
-                        selectFicha.append(option);
-                        selectVirtual.append(option);
-                    });
-                }
-            });
-        }
-
-        // Carregar documentos (tab todos)
-        function carregarDocumentos(filtros = {}, containerId = 'documentosList') {
-            const container = $('#' + containerId);
-
-            // Mostra loading
-            container.html(`
-                <div class="col-12 text-center py-5">
-                    <div class="loading-spinner mb-3"></div>
-                    <p class="text-muted">Carregando documentos...</p>
-                </div>
-            `);
-
-            $.get('../api/documentos/documentos_listar.php', filtros, function (response) {
-                if (response.status === 'success') {
-                    renderizarDocumentos(response.data, containerId);
-                } else {
-                    container.html(`
-                        <div class="col-12">
-                            <div class="empty-state">
-                                <i class="fas fa-exclamation-triangle"></i>
-                                <h5>Erro ao carregar documentos</h5>
-                                <p>${response.message || 'Tente novamente mais tarde'}</p>
-                            </div>
-                        </div>
-                    `);
-                }
-            }).fail(function () {
-                container.html(`
-                    <div class="col-12">
-                        <div class="empty-state">
-                            <i class="fas fa-wifi-slash"></i>
-                            <h5>Erro de conexão</h5>
-                            <p>Verifique sua conexão com a internet</p>
-                        </div>
-                    </div>
-                `);
-            });
-        }
-
-        // Renderizar documentos
-        function renderizarDocumentos(documentos, containerId) {
-            const container = $('#' + containerId);
-            container.empty();
-
-            if (documentos.length === 0) {
-                container.html(`
-                    <div class="col-12">
-                        <div class="empty-state">
-                            <i class="fas fa-folder-open"></i>
-                            <h5>Nenhum documento encontrado</h5>
-                            <p>Não há documentos com os filtros selecionados</p>
-                        </div>
-                    </div>
-                `);
-                return;
-            }
-
-            documentos.forEach(doc => {
-                // Pular fichas de associação na listagem geral
-                if (doc.tipo_documento === 'ficha_associacao') return;
-
-                const iconClass = getIconClass(doc.extensao);
-                const badge = doc.verificado == 1
-                    ? '<span class="status-badge assinado"><i class="fas fa-check me-1"></i>Verificado</span>'
-                    : '<span class="status-badge aguardando-assinatura"><i class="fas fa-clock me-1"></i>Pendente</span>';
-
-                const cardHtml = `
-                    <div class="document-card" data-aos="fade-up">
-                        ${badge}
-                        <div class="document-header">
-                            <div class="document-icon ${iconClass}">
-                                <i class="fas fa-file-${iconClass}"></i>
-                            </div>
-                            <div class="document-info">
-                                <h6 class="document-title">${doc.tipo_documento_nome}</h6>
-                                <p class="document-subtitle">${doc.nome_arquivo}</p>
-                            </div>
-                        </div>
-                        
-                        <div class="document-meta">
-                            <div class="meta-item">
-                                <i class="fas fa-user"></i>
-                                <span>${doc.associado_nome}</span>
-                            </div>
-                            <div class="meta-item">
-                                <i class="fas fa-calendar"></i>
-                                <span>${formatarData(doc.data_upload)}</span>
-                            </div>
-                            <div class="meta-item">
-                                <i class="fas fa-file"></i>
-                                <span>${doc.tamanho_formatado}</span>
-                            </div>
-                            ${doc.observacao ? `
-                                <div class="meta-item">
-                                    <i class="fas fa-comment"></i>
-                                    <span>${doc.observacao}</span>
-                                </div>
-                            ` : ''}
-                        </div>
-                        
-                        <div class="document-actions">
-                            <button class="btn-modern btn-primary btn-sm" onclick="downloadDocumento(${doc.id})" title="Download">
-                                <i class="fas fa-download"></i>
-                                Download
-                            </button>
-                            ${doc.verificado == 0 ? `
-                                <button class="btn-modern btn-success btn-sm" onclick="verificarDocumento(${doc.id})" title="Verificar">
-                                    <i class="fas fa-check"></i>
-                                    Verificar
-                                </button>
-                            ` : ''}
-                            <button class="btn-modern btn-danger btn-sm" onclick="excluirDocumento(${doc.id})" title="Excluir">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </div>
-                    </div>
-                `;
-
-                container.append(cardHtml);
-            });
+        // Limpar filtros
+        function limparFiltros() {
+            $('#filtroStatusFluxo').val('');
+            $('#filtroBuscaFluxo').val('');
+            $('#filtroPeriodo').val('');
+            filtrosAtuais = {};
+            carregarDocumentosFluxo();
         }
 
         // Funções auxiliares
-        function getIconClass(extensao) {
-            const ext = extensao?.toLowerCase();
-            if (['jpg', 'jpeg', 'png', 'gif'].includes(ext)) return 'image';
-            if (ext === 'pdf') return 'pdf';
-            if (['doc', 'docx'].includes(ext)) return 'word';
-            if (['xls', 'xlsx'].includes(ext)) return 'excel';
-            return 'alt';
-        }
-
         function formatarData(dataStr) {
             if (!dataStr) return '-';
             const data = new Date(dataStr);
@@ -2420,104 +1535,6 @@ $headerComponent = HeaderComponent::create([
             window.open('../api/documentos/documentos_download.php?id=' + id, '_blank');
         }
 
-        function verificarDocumento(id) {
-            if (confirm('Confirma a verificação deste documento?')) {
-                $.ajax({
-                    url: '../api/documentos/documentos_verificar.php',
-                    type: 'POST',
-                    contentType: 'application/json',
-                    data: JSON.stringify({ documento_id: id }),
-                    success: function (response) {
-                        if (response.status === 'success') {
-                            alert('Documento verificado com sucesso!');
-                            carregarDocumentos();
-                            carregarEstatisticas();
-                        } else {
-                            alert('Erro: ' + response.message);
-                        }
-                    },
-                    error: function () {
-                        alert('Erro ao verificar documento');
-                    }
-                });
-            }
-        }
-
-        function excluirDocumento(id) {
-            if (confirm('Tem certeza que deseja excluir este documento?\n\nEsta ação não pode ser desfeita!')) {
-                $.ajax({
-                    url: '../api/documentos/documentos_excluir.php?id=' + id,
-                    type: 'DELETE',
-                    success: function (response) {
-                        if (response.status === 'success') {
-                            alert('Documento excluído com sucesso!');
-                            carregarDocumentos();
-                            carregarEstatisticas();
-                        } else {
-                            alert('Erro: ' + response.message);
-                        }
-                    },
-                    error: function () {
-                        alert('Erro ao excluir documento');
-                    }
-                });
-            }
-        }
-
-        // Aplicar filtros do fluxo
-        function aplicarFiltrosFluxo() {
-            const filtros = {};
-
-            const status = $('#filtroStatusFluxo').val();
-            if (status) filtros.status = status;
-
-            const origem = $('#filtroOrigem').val();
-            if (origem) filtros.origem = origem;
-
-            const busca = $('#filtroBuscaFluxo').val().trim();
-            if (busca) filtros.busca = busca;
-
-            carregarDocumentosFluxo(filtros);
-        }
-
-        // Limpar filtros do fluxo
-        function limparFiltrosFluxo() {
-            $('#filtroStatusFluxo').val('');
-            $('#filtroOrigem').val('');
-            $('#filtroBuscaFluxo').val('');
-            carregarDocumentosFluxo();
-        }
-
-        // Aplicar filtros gerais
-        function aplicarFiltros() {
-            const filtros = {};
-
-            const busca = $('#filtroAssociado').val().trim();
-            if (busca) filtros.busca = busca;
-
-            const tipo = $('#filtroTipo').val();
-            if (tipo) filtros.tipo_documento = tipo;
-
-            const status = $('#filtroStatus').val();
-            if (status !== '') {
-                filtros.verificado = status === '1' ? 'sim' : 'nao';
-            }
-
-            const periodo = $('#filtroPeriodo').val();
-            if (periodo) filtros.periodo = periodo;
-
-            carregarDocumentos(filtros);
-        }
-
-        // Limpar filtros gerais
-        function limparFiltros() {
-            $('#filtroAssociado').val('');
-            $('#filtroTipo').val('');
-            $('#filtroStatus').val('');
-            $('#filtroPeriodo').val('');
-            carregarDocumentos();
-        }
-
         // Fecha modal quando pressiona ESC
         $(document).on('keydown', function (e) {
             if (e.key === 'Escape') {
@@ -2526,24 +1543,18 @@ $headerComponent = HeaderComponent::create([
         });
 
         // Limpa formulários quando modais são fechados
-        $('#uploadFichaModal').on('hidden.bs.modal', function () {
-            $('#uploadFichaForm')[0].reset();
-            arquivoFichaSelecionado = null;
-            $('#fichaFilesList').empty();
-        });
-
-        $('#fichaVirtualModal').on('hidden.bs.modal', function () {
-            $('#fichaVirtualForm')[0].reset();
-            $('#previewAssociado').addClass('d-none');
-        });
-
         $('#assinaturaModal').on('hidden.bs.modal', function () {
             $('#assinaturaForm')[0].reset();
             arquivoAssinaturaSelecionado = null;
             $('#assinaturaFilesList').empty();
         });
 
-        console.log('✓ Sistema de documentos com fluxo de assinatura carregado!');
+        // Auto-refresh a cada 30 segundos
+        setInterval(function() {
+            carregarDocumentosFluxo(filtrosAtuais);
+        }, 30000);
+
+        console.log('✓ Sistema de fluxo de assinatura carregado!');
     </script>
 
 </body>

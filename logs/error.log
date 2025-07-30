@@ -91,3 +91,580 @@ Stack trace:
 [28-Jul-2025 10:36:44 America/Sao_Paulo] Regras de contribuição encontradas: 16
 [28-Jul-2025 10:36:44 America/Sao_Paulo] Tipos de associado encontrados: 8
 [28-Jul-2025 10:36:44 America/Sao_Paulo] ✓ Dados preparados: 2 serviços, 16 regras
+[28-Jul-2025 10:43:43 America/Sao_Paulo] PHP Deprecated:  htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated in /var/www/html/matheus/comercial/classes/Documentos.php on line 391
+[28-Jul-2025 10:43:43 America/Sao_Paulo] PHP Stack trace:
+[28-Jul-2025 10:43:43 America/Sao_Paulo] PHP   1. {main}() /var/www/html/matheus/comercial/api/documentos/documentos_gerar_ficha_virtual.php:0
+[28-Jul-2025 10:43:43 America/Sao_Paulo] PHP   2. Documentos->gerarFichaVirtual($associadoId = 16843) /var/www/html/matheus/comercial/api/documentos/documentos_gerar_ficha_virtual.php:32
+[28-Jul-2025 10:43:43 America/Sao_Paulo] PHP   3. htmlspecialchars($string = NULL) /var/www/html/matheus/comercial/classes/Documentos.php:391
+[28-Jul-2025 10:43:43 America/Sao_Paulo] PHP Deprecated:  htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated in /var/www/html/matheus/comercial/classes/Documentos.php on line 414
+[28-Jul-2025 10:43:43 America/Sao_Paulo] PHP Stack trace:
+[28-Jul-2025 10:43:43 America/Sao_Paulo] PHP   1. {main}() /var/www/html/matheus/comercial/api/documentos/documentos_gerar_ficha_virtual.php:0
+[28-Jul-2025 10:43:43 America/Sao_Paulo] PHP   2. Documentos->gerarFichaVirtual($associadoId = 16843) /var/www/html/matheus/comercial/api/documentos/documentos_gerar_ficha_virtual.php:32
+[28-Jul-2025 10:43:43 America/Sao_Paulo] PHP   3. htmlspecialchars($string = NULL) /var/www/html/matheus/comercial/classes/Documentos.php:414
+[28-Jul-2025 10:43:54 America/Sao_Paulo] PHP Deprecated:  htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated in /var/www/html/matheus/comercial/classes/Documentos.php on line 391
+[28-Jul-2025 10:43:54 America/Sao_Paulo] PHP Stack trace:
+[28-Jul-2025 10:43:54 America/Sao_Paulo] PHP   1. {main}() /var/www/html/matheus/comercial/api/documentos/documentos_gerar_ficha_virtual.php:0
+[28-Jul-2025 10:43:54 America/Sao_Paulo] PHP   2. Documentos->gerarFichaVirtual($associadoId = 16843) /var/www/html/matheus/comercial/api/documentos/documentos_gerar_ficha_virtual.php:32
+[28-Jul-2025 10:43:54 America/Sao_Paulo] PHP   3. htmlspecialchars($string = NULL) /var/www/html/matheus/comercial/classes/Documentos.php:391
+[28-Jul-2025 10:43:54 America/Sao_Paulo] PHP Deprecated:  htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated in /var/www/html/matheus/comercial/classes/Documentos.php on line 414
+[28-Jul-2025 10:43:54 America/Sao_Paulo] PHP Stack trace:
+[28-Jul-2025 10:43:54 America/Sao_Paulo] PHP   1. {main}() /var/www/html/matheus/comercial/api/documentos/documentos_gerar_ficha_virtual.php:0
+[28-Jul-2025 10:43:54 America/Sao_Paulo] PHP   2. Documentos->gerarFichaVirtual($associadoId = 16843) /var/www/html/matheus/comercial/api/documentos/documentos_gerar_ficha_virtual.php:32
+[28-Jul-2025 10:43:54 America/Sao_Paulo] PHP   3. htmlspecialchars($string = NULL) /var/www/html/matheus/comercial/classes/Documentos.php:414
+[28-Jul-2025 10:44:35 America/Sao_Paulo] PHP Deprecated:  htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated in /var/www/html/matheus/comercial/classes/Documentos.php on line 391
+[28-Jul-2025 10:44:35 America/Sao_Paulo] PHP Stack trace:
+[28-Jul-2025 10:44:35 America/Sao_Paulo] PHP   1. {main}() /var/www/html/matheus/comercial/api/documentos/documentos_gerar_ficha_virtual.php:0
+[28-Jul-2025 10:44:35 America/Sao_Paulo] PHP   2. Documentos->gerarFichaVirtual($associadoId = 13672) /var/www/html/matheus/comercial/api/documentos/documentos_gerar_ficha_virtual.php:32
+[28-Jul-2025 10:44:35 America/Sao_Paulo] PHP   3. htmlspecialchars($string = NULL) /var/www/html/matheus/comercial/classes/Documentos.php:391
+[28-Jul-2025 10:44:35 America/Sao_Paulo] PHP Deprecated:  htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated in /var/www/html/matheus/comercial/classes/Documentos.php on line 414
+[28-Jul-2025 10:44:35 America/Sao_Paulo] PHP Stack trace:
+[28-Jul-2025 10:44:35 America/Sao_Paulo] PHP   1. {main}() /var/www/html/matheus/comercial/api/documentos/documentos_gerar_ficha_virtual.php:0
+[28-Jul-2025 10:44:35 America/Sao_Paulo] PHP   2. Documentos->gerarFichaVirtual($associadoId = 13672) /var/www/html/matheus/comercial/api/documentos/documentos_gerar_ficha_virtual.php:32
+[28-Jul-2025 10:44:35 America/Sao_Paulo] PHP   3. htmlspecialchars($string = NULL) /var/www/html/matheus/comercial/classes/Documentos.php:414
+[28-Jul-2025 10:47:46 America/Sao_Paulo] PHP Deprecated:  htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated in /var/www/html/matheus/comercial/classes/Documentos.php on line 391
+[28-Jul-2025 10:47:46 America/Sao_Paulo] PHP Stack trace:
+[28-Jul-2025 10:47:46 America/Sao_Paulo] PHP   1. {main}() /var/www/html/matheus/comercial/api/documentos/documentos_gerar_ficha_virtual.php:0
+[28-Jul-2025 10:47:46 America/Sao_Paulo] PHP   2. Documentos->gerarFichaVirtual($associadoId = 13672) /var/www/html/matheus/comercial/api/documentos/documentos_gerar_ficha_virtual.php:38
+[28-Jul-2025 10:47:46 America/Sao_Paulo] PHP   3. htmlspecialchars($string = NULL) /var/www/html/matheus/comercial/classes/Documentos.php:391
+[28-Jul-2025 10:47:46 America/Sao_Paulo] PHP Deprecated:  htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated in /var/www/html/matheus/comercial/classes/Documentos.php on line 414
+[28-Jul-2025 10:47:46 America/Sao_Paulo] PHP Stack trace:
+[28-Jul-2025 10:47:46 America/Sao_Paulo] PHP   1. {main}() /var/www/html/matheus/comercial/api/documentos/documentos_gerar_ficha_virtual.php:0
+[28-Jul-2025 10:47:46 America/Sao_Paulo] PHP   2. Documentos->gerarFichaVirtual($associadoId = 13672) /var/www/html/matheus/comercial/api/documentos/documentos_gerar_ficha_virtual.php:38
+[28-Jul-2025 10:47:46 America/Sao_Paulo] PHP   3. htmlspecialchars($string = NULL) /var/www/html/matheus/comercial/classes/Documentos.php:414
+[28-Jul-2025 10:47:58 America/Sao_Paulo] PHP Deprecated:  htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated in /var/www/html/matheus/comercial/classes/Documentos.php on line 391
+[28-Jul-2025 10:47:58 America/Sao_Paulo] PHP Stack trace:
+[28-Jul-2025 10:47:58 America/Sao_Paulo] PHP   1. {main}() /var/www/html/matheus/comercial/api/documentos/documentos_gerar_ficha_virtual.php:0
+[28-Jul-2025 10:47:58 America/Sao_Paulo] PHP   2. Documentos->gerarFichaVirtual($associadoId = 16840) /var/www/html/matheus/comercial/api/documentos/documentos_gerar_ficha_virtual.php:38
+[28-Jul-2025 10:47:58 America/Sao_Paulo] PHP   3. htmlspecialchars($string = NULL) /var/www/html/matheus/comercial/classes/Documentos.php:391
+[28-Jul-2025 10:47:58 America/Sao_Paulo] PHP Deprecated:  htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated in /var/www/html/matheus/comercial/classes/Documentos.php on line 414
+[28-Jul-2025 10:47:58 America/Sao_Paulo] PHP Stack trace:
+[28-Jul-2025 10:47:58 America/Sao_Paulo] PHP   1. {main}() /var/www/html/matheus/comercial/api/documentos/documentos_gerar_ficha_virtual.php:0
+[28-Jul-2025 10:47:58 America/Sao_Paulo] PHP   2. Documentos->gerarFichaVirtual($associadoId = 16840) /var/www/html/matheus/comercial/api/documentos/documentos_gerar_ficha_virtual.php:38
+[28-Jul-2025 10:47:58 America/Sao_Paulo] PHP   3. htmlspecialchars($string = NULL) /var/www/html/matheus/comercial/classes/Documentos.php:414
+[28-Jul-2025 11:16:39 America/Sao_Paulo] PHP Warning:  The use statement with non-compound name 'TCPDF' has no effect in /var/www/html/matheus/comercial/classes/FichaPDF.php on line 9
+[28-Jul-2025 11:16:39 America/Sao_Paulo] PHP Stack trace:
+[28-Jul-2025 11:16:39 America/Sao_Paulo] PHP   1. {main}() /var/www/html/matheus/comercial/api/documentos/documentos_gerar_ficha_virtual.php:0
+[28-Jul-2025 11:16:39 America/Sao_Paulo] PHP   2. Documentos->gerarFichaVirtual($associadoId = 16845) /var/www/html/matheus/comercial/api/documentos/documentos_gerar_ficha_virtual.php:32
+[28-Jul-2025 11:16:39 America/Sao_Paulo] PHP Warning:  require_once(vendor/autoload.php): Failed to open stream: No such file or directory in /var/www/html/matheus/comercial/classes/FichaPDF.php on line 7
+[28-Jul-2025 11:16:39 America/Sao_Paulo] PHP Stack trace:
+[28-Jul-2025 11:16:39 America/Sao_Paulo] PHP   1. {main}() /var/www/html/matheus/comercial/api/documentos/documentos_gerar_ficha_virtual.php:0
+[28-Jul-2025 11:16:39 America/Sao_Paulo] PHP   2. Documentos->gerarFichaVirtual($associadoId = 16845) /var/www/html/matheus/comercial/api/documentos/documentos_gerar_ficha_virtual.php:32
+[28-Jul-2025 11:16:39 America/Sao_Paulo] PHP   3. require_once() /var/www/html/matheus/comercial/classes/Documentos.php:377
+[28-Jul-2025 11:16:39 America/Sao_Paulo] PHP Fatal error:  Uncaught Error: Failed opening required 'vendor/autoload.php' (include_path='.:/usr/share/php') in /var/www/html/matheus/comercial/classes/FichaPDF.php:7
+Stack trace:
+#0 /var/www/html/matheus/comercial/classes/Documentos.php(377): require_once()
+#1 /var/www/html/matheus/comercial/api/documentos/documentos_gerar_ficha_virtual.php(32): Documentos->gerarFichaVirtual()
+#2 {main}
+  thrown in /var/www/html/matheus/comercial/classes/FichaPDF.php on line 7
+[28-Jul-2025 11:16:51 America/Sao_Paulo] PHP Warning:  require_once(vendor/autoload.php): Failed to open stream: No such file or directory in /var/www/html/matheus/comercial/classes/FichaPDF.php on line 7
+[28-Jul-2025 11:16:51 America/Sao_Paulo] PHP Stack trace:
+[28-Jul-2025 11:16:51 America/Sao_Paulo] PHP   1. {main}() /var/www/html/matheus/comercial/api/documentos/documentos_gerar_ficha_virtual.php:0
+[28-Jul-2025 11:16:51 America/Sao_Paulo] PHP   2. Documentos->gerarFichaVirtual($associadoId = 16845) /var/www/html/matheus/comercial/api/documentos/documentos_gerar_ficha_virtual.php:32
+[28-Jul-2025 11:16:51 America/Sao_Paulo] PHP   3. require_once() /var/www/html/matheus/comercial/classes/Documentos.php:377
+[28-Jul-2025 11:16:51 America/Sao_Paulo] PHP Fatal error:  Uncaught Error: Failed opening required 'vendor/autoload.php' (include_path='.:/usr/share/php') in /var/www/html/matheus/comercial/classes/FichaPDF.php:7
+Stack trace:
+#0 /var/www/html/matheus/comercial/classes/Documentos.php(377): require_once()
+#1 /var/www/html/matheus/comercial/api/documentos/documentos_gerar_ficha_virtual.php(32): Documentos->gerarFichaVirtual()
+#2 {main}
+  thrown in /var/www/html/matheus/comercial/classes/FichaPDF.php on line 7
+[28-Jul-2025 11:20:02 America/Sao_Paulo] PHP Warning:  fopen(file:///var/www/html/matheus/comercial/uploads/documentos/temp/teste_1753712402.pdf): Failed to open stream: No such file or directory in /var/www/html/matheus/comercial/vendor/tecnickcom/tcpdf/include/tcpdf_static.php on line 1839
+[28-Jul-2025 11:20:02 America/Sao_Paulo] PHP Stack trace:
+[28-Jul-2025 11:20:02 America/Sao_Paulo] PHP   1. {main}() /var/www/html/matheus/comercial/setup_permissions.php:0
+[28-Jul-2025 11:20:02 America/Sao_Paulo] PHP   2. FichaPDF->salvarPDF($caminho = '/var/www/html/matheus/comercial/uploads/documentos/temp/teste_1753712402.pdf') /var/www/html/matheus/comercial/setup_permissions.php:154
+[28-Jul-2025 11:20:02 America/Sao_Paulo] PHP   3. TCPDF->Output($name = '/var/www/html/matheus/comercial/uploads/documentos/temp/teste_1753712402.pdf', $dest = 'F') /var/www/html/matheus/comercial/classes/FichaPDF.php:369
+[28-Jul-2025 11:20:02 America/Sao_Paulo] PHP   4. TCPDF_STATIC::fopenLocal($filename = '/var/www/html/matheus/comercial/uploads/documentos/temp/teste_1753712402.pdf', $mode = 'wb') /var/www/html/matheus/comercial/vendor/tecnickcom/tcpdf/tcpdf.php:7815
+[28-Jul-2025 11:20:02 America/Sao_Paulo] PHP   5. fopen($filename = 'file:///var/www/html/matheus/comercial/uploads/documentos/temp/teste_1753712402.pdf', $mode = 'wb') /var/www/html/matheus/comercial/vendor/tecnickcom/tcpdf/include/tcpdf_static.php:1839
+[28-Jul-2025 11:22:22 America/Sao_Paulo] PHP Warning:  require_once(vendor/autoload.php): Failed to open stream: No such file or directory in /var/www/html/matheus/comercial/classes/FichaPDF.php on line 7
+[28-Jul-2025 11:22:22 America/Sao_Paulo] PHP Stack trace:
+[28-Jul-2025 11:22:22 America/Sao_Paulo] PHP   1. {main}() /var/www/html/matheus/comercial/api/documentos/documentos_gerar_ficha_virtual.php:0
+[28-Jul-2025 11:22:22 America/Sao_Paulo] PHP   2. Documentos->gerarFichaVirtual($associadoId = 16845) /var/www/html/matheus/comercial/api/documentos/documentos_gerar_ficha_virtual.php:32
+[28-Jul-2025 11:22:22 America/Sao_Paulo] PHP   3. require_once() /var/www/html/matheus/comercial/classes/Documentos.php:377
+[28-Jul-2025 11:22:22 America/Sao_Paulo] PHP Fatal error:  Uncaught Error: Failed opening required 'vendor/autoload.php' (include_path='.:/usr/share/php') in /var/www/html/matheus/comercial/classes/FichaPDF.php:7
+Stack trace:
+#0 /var/www/html/matheus/comercial/classes/Documentos.php(377): require_once()
+#1 /var/www/html/matheus/comercial/api/documentos/documentos_gerar_ficha_virtual.php(32): Documentos->gerarFichaVirtual()
+#2 {main}
+  thrown in /var/www/html/matheus/comercial/classes/FichaPDF.php on line 7
+[28-Jul-2025 11:23:46 America/Sao_Paulo] PHP Warning:  require_once(vendor/autoload.php): Failed to open stream: No such file or directory in /var/www/html/matheus/comercial/classes/FichaPDF.php on line 7
+[28-Jul-2025 11:23:46 America/Sao_Paulo] PHP Stack trace:
+[28-Jul-2025 11:23:46 America/Sao_Paulo] PHP   1. {main}() /var/www/html/matheus/comercial/api/documentos/documentos_gerar_ficha_virtual.php:0
+[28-Jul-2025 11:23:46 America/Sao_Paulo] PHP   2. Documentos->gerarFichaVirtual($associadoId = 16845) /var/www/html/matheus/comercial/api/documentos/documentos_gerar_ficha_virtual.php:32
+[28-Jul-2025 11:23:46 America/Sao_Paulo] PHP   3. require_once() /var/www/html/matheus/comercial/classes/Documentos.php:377
+[28-Jul-2025 11:23:46 America/Sao_Paulo] PHP Fatal error:  Uncaught Error: Failed opening required 'vendor/autoload.php' (include_path='.:/usr/share/php') in /var/www/html/matheus/comercial/classes/FichaPDF.php:7
+Stack trace:
+#0 /var/www/html/matheus/comercial/classes/Documentos.php(377): require_once()
+#1 /var/www/html/matheus/comercial/api/documentos/documentos_gerar_ficha_virtual.php(32): Documentos->gerarFichaVirtual()
+#2 {main}
+  thrown in /var/www/html/matheus/comercial/classes/FichaPDF.php on line 7
+[28-Jul-2025 11:31:50 America/Sao_Paulo] Login bem-sucedido - Funcionário ID: 112 - IP: 172.16.1.121
+[28-Jul-2025 11:36:21 America/Sao_Paulo] Erro no upload de documento: Erro ao salvar arquivo
+[28-Jul-2025 11:36:21 America/Sao_Paulo] Erro ao gerar ficha virtual: Erro ao salvar arquivo
+[28-Jul-2025 11:37:13 America/Sao_Paulo] Erro no upload de documento: Erro ao salvar arquivo
+[28-Jul-2025 11:37:13 America/Sao_Paulo] Erro ao gerar ficha virtual: Erro ao salvar arquivo
+[28-Jul-2025 11:37:19 America/Sao_Paulo] Erro no upload de documento: Erro ao salvar arquivo
+[28-Jul-2025 11:37:19 America/Sao_Paulo] Erro ao gerar ficha virtual: Erro ao salvar arquivo
+[28-Jul-2025 11:42:32 America/Sao_Paulo] Incluindo: /var/www/html/matheus/comercial/classes/Database.php
+[28-Jul-2025 11:42:32 America/Sao_Paulo] Incluindo: /var/www/html/matheus/comercial/classes/Auth.php
+[28-Jul-2025 11:42:32 America/Sao_Paulo] Incluindo: /var/www/html/matheus/comercial/classes/Documentos.php
+[28-Jul-2025 11:42:32 America/Sao_Paulo] Auth criado
+[28-Jul-2025 11:42:32 America/Sao_Paulo] Usuário autenticado: {"id":116,"nome":"MATHEUS RENATO ARANTES DE MORAIS","email":"matheus.morais@assego.com.br","cargo":"Contrato","departamento_id":15,"departamento_nome":"Tecnologia da informacao","is_diretor":false}
+[28-Jul-2025 11:42:32 America/Sao_Paulo] Documentos instanciado
+[28-Jul-2025 11:42:32 America/Sao_Paulo] Chamando gerarFichaVirtual para associado: 16845
+[28-Jul-2025 11:42:32 America/Sao_Paulo] Erro no upload de documento: Erro ao salvar arquivo
+[28-Jul-2025 11:42:32 America/Sao_Paulo] Erro ao gerar ficha virtual: Erro ao salvar arquivo
+[28-Jul-2025 11:42:32 America/Sao_Paulo] ERRO NA API: Erro ao salvar arquivo
+[28-Jul-2025 11:42:32 America/Sao_Paulo] Stack trace: #0 /var/www/html/matheus/comercial/classes/Documentos.php(61): Documentos->upload()
+#1 /var/www/html/matheus/comercial/classes/Documentos.php(406): Documentos->uploadDocumentoAssociacao()
+#2 /var/www/html/matheus/comercial/api/documentos/documentos_gerar_ficha_virtual.php(101): Documentos->gerarFichaVirtual()
+#3 {main}
+[28-Jul-2025 11:42:32 America/Sao_Paulo] === FIM API GERAR FICHA VIRTUAL (ERRO) ===
+[28-Jul-2025 11:43:44 America/Sao_Paulo] Incluindo: /var/www/html/matheus/comercial/classes/Database.php
+[28-Jul-2025 11:43:44 America/Sao_Paulo] Incluindo: /var/www/html/matheus/comercial/classes/Auth.php
+[28-Jul-2025 11:43:44 America/Sao_Paulo] Incluindo: /var/www/html/matheus/comercial/classes/Documentos.php
+[28-Jul-2025 11:43:44 America/Sao_Paulo] Auth criado
+[28-Jul-2025 11:43:44 America/Sao_Paulo] ERRO NA API: Usuário não autenticado
+[28-Jul-2025 11:43:44 America/Sao_Paulo] Stack trace: #0 {main}
+[28-Jul-2025 11:43:44 America/Sao_Paulo] === FIM API GERAR FICHA VIRTUAL (ERRO) ===
+[28-Jul-2025 11:43:44 America/Sao_Paulo] Incluindo: /var/www/html/matheus/comercial/classes/Database.php
+[28-Jul-2025 11:43:44 America/Sao_Paulo] Incluindo: /var/www/html/matheus/comercial/classes/Auth.php
+[28-Jul-2025 11:43:44 America/Sao_Paulo] Incluindo: /var/www/html/matheus/comercial/classes/Documentos.php
+[28-Jul-2025 11:43:44 America/Sao_Paulo] Auth criado
+[28-Jul-2025 11:43:44 America/Sao_Paulo] ERRO NA API: Usuário não autenticado
+[28-Jul-2025 11:43:44 America/Sao_Paulo] Stack trace: #0 {main}
+[28-Jul-2025 11:43:44 America/Sao_Paulo] === FIM API GERAR FICHA VIRTUAL (ERRO) ===
+[28-Jul-2025 11:43:44 America/Sao_Paulo] === INICIO API GERAR FICHA VIRTUAL ===
+[28-Jul-2025 11:43:44 America/Sao_Paulo] Método: POST
+[28-Jul-2025 11:43:44 America/Sao_Paulo] PHP Deprecated:  Creation of dynamic property MockPhpStream::$context is deprecated in /var/www/html/matheus/comercial/api/documentos/documentos_gerar_ficha_virtual.php on line 37
+[28-Jul-2025 11:43:44 America/Sao_Paulo] PHP Stack trace:
+[28-Jul-2025 11:43:44 America/Sao_Paulo] PHP   1. {main}() /var/www/html/matheus/comercial/setup_permissions.php:0
+[28-Jul-2025 11:43:44 America/Sao_Paulo] PHP   2. include() /var/www/html/matheus/comercial/setup_permissions.php:158
+[28-Jul-2025 11:43:44 America/Sao_Paulo] PHP   3. file_get_contents($filename = 'php://input') /var/www/html/matheus/comercial/api/documentos/documentos_gerar_ficha_virtual.php:37
+[28-Jul-2025 11:43:44 America/Sao_Paulo] Input bruto: {"associado_id":2}
+[28-Jul-2025 11:43:44 America/Sao_Paulo] Input decodificado: Array
+(
+    [associado_id] => 2
+)
+
+[28-Jul-2025 11:43:44 America/Sao_Paulo] Associado ID: 2
+[28-Jul-2025 11:43:44 America/Sao_Paulo] Base path: /var/www/html/matheus/comercial
+[28-Jul-2025 11:43:44 America/Sao_Paulo] Incluindo: /var/www/html/matheus/comercial/config/config.php
+[28-Jul-2025 11:43:44 America/Sao_Paulo] Incluindo: /var/www/html/matheus/comercial/config/database.php
+[28-Jul-2025 11:43:44 America/Sao_Paulo] Incluindo: /var/www/html/matheus/comercial/classes/Database.php
+[28-Jul-2025 11:43:44 America/Sao_Paulo] Incluindo: /var/www/html/matheus/comercial/classes/Auth.php
+[28-Jul-2025 11:43:44 America/Sao_Paulo] PHP Notice:  session_start(): Ignoring session_start() because a session is already active (started from /var/www/html/matheus/comercial/setup_permissions.php on line 136) in /var/www/html/matheus/comercial/classes/Auth.php on line 7
+[28-Jul-2025 11:43:44 America/Sao_Paulo] PHP Stack trace:
+[28-Jul-2025 11:43:44 America/Sao_Paulo] PHP   1. {main}() /var/www/html/matheus/comercial/setup_permissions.php:0
+[28-Jul-2025 11:43:44 America/Sao_Paulo] PHP   2. include() /var/www/html/matheus/comercial/setup_permissions.php:158
+[28-Jul-2025 11:43:44 America/Sao_Paulo] PHP   3. require_once() /var/www/html/matheus/comercial/api/documentos/documentos_gerar_ficha_virtual.php:82
+[28-Jul-2025 11:43:44 America/Sao_Paulo] PHP   4. session_start() /var/www/html/matheus/comercial/classes/Auth.php:7
+[28-Jul-2025 11:43:44 America/Sao_Paulo] Incluindo: /var/www/html/matheus/comercial/classes/Documentos.php
+[28-Jul-2025 11:43:44 America/Sao_Paulo] Auth criado
+[28-Jul-2025 11:43:44 America/Sao_Paulo] Usuário autenticado: {"id":1,"nome":"Teste","email":"matheus.morais@assego.com.br","cargo":"Contrato","departamento_id":1,"departamento_nome":"Tecnologia da informacao","is_diretor":false}
+[28-Jul-2025 11:43:44 America/Sao_Paulo] Documentos instanciado
+[28-Jul-2025 11:43:44 America/Sao_Paulo] Chamando gerarFichaVirtual para associado: 2
+[28-Jul-2025 11:43:44 America/Sao_Paulo] Erro no upload de documento: Erro ao salvar arquivo
+[28-Jul-2025 11:43:44 America/Sao_Paulo] Erro ao gerar ficha virtual: Erro ao salvar arquivo
+[28-Jul-2025 11:43:44 America/Sao_Paulo] ERRO NA API: Erro ao salvar arquivo
+[28-Jul-2025 11:43:44 America/Sao_Paulo] Stack trace: #0 /var/www/html/matheus/comercial/classes/Documentos.php(61): Documentos->upload()
+#1 /var/www/html/matheus/comercial/classes/Documentos.php(406): Documentos->uploadDocumentoAssociacao()
+#2 /var/www/html/matheus/comercial/api/documentos/documentos_gerar_ficha_virtual.php(101): Documentos->gerarFichaVirtual()
+#3 /var/www/html/matheus/comercial/setup_permissions.php(158): include('...')
+#4 {main}
+[28-Jul-2025 11:43:44 America/Sao_Paulo] === FIM API GERAR FICHA VIRTUAL (ERRO) ===
+[28-Jul-2025 11:47:46 America/Sao_Paulo] Incluindo: /var/www/html/matheus/comercial/classes/Database.php
+[28-Jul-2025 11:47:46 America/Sao_Paulo] Incluindo: /var/www/html/matheus/comercial/classes/Auth.php
+[28-Jul-2025 11:47:46 America/Sao_Paulo] Incluindo: /var/www/html/matheus/comercial/classes/Documentos.php
+[28-Jul-2025 11:47:46 America/Sao_Paulo] Auth criado
+[28-Jul-2025 11:47:46 America/Sao_Paulo] Usuário autenticado: {"id":1,"nome":"Teste","email":"matheus.morais@assego.com.br","cargo":"Contrato","departamento_id":1,"departamento_nome":"Tecnologia da informacao","is_diretor":false}
+[28-Jul-2025 11:47:46 America/Sao_Paulo] Documentos instanciado
+[28-Jul-2025 11:47:46 America/Sao_Paulo] Chamando gerarFichaVirtual para associado: 16843
+[28-Jul-2025 11:47:46 America/Sao_Paulo] Erro no upload de documento: Erro ao salvar arquivo
+[28-Jul-2025 11:47:46 America/Sao_Paulo] Erro ao gerar ficha virtual: Erro ao salvar arquivo
+[28-Jul-2025 11:47:46 America/Sao_Paulo] ERRO NA API: Erro ao salvar arquivo
+[28-Jul-2025 11:47:46 America/Sao_Paulo] Stack trace: #0 /var/www/html/matheus/comercial/classes/Documentos.php(61): Documentos->upload()
+#1 /var/www/html/matheus/comercial/classes/Documentos.php(406): Documentos->uploadDocumentoAssociacao()
+#2 /var/www/html/matheus/comercial/api/documentos/documentos_gerar_ficha_virtual.php(101): Documentos->gerarFichaVirtual()
+#3 {main}
+[28-Jul-2025 11:47:46 America/Sao_Paulo] === FIM API GERAR FICHA VIRTUAL (ERRO) ===
+[28-Jul-2025 11:50:35 America/Sao_Paulo] Incluído: config/database.php
+[28-Jul-2025 11:50:35 America/Sao_Paulo] Incluído: classes/Database.php
+[28-Jul-2025 11:50:35 America/Sao_Paulo] Conexão com banco estabelecida
+[28-Jul-2025 11:50:35 America/Sao_Paulo] Associado encontrado: foto
+[28-Jul-2025 11:50:35 America/Sao_Paulo] Dependentes encontrados: 0
+[28-Jul-2025 11:50:35 America/Sao_Paulo] Diretório temporário: /var/www/html/matheus/comercial/uploads/documentos/temp/
+[28-Jul-2025 11:50:35 America/Sao_Paulo] Arquivo PDF de teste criado: /var/www/html/matheus/comercial/uploads/documentos/temp/ficha_virtual_16845_1753714235.pdf
+[28-Jul-2025 11:50:35 America/Sao_Paulo] Documento inserido com ID: 1
+[28-Jul-2025 11:50:35 America/Sao_Paulo] Transação confirmada
+[28-Jul-2025 11:50:35 America/Sao_Paulo] Resposta enviada com sucesso
+[28-Jul-2025 11:50:35 America/Sao_Paulo] === FIM API GERAR FICHA VIRTUAL ===
+[28-Jul-2025 11:52:29 America/Sao_Paulo] Login bem-sucedido - Funcionário ID: 116 - IP: 172.16.1.131
+[28-Jul-2025 11:58:46 America/Sao_Paulo] Incluído: config/database.php
+[28-Jul-2025 11:58:46 America/Sao_Paulo] Incluído: classes/Database.php
+[28-Jul-2025 11:58:46 America/Sao_Paulo] Conexão com banco estabelecida
+[28-Jul-2025 11:58:46 America/Sao_Paulo] Associado encontrado: academia
+[28-Jul-2025 11:58:46 America/Sao_Paulo] Dependentes encontrados: 0
+[28-Jul-2025 11:58:46 America/Sao_Paulo] Tentando gerar PDF com dados do associado
+[28-Jul-2025 11:58:46 America/Sao_Paulo] Diretório temporário: /var/www/html/matheus/comercial/uploads/documentos/temp/
+[28-Jul-2025 11:58:46 America/Sao_Paulo] TCPDF encontrado em: /var/www/html/matheus/comercial/vendor/tecnickcom/tcpdf/tcpdf.php
+[28-Jul-2025 11:58:46 America/Sao_Paulo] Usando FichaPDF com TCPDF
+[28-Jul-2025 11:58:46 America/Sao_Paulo] PHP Fatal error:  Uncaught Error: Class "FichaPDF" not found in /var/www/html/matheus/comercial/api/documentos/documentos_gerar_ficha_virtual.php:220
+Stack trace:
+#0 {main}
+  thrown in /var/www/html/matheus/comercial/api/documentos/documentos_gerar_ficha_virtual.php on line 220
+[28-Jul-2025 11:59:04 America/Sao_Paulo] Incluído: config/database.php
+[28-Jul-2025 11:59:04 America/Sao_Paulo] Incluído: classes/Database.php
+[28-Jul-2025 11:59:04 America/Sao_Paulo] Conexão com banco estabelecida
+[28-Jul-2025 11:59:04 America/Sao_Paulo] Associado encontrado: academia
+[28-Jul-2025 11:59:04 America/Sao_Paulo] Dependentes encontrados: 0
+[28-Jul-2025 11:59:04 America/Sao_Paulo] Tentando gerar PDF com dados do associado
+[28-Jul-2025 11:59:04 America/Sao_Paulo] Diretório temporário: /var/www/html/matheus/comercial/uploads/documentos/temp/
+[28-Jul-2025 11:59:04 America/Sao_Paulo] TCPDF encontrado em: /var/www/html/matheus/comercial/vendor/tecnickcom/tcpdf/tcpdf.php
+[28-Jul-2025 11:59:04 America/Sao_Paulo] Usando FichaPDF com TCPDF
+[28-Jul-2025 11:59:04 America/Sao_Paulo] PHP Fatal error:  Uncaught Error: Class "FichaPDF" not found in /var/www/html/matheus/comercial/api/documentos/documentos_gerar_ficha_virtual.php:220
+Stack trace:
+#0 {main}
+  thrown in /var/www/html/matheus/comercial/api/documentos/documentos_gerar_ficha_virtual.php on line 220
+[28-Jul-2025 11:59:07 America/Sao_Paulo] Incluído: config/database.php
+[28-Jul-2025 11:59:07 America/Sao_Paulo] Incluído: classes/Database.php
+[28-Jul-2025 11:59:07 America/Sao_Paulo] Conexão com banco estabelecida
+[28-Jul-2025 11:59:07 America/Sao_Paulo] Associado encontrado: academia
+[28-Jul-2025 11:59:07 America/Sao_Paulo] Dependentes encontrados: 0
+[28-Jul-2025 11:59:07 America/Sao_Paulo] Tentando gerar PDF com dados do associado
+[28-Jul-2025 11:59:07 America/Sao_Paulo] Diretório temporário: /var/www/html/matheus/comercial/uploads/documentos/temp/
+[28-Jul-2025 11:59:07 America/Sao_Paulo] TCPDF encontrado em: /var/www/html/matheus/comercial/vendor/tecnickcom/tcpdf/tcpdf.php
+[28-Jul-2025 11:59:07 America/Sao_Paulo] Usando FichaPDF com TCPDF
+[28-Jul-2025 11:59:07 America/Sao_Paulo] PHP Fatal error:  Uncaught Error: Class "FichaPDF" not found in /var/www/html/matheus/comercial/api/documentos/documentos_gerar_ficha_virtual.php:220
+Stack trace:
+#0 {main}
+  thrown in /var/www/html/matheus/comercial/api/documentos/documentos_gerar_ficha_virtual.php on line 220
+[28-Jul-2025 12:03:50 America/Sao_Paulo] Notificação para departamento 1: Novo documento aguardando assinatura (Doc: 2)
+[28-Jul-2025 14:57:14 America/Sao_Paulo] Login bem-sucedido - Funcionário ID: 116 - IP: 172.16.1.131
+[28-Jul-2025 14:58:30 America/Sao_Paulo] === BUSCANDO SERVIÇOS DO ASSOCIADO 16843 ===
+[28-Jul-2025 14:58:30 America/Sao_Paulo] Serviços ativos encontrados: 2
+[28-Jul-2025 14:58:30 America/Sao_Paulo] Tipo encontrado na auditoria: Aluno
+[28-Jul-2025 14:58:30 America/Sao_Paulo] Valor total mensal calculado: 129.83
+[28-Jul-2025 14:58:30 America/Sao_Paulo] Tipo de associado final: Aluno
+[28-Jul-2025 14:58:30 America/Sao_Paulo] ✓ Resposta preparada com sucesso
+[29-Jul-2025 11:26:16 America/Sao_Paulo] Login bem-sucedido - Funcionário ID: 116 - IP: 172.16.1.131
+[29-Jul-2025 11:26:21 America/Sao_Paulo] === BUSCANDO SERVIÇOS DO ASSOCIADO 16841 ===
+[29-Jul-2025 11:26:21 America/Sao_Paulo] Serviços ativos encontrados: 0
+[29-Jul-2025 11:26:21 America/Sao_Paulo] Valor total mensal calculado: 0
+[29-Jul-2025 11:26:21 America/Sao_Paulo] Tipo de associado final: Não definido
+[29-Jul-2025 11:26:21 America/Sao_Paulo] ✓ Resposta preparada com sucesso
+[29-Jul-2025 11:26:22 America/Sao_Paulo] === BUSCANDO SERVIÇOS DO ASSOCIADO 16843 ===
+[29-Jul-2025 11:26:22 America/Sao_Paulo] Serviços ativos encontrados: 2
+[29-Jul-2025 11:26:22 America/Sao_Paulo] Tipo encontrado na auditoria: Aluno
+[29-Jul-2025 11:26:22 America/Sao_Paulo] Valor total mensal calculado: 129.83
+[29-Jul-2025 11:26:22 America/Sao_Paulo] Tipo de associado final: Aluno
+[29-Jul-2025 11:26:22 America/Sao_Paulo] ✓ Resposta preparada com sucesso
+[29-Jul-2025 11:26:23 America/Sao_Paulo] === BUSCANDO SERVIÇOS DO ASSOCIADO 16845 ===
+[29-Jul-2025 11:26:23 America/Sao_Paulo] Serviços ativos encontrados: 2
+[29-Jul-2025 11:26:23 America/Sao_Paulo] Tipo inferido pelas regras: Contribuinte
+[29-Jul-2025 11:26:23 America/Sao_Paulo] Valor total mensal calculado: 216.38
+[29-Jul-2025 11:26:23 America/Sao_Paulo] Tipo de associado final: Contribuinte
+[29-Jul-2025 11:26:23 America/Sao_Paulo] ✓ Resposta preparada com sucesso
+[29-Jul-2025 11:45:11 America/Sao_Paulo] === BUSCANDO SERVIÇOS DO ASSOCIADO 16836 ===
+[29-Jul-2025 11:45:11 America/Sao_Paulo] Serviços ativos encontrados: 0
+[29-Jul-2025 11:45:11 America/Sao_Paulo] Valor total mensal calculado: 0
+[29-Jul-2025 11:45:11 America/Sao_Paulo] Tipo de associado final: Não definido
+[29-Jul-2025 11:45:11 America/Sao_Paulo] ✓ Resposta preparada com sucesso
+[29-Jul-2025 11:45:18 America/Sao_Paulo] === BUSCANDO SERVIÇOS DO ASSOCIADO 16845 ===
+[29-Jul-2025 11:45:18 America/Sao_Paulo] Serviços ativos encontrados: 2
+[29-Jul-2025 11:45:18 America/Sao_Paulo] Tipo inferido pelas regras: Contribuinte
+[29-Jul-2025 11:45:18 America/Sao_Paulo] Valor total mensal calculado: 216.38
+[29-Jul-2025 11:45:18 America/Sao_Paulo] Tipo de associado final: Contribuinte
+[29-Jul-2025 11:45:18 America/Sao_Paulo] ✓ Resposta preparada com sucesso
+[29-Jul-2025 12:40:20 America/Sao_Paulo] Login bem-sucedido - Funcionário ID: 116 - IP: 172.16.1.131
+[29-Jul-2025 13:45:54 America/Sao_Paulo] Login bem-sucedido - Funcionário ID: 116 - IP: 172.16.1.131
+[29-Jul-2025 13:47:47 America/Sao_Paulo] === BUSCANDO SERVIÇOS DO ASSOCIADO 16840 ===
+[29-Jul-2025 13:47:47 America/Sao_Paulo] Serviços ativos encontrados: 0
+[29-Jul-2025 13:47:47 America/Sao_Paulo] Valor total mensal calculado: 0
+[29-Jul-2025 13:47:47 America/Sao_Paulo] Tipo de associado final: Não definido
+[29-Jul-2025 13:47:47 America/Sao_Paulo] ✓ Resposta preparada com sucesso
+[29-Jul-2025 14:01:23 America/Sao_Paulo] === BUSCANDO SERVIÇOS DO ASSOCIADO 16845 ===
+[29-Jul-2025 14:01:23 America/Sao_Paulo] Serviços ativos encontrados: 2
+[29-Jul-2025 14:01:23 America/Sao_Paulo] Tipo inferido pelas regras: Contribuinte
+[29-Jul-2025 14:01:23 America/Sao_Paulo] Valor total mensal calculado: 216.38
+[29-Jul-2025 14:01:23 America/Sao_Paulo] Tipo de associado final: Contribuinte
+[29-Jul-2025 14:01:23 America/Sao_Paulo] ✓ Resposta preparada com sucesso
+[29-Jul-2025 14:10:26 America/Sao_Paulo] === BUSCANDO DADOS DE SERVIÇOS E REGRAS ===
+[29-Jul-2025 14:10:26 America/Sao_Paulo] Serviços encontrados: 2
+[29-Jul-2025 14:10:26 America/Sao_Paulo] Regras de contribuição encontradas: 16
+[29-Jul-2025 14:10:26 America/Sao_Paulo] Tipos de associado encontrados: 8
+[29-Jul-2025 14:10:26 America/Sao_Paulo] ✓ Dados preparados: 2 serviços, 16 regras
+[29-Jul-2025 14:46:43 America/Sao_Paulo] === BUSCANDO DADOS DE SERVIÇOS E REGRAS ===
+[29-Jul-2025 14:46:43 America/Sao_Paulo] Serviços encontrados: 2
+[29-Jul-2025 14:46:43 America/Sao_Paulo] Regras de contribuição encontradas: 16
+[29-Jul-2025 14:46:43 America/Sao_Paulo] Tipos de associado encontrados: 8
+[29-Jul-2025 14:46:43 America/Sao_Paulo] ✓ Dados preparados: 2 serviços, 16 regras
+[29-Jul-2025 15:28:57 America/Sao_Paulo] === BUSCANDO SERVIÇOS DO ASSOCIADO 16845 ===
+[29-Jul-2025 15:28:57 America/Sao_Paulo] Serviços ativos encontrados: 2
+[29-Jul-2025 15:28:57 America/Sao_Paulo] Tipo inferido pelas regras: Contribuinte
+[29-Jul-2025 15:28:57 America/Sao_Paulo] Valor total mensal calculado: 216.38
+[29-Jul-2025 15:28:57 America/Sao_Paulo] Tipo de associado final: Contribuinte
+[29-Jul-2025 15:28:57 America/Sao_Paulo] ✓ Resposta preparada com sucesso
+[29-Jul-2025 15:29:02 America/Sao_Paulo] === BUSCANDO SERVIÇOS DO ASSOCIADO 16843 ===
+[29-Jul-2025 15:29:02 America/Sao_Paulo] Serviços ativos encontrados: 2
+[29-Jul-2025 15:29:02 America/Sao_Paulo] Tipo encontrado na auditoria: Aluno
+[29-Jul-2025 15:29:02 America/Sao_Paulo] Valor total mensal calculado: 129.83
+[29-Jul-2025 15:29:02 America/Sao_Paulo] Tipo de associado final: Aluno
+[29-Jul-2025 15:29:02 America/Sao_Paulo] ✓ Resposta preparada com sucesso
+[30-Jul-2025 08:24:03 America/Sao_Paulo] Login bem-sucedido - Funcionário ID: 8 - IP: 172.16.1.120
+[30-Jul-2025 08:29:35 America/Sao_Paulo] Notificação para departamento 1: Novo documento aguardando assinatura (Doc: 3)
+[30-Jul-2025 09:04:26 America/Sao_Paulo] Login bem-sucedido - Funcionário ID: 116 - IP: 172.16.1.131
+[30-Jul-2025 09:26:30 America/Sao_Paulo] === BUSCANDO DADOS DE SERVIÇOS E REGRAS ===
+[30-Jul-2025 09:26:30 America/Sao_Paulo] Serviços encontrados: 2
+[30-Jul-2025 09:26:30 America/Sao_Paulo] Regras de contribuição encontradas: 16
+[30-Jul-2025 09:26:30 America/Sao_Paulo] Tipos de associado encontrados: 8
+[30-Jul-2025 09:26:30 America/Sao_Paulo] ✓ Dados preparados: 2 serviços, 16 regras
+[30-Jul-2025 09:30:54 America/Sao_Paulo] Login bem-sucedido - Funcionário ID: 116 - IP: 172.16.1.131
+[30-Jul-2025 09:31:00 America/Sao_Paulo] === BUSCANDO DADOS DE SERVIÇOS E REGRAS ===
+[30-Jul-2025 09:31:00 America/Sao_Paulo] Serviços encontrados: 2
+[30-Jul-2025 09:31:00 America/Sao_Paulo] Regras de contribuição encontradas: 16
+[30-Jul-2025 09:31:00 America/Sao_Paulo] Tipos de associado encontrados: 8
+[30-Jul-2025 09:31:00 America/Sao_Paulo] ✓ Dados preparados: 2 serviços, 16 regras
+[30-Jul-2025 09:33:26 America/Sao_Paulo] === CRIAR PRÉ-CADASTRO ===
+[30-Jul-2025 09:33:26 America/Sao_Paulo] Usuário: Debug User
+[30-Jul-2025 09:33:26 America/Sao_Paulo] POST fields: 39
+[30-Jul-2025 09:33:26 America/Sao_Paulo] ✓ Ficha assinada salva: uploads/fichas/ficha_70074030183_20250730093326.png
+[30-Jul-2025 09:33:26 America/Sao_Paulo] ✓ Foto do associado salva: uploads/fotos/foto_70074030183_1753878806.png
+[30-Jul-2025 09:33:26 America/Sao_Paulo] Dados preparados - Total campos: 33
+[30-Jul-2025 09:33:26 America/Sao_Paulo] Dependentes: 1
+[30-Jul-2025 09:33:26 America/Sao_Paulo] Erro ao criar associado: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'wwasse_cadastro.Fluxo_Pre_Cadastro' doesn't exist
+[30-Jul-2025 09:33:26 America/Sao_Paulo] ✗ Erro na classe Associados: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'wwasse_cadastro.Fluxo_Pre_Cadastro' doesn't exist
+[30-Jul-2025 09:33:26 America/Sao_Paulo] ✗ ERRO GERAL: Erro ao criar pré-cadastro: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'wwasse_cadastro.Fluxo_Pre_Cadastro' doesn't exist
+[30-Jul-2025 09:33:26 America/Sao_Paulo] Stack trace: #0 {main}
+[30-Jul-2025 09:33:28 America/Sao_Paulo] === CRIAR PRÉ-CADASTRO ===
+[30-Jul-2025 09:33:28 America/Sao_Paulo] Usuário: Debug User
+[30-Jul-2025 09:33:28 America/Sao_Paulo] POST fields: 39
+[30-Jul-2025 09:33:28 America/Sao_Paulo] ✓ Ficha assinada salva: uploads/fichas/ficha_70074030183_20250730093328.png
+[30-Jul-2025 09:33:28 America/Sao_Paulo] ✓ Foto do associado salva: uploads/fotos/foto_70074030183_1753878808.png
+[30-Jul-2025 09:33:28 America/Sao_Paulo] Dados preparados - Total campos: 33
+[30-Jul-2025 09:33:28 America/Sao_Paulo] Dependentes: 1
+[30-Jul-2025 09:33:28 America/Sao_Paulo] Erro ao criar associado: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'wwasse_cadastro.Fluxo_Pre_Cadastro' doesn't exist
+[30-Jul-2025 09:33:28 America/Sao_Paulo] ✗ Erro na classe Associados: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'wwasse_cadastro.Fluxo_Pre_Cadastro' doesn't exist
+[30-Jul-2025 09:33:28 America/Sao_Paulo] ✗ ERRO GERAL: Erro ao criar pré-cadastro: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'wwasse_cadastro.Fluxo_Pre_Cadastro' doesn't exist
+[30-Jul-2025 09:33:28 America/Sao_Paulo] Stack trace: #0 {main}
+[30-Jul-2025 09:38:51 America/Sao_Paulo] === CRIAR PRÉ-CADASTRO ===
+[30-Jul-2025 09:38:51 America/Sao_Paulo] Usuário: Debug User
+[30-Jul-2025 09:38:51 America/Sao_Paulo] POST fields: 39
+[30-Jul-2025 09:38:51 America/Sao_Paulo] ✓ Ficha assinada salva: uploads/fichas/ficha_70074030183_20250730093851.png
+[30-Jul-2025 09:38:51 America/Sao_Paulo] ✓ Foto do associado salva: uploads/fotos/foto_70074030183_1753879131.png
+[30-Jul-2025 09:38:51 America/Sao_Paulo] Dados preparados - Total campos: 33
+[30-Jul-2025 09:38:51 America/Sao_Paulo] Dependentes: 1
+[30-Jul-2025 09:38:51 America/Sao_Paulo] Erro ao criar associado: SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '16848' for key 'Fluxo_Pre_Cadastro.uk_associado'
+[30-Jul-2025 09:38:51 America/Sao_Paulo] ✗ Erro na classe Associados: SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '16848' for key 'Fluxo_Pre_Cadastro.uk_associado'
+[30-Jul-2025 09:38:51 America/Sao_Paulo] ✗ ERRO GERAL: Erro ao criar pré-cadastro: SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '16848' for key 'Fluxo_Pre_Cadastro.uk_associado'
+[30-Jul-2025 09:38:51 America/Sao_Paulo] Stack trace: #0 {main}
+[30-Jul-2025 09:39:19 America/Sao_Paulo] === BUSCANDO DADOS DE SERVIÇOS E REGRAS ===
+[30-Jul-2025 09:39:19 America/Sao_Paulo] Serviços encontrados: 2
+[30-Jul-2025 09:39:19 America/Sao_Paulo] Regras de contribuição encontradas: 16
+[30-Jul-2025 09:39:19 America/Sao_Paulo] Tipos de associado encontrados: 8
+[30-Jul-2025 09:39:19 America/Sao_Paulo] ✓ Dados preparados: 2 serviços, 16 regras
+[30-Jul-2025 09:41:47 America/Sao_Paulo] === CRIAR PRÉ-CADASTRO ===
+[30-Jul-2025 09:41:47 America/Sao_Paulo] Usuário: Debug User
+[30-Jul-2025 09:41:47 America/Sao_Paulo] POST fields: 39
+[30-Jul-2025 09:41:47 America/Sao_Paulo] ✓ Ficha assinada salva: uploads/fichas/ficha_70074030183_20250730094147.png
+[30-Jul-2025 09:41:47 America/Sao_Paulo] ✓ Foto do associado salva: uploads/fotos/foto_70074030183_1753879307.png
+[30-Jul-2025 09:41:47 America/Sao_Paulo] Dados preparados - Total campos: 33
+[30-Jul-2025 09:41:47 America/Sao_Paulo] Dependentes: 1
+[30-Jul-2025 09:41:47 America/Sao_Paulo] Erro ao criar associado: SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '16849' for key 'Fluxo_Pre_Cadastro.uk_associado'
+[30-Jul-2025 09:41:47 America/Sao_Paulo] ✗ Erro na classe Associados: SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '16849' for key 'Fluxo_Pre_Cadastro.uk_associado'
+[30-Jul-2025 09:41:47 America/Sao_Paulo] ✗ ERRO GERAL: Erro ao criar pré-cadastro: SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '16849' for key 'Fluxo_Pre_Cadastro.uk_associado'
+[30-Jul-2025 09:41:47 America/Sao_Paulo] Stack trace: #0 {main}
+[30-Jul-2025 09:48:54 America/Sao_Paulo] === CRIAR PRÉ-CADASTRO ===
+[30-Jul-2025 09:48:54 America/Sao_Paulo] Usuário: Debug User
+[30-Jul-2025 09:48:54 America/Sao_Paulo] POST fields: 39
+[30-Jul-2025 09:48:54 America/Sao_Paulo] ✓ Ficha assinada salva: uploads/fichas/ficha_70074030183_20250730094854.png
+[30-Jul-2025 09:48:54 America/Sao_Paulo] ✓ Foto do associado salva: uploads/fotos/foto_70074030183_1753879734.png
+[30-Jul-2025 09:48:54 America/Sao_Paulo] Dados preparados - Total campos: 33
+[30-Jul-2025 09:48:54 America/Sao_Paulo] Dependentes: 1
+[30-Jul-2025 09:48:54 America/Sao_Paulo] ✓ Fluxo de pré-cadastro criado para associado 16850
+[30-Jul-2025 09:48:54 America/Sao_Paulo] ✓ Pré-cadastro criado com ID: 16850
+[30-Jul-2025 09:48:54 America/Sao_Paulo] ✓ Ficha assinada anexada ao pré-cadastro
+[30-Jul-2025 09:48:54 America/Sao_Paulo] ✓ Serviço Social criado - R$ 173,10
+[30-Jul-2025 09:48:54 America/Sao_Paulo] ✓ Serviço Jurídico criado - R$ 43,28
+[30-Jul-2025 09:48:54 America/Sao_Paulo] ✓ Total de serviços criados: 2
+[30-Jul-2025 09:48:54 America/Sao_Paulo] ✓ Valor total mensal: R$ 216,38
+[30-Jul-2025 09:48:54 America/Sao_Paulo] ✓ Enviado automaticamente para presidência
+[30-Jul-2025 09:48:54 America/Sao_Paulo] ✓ SUCESSO - Pré-cadastro ID 16850 criado completamente
+[30-Jul-2025 09:49:02 America/Sao_Paulo] === BUSCANDO SERVIÇOS DO ASSOCIADO 16850 ===
+[30-Jul-2025 09:49:02 America/Sao_Paulo] Serviços ativos encontrados: 2
+[30-Jul-2025 09:49:02 America/Sao_Paulo] Tipo inferido pelas regras: Contribuinte
+[30-Jul-2025 09:49:02 America/Sao_Paulo] Valor total mensal calculado: 216.38
+[30-Jul-2025 09:49:02 America/Sao_Paulo] Tipo de associado final: Contribuinte
+[30-Jul-2025 09:49:02 America/Sao_Paulo] ✓ Resposta preparada com sucesso
+[30-Jul-2025 09:57:09 America/Sao_Paulo] PHP Warning:  require_once(../components/Header.php): Failed to open stream: No such file or directory in /var/www/html/matheus/comercial/pages/gerenciar_pre_cadastros.php on line 12
+[30-Jul-2025 09:57:09 America/Sao_Paulo] PHP Stack trace:
+[30-Jul-2025 09:57:09 America/Sao_Paulo] PHP   1. {main}() /var/www/html/matheus/comercial/pages/gerenciar_pre_cadastros.php:0
+[30-Jul-2025 09:57:09 America/Sao_Paulo] PHP Fatal error:  Uncaught Error: Failed opening required '../components/Header.php' (include_path='.:/usr/share/php') in /var/www/html/matheus/comercial/pages/gerenciar_pre_cadastros.php:12
+Stack trace:
+#0 {main}
+  thrown in /var/www/html/matheus/comercial/pages/gerenciar_pre_cadastros.php on line 12
+[30-Jul-2025 09:59:24 America/Sao_Paulo] PHP Deprecated:  preg_replace(): Passing null to parameter #3 ($subject) of type array|string is deprecated in /var/www/html/matheus/comercial/pages/gerenciar_pre_cadastros.php on line 677
+[30-Jul-2025 09:59:24 America/Sao_Paulo] PHP Stack trace:
+[30-Jul-2025 09:59:24 America/Sao_Paulo] PHP   1. {main}() /var/www/html/matheus/comercial/pages/gerenciar_pre_cadastros.php:0
+[30-Jul-2025 09:59:24 America/Sao_Paulo] PHP   2. formatarCPF($cpf = NULL) /var/www/html/matheus/comercial/pages/gerenciar_pre_cadastros.php:394
+[30-Jul-2025 09:59:24 America/Sao_Paulo] PHP   3. preg_replace($pattern = '/(\\d{3})(\\d{3})(\\d{3})(\\d{2})/', $replacement = '$1.$2.$3-$4', $subject = NULL) /var/www/html/matheus/comercial/pages/gerenciar_pre_cadastros.php:677
+[30-Jul-2025 09:59:24 America/Sao_Paulo] PHP Deprecated:  preg_replace(): Passing null to parameter #3 ($subject) of type array|string is deprecated in /var/www/html/matheus/comercial/pages/gerenciar_pre_cadastros.php on line 677
+[30-Jul-2025 09:59:24 America/Sao_Paulo] PHP Stack trace:
+[30-Jul-2025 09:59:24 America/Sao_Paulo] PHP   1. {main}() /var/www/html/matheus/comercial/pages/gerenciar_pre_cadastros.php:0
+[30-Jul-2025 09:59:24 America/Sao_Paulo] PHP   2. formatarCPF($cpf = NULL) /var/www/html/matheus/comercial/pages/gerenciar_pre_cadastros.php:394
+[30-Jul-2025 09:59:24 America/Sao_Paulo] PHP   3. preg_replace($pattern = '/(\\d{3})(\\d{3})(\\d{3})(\\d{2})/', $replacement = '$1.$2.$3-$4', $subject = NULL) /var/www/html/matheus/comercial/pages/gerenciar_pre_cadastros.php:677
+[30-Jul-2025 09:59:24 America/Sao_Paulo] PHP Deprecated:  preg_replace(): Passing null to parameter #3 ($subject) of type array|string is deprecated in /var/www/html/matheus/comercial/pages/gerenciar_pre_cadastros.php on line 677
+[30-Jul-2025 09:59:24 America/Sao_Paulo] PHP Stack trace:
+[30-Jul-2025 09:59:24 America/Sao_Paulo] PHP   1. {main}() /var/www/html/matheus/comercial/pages/gerenciar_pre_cadastros.php:0
+[30-Jul-2025 09:59:24 America/Sao_Paulo] PHP   2. formatarCPF($cpf = NULL) /var/www/html/matheus/comercial/pages/gerenciar_pre_cadastros.php:394
+[30-Jul-2025 09:59:24 America/Sao_Paulo] PHP   3. preg_replace($pattern = '/(\\d{3})(\\d{3})(\\d{3})(\\d{2})/', $replacement = '$1.$2.$3-$4', $subject = NULL) /var/www/html/matheus/comercial/pages/gerenciar_pre_cadastros.php:677
+[30-Jul-2025 10:04:07 America/Sao_Paulo] === BUSCANDO DADOS DE SERVIÇOS E REGRAS ===
+[30-Jul-2025 10:04:07 America/Sao_Paulo] Serviços encontrados: 2
+[30-Jul-2025 10:04:07 America/Sao_Paulo] Regras de contribuição encontradas: 16
+[30-Jul-2025 10:04:07 America/Sao_Paulo] Tipos de associado encontrados: 8
+[30-Jul-2025 10:04:07 America/Sao_Paulo] ✓ Dados preparados: 2 serviços, 16 regras
+[30-Jul-2025 10:17:05 America/Sao_Paulo] === BUSCANDO DADOS DE SERVIÇOS E REGRAS ===
+[30-Jul-2025 10:17:05 America/Sao_Paulo] Serviços encontrados: 2
+[30-Jul-2025 10:17:05 America/Sao_Paulo] Regras de contribuição encontradas: 16
+[30-Jul-2025 10:17:05 America/Sao_Paulo] Tipos de associado encontrados: 8
+[30-Jul-2025 10:17:05 America/Sao_Paulo] ✓ Dados preparados: 2 serviços, 16 regras
+[30-Jul-2025 10:25:12 America/Sao_Paulo] === BUSCANDO DADOS DE SERVIÇOS E REGRAS ===
+[30-Jul-2025 10:25:12 America/Sao_Paulo] Serviços encontrados: 2
+[30-Jul-2025 10:25:12 America/Sao_Paulo] Regras de contribuição encontradas: 16
+[30-Jul-2025 10:25:12 America/Sao_Paulo] Tipos de associado encontrados: 8
+[30-Jul-2025 10:25:12 America/Sao_Paulo] ✓ Dados preparados: 2 serviços, 16 regras
+[30-Jul-2025 10:26:27 America/Sao_Paulo] Login bem-sucedido - Funcionário ID: 110 - IP: 172.16.1.131
+[30-Jul-2025 10:27:03 America/Sao_Paulo] Login bem-sucedido - Funcionário ID: 116 - IP: 172.16.1.131
+[30-Jul-2025 10:27:08 America/Sao_Paulo] === BUSCANDO DADOS DE SERVIÇOS E REGRAS ===
+[30-Jul-2025 10:27:08 America/Sao_Paulo] Serviços encontrados: 2
+[30-Jul-2025 10:27:08 America/Sao_Paulo] Regras de contribuição encontradas: 16
+[30-Jul-2025 10:27:08 America/Sao_Paulo] Tipos de associado encontrados: 8
+[30-Jul-2025 10:27:08 America/Sao_Paulo] ✓ Dados preparados: 2 serviços, 16 regras
+[30-Jul-2025 10:29:23 America/Sao_Paulo] === CRIAR PRÉ-CADASTRO COM FLUXO ===
+[30-Jul-2025 10:29:23 America/Sao_Paulo] Usuário: Debug User
+[30-Jul-2025 10:29:23 America/Sao_Paulo] POST fields: 39
+[30-Jul-2025 10:29:23 America/Sao_Paulo] ✓ Foto do associado salva: uploads/fotos/foto_70074030183_1753882163.png
+[30-Jul-2025 10:29:23 America/Sao_Paulo] Dados preparados - Total campos: 33
+[30-Jul-2025 10:29:23 America/Sao_Paulo] Dependentes: 1
+[30-Jul-2025 10:29:23 America/Sao_Paulo] Erro ao criar associado: There is already an active transaction
+[30-Jul-2025 10:29:23 America/Sao_Paulo] ✗ ERRO GERAL: There is no active transaction
+[30-Jul-2025 10:29:23 America/Sao_Paulo] Stack trace: #0 /var/www/html/matheus/comercial/api/criar_associado.php(296): PDO->rollBack()
+#1 {main}
+[30-Jul-2025 10:45:15 America/Sao_Paulo] Login bem-sucedido - Funcionário ID: 116 - IP: 172.16.1.131
+[30-Jul-2025 10:45:28 America/Sao_Paulo] === BUSCANDO DADOS DE SERVIÇOS E REGRAS ===
+[30-Jul-2025 10:45:28 America/Sao_Paulo] Serviços encontrados: 2
+[30-Jul-2025 10:45:28 America/Sao_Paulo] Regras de contribuição encontradas: 16
+[30-Jul-2025 10:45:28 America/Sao_Paulo] Tipos de associado encontrados: 8
+[30-Jul-2025 10:45:28 America/Sao_Paulo] ✓ Dados preparados: 2 serviços, 16 regras
+[30-Jul-2025 10:45:41 America/Sao_Paulo] === BUSCANDO DADOS DE SERVIÇOS E REGRAS ===
+[30-Jul-2025 10:45:41 America/Sao_Paulo] Serviços encontrados: 2
+[30-Jul-2025 10:45:41 America/Sao_Paulo] Regras de contribuição encontradas: 16
+[30-Jul-2025 10:45:41 America/Sao_Paulo] Tipos de associado encontrados: 8
+[30-Jul-2025 10:45:41 America/Sao_Paulo] ✓ Dados preparados: 2 serviços, 16 regras
+[30-Jul-2025 10:45:48 America/Sao_Paulo] === BUSCANDO DADOS DE SERVIÇOS E REGRAS ===
+[30-Jul-2025 10:45:48 America/Sao_Paulo] Serviços encontrados: 2
+[30-Jul-2025 10:45:48 America/Sao_Paulo] Regras de contribuição encontradas: 16
+[30-Jul-2025 10:45:48 America/Sao_Paulo] Tipos de associado encontrados: 8
+[30-Jul-2025 10:45:48 America/Sao_Paulo] ✓ Dados preparados: 2 serviços, 16 regras
+[30-Jul-2025 10:48:34 America/Sao_Paulo] === CRIAR PRÉ-CADASTRO COM FLUXO INTEGRADO ===
+[30-Jul-2025 10:48:34 America/Sao_Paulo] Usuário: N/A
+[30-Jul-2025 10:48:34 America/Sao_Paulo] POST fields: 39
+[30-Jul-2025 10:48:34 America/Sao_Paulo] FILES: Array
+(
+    [foto] => Array
+        (
+            [name] => Captura de tela 2025-06-02 133332.png
+            [full_path] => Captura de tela 2025-06-02 133332.png
+            [type] => image/png
+            [tmp_name] => /tmp/php9W2OkB
+            [error] => 0
+            [size] => 386208
+        )
+
+    [ficha_assinada] => Array
+        (
+            [name] => Captura de tela 2025-04-22 130914.png
+            [full_path] => Captura de tela 2025-04-22 130914.png
+            [type] => image/png
+            [tmp_name] => /tmp/php0IhT3j
+            [error] => 0
+            [size] => 130112
+        )
+
+)
+
+[30-Jul-2025 10:48:34 America/Sao_Paulo] ✓ Foto do associado salva: uploads/fotos/foto_70074030183_1753883314.png
+[30-Jul-2025 10:48:34 America/Sao_Paulo] ✓ Transação iniciada
+[30-Jul-2025 10:48:34 America/Sao_Paulo] Erro ao criar associado: There is already an active transaction
+[30-Jul-2025 10:48:34 America/Sao_Paulo] ✗ Erro ao fazer rollback: There is no active transaction
+[30-Jul-2025 10:48:34 America/Sao_Paulo] ✗ ERRO GERAL: There is no active transaction
+[30-Jul-2025 10:48:34 America/Sao_Paulo] Stack trace: #0 /var/www/html/matheus/comercial/api/criar_associado.php(311): PDO->rollBack()
+#1 {main}
+[30-Jul-2025 10:52:15 America/Sao_Paulo] === CRIAR PRÉ-CADASTRO COM FLUXO INTEGRADO ===
+[30-Jul-2025 10:52:15 America/Sao_Paulo] Usuário: N/A
+[30-Jul-2025 10:52:15 America/Sao_Paulo] POST fields: 39
+[30-Jul-2025 10:52:15 America/Sao_Paulo] ✓ Foto do associado salva: uploads/fotos/foto_70074030183_1753883535.png
+[30-Jul-2025 10:52:15 America/Sao_Paulo] ✓ Fluxo de pré-cadastro criado para associado 16851
+[30-Jul-2025 10:52:15 America/Sao_Paulo] ✓ Pré-cadastro criado com ID: 16851
+[30-Jul-2025 10:52:15 America/Sao_Paulo] ✓ Ficha assinada anexada com ID: 5
+[30-Jul-2025 10:52:15 America/Sao_Paulo] Notificação para departamento 1: Novo documento aguardando assinatura (Doc: 5)
+[30-Jul-2025 10:52:15 America/Sao_Paulo] ✓ Pré-cadastro 16851 marcado como ENVIADO_PRESIDENCIA
+[30-Jul-2025 10:52:15 America/Sao_Paulo] ✓ Documento enviado para presidência assinar
+[30-Jul-2025 10:52:15 America/Sao_Paulo] ✓ Serviço Social: R$ 173,10
+[30-Jul-2025 10:52:15 America/Sao_Paulo] ✓ Serviço Jurídico: R$ 43,28
+[30-Jul-2025 10:52:15 America/Sao_Paulo] === PRÉ-CADASTRO CONCLUÍDO COM SUCESSO ===
+[30-Jul-2025 10:52:15 America/Sao_Paulo] ID: 16851 | Documento: 5 | Status: AGUARDANDO_ASSINATURA
+[30-Jul-2025 10:52:32 America/Sao_Paulo] === BUSCANDO SERVIÇOS DO ASSOCIADO 16851 ===
+[30-Jul-2025 10:52:32 America/Sao_Paulo] Serviços ativos encontrados: 2
+[30-Jul-2025 10:52:32 America/Sao_Paulo] Tipo inferido pelas regras: Contribuinte
+[30-Jul-2025 10:52:32 America/Sao_Paulo] Valor total mensal calculado: 216.38
+[30-Jul-2025 10:52:32 America/Sao_Paulo] Tipo de associado final: Contribuinte
+[30-Jul-2025 10:52:32 America/Sao_Paulo] ✓ Resposta preparada com sucesso
+[30-Jul-2025 10:52:36 America/Sao_Paulo] PHP Notice:  session_start(): Ignoring session_start() because a session is already active (started from /var/www/html/matheus/comercial/classes/Auth.php on line 7) in /var/www/html/matheus/comercial/api/documentos/documentos_fluxo_listar.php on line 28
+[30-Jul-2025 10:52:36 America/Sao_Paulo] PHP Stack trace:
+[30-Jul-2025 10:52:36 America/Sao_Paulo] PHP   1. {main}() /var/www/html/matheus/comercial/api/documentos/documentos_fluxo_listar.php:0
+[30-Jul-2025 10:52:36 America/Sao_Paulo] PHP   2. session_start() /var/www/html/matheus/comercial/api/documentos/documentos_fluxo_listar.php:28
+[30-Jul-2025 10:53:28 America/Sao_Paulo] === BUSCANDO SERVIÇOS DO ASSOCIADO 16851 ===
+[30-Jul-2025 10:53:28 America/Sao_Paulo] Serviços ativos encontrados: 2
+[30-Jul-2025 10:53:28 America/Sao_Paulo] Tipo inferido pelas regras: Contribuinte
+[30-Jul-2025 10:53:28 America/Sao_Paulo] Valor total mensal calculado: 216.38
+[30-Jul-2025 10:53:28 America/Sao_Paulo] Tipo de associado final: Contribuinte
+[30-Jul-2025 10:53:28 America/Sao_Paulo] ✓ Resposta preparada com sucesso
+[30-Jul-2025 10:53:56 America/Sao_Paulo] === BUSCANDO SERVIÇOS DO ASSOCIADO 16851 ===
+[30-Jul-2025 10:53:56 America/Sao_Paulo] Serviços ativos encontrados: 2
+[30-Jul-2025 10:53:56 America/Sao_Paulo] Tipo inferido pelas regras: Contribuinte
+[30-Jul-2025 10:53:56 America/Sao_Paulo] Valor total mensal calculado: 216.38
+[30-Jul-2025 10:53:56 America/Sao_Paulo] Tipo de associado final: Contribuinte
+[30-Jul-2025 10:53:56 America/Sao_Paulo] ✓ Resposta preparada com sucesso
+[30-Jul-2025 10:53:57 America/Sao_Paulo] === BUSCANDO SERVIÇOS DO ASSOCIADO 16851 ===
+[30-Jul-2025 10:53:57 America/Sao_Paulo] Serviços ativos encontrados: 2
+[30-Jul-2025 10:53:57 America/Sao_Paulo] Tipo inferido pelas regras: Contribuinte
+[30-Jul-2025 10:53:57 America/Sao_Paulo] Valor total mensal calculado: 216.38
+[30-Jul-2025 10:53:57 America/Sao_Paulo] Tipo de associado final: Contribuinte
+[30-Jul-2025 10:53:57 America/Sao_Paulo] ✓ Resposta preparada com sucesso
+[30-Jul-2025 10:54:09 America/Sao_Paulo] === BUSCANDO SERVIÇOS DO ASSOCIADO 16851 ===
+[30-Jul-2025 10:54:09 America/Sao_Paulo] Serviços ativos encontrados: 2
+[30-Jul-2025 10:54:09 America/Sao_Paulo] Tipo inferido pelas regras: Contribuinte
+[30-Jul-2025 10:54:09 America/Sao_Paulo] Valor total mensal calculado: 216.38
+[30-Jul-2025 10:54:09 America/Sao_Paulo] Tipo de associado final: Contribuinte
+[30-Jul-2025 10:54:09 America/Sao_Paulo] ✓ Resposta preparada com sucesso
+[30-Jul-2025 10:54:30 America/Sao_Paulo] === BUSCANDO SERVIÇOS DO ASSOCIADO 16851 ===
+[30-Jul-2025 10:54:30 America/Sao_Paulo] Serviços ativos encontrados: 2
+[30-Jul-2025 10:54:30 America/Sao_Paulo] Tipo inferido pelas regras: Contribuinte
+[30-Jul-2025 10:54:30 America/Sao_Paulo] Valor total mensal calculado: 216.38
+[30-Jul-2025 10:54:30 America/Sao_Paulo] Tipo de associado final: Contribuinte
+[30-Jul-2025 10:54:30 America/Sao_Paulo] ✓ Resposta preparada com sucesso
+[30-Jul-2025 10:57:21 America/Sao_Paulo] PHP Notice:  session_start(): Ignoring session_start() because a session is already active (started from /var/www/html/matheus/comercial/classes/Auth.php on line 7) in /var/www/html/matheus/comercial/api/documentos/documentos_fluxo_listar.php on line 28
+[30-Jul-2025 10:57:21 America/Sao_Paulo] PHP Stack trace:
+[30-Jul-2025 10:57:21 America/Sao_Paulo] PHP   1. {main}() /var/www/html/matheus/comercial/api/documentos/documentos_fluxo_listar.php:0
+[30-Jul-2025 10:57:21 America/Sao_Paulo] PHP   2. session_start() /var/www/html/matheus/comercial/api/documentos/documentos_fluxo_listar.php:28
+[30-Jul-2025 10:57:30 America/Sao_Paulo] === BUSCANDO SERVIÇOS DO ASSOCIADO 16851 ===
+[30-Jul-2025 10:57:30 America/Sao_Paulo] Serviços ativos encontrados: 2
+[30-Jul-2025 10:57:30 America/Sao_Paulo] Tipo inferido pelas regras: Contribuinte
+[30-Jul-2025 10:57:30 America/Sao_Paulo] Valor total mensal calculado: 216.38
+[30-Jul-2025 10:57:30 America/Sao_Paulo] Tipo de associado final: Contribuinte
+[30-Jul-2025 10:57:30 America/Sao_Paulo] ✓ Resposta preparada com sucesso
+[30-Jul-2025 10:57:37 America/Sao_Paulo] === BUSCANDO SERVIÇOS DO ASSOCIADO 16851 ===
+[30-Jul-2025 10:57:37 America/Sao_Paulo] Serviços ativos encontrados: 2
+[30-Jul-2025 10:57:37 America/Sao_Paulo] Tipo inferido pelas regras: Contribuinte
+[30-Jul-2025 10:57:37 America/Sao_Paulo] Valor total mensal calculado: 216.38
+[30-Jul-2025 10:57:37 America/Sao_Paulo] Tipo de associado final: Contribuinte
+[30-Jul-2025 10:57:37 America/Sao_Paulo] ✓ Resposta preparada com sucesso
