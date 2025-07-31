@@ -4,6 +4,10 @@
  * pages/relatorios.php
  */
 
+// Tratamento de erros para debug
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
 // Configuração e includes
 require_once '../config/config.php';
 require_once '../config/database.php';
@@ -29,6 +33,254 @@ $usuarioLogado = $auth->getUser();
 // Define o título da página
 $page_title = 'Relatórios - ASSEGO';
 
+// NOVA VERIFICAÇÃO: Igual à da presidência - Verificar se o usuário tem permissão para acessar relatórios
+$temPermissaoRelatorios = false;
+$motivoNegacao = '';
+
+// Debug completo ANTES das verificações
+error_log("=== DEBUG DETALHADO PERMISSÕES RELATÓRIOS ===");
+error_log("Usuário: " . $usuarioLogado['nome']);
+error_log("Array completo do usuário: " . print_r($usuarioLogado, true));
+error_log("Departamento ID (valor): " . ($usuarioLogado['departamento_id'] ?? 'NULL'));
+error_log("Departamento ID (tipo): " . gettype($usuarioLogado['departamento_id'] ?? null));
+error_log("É Diretor (método): " . ($auth->isDiretor() ? 'SIM' : 'NÃO'));
+
+// Verificações de permissão (IGUAL À PRESIDÊNCIA):
+// 1. É diretor OU
+// 2. Está no departamento da presidência (APENAS ID: 1)
+if ($auth->isDiretor()) {
+    $temPermissaoRelatorios = true;
+    error_log("✅ Permissão concedida: É DIRETOR");
+} elseif (isset($usuarioLogado['departamento_id'])) {
+    $deptId = $usuarioLogado['departamento_id'];
+    
+    // Testar diferentes tipos de comparação
+    $isString1 = ($deptId === '1');
+    $isInt1 = ($deptId === 1);
+    $isEqual1 = ($deptId == 1);
+    
+    error_log("Testes de comparação:");
+    error_log("  deptId === '1': " . ($isString1 ? 'true' : 'false'));
+    error_log("  deptId === 1: " . ($isInt1 ? 'true' : 'false'));
+    error_log("  deptId == 1: " . ($isEqual1 ? 'true' : 'false'));
+    
+    if ($deptId == 1) { // Comparação flexível para pegar string ou int
+        $temPermissaoRelatorios = true;
+        error_log("✅ Permissão concedida: Departamento ID = 1");
+    } else {
+        error_log("❌ Departamento incorreto. Valor: '$deptId' (tipo: " . gettype($deptId) . ")");
+    }
+} else {
+    error_log("❌ departamento_id não existe no array do usuário");
+}
+
+if (!$temPermissaoRelatorios) {
+    $motivoNegacao = 'Para acessar relatórios, você precisa ser diretor ou estar no departamento da Presidência (ID: 1). Seu departamento atual: ' . ($usuarioLogado['departamento_id'] ?? 'não definido') . ' (tipo: ' . gettype($usuarioLogado['departamento_id'] ?? null) . ')';
+    error_log("❌ ACESSO NEGADO: " . $motivoNegacao);
+} else {
+    error_log("✅ ACESSO PERMITIDO");
+}
+
+// Só continua se tiver permissão
+if (!$temPermissaoRelatorios) {
+    // Cria instância do Header Component para a página de erro
+    $headerComponent = HeaderComponent::create([
+        'usuario' => [
+            'nome' => $usuarioLogado['nome'],
+            'cargo' => $usuarioLogado['cargo'] ?? 'Funcionário',
+            'avatar' => $usuarioLogado['avatar'] ?? null
+        ],
+        'isDiretor' => $auth->isDiretor(),
+        'activeTab' => 'relatorios',
+        'notificationCount' => 0,
+        'showSearch' => false
+    ]);
+    ?>
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Acesso Negado - ASSEGO</title>
+        <link rel="icon" href="../assets/img/favicon.ico" type="image/x-icon">
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+        <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+        <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+        <?php $headerComponent->renderCSS(); ?>
+        <style>
+            body {
+                background-color: #f8f9fa;
+                font-family: 'Plus Jakarta Sans', sans-serif;
+            }
+            .main-wrapper {
+                min-height: 100vh;
+            }
+            .content-area {
+                padding: 2rem;
+                max-width: 1200px;
+                margin: 0 auto;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="main-wrapper">
+            <?php $headerComponent->render(); ?>
+            
+            <div class="content-area">
+                <div class="alert alert-danger" data-aos="fade-up">
+                    <h4><i class="fas fa-ban me-2"></i>Acesso Negado à Área de Relatórios</h4>
+                    <p class="mb-3"><?php echo htmlspecialchars($motivoNegacao); ?></p>
+                    
+                    <div class="alert alert-info">
+                        <h6><i class="fas fa-info-circle me-2"></i>Como resolver:</h6>
+                        <ol class="mb-0">
+                            <li>Verifique se você está no departamento correto (ID: 1)</li>
+                            <li>Confirme se você é diretor no sistema</li>
+                            <li>Use o botão "Debug Detalhado" para mais informações</li>
+                            <li>Entre em contato com o administrador se necessário</li>
+                        </ol>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Suas informações atuais:</h6>
+                            <ul class="mb-0">
+                                <li><strong>Nome:</strong> <?php echo htmlspecialchars($usuarioLogado['nome']); ?></li>
+                                <li><strong>Cargo:</strong> <?php echo htmlspecialchars($usuarioLogado['cargo'] ?? 'N/A'); ?></li>
+                                <li><strong>Departamento ID:</strong> 
+                                    <span class="badge bg-<?php echo ($usuarioLogado['departamento_id'] == 1) ? 'success' : 'danger'; ?>">
+                                        <?php echo $usuarioLogado['departamento_id'] ?? 'N/A'; ?>
+                                    </span>
+                                </li>
+                                <li><strong>É Diretor:</strong> 
+                                    <span class="badge bg-<?php echo $auth->isDiretor() ? 'success' : 'danger'; ?>">
+                                        <?php echo $auth->isDiretor() ? 'Sim' : 'Não'; ?>
+                                    </span>
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Requisitos para acesso:</h6>
+                            <ul class="mb-3">
+                                <li>Ser diretor <strong>OU</strong></li>
+                                <li>Estar no departamento da Presidência (ID: 1)</li>
+                            </ul>
+                            
+                            <div class="btn-group d-block">
+                                <button class="btn btn-primary btn-sm" onclick="window.location.reload()">
+                                    <i class="fas fa-sync me-1"></i>
+                                    Recarregar Página
+                                </button>
+                                <button class="btn btn-info btn-sm" onclick="mostrarDebugCompleto()">
+                                    <i class="fas fa-bug me-1"></i>
+                                    Debug Detalhado
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+        <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+        <?php $headerComponent->renderJS(); ?>
+        
+        <script>
+            // Inicializa AOS
+            AOS.init({
+                duration: 800,
+                once: true
+            });
+
+            // Função de debug completo (igual à da presidência)
+            function mostrarDebugCompleto() {
+                const usuario = <?php echo json_encode($usuarioLogado); ?>;
+                const isDiretor = <?php echo json_encode($auth->isDiretor()); ?>;
+                const temPermissao = <?php echo json_encode($temPermissaoRelatorios); ?>;
+                
+                let debugHtml = `
+                    <div class="debug-completo">
+                        <h6><i class="fas fa-bug"></i> Debug Completo de Permissões</h6>
+                        <hr>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6>Dados do Usuário:</h6>
+                                <pre class="bg-light p-2 small">${JSON.stringify(usuario, null, 2)}</pre>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>Verificações:</h6>
+                                <ul class="small">
+                                    <li><strong>É Diretor:</strong> ${isDiretor ? 'SIM ✅' : 'NÃO ❌'}</li>
+                                    <li><strong>Departamento ID:</strong> ${usuario.departamento_id} (tipo: ${typeof usuario.departamento_id})</li>
+                                    <li><strong>Departamento == 1:</strong> ${usuario.departamento_id == 1 ? 'SIM ✅' : 'NÃO ❌'}</li>
+                                    <li><strong>Departamento === 1:</strong> ${usuario.departamento_id === 1 ? 'SIM ✅' : 'NÃO ❌'}</li>
+                                    <li><strong>Departamento === '1':</strong> ${usuario.departamento_id === '1' ? 'SIM ✅' : 'NÃO ❌'}</li>
+                                    <li><strong>Tem Permissão Final:</strong> ${temPermissao ? 'SIM ✅' : 'NÃO ❌'}</li>
+                                </ul>
+                                
+                                <div class="mt-3">
+                                    <strong>Regra de Acesso:</strong><br>
+                                    <code>isDiretor || departamento_id == 1</code><br><br>
+                                    
+                                    <strong>Resultado:</strong><br>
+                                    <code>${isDiretor} || ${usuario.departamento_id == 1} = ${isDiretor || usuario.departamento_id == 1}</code>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <hr>
+                        <small class="text-muted">
+                            <strong>Dica:</strong> Se você deveria ter acesso mas não consegue, verifique:
+                            <br>1. Se você é diretor no sistema
+                            <br>2. Se seu departamento_id está correto no banco de dados
+                            <br>3. Se não há cache ou sessão antiga
+                        </small>
+                    </div>
+                `;
+                
+                // Criar modal customizado
+                const modal = document.createElement('div');
+                modal.className = 'modal fade';
+                modal.innerHTML = `
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Debug de Permissões - Relatórios</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                ${debugHtml}
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                                <button type="button" class="btn btn-primary" onclick="window.location.reload()">
+                                    <i class="fas fa-sync me-1"></i>
+                                    Recarregar Página
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                document.body.appendChild(modal);
+                const bsModal = new bootstrap.Modal(modal);
+                bsModal.show();
+                
+                modal.addEventListener('hidden.bs.modal', () => {
+                    modal.remove();
+                });
+            }
+        </script>
+    </body>
+    </html>
+    <?php
+    exit;
+}
+
+// Continua apenas se tiver permissão...
 // Inicializa classe de relatórios
 $relatorios = new Relatorios();
 
@@ -83,1025 +335,7 @@ $headerComponent = HeaderComponent::create([
 
     <!-- CSS do Header Component -->
     <?php $headerComponent->renderCSS(); ?>
-
-    <!-- Custom CSS -->
-    <style>
-        body {
-            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-            background-color: var(--gray-100);
-            color: var(--dark);
-            overflow-x: hidden;
-        }
-
-        /* Scrollbar personalizada */
-        ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: var(--gray-100);
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: var(--gray-400);
-            border-radius: 3px;
-        }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background: var(--gray-500);
-        }
-
-        /* Main Content */
-        .main-wrapper {
-            min-height: 100vh;
-            background: var(--gray-100);
-        }
-
-        /* Content Area */
-        .content-area {
-            padding: 2rem;
-        }
-
-        .page-header {
-            margin-bottom: 2rem;
-        }
-
-        .page-title {
-            font-size: 2rem;
-            font-weight: 800;
-            color: var(--dark);
-            margin: 0 0 0.5rem 0;
-        }
-
-        .page-subtitle {
-            font-size: 1rem;
-            color: var(--gray-600);
-            margin: 0;
-        }
-
-        /* Stats Grid */
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 2rem;
-        }
-
-        .stat-card {
-            background: var(--white);
-            border-radius: 16px;
-            padding: 1.25rem;
-            box-shadow: var(--shadow-sm);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            position: relative;
-            overflow: hidden;
-            border: 1px solid var(--gray-100);
-        }
-
-        .stat-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 4px;
-            background: var(--primary);
-            transform: scaleX(0);
-            transform-origin: left;
-            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .stat-card:hover {
-            transform: translateY(-4px);
-            box-shadow: var(--shadow-lg);
-        }
-
-        .stat-card:hover::before {
-            transform: scaleX(1);
-        }
-
-        .stat-header {
-            display: flex;
-            align-items: flex-start;
-            justify-content: space-between;
-            margin-bottom: 1rem;
-        }
-
-        .stat-icon {
-            width: 44px;
-            height: 44px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.125rem;
-        }
-
-        .stat-icon.primary {
-            background: var(--primary-light);
-            color: var(--primary);
-        }
-
-        .stat-icon.success {
-            background: rgba(0, 200, 83, 0.1);
-            color: var(--success);
-        }
-
-        .stat-icon.warning {
-            background: rgba(255, 149, 0, 0.1);
-            color: var(--warning);
-        }
-
-        .stat-icon.info {
-            background: rgba(0, 184, 212, 0.1);
-            color: var(--info);
-        }
-
-        .stat-value {
-            font-size: 1.75rem;
-            font-weight: 800;
-            color: var(--dark);
-            line-height: 1;
-            margin-bottom: 0.375rem;
-        }
-
-        .stat-label {
-            font-size: 0.8125rem;
-            color: var(--gray-500);
-            margin-bottom: 0.375rem;
-        }
-
-        /* Section Cards */
-        .section-card {
-            background: var(--white);
-            border-radius: 16px;
-            box-shadow: var(--shadow-sm);
-            overflow: hidden;
-            margin-bottom: 2rem;
-        }
-
-        .section-header {
-            padding: 1.5rem;
-            border-bottom: 1px solid var(--gray-200);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-
-        .section-title {
-            font-size: 1.125rem;
-            font-weight: 700;
-            color: var(--dark);
-            margin: 0;
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-        }
-
-        .section-icon {
-            width: 36px;
-            height: 36px;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: var(--primary-light);
-            color: var(--primary);
-            font-size: 1rem;
-        }
-
-        .section-actions {
-            display: flex;
-            gap: 0.5rem;
-        }
-
-        /* Report Grid */
-        .report-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 1.5rem;
-            padding: 1.5rem;
-        }
-
-        .report-card {
-            background: var(--gray-100);
-            border-radius: 12px;
-            padding: 1.5rem;
-            transition: all 0.3s ease;
-            cursor: pointer;
-            position: relative;
-            border: 2px solid transparent;
-        }
-
-        .report-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
-            border-color: var(--primary-light);
-        }
-
-        .report-icon {
-            width: 48px;
-            height: 48px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-            margin-bottom: 1rem;
-        }
-
-        .report-icon.blue {
-            background: rgba(0, 86, 210, 0.1);
-            color: var(--primary);
-        }
-
-        .report-icon.green {
-            background: rgba(0, 200, 83, 0.1);
-            color: var(--success);
-        }
-
-        .report-icon.orange {
-            background: rgba(255, 149, 0, 0.1);
-            color: var(--warning);
-        }
-
-        .report-icon.purple {
-            background: rgba(124, 58, 237, 0.1);
-            color: #7c3aed;
-        }
-
-        .report-icon.red {
-            background: rgba(255, 59, 48, 0.1);
-            color: var(--danger);
-        }
-
-        .report-icon.info {
-            background: rgba(0, 184, 212, 0.1);
-            color: var(--info);
-        }
-
-        .report-title {
-            font-size: 1rem;
-            font-weight: 700;
-            color: var(--dark);
-            margin-bottom: 0.5rem;
-        }
-
-        .report-description {
-            font-size: 0.8125rem;
-            color: var(--gray-600);
-            margin-bottom: 1rem;
-            line-height: 1.5;
-        }
-
-        .report-meta {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            font-size: 0.75rem;
-            color: var(--gray-500);
-        }
-
-        /* Quick Report Actions */
-        .quick-report-actions {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 0.375rem;
-            margin-top: 1rem;
-            padding-top: 1rem;
-            border-top: 1px solid var(--gray-200);
-        }
-
-        .quick-report-action {
-            padding: 0.5rem 0.625rem;
-            background: linear-gradient(135deg, var(--white), var(--gray-100));
-            border: 1px solid var(--gray-200);
-            border-radius: 10px;
-            font-size: 0.7rem;
-            font-weight: 600;
-            color: var(--gray-700);
-            text-align: center;
-            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-            cursor: pointer;
-            text-decoration: none;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.375rem;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .quick-report-action::after {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 0;
-            height: 0;
-            background: radial-gradient(circle, rgba(0, 86, 210, 0.1), transparent);
-            transform: translate(-50%, -50%);
-            transition: width 0.4s ease, height 0.4s ease;
-        }
-
-        .quick-report-action:hover {
-            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-            color: var(--white);
-            border-color: var(--primary);
-            transform: translateY(-2px) scale(1.02);
-            box-shadow: 0 6px 20px rgba(0, 86, 210, 0.3);
-        }
-
-        .quick-report-action:hover::after {
-            width: 100%;
-            height: 100%;
-        }
-
-        .quick-report-action:active {
-            transform: translateY(0) scale(1);
-        }
-
-        .quick-report-action i {
-            font-size: 0.875rem;
-            transition: transform 0.2s ease;
-        }
-
-        .quick-report-action:hover i {
-            transform: rotate(5deg) scale(1.1);
-        }
-
-        /* Model Actions */
-        .model-actions {
-            display: flex;
-            gap: 0.375rem;
-            margin-top: 1rem;
-            padding-top: 1rem;
-            border-top: 1px solid var(--gray-200);
-        }
-
-        .model-action {
-            flex: 1;
-            padding: 0.5rem;
-            background: transparent;
-            border: 1.5px solid transparent;
-            border-radius: 8px;
-            font-size: 0.6875rem;
-            font-weight: 600;
-            color: var(--gray-600);
-            text-align: center;
-            transition: all 0.2s ease;
-            cursor: pointer;
-            text-decoration: none;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.25rem;
-            position: relative;
-        }
-
-        .model-action:hover {
-            background: var(--gray-100);
-            border-color: var(--gray-300);
-        }
-
-        .model-action.primary {
-            background: var(--primary-light);
-            color: var(--primary);
-            border-color: var(--primary-light);
-        }
-
-        .model-action.primary:hover {
-            background: var(--primary);
-            color: var(--white);
-            border-color: var(--primary);
-            transform: translateY(-1px);
-            box-shadow: 0 2px 8px rgba(0, 86, 210, 0.2);
-        }
-
-        .model-action.danger {
-            color: var(--danger);
-        }
-
-        .model-action.danger:hover {
-            background: var(--danger);
-            color: var(--white);
-            border-color: var(--danger);
-        }
-
-        .model-action i {
-            font-size: 0.75rem;
-        }
-
-        /* Recent Activity */
-        .activity-list {
-            padding: 0;
-        }
-
-        .activity-item {
-            padding: 1rem 1.5rem;
-            border-bottom: 1px solid var(--gray-100);
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            transition: all 0.2s ease;
-        }
-
-        .activity-item:hover {
-            background: var(--gray-100);
-        }
-
-        .activity-item:last-child {
-            border-bottom: none;
-        }
-
-        .activity-icon {
-            width: 40px;
-            height: 40px;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: var(--gray-100);
-            color: var(--gray-600);
-            font-size: 0.875rem;
-        }
-
-        .activity-content {
-            flex: 1;
-        }
-
-        .activity-title {
-            font-size: 0.875rem;
-            font-weight: 600;
-            color: var(--dark);
-            margin-bottom: 0.125rem;
-        }
-
-        .activity-description {
-            font-size: 0.75rem;
-            color: var(--gray-500);
-        }
-
-        .activity-time {
-            font-size: 0.75rem;
-            color: var(--gray-400);
-        }
-
-        /* Modal Styles */
-        .modal-custom {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 1050;
-            overflow-y: auto;
-            animation: fadeIn 0.3s ease;
-        }
-
-        .modal-custom.show {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 2rem;
-        }
-
-        .modal-content-custom {
-            background: var(--white);
-            border-radius: 24px;
-            width: 100%;
-            max-width: 600px;
-            max-height: 90vh;
-            overflow: hidden;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
-            animation: slideUp 0.3s ease;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .modal-content-custom.large {
-            max-width: 800px;
-        }
-
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-            }
-            to {
-                opacity: 1;
-            }
-        }
-
-        @keyframes slideUp {
-            from {
-                transform: translateY(50px);
-                opacity: 0;
-            }
-            to {
-                transform: translateY(0);
-                opacity: 1;
-            }
-        }
-
-        .modal-header-custom {
-            padding: 1.5rem 2rem;
-            background: var(--gray-100);
-            border-bottom: 1px solid var(--gray-200);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-
-        .modal-title-custom {
-            font-size: 1.25rem;
-            font-weight: 700;
-            color: var(--dark);
-            margin: 0;
-        }
-
-        .modal-close-custom {
-            width: 36px;
-            height: 36px;
-            border: none;
-            background: transparent;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            color: var(--gray-600);
-        }
-
-        .modal-close-custom:hover {
-            background: var(--gray-200);
-            color: var(--dark);
-        }
-
-        .modal-body-custom {
-            padding: 2rem;
-            overflow-y: auto;
-        }
-
-        /* Form Styles */
-        .form-section {
-            margin-bottom: 2rem;
-        }
-
-        .form-section-title {
-            font-size: 1rem;
-            font-weight: 700;
-            color: var(--dark);
-            margin-bottom: 1rem;
-            padding-bottom: 0.75rem;
-            border-bottom: 2px solid var(--gray-100);
-        }
-
-        .form-group {
-            margin-bottom: 1.5rem;
-        }
-
-        .form-label {
-            font-size: 0.875rem;
-            font-weight: 600;
-            color: var(--gray-700);
-            margin-bottom: 0.5rem;
-            display: block;
-        }
-
-        .form-control-custom {
-            width: 100%;
-            padding: 0.75rem 1rem;
-            border: 2px solid var(--gray-200);
-            border-radius: 12px;
-            font-size: 0.875rem;
-            transition: all 0.2s ease;
-            background: var(--gray-100);
-        }
-
-        .form-control-custom:focus {
-            outline: none;
-            border-color: var(--primary);
-            background: var(--white);
-        }
-
-        .form-select-custom {
-            appearance: none;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23636366' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
-            background-repeat: no-repeat;
-            background-position: right 1rem center;
-            padding-right: 2.5rem;
-        }
-
-        .form-text {
-            font-size: 0.75rem;
-            color: var(--gray-500);
-            margin-top: 0.25rem;
-        }
-
-        /* Checkbox Group */
-        .checkbox-group {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-            gap: 1rem;
-            max-height: 300px;
-            overflow-y: auto;
-            padding: 1rem;
-            background: var(--gray-100);
-            border-radius: 12px;
-        }
-
-        .checkbox-item {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.5rem;
-            border-radius: 8px;
-            transition: background 0.2s ease;
-        }
-
-        .checkbox-item:hover {
-            background: var(--gray-200);
-        }
-
-        .checkbox-custom {
-            width: 18px;
-            height: 18px;
-            cursor: pointer;
-        }
-
-        .checkbox-label {
-            font-size: 0.8125rem;
-            color: var(--gray-700);
-            cursor: pointer;
-            user-select: none;
-        }
-
-        /* Campos Selecionados com Drag and Drop */
-        .campos-selecionados-container {
-            background: var(--white);
-            border: 2px solid var(--gray-200);
-            border-radius: 12px;
-            padding: 1rem;
-            min-height: 200px;
-        }
-
-        .campos-selecionados-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1rem;
-            padding-bottom: 0.75rem;
-            border-bottom: 1px solid var(--gray-200);
-        }
-
-        .campos-selecionados-title {
-            font-weight: 600;
-            color: var(--gray-700);
-            font-size: 0.875rem;
-        }
-
-        .campos-ordem-info {
-            font-size: 0.75rem;
-            color: var(--gray-500);
-        }
-
-        .campos-selecionados-list {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-        }
-
-        .campo-selecionado-item {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            padding: 0.75rem;
-            background: var(--gray-100);
-            border-radius: 8px;
-            margin-bottom: 0.5rem;
-            cursor: move;
-            transition: all 0.2s ease;
-            position: relative;
-        }
-
-        .campo-selecionado-item:hover {
-            background: var(--gray-200);
-            transform: translateX(4px);
-        }
-
-        .campo-selecionado-item.dragging {
-            opacity: 0.5;
-            background: var(--primary-light);
-        }
-
-        .campo-selecionado-item.drag-over {
-            border-top: 3px solid var(--primary);
-        }
-
-        .campo-drag-handle {
-            color: var(--gray-400);
-            font-size: 0.875rem;
-            cursor: grab;
-        }
-
-        .campo-drag-handle:active {
-            cursor: grabbing;
-        }
-
-        .campo-selecionado-numero {
-            width: 24px;
-            height: 24px;
-            background: var(--primary);
-            color: var(--white);
-            border-radius: 6px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.75rem;
-            font-weight: 600;
-        }
-
-        .campo-selecionado-nome {
-            flex: 1;
-            font-size: 0.8125rem;
-            color: var(--gray-700);
-        }
-
-        .campo-selecionado-remove {
-            width: 28px;
-            height: 28px;
-            border: none;
-            background: transparent;
-            color: var(--gray-400);
-            border-radius: 6px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .campo-selecionado-remove:hover {
-            background: var(--danger);
-            color: var(--white);
-        }
-
-        .campos-selecionados-empty {
-            text-align: center;
-            padding: 3rem;
-            color: var(--gray-400);
-            font-size: 0.875rem;
-        }
-
-        .campos-selecionados-empty i {
-            font-size: 2rem;
-            margin-bottom: 0.5rem;
-            display: block;
-            opacity: 0.3;
-        }
-
-        /* Tabs para alternar entre seleção e ordenação */
-        .campos-tabs {
-            display: flex;
-            gap: 0.5rem;
-            margin-bottom: 1rem;
-            background: var(--gray-100);
-            padding: 0.25rem;
-            border-radius: 10px;
-        }
-
-        .campos-tab {
-            flex: 1;
-            padding: 0.625rem 1rem;
-            background: transparent;
-            border: none;
-            border-radius: 8px;
-            font-size: 0.8125rem;
-            font-weight: 600;
-            color: var(--gray-600);
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .campos-tab.active {
-            background: var(--white);
-            color: var(--primary);
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-        }
-
-        .campos-tab-content {
-            display: none;
-        }
-
-        .campos-tab-content.active {
-            display: block;
-        }
-
-        /* Category Header */
-        .category-header {
-            font-size: 0.875rem;
-            font-weight: 700;
-            color: var(--primary);
-            margin-bottom: 0.75rem;
-            padding: 0.5rem 0;
-            border-bottom: 1px solid var(--gray-200);
-        }
-
-        /* Buttons */
-        .btn-modern {
-            padding: 0.75rem 1.5rem;
-            border: none;
-            border-radius: 12px;
-            font-weight: 600;
-            font-size: 0.875rem;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            text-decoration: none;
-        }
-
-        .btn-primary {
-            background: var(--primary);
-            color: var(--white);
-            box-shadow: 0 2px 8px rgba(0, 86, 210, 0.25);
-        }
-
-        .btn-primary:hover {
-            background: var(--primary-dark);
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-md);
-        }
-
-        .btn-secondary {
-            background: var(--gray-100);
-            color: var(--gray-700);
-        }
-
-        .btn-secondary:hover {
-            background: var(--gray-200);
-        }
-
-        .btn-icon {
-            width: 36px;
-            height: 36px;
-            border: none;
-            background: transparent;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            color: var(--gray-600);
-            font-size: 0.875rem;
-        }
-
-        .btn-icon:hover {
-            background: var(--gray-100);
-        }
-
-        /* Loading */
-        .loading-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(255, 255, 255, 0.95);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            z-index: 9999;
-            opacity: 0;
-            visibility: hidden;
-            transition: all 0.3s ease;
-        }
-
-        .loading-overlay.active {
-            opacity: 1;
-            visibility: visible;
-        }
-
-        .loading-spinner {
-            width: 50px;
-            height: 50px;
-            border: 4px solid var(--gray-200);
-            border-top-color: var(--primary);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            to { 
-                transform: rotate(360deg); 
-            }
-        }
-
-        .loading-text {
-            margin-top: 1rem;
-            color: var(--gray-600);
-            font-weight: 500;
-        }
-
-        /* Empty State */
-        .empty-state {
-            text-align: center;
-            padding: 3rem;
-            color: var(--gray-500);
-        }
-
-        .empty-state i {
-            font-size: 3rem;
-            margin-bottom: 1rem;
-            opacity: 0.3;
-        }
-
-        /* Quick Filters */
-        .quick-filters {
-            background: var(--gray-100);
-            padding: 1rem;
-            border-radius: 12px;
-            margin-bottom: 1.5rem;
-        }
-
-        .quick-filters-title {
-            font-size: 0.875rem;
-            font-weight: 600;
-            color: var(--gray-700);
-            margin-bottom: 0.75rem;
-        }
-
-        .filter-pills {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.5rem;
-        }
-
-        .filter-pill {
-            padding: 0.5rem 1rem;
-            background: var(--white);
-            border: 1px solid var(--gray-200);
-            border-radius: 20px;
-            font-size: 0.75rem;
-            color: var(--gray-600);
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .filter-pill:hover {
-            border-color: var(--primary);
-            color: var(--primary);
-        }
-
-        .filter-pill.active {
-            background: var(--primary);
-            color: var(--white);
-            border-color: var(--primary);
-        }
-
-        /* Simple Date Range */
-        .date-range-simple {
-            display: flex;
-            gap: 1rem;
-            align-items: center;
-        }
-
-        .date-range-simple .form-control-custom {
-            flex: 1;
-        }
-
-        /* Responsive */
-        @media (max-width: 768px) {
-            .stats-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .report-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .checkbox-group {
-                grid-template-columns: 1fr;
-            }
-
-            .modal-content-custom {
-                max-width: 100%;
-                margin: 1rem;
-                max-height: calc(100vh - 2rem);
-            }
-
-            .date-range-simple {
-                flex-direction: column;
-            }
-        }
-    </style>
+    <link rel="stylesheet" href="estilizacao/relatorios.css">
 </head>
 
 <body>
@@ -1607,6 +841,9 @@ $headerComponent = HeaderComponent::create([
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
 
+    <!-- JavaScript do Header Component -->
+    <?php $headerComponent->renderJS(); ?>
+
     <script>
         // Inicializa AOS
         AOS.init({
@@ -1619,6 +856,7 @@ $headerComponent = HeaderComponent::create([
         let camposDisponiveis = {};
         let camposOrdenados = [];
         let isDiretor = <?php echo $auth->isDiretor() ? 'true' : 'false'; ?>;
+        let temPermissao = <?php echo json_encode($temPermissaoRelatorios); ?>;
         let camposBasicos = {
             'associados': ['nome', 'cpf', 'telefone', 'email', 'situacao'],
             'financeiro': ['nome', 'cpf', 'tipoAssociado', 'situacaoFinanceira'],
@@ -1627,8 +865,9 @@ $headerComponent = HeaderComponent::create([
             'documentos': ['nome', 'cpf', 'tipo_documento', 'data_upload', 'verificado']
         };
 
-        // User Dropdown Menu
+        // Inicialização
         document.addEventListener('DOMContentLoaded', function() {
+            // CORRIGIDO: User Dropdown Menu (igual à presidência)
             const userMenu = document.getElementById('userMenu');
             const userDropdown = document.getElementById('userDropdown');
 
@@ -1643,31 +882,42 @@ $headerComponent = HeaderComponent::create([
                 });
             }
 
-            // Event listeners
-            document.getElementById('formFiltrosRapidos').addEventListener('submit', aplicarFiltrosRapidos);
-            document.getElementById('formPersonalizado').addEventListener('submit', gerarRelatorioPersonalizado);
+            // Event listeners dos formulários
+            const formFiltrosRapidos = document.getElementById('formFiltrosRapidos');
+            const formPersonalizado = document.getElementById('formPersonalizado');
+            
+            if (formFiltrosRapidos) {
+                formFiltrosRapidos.addEventListener('submit', aplicarFiltrosRapidos);
+            }
+            
+            if (formPersonalizado) {
+                formPersonalizado.addEventListener('submit', gerarRelatorioPersonalizado);
+            }
             
             // Mudança de tipo no relatório personalizado
-            document.getElementById('tipoRelatorio').addEventListener('change', function() {
-                if (this.value) {
-                    document.getElementById('secaoCampos').style.display = 'block';
-                    document.getElementById('secaoFiltros').style.display = 'block';
-                    
-                    // Se mudou o tipo, limpa a ordem anterior pois os campos são diferentes
-                    if (this.value !== tipoRelatorioAtual) {
-                        camposOrdenados = [];
+            const tipoRelatorio = document.getElementById('tipoRelatorio');
+            if (tipoRelatorio) {
+                tipoRelatorio.addEventListener('change', function() {
+                    if (this.value) {
+                        document.getElementById('secaoCampos').style.display = 'block';
+                        document.getElementById('secaoFiltros').style.display = 'block';
+                        
+                        // Se mudou o tipo, limpa a ordem anterior pois os campos são diferentes
+                        if (this.value !== tipoRelatorioAtual) {
+                            camposOrdenados = [];
+                        }
+                        
+                        tipoRelatorioAtual = this.value;
+                        carregarCamposPersonalizados(this.value);
+                        carregarFiltrosPersonalizados(this.value);
+                        // Reseta para aba de seleção (sem event)
+                        alternarTabCampos('selecao', null);
+                    } else {
+                        document.getElementById('secaoCampos').style.display = 'none';
+                        document.getElementById('secaoFiltros').style.display = 'none';
                     }
-                    
-                    tipoRelatorioAtual = this.value;
-                    carregarCamposPersonalizados(this.value);
-                    carregarFiltrosPersonalizados(this.value);
-                    // Reseta para aba de seleção (sem event)
-                    alternarTabCampos('selecao', null);
-                } else {
-                    document.getElementById('secaoCampos').style.display = 'none';
-                    document.getElementById('secaoFiltros').style.display = 'none';
-                }
-            });
+                });
+            }
             
             // Event listener para mudanças nos checkboxes
             document.addEventListener('change', function(e) {
@@ -1675,18 +925,48 @@ $headerComponent = HeaderComponent::create([
                     atualizarCamposSelecionados();
                 }
             });
+
+            // Debug inicial (igual à presidência)
+            console.log('=== DEBUG RELATÓRIOS FRONTEND DETALHADO ===');
+            const usuario = <?php echo json_encode($usuarioLogado); ?>;
+            const isDiretorLocal = <?php echo json_encode($auth->isDiretor()); ?>;
+            
+            console.log('👤 Usuário completo:', usuario);
+            console.log('🏢 Departamento ID:', usuario.departamento_id, '(tipo:', typeof usuario.departamento_id, ')');
+            console.log('👔 É diretor:', isDiretorLocal);
+            console.log('🔐 Tem permissão:', temPermissao);
+            
+            // Teste das comparações
+            console.log('🧪 Testes de comparação:');
+            console.log('  departamento_id == 1:', usuario.departamento_id == 1);
+            console.log('  departamento_id === 1:', usuario.departamento_id === 1);
+            console.log('  departamento_id === "1":', usuario.departamento_id === "1");
+            
+            // Resultado final da lógica
+            const resultadoLogica = isDiretorLocal || usuario.departamento_id == 1;
+            console.log('📋 Lógica de acesso (isDiretor || dept==1):', resultadoLogica);
+            console.log('📋 Permissão PHP vs JS:', temPermissao, '===', resultadoLogica, '?', temPermissao === resultadoLogica);
+            
+            console.log('✅ Sistema de Relatórios carregado com sucesso! (Versão Corrigida)');
         });
 
         // Loading functions
         function showLoading(texto = 'Processando...') {
             const overlay = document.getElementById('loadingOverlay');
-            const loadingText = overlay.querySelector('.loading-text');
-            loadingText.textContent = texto;
-            overlay.classList.add('active');
+            if (overlay) {
+                const loadingText = overlay.querySelector('.loading-text');
+                if (loadingText) {
+                    loadingText.textContent = texto;
+                }
+                overlay.classList.add('active');
+            }
         }
 
         function hideLoading() {
-            document.getElementById('loadingOverlay').classList.remove('active');
+            const overlay = document.getElementById('loadingOverlay');
+            if (overlay) {
+                overlay.classList.remove('active');
+            }
         }
 
         // Executa relatório rápido
@@ -2133,12 +1413,14 @@ $headerComponent = HeaderComponent::create([
             document.querySelectorAll('#camposPersonalizados input[type="checkbox"]').forEach(cb => {
                 cb.checked = true;
             });
+            atualizarCamposSelecionados();
         }
 
         function limparTodosCampos() {
             document.querySelectorAll('#camposPersonalizados input[type="checkbox"]').forEach(cb => {
                 cb.checked = false;
             });
+            atualizarCamposSelecionados();
         }
 
         function selecionarCamposBasicos() {
@@ -2148,6 +1430,7 @@ $headerComponent = HeaderComponent::create([
             document.querySelectorAll('#camposPersonalizados input[type="checkbox"]').forEach(cb => {
                 cb.checked = basicos.includes(cb.value);
             });
+            atualizarCamposSelecionados();
         }
 
         // Gera relatório personalizado
@@ -2531,23 +1814,29 @@ $headerComponent = HeaderComponent::create([
 
         // Fecha modal
         function fecharModal(modalId) {
-            document.getElementById(modalId).classList.remove('show');
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                modal.classList.remove('show');
+            }
             
             // Limpa formulários
             if (modalId === 'modalFiltrosRapidos') {
-                document.getElementById('formFiltrosRapidos').reset();
+                const form = document.getElementById('formFiltrosRapidos');
+                if (form) form.reset();
             } else if (modalId === 'modalPersonalizado') {
                 // Salva o estado atual antes de fechar
-                const modeloIdEditando = document.getElementById('formPersonalizado').getAttribute('data-modelo-id');
+                const form = document.getElementById('formPersonalizado');
+                const modeloIdEditando = form ? form.getAttribute('data-modelo-id') : null;
                 
                 // Se não está editando um modelo existente, limpa tudo
-                if (!modeloIdEditando) {
-                    document.getElementById('formPersonalizado').reset();
-                    document.getElementById('formPersonalizado').removeAttribute('data-modelo-id');
+                if (!modeloIdEditando && form) {
+                    form.reset();
+                    form.removeAttribute('data-modelo-id');
                     document.getElementById('secaoCampos').style.display = 'none';
                     document.getElementById('secaoFiltros').style.display = 'none';
                     // Restaura título original
-                    document.querySelector('#modalPersonalizado .modal-title-custom').textContent = 'Criar Relatório Personalizado';
+                    const title = document.querySelector('#modalPersonalizado .modal-title-custom');
+                    if (title) title.textContent = 'Criar Relatório Personalizado';
                     // Limpa campos ordenados apenas se não estiver editando
                     camposOrdenados = [];
                     // Volta para aba de seleção (sem event)
@@ -2652,9 +1941,11 @@ $headerComponent = HeaderComponent::create([
             });
             
             if (tab === 'selecao') {
-                document.getElementById('tabSelecao').classList.add('active');
+                const tabSelecao = document.getElementById('tabSelecao');
+                if (tabSelecao) tabSelecao.classList.add('active');
             } else {
-                document.getElementById('tabOrdem').classList.add('active');
+                const tabOrdem = document.getElementById('tabOrdem');
+                if (tabOrdem) tabOrdem.classList.add('active');
                 atualizarCamposSelecionados();
             }
         }
@@ -2664,6 +1955,8 @@ $headerComponent = HeaderComponent::create([
             const checkboxes = document.querySelectorAll('#camposPersonalizados input[type="checkbox"]:checked');
             const lista = document.getElementById('camposSelecionadosList');
             const empty = document.getElementById('camposSelecionadosEmpty');
+            
+            if (!lista || !empty) return;
             
             lista.innerHTML = '';
             
@@ -2704,7 +1997,7 @@ $headerComponent = HeaderComponent::create([
             camposOrdenados.forEach((campo, index) => {
                 const checkbox = document.querySelector(`#campo_personalizado_${campo}`);
                 if (checkbox && checkbox.checked) {
-                    const label = checkbox.parentElement.querySelector('label').textContent.trim();
+                    const label = checkbox.closest('.checkbox-item').querySelector('label').textContent.trim();
                     
                     const li = document.createElement('li');
                     li.className = 'campo-selecionado-item';
@@ -2810,9 +2103,12 @@ $headerComponent = HeaderComponent::create([
             items.forEach((item, index) => {
                 camposOrdenados.push(item.dataset.campo);
                 // Atualiza número
-                item.querySelector('.campo-selecionado-numero').textContent = index + 1;
+                const numero = item.querySelector('.campo-selecionado-numero');
+                if (numero) numero.textContent = index + 1;
             });
         }
+
+        console.log('✓ Sistema de Relatórios carregado com sucesso! (Versão Completa Corrigida com Bloqueio)');
     </script>
 </body>
 </html>
