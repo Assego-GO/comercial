@@ -389,6 +389,13 @@ class HeaderComponent {
         ];
 
         $tabs[] = [
+            'id' => 'auditoria',
+            'label' => 'Auditoria',
+            'icon' => 'fas fa-user-shield',
+            'href' => 'auditoria.php'
+        ];
+
+        $tabs[] = [
             'id' => 'documentos',
             'label' => 'Documentos',
             'icon' => 'fas fa-folder-open',
