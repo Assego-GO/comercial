@@ -406,6 +406,7 @@ function temConjugeComTelefone($dependentes) {
 }
 
 // Limpa buffer e envia resposta
+
 ob_end_clean();
 echo json_encode($response, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
 exit;

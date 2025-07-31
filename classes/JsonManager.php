@@ -495,6 +495,7 @@ class JsonManager {
         return $arquivos;
     }
     
+    //oi
     public function obterEstatisticas() {
         $arquivo = $this->jsonDirectory . 'estatisticas.json';
         
