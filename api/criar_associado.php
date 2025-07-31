@@ -92,6 +92,7 @@ try {
         'patente' => $_POST['patente'] ?? null,
         'categoria' => $_POST['categoria'] ?? null,
         'lotacao' => trim($_POST['lotacao'] ?? '') ?: null,
+        'telefoneLotacao' => preg_replace('/[^0-9]/', '', $_POST['telefoneLotacao'] ?? '') ?: null, // ✅ NOVO CAMPO
         'unidade' => trim($_POST['unidade'] ?? '') ?: null,
         // Endereço
         'cep' => preg_replace('/[^0-9]/', '', $_POST['cep'] ?? '') ?: null,
@@ -118,17 +119,29 @@ try {
         'servicoJuridico' => $_POST['servicoJuridico'] ?? null
     ];
 
-    // Processa dependentes
+    // ✅ MODIFICADO - Processa dependentes com telefone E data para cônjuges
     $dados['dependentes'] = [];
     if (isset($_POST['dependentes']) && is_array($_POST['dependentes'])) {
         foreach ($_POST['dependentes'] as $dep) {
             if (!empty($dep['nome'])) {
-                $dados['dependentes'][] = [
+                $dependente = [
                     'nome' => trim($dep['nome']),
-                    'data_nascimento' => $dep['data_nascimento'] ?? null,
                     'parentesco' => $dep['parentesco'] ?? null,
                     'sexo' => $dep['sexo'] ?? null
                 ];
+                
+                // ✅ NOVO: Para cônjuge, captura TELEFONE E DATA. Para outros, só data
+                if ($dep['parentesco'] === 'Cônjuge') {
+                    // Cônjuge tem AMBOS os campos
+                    $dependente['telefone'] = preg_replace('/[^0-9]/', '', $dep['telefone'] ?? '');
+                    $dependente['data_nascimento'] = $dep['data_nascimento'] ?? null;
+                } else {
+                    // Outros parentes só têm data de nascimento
+                    $dependente['data_nascimento'] = $dep['data_nascimento'] ?? null;
+                    $dependente['telefone'] = null; // Limpa telefone
+                }
+                
+                $dados['dependentes'][] = $dependente;
             }
         }
     }
@@ -336,7 +349,9 @@ try {
             'extras' => [
                 'dependentes' => count($dados['dependentes']),
                 'tem_foto' => !empty($dados['foto']),
-                'tem_ficha_assinada' => $documentoId !== null
+                'tem_ficha_assinada' => $documentoId !== null,
+                'telefone_lotacao' => !empty($dados['telefoneLotacao']), // ✅ NOVO
+                'tem_conjuge' => temConjugeComTelefone($dados['dependentes']) // ✅ ATUALIZADO
             ],
             
             // ✅ NOVA SEÇÃO - Informações sobre o JSON
@@ -378,6 +393,16 @@ try {
     ];
     
     http_response_code(400);
+}
+
+// ✅ FUNÇÃO AUXILIAR ATUALIZADA
+function temConjugeComTelefone($dependentes) {
+    foreach ($dependentes as $dep) {
+        if ($dep['parentesco'] === 'Cônjuge') {
+            return true; // Cônjuge sempre tem telefone agora
+        }
+    }
+    return false;
 }
 
 // Limpa buffer e envia resposta
