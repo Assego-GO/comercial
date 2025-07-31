@@ -1,6 +1,6 @@
 <?php
 /**
- * API para atualizar associado - VERSÃO CORRIGIDA
+ * API para atualizar associado - VERSÃO COM SALVAMENTO EM JSON
  * api/atualizar_associado.php
  */
 
@@ -41,6 +41,9 @@ try {
     require_once '../classes/Database.php';
     require_once '../classes/Auth.php';
     require_once '../classes/Associados.php';
+    
+    // ✅ NOVA LINHA - JsonManager para salvar em JSON
+    require_once '../classes/JsonManager.php';
 
     // Inicia sessão
     if (session_status() === PHP_SESSION_NONE) {
@@ -61,7 +64,7 @@ try {
         'email' => $_SESSION['user_email'] ?? null
     ];
     
-    error_log("=== ATUALIZAR ASSOCIADO - VERSÃO CORRIGIDA ===");
+    error_log("=== ATUALIZAR ASSOCIADO COM JSON - VERSÃO CORRIGIDA ===");
     error_log("ID: $associadoId | Usuário: " . $usuarioLogado['nome']);
     error_log("POST dados: " . json_encode($_POST, JSON_PARTIAL_OUTPUT_ON_ERROR));
 
@@ -122,7 +125,15 @@ try {
             'localDebito' => $_POST['localDebito'] ?? null,
             'agencia' => trim($_POST['agencia'] ?? '') ?: null,
             'operacao' => trim($_POST['operacao'] ?? '') ?: null,
-            'contaCorrente' => trim($_POST['contaCorrente'] ?? '') ?: null
+            'contaCorrente' => trim($_POST['contaCorrente'] ?? '') ?: null,
+            
+            // ✅ NOVOS CAMPOS - Dados dos serviços para JSON
+            'tipoAssociadoServico' => $_POST['tipoAssociadoServico'] ?? null,
+            'valorSocial' => $_POST['valorSocial'] ?? '0',
+            'percentualAplicadoSocial' => $_POST['percentualAplicadoSocial'] ?? '0',
+            'valorJuridico' => $_POST['valorJuridico'] ?? '0',
+            'percentualAplicadoJuridico' => $_POST['percentualAplicadoJuridico'] ?? '0',
+            'servicoJuridico' => $_POST['servicoJuridico'] ?? null
         ];
 
         // Processa dependentes
@@ -457,6 +468,34 @@ try {
         $transacaoAtiva = false;
         error_log("✓ Transação dos serviços confirmada");
 
+        // =====================================
+        // ✅ PASSO 3: SALVA DADOS EM JSON
+        // =====================================
+        
+        $resultadoJson = ['sucesso' => false, 'erro' => 'Não processado'];
+        
+        try {
+            error_log("=== INICIANDO SALVAMENTO EM JSON (ATUALIZAÇÃO) ===");
+            
+            $jsonManager = new JsonManager();
+            $resultadoJson = $jsonManager->salvarAssociadoJson($dados, $associadoId, 'UPDATE');
+            
+            if ($resultadoJson['sucesso']) {
+                error_log("✓ JSON atualizado com sucesso: " . $resultadoJson['arquivo_individual']);
+                error_log("✓ Tamanho do arquivo: " . $resultadoJson['tamanho_bytes'] . " bytes");
+            } else {
+                error_log("⚠ Erro ao salvar JSON: " . $resultadoJson['erro']);
+            }
+            
+        } catch (Exception $e) {
+            $resultadoJson = [
+                'sucesso' => false,
+                'erro' => $e->getMessage()
+            ];
+            error_log("✗ ERRO CRÍTICO ao salvar JSON: " . $e->getMessage());
+            // Não falha a operação por causa do JSON
+        }
+
         // Busca dados atualizados
         $associadoAtualizado = $associados->getById($associadoId);
         
@@ -477,9 +516,25 @@ try {
                 'servicos_alterados' => $servicosAlterados,
                 'detalhes_servicos' => $detalhesServicos,
                 'total_alteracoes_servicos' => count($detalhesServicos),
-                'tipo_associado_servico' => $tipoAssociadoServico
+                'tipo_associado_servico' => $tipoAssociadoServico,
+                
+                // ✅ NOVA SEÇÃO - Informações sobre o JSON
+                'json_export' => [
+                    'atualizado' => $resultadoJson['sucesso'],
+                    'arquivo' => $resultadoJson['arquivo_individual'] ?? null,
+                    'tamanho_bytes' => $resultadoJson['tamanho_bytes'] ?? 0,
+                    'timestamp' => $resultadoJson['timestamp'] ?? null,
+                    'erro' => $resultadoJson['sucesso'] ? null : $resultadoJson['erro'],
+                    'operacao' => 'UPDATE',
+                    'pronto_para_zapsing' => $resultadoJson['sucesso']
+                ]
             ]
         ];
+        
+        // ✅ Adiciona informação na mensagem se JSON foi salvo
+        if ($resultadoJson['sucesso']) {
+            $response['message'] .= ' Dados atualizados na integração.';
+        }
 
     } catch (Exception $e) {
         if ($transacaoAtiva) {
