@@ -453,9 +453,8 @@ try {
                                 <option value="">Selecione...</option>
                                 <option value="Polícia Militar" <?php echo (isset($associadoData['corporacao']) && $associadoData['corporacao'] == 'Polícia Militar') ? 'selected' : ''; ?>>Polícia Militar</option>
                                 <option value="Corpo de Bombeiros" <?php echo (isset($associadoData['corporacao']) && $associadoData['corporacao'] == 'Corpo de Bombeiros') ? 'selected' : ''; ?>>Corpo de Bombeiros</option>
-                                <option value="Polícia Civil" <?php echo (isset($associadoData['corporacao']) && $associadoData['corporacao'] == 'Polícia Civil') ? 'selected' : ''; ?>>Polícia Civil</option>
-                                <option value="Polícia Federal" <?php echo (isset($associadoData['corporacao']) && $associadoData['corporacao'] == 'Polícia Federal') ? 'selected' : ''; ?>>Polícia Federal</option>
-                                <option value="Forças Armadas" <?php echo (isset($associadoData['corporacao']) && $associadoData['corporacao'] == 'Forças Armadas') ? 'selected' : ''; ?>>Forças Armadas</option>
+                               
+                                <option value="Pensionista" <?php echo (isset($associadoData['corporacao']) && $associadoData['corporacao'] == 'Forças Pensionista') ? 'selected' : ''; ?>>Pensionista</option>
                             </select>
                         </div>
 
