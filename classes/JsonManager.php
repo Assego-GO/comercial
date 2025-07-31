@@ -155,6 +155,8 @@ class JsonManager {
                 'patente' => $dados['patente'] ?? '',
                 'categoria' => $dados['categoria'] ?? '',
                 'lotacao' => $dados['lotacao'] ?? '',
+                'telefone_lotacao' => $dados['telefoneLotacao'] ?? '', // ✅ NOVO CAMPO
+                'telefone_lotacao_numeros' => preg_replace('/[^0-9]/', '', $dados['telefoneLotacao'] ?? ''), // ✅ NOVO CAMPO
                 'unidade' => $dados['unidade'] ?? '',
                 'nivel_hierarquico' => $this->determinarNivelHierarquico($dados['patente'] ?? '')
             ],
@@ -256,7 +258,7 @@ class JsonManager {
     }
     
     /**
-     * Processa dependentes
+     * Processa dependentes - ✅ FUNÇÃO MODIFICADA PARA CÔNJUGE TER TELEFONE E DATA
      */
     private function processarDependentes($dados) {
         $dependentes = [];
@@ -264,15 +266,33 @@ class JsonManager {
         if (isset($dados['dependentes']) && is_array($dados['dependentes'])) {
             foreach ($dados['dependentes'] as $index => $dep) {
                 if (!empty($dep['nome'])) {
-                    $dependentes[] = [
+                    $dependente = [
                         'ordem' => $index + 1,
                         'nome' => trim($dep['nome']),
-                        'data_nascimento' => $dep['data_nascimento'] ?? '',
-                        'idade_anos' => $this->calcularIdade($dep['data_nascimento'] ?? ''),
                         'parentesco' => $dep['parentesco'] ?? '',
-                        'sexo' => $dep['sexo'] ?? '',
-                        'eh_menor_idade' => $this->calcularIdade($dep['data_nascimento'] ?? '') < 18
+                        'sexo' => $dep['sexo'] ?? ''
                     ];
+                    
+                    // ✅ NOVO: Para cônjuge, captura TELEFONE E DATA. Para outros, só data
+                    if ($dep['parentesco'] === 'Cônjuge') {
+                        // Cônjuge tem AMBOS os campos
+                        $dependente['telefone'] = $dep['telefone'] ?? '';
+                        $dependente['telefone_numeros'] = preg_replace('/[^0-9]/', '', $dep['telefone'] ?? '');
+                        $dependente['data_nascimento'] = $dep['data_nascimento'] ?? '';
+                        $dependente['idade_anos'] = $this->calcularIdade($dep['data_nascimento'] ?? '');
+                        $dependente['eh_menor_idade'] = $this->calcularIdade($dep['data_nascimento'] ?? '') < 18;
+                        $dependente['tipo_campo'] = 'telefone_e_data';
+                    } else {
+                        // Outros parentes só têm data de nascimento
+                        $dependente['data_nascimento'] = $dep['data_nascimento'] ?? '';
+                        $dependente['idade_anos'] = $this->calcularIdade($dep['data_nascimento'] ?? '');
+                        $dependente['eh_menor_idade'] = $this->calcularIdade($dep['data_nascimento'] ?? '') < 18;
+                        $dependente['telefone'] = null;
+                        $dependente['telefone_numeros'] = null;
+                        $dependente['tipo_campo'] = 'data_nascimento';
+                    }
+                    
+                    $dependentes[] = $dependente;
                 }
             }
         }
