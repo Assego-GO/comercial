@@ -73,7 +73,7 @@ if ($auth->isDiretor()) {
 }
 
 if (!$temPermissaoPresidencia) {
-    $motivoNegacao = 'Para acessar a presidência, você precisa ser diretor ou estar no departamento da Presidência (ID: 1). Seu departamento atual: ' . ($usuarioLogado['departamento_id'] ?? 'não definido') . ' (tipo: ' . gettype($usuarioLogado['departamento_id'] ?? null) . ')';
+    $motivoNegacao = 'Para acessar a presidência, você precisa ser diretor ou estar no departamento da Presidência.';
     error_log("❌ ACESSO NEGADO: " . $motivoNegacao);
 } else {
     error_log("✅ ACESSO PERMITIDO");
@@ -160,9 +160,8 @@ $headerComponent = HeaderComponent::create([
                 <div class="alert alert-info">
                     <h6><i class="fas fa-info-circle me-2"></i>Como resolver:</h6>
                     <ol class="mb-0">
-                        <li>Verifique se você está no departamento correto (ID: 1)</li>
+                        <li>Verifique se você está no departamento correto</li>
                         <li>Confirme se você é diretor no sistema</li>
-                        <li>Use o botão "Debug Detalhado" para mais informações</li>
                         <li>Entre em contato com o administrador se necessário</li>
                     </ol>
                 </div>
@@ -173,10 +172,6 @@ $headerComponent = HeaderComponent::create([
                         <ul class="mb-0">
                             <li><strong>Nome:</strong> <?php echo htmlspecialchars($usuarioLogado['nome']); ?></li>
                             <li><strong>Cargo:</strong> <?php echo htmlspecialchars($usuarioLogado['cargo'] ?? 'N/A'); ?></li>
-                            <li><strong>Departamento ID:</strong> 
-                                <span class="badge bg-<?php echo ($usuarioLogado['departamento_id'] == 1) ? 'success' : 'danger'; ?>">
-                                    <?php echo $usuarioLogado['departamento_id'] ?? 'N/A'; ?>
-                                </span>
                             </li>
                             <li><strong>É Diretor:</strong> 
                                 <span class="badge bg-<?php echo $auth->isDiretor() ? 'success' : 'danger'; ?>">
@@ -189,7 +184,7 @@ $headerComponent = HeaderComponent::create([
                         <h6>Requisitos para acesso:</h6>
                         <ul class="mb-3">
                             <li>Ser diretor <strong>OU</strong></li>
-                            <li>Estar no departamento da Presidência (ID: 1)</li>
+                            <li>Estar no departamento da Presidência</li>
                         </ul>
                         
                         <div class="btn-group d-block">
