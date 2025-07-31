@@ -2404,6 +2404,7 @@ function selecionarNome(nome) {
     
     console.log('✓ Nome selecionado:', nome);
 }
+//oi
 
 function hideSuggestions() {
     const suggestionsContainer = document.getElementById('indicacaoSuggestions');
