@@ -197,6 +197,10 @@ $headerComponent = HeaderComponent::create([
                                 <i class="fas fa-sync me-1"></i>
                                 Recarregar Página
                             </button>
+                            <button class="btn btn-info btn-sm ms-2" onclick="mostrarDebugCompleto()">
+                                <i class="fas fa-bug me-1"></i>
+                                Debug Detalhado
+                            </button>
                         </div>
                     </div>
                 </div>
