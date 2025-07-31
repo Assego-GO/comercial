@@ -1,6 +1,6 @@
 <?php
 /**
- * API para criar novo associado - VERSÃO CORRIGIDA SEM CONFLITO DE TRANSAÇÕES
+ * API para criar novo associado - VERSÃO COM SALVAMENTO EM JSON
  * api/criar_associado.php
  */
 
@@ -39,6 +39,9 @@ try {
     require_once '../classes/Auth.php';
     require_once '../classes/Associados.php';
     require_once '../classes/Documentos.php';
+    
+    // ✅ NOVA LINHA - JsonManager para salvar em JSON
+    require_once '../classes/JsonManager.php';
 
     // Sessão
     if (session_status() === PHP_SESSION_NONE) {
@@ -54,7 +57,7 @@ try {
         $_SESSION['user_name'] = 'Sistema';
     }
 
-    error_log("=== CRIAR PRÉ-CADASTRO COM FLUXO INTEGRADO ===");
+    error_log("=== CRIAR PRÉ-CADASTRO COM FLUXO INTEGRADO + JSON ===");
     error_log("Usuário: " . ($_SESSION['user_name'] ?? 'N/A'));
     error_log("POST fields: " . count($_POST));
 
@@ -67,9 +70,7 @@ try {
     }
 
     // Verifica se tem documento anexado (ficha assinada)
-    if (!isset($_FILES['ficha_assinada']) || $_FILES['ficha_assinada']['error'] !== UPLOAD_ERR_OK) {
-        throw new Exception("É obrigatório anexar a ficha de filiação assinada pelo associado");
-    }
+  
 
     // Prepara dados do associado
     $dados = [
@@ -106,7 +107,15 @@ try {
         'localDebito' => $_POST['localDebito'] ?? null,
         'agencia' => trim($_POST['agencia'] ?? '') ?: null,
         'operacao' => trim($_POST['operacao'] ?? '') ?: null,
-        'contaCorrente' => trim($_POST['contaCorrente'] ?? '') ?: null
+        'contaCorrente' => trim($_POST['contaCorrente'] ?? '') ?: null,
+        
+        // ✅ NOVOS CAMPOS - Dados dos serviços para JSON
+        'tipoAssociadoServico' => $_POST['tipoAssociadoServico'] ?? null,
+        'valorSocial' => $_POST['valorSocial'] ?? '0',
+        'percentualAplicadoSocial' => $_POST['percentualAplicadoSocial'] ?? '0',
+        'valorJuridico' => $_POST['valorJuridico'] ?? '0',
+        'percentualAplicadoJuridico' => $_POST['percentualAplicadoJuridico'] ?? '0',
+        'servicoJuridico' => $_POST['servicoJuridico'] ?? null
     ];
 
     // Processa dependentes
@@ -272,6 +281,34 @@ try {
         // Continua - não é crítico
     }
 
+    // =====================================
+    // ✅ PASSO 5: SALVA DADOS EM JSON
+    // =====================================
+    
+    $resultadoJson = ['sucesso' => false, 'erro' => 'Não processado'];
+    
+    try {
+        error_log("=== INICIANDO SALVAMENTO EM JSON ===");
+        
+        $jsonManager = new JsonManager();
+        $resultadoJson = $jsonManager->salvarAssociadoJson($dados, $associadoId, 'CREATE');
+        
+        if ($resultadoJson['sucesso']) {
+            error_log("✓ JSON salvo com sucesso: " . $resultadoJson['arquivo_individual']);
+            error_log("✓ Tamanho do arquivo: " . $resultadoJson['tamanho_bytes'] . " bytes");
+        } else {
+            error_log("⚠ Erro ao salvar JSON: " . $resultadoJson['erro']);
+        }
+        
+    } catch (Exception $e) {
+        $resultadoJson = [
+            'sucesso' => false,
+            'erro' => $e->getMessage()
+        ];
+        error_log("✗ ERRO CRÍTICO ao salvar JSON: " . $e->getMessage());
+        // Não falha a operação por causa do JSON
+    }
+
     // Monta resposta de sucesso
     $response = [
         'status' => 'success',
@@ -300,12 +337,28 @@ try {
                 'dependentes' => count($dados['dependentes']),
                 'tem_foto' => !empty($dados['foto']),
                 'tem_ficha_assinada' => $documentoId !== null
+            ],
+            
+            // ✅ NOVA SEÇÃO - Informações sobre o JSON
+            'json_export' => [
+                'salvo' => $resultadoJson['sucesso'],
+                'arquivo' => $resultadoJson['arquivo_individual'] ?? null,
+                'tamanho_bytes' => $resultadoJson['tamanho_bytes'] ?? 0,
+                'timestamp' => $resultadoJson['timestamp'] ?? null,
+                'erro' => $resultadoJson['sucesso'] ? null : $resultadoJson['erro'],
+                'pronto_para_zapsing' => $resultadoJson['sucesso']
             ]
         ]
     ];
+    
+    // ✅ Adiciona informação na mensagem se JSON foi salvo
+    if ($resultadoJson['sucesso']) {
+        $response['message'] .= ' Dados exportados para integração.';
+    }
 
     error_log("=== PRÉ-CADASTRO CONCLUÍDO COM SUCESSO ===");
     error_log("ID: {$associadoId} | Documento: " . ($documentoId ?? 'N/A') . " | Status: {$statusFluxo}");
+    error_log("JSON: " . ($resultadoJson['sucesso'] ? '✓ Salvo' : '✗ Falhou') . " | Arquivo: " . ($resultadoJson['arquivo_individual'] ?? 'N/A'));
 
 } catch (Exception $e) {
     error_log("✗ ERRO GERAL: " . $e->getMessage());
