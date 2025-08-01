@@ -43,40 +43,34 @@ error_log("Departamento ID (valor): " . ($usuarioLogado['departamento_id'] ?? 'N
 error_log("Departamento ID (tipo): " . gettype($usuarioLogado['departamento_id'] ?? null));
 error_log("É Diretor (método): " . ($auth->isDiretor() ? 'SIM' : 'NÃO'));
 
-// Verificações de permissão:
-// 1. É diretor OU
-// 2. Está no departamento da presidência (APENAS ID: 1)
-if ($auth->isDiretor()) {
-    $temPermissaoPresidencia = true;
-    error_log("✅ Permissão concedida: É DIRETOR");
-} elseif (isset($usuarioLogado['departamento_id'])) {
+// NOVA VALIDAÇÃO: APENAS usuários do departamento da presidência (ID: 1)
+// Não importa se é diretor ou não - só quem é da presidência pode acessar
+if (isset($usuarioLogado['departamento_id'])) {
     $deptId = $usuarioLogado['departamento_id'];
     
-    // Testar diferentes tipos de comparação
-    $isString1 = ($deptId === '1');
-    $isInt1 = ($deptId === 1);
-    $isEqual1 = ($deptId == 1);
-    
+    // Debug dos testes de comparação
     error_log("Testes de comparação:");
-    error_log("  deptId === '1': " . ($isString1 ? 'true' : 'false'));
-    error_log("  deptId === 1: " . ($isInt1 ? 'true' : 'false'));
-    error_log("  deptId == 1: " . ($isEqual1 ? 'true' : 'false'));
+    error_log("  deptId === '1': " . ($deptId === '1' ? 'true' : 'false'));
+    error_log("  deptId === 1: " . ($deptId === 1 ? 'true' : 'false'));
+    error_log("  deptId == 1: " . ($deptId == 1 ? 'true' : 'false'));
     
     if ($deptId == 1) { // Comparação flexível para pegar string ou int
         $temPermissaoPresidencia = true;
-        error_log("✅ Permissão concedida: Departamento ID = 1");
+        error_log("✅ Permissão concedida: Usuário pertence ao Departamento da Presidência (ID = 1)");
     } else {
-        error_log("❌ Departamento incorreto. Valor: '$deptId' (tipo: " . gettype($deptId) . ")");
+        $motivoNegacao = 'Acesso restrito ao departamento da Presidência.';
+        error_log("❌ Acesso negado. Departamento: '$deptId' (tipo: " . gettype($deptId) . "). Necessário: Presidência (ID = 1)");
     }
 } else {
+    $motivoNegacao = 'Departamento não identificado. Acesso restrito ao departamento da Presidência.';
     error_log("❌ departamento_id não existe no array do usuário");
 }
 
+// Log final do resultado
 if (!$temPermissaoPresidencia) {
-    $motivoNegacao = 'Para acessar a presidência, você precisa ser diretor ou estar no departamento da Presidência.';
     error_log("❌ ACESSO NEGADO: " . $motivoNegacao);
 } else {
-    error_log("✅ ACESSO PERMITIDO");
+    error_log("✅ ACESSO PERMITIDO - Usuário da Presidência");
 }
 
 // Busca estatísticas de documentos (apenas se tem permissão)
@@ -98,13 +92,9 @@ if ($temPermissaoPresidencia) {
     $aguardandoAssinatura = $assinadosHoje = $assinadosMes = $tempoMedio = 0;
 }
 
-// Cria instância do Header Component
+// Cria instância do Header Component - CORRIGIDO: passa TODO o array do usuário
 $headerComponent = HeaderComponent::create([
-    'usuario' => [
-        'nome' => $usuarioLogado['nome'],
-        'cargo' => $usuarioLogado['cargo'] ?? 'Funcionário',
-        'avatar' => $usuarioLogado['avatar'] ?? null
-    ],
+    'usuario' => $usuarioLogado, // ← CORRIGIDO: Agora passa TODO o array (incluindo departamento_id)
     'isDiretor' => $auth->isDiretor(),
     'activeTab' => 'presidencia',
     'notificationCount' => $aguardandoAssinatura,
@@ -257,7 +247,6 @@ $headerComponent = HeaderComponent::create([
                     <div class="col-md-6">
                         <h6>Requisitos para acesso:</h6>
                         <ul class="mb-3">
-                            <li>Ser diretor <strong>OU</strong></li>
                             <li>Estar no departamento da Presidência</li>
                         </ul>
                         
@@ -276,13 +265,26 @@ $headerComponent = HeaderComponent::create([
             
             <!-- Page Header -->
             <div class="page-header" data-aos="fade-right">
-                <h1 class="page-title">
-                    <div class="page-title-icon">
-                        <i class="fas fa-stamp"></i>
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h1 class="page-title">
+                            <div class="page-title-icon">
+                                <i class="fas fa-stamp"></i>
+                            </div>
+                            Área da Presidência
+                        </h1>
+                        <p class="page-subtitle">Gerencie e assine documentos de filiação dos associados</p>
                     </div>
-                    Área da Presidência
-                </h1>
-                <p class="page-subtitle">Gerencie e assine documentos de filiação dos associados</p>
+                    
+                    <!-- BOTÃO DE FUNCIONÁRIOS - PARA USUÁRIOS DA PRESIDÊNCIA -->
+                    <?php if ($temPermissaoPresidencia): ?>
+                    <div class="header-actions">
+                        <a href="funcionarios.php" class="btn btn-primary btn-lg">
+                            <i class="fas fa-users me-2"></i> Funcionários
+                        </a>
+                    </div>
+                    <?php endif; ?>
+                </div>
             </div>
 
             <!-- Stats Grid -->
@@ -981,6 +983,94 @@ $headerComponent = HeaderComponent::create([
 
         const debouncedFilter = debounce(filtrarDocumentos, 300);
 
+        // FUNÇÃO ROBUSTA PARA INICIALIZAR DROPDOWN DO USUÁRIO
+        function initializeUserDropdown() {
+            console.log('🎯 Inicializando dropdown do usuário na presidência...');
+            
+            // Diferentes possibilidades de seletores
+            const menuSelectors = [
+                '#userMenu',
+                '.user-menu-btn',
+                '[data-user-menu]',
+                '.user-profile-btn',
+                '.user-avatar'
+            ];
+            
+            const dropdownSelectors = [
+                '#userDropdown',
+                '.user-dropdown',
+                '[data-user-dropdown]',
+                '.user-menu-dropdown'
+            ];
+            
+            let userMenu = null;
+            let userDropdown = null;
+            
+            // Procura pelo botão do menu
+            for (const selector of menuSelectors) {
+                userMenu = document.querySelector(selector);
+                if (userMenu) {
+                    console.log('✅ Menu encontrado com seletor:', selector);
+                    break;
+                }
+            }
+            
+            // Procura pelo dropdown
+            for (const selector of dropdownSelectors) {
+                userDropdown = document.querySelector(selector);
+                if (userDropdown) {
+                    console.log('✅ Dropdown encontrado com seletor:', selector);
+                    break;
+                }
+            }
+            
+            if (userMenu && userDropdown) {
+                // Remove listeners antigos se existirem
+                userMenu.removeEventListener('click', handleUserMenuClick);
+                document.removeEventListener('click', handleDocumentClick);
+                
+                // Adiciona novos listeners
+                userMenu.addEventListener('click', handleUserMenuClick);
+                document.addEventListener('click', handleDocumentClick);
+                
+                console.log('✅ User dropdown inicializado com sucesso na presidência!');
+                
+                // Função para lidar com clique no menu
+                function handleUserMenuClick(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    const isVisible = userDropdown.classList.contains('show');
+                    
+                    // Fecha outros dropdowns abertos
+                    document.querySelectorAll('.user-dropdown.show').forEach(dropdown => {
+                        if (dropdown !== userDropdown) {
+                            dropdown.classList.remove('show');
+                        }
+                    });
+                    
+                    // Alterna o dropdown atual
+                    userDropdown.classList.toggle('show', !isVisible);
+                    
+                    console.log('Dropdown toggled:', !isVisible);
+                }
+                
+                // Função para lidar com cliques no documento
+                function handleDocumentClick(e) {
+                    if (!userMenu.contains(e.target) && !userDropdown.contains(e.target)) {
+                        userDropdown.classList.remove('show');
+                    }
+                }
+                
+            } else {
+                console.warn('⚠️ Elementos do dropdown não encontrados na presidência');
+                console.log('Elementos com ID disponíveis:', 
+                    Array.from(document.querySelectorAll('[id]')).map(el => `#${el.id}`));
+                console.log('Elementos com classes de usuário:', 
+                    Array.from(document.querySelectorAll('[class*="user"]')).map(el => el.className));
+            }
+        }
+
         // Inicialização - CORRIGIDA
         document.addEventListener('DOMContentLoaded', function() {
             // Inicializa AOS
@@ -988,6 +1078,14 @@ $headerComponent = HeaderComponent::create([
                 duration: 800,
                 once: true
             });
+
+            // INICIALIZA DROPDOWN DO USUÁRIO - VERSÃO ROBUSTA
+            initializeUserDropdown();
+            
+            // Tenta novamente após delays (caso elementos sejam carregados assincronamente)
+            setTimeout(initializeUserDropdown, 500);
+            setTimeout(initializeUserDropdown, 1000);
+            setTimeout(initializeUserDropdown, 2000);
 
             // Debug inicial DETALHADO
             console.log('=== DEBUG PRESIDÊNCIA FRONTEND DETALHADO ===');
@@ -998,6 +1096,7 @@ $headerComponent = HeaderComponent::create([
             console.log('🏢 Departamento ID:', usuario.departamento_id, '(tipo:', typeof usuario.departamento_id, ')');
             console.log('👔 É diretor:', isDiretor);
             console.log('🔐 Tem permissão:', temPermissao);
+            console.log('🎯 Botão Funcionários deve aparecer:', temPermissao ? 'SIM' : 'NÃO');
             
             // Teste das comparações
             console.log('🧪 Testes de comparação:');
@@ -1006,8 +1105,8 @@ $headerComponent = HeaderComponent::create([
             console.log('  departamento_id === "1":', usuario.departamento_id === "1");
             
             // Resultado final da lógica
-            const resultadoLogica = isDiretor || usuario.departamento_id == 1;
-            console.log('📋 Lógica de acesso (isDiretor || dept==1):', resultadoLogica);
+            const resultadoLogica = usuario.departamento_id == 1;
+            console.log('📋 Lógica de acesso (dept==1):', resultadoLogica);
             console.log('📋 Permissão PHP vs JS:', temPermissao, '===', resultadoLogica, '?', temPermissao === resultadoLogica);
             
             console.log('🔗 URL da API:', '../api/documentos/documentos_presidencia_listar.php');
@@ -2035,6 +2134,175 @@ $headerComponent = HeaderComponent::create([
             carregarDocumentosPendentes();
         }
 
+
+        // Placeholder functions para ações rápidas
+        function abrirRelatorios() {
+            window.location.href = 'relatorios.php';
+        }
+
+        function verHistorico() {
+            notifications.show('Funcionalidade de histórico em desenvolvimento', 'info');
+        }
+
+        function configurarAssinatura() {
+            notifications.show('Funcionalidade de configurações em desenvolvimento', 'info');
+        }
+
+        // Função de debug completo para diagnosticar problemas de acesso
+        function mostrarDebugCompleto() {
+            const usuario = <?php echo json_encode($usuarioLogado); ?>;
+            const isDiretor = <?php echo json_encode($auth->isDiretor()); ?>;
+            const temPermissao = <?php echo json_encode($temPermissaoPresidencia); ?>;
+            
+            let debugHtml = `
+                <div class="debug-completo">
+                    <h6><i class="fas fa-bug"></i> Debug Completo de Permissões</h6>
+                    <hr>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Dados do Usuário:</h6>
+                            <pre class="bg-light p-2 small">${JSON.stringify(usuario, null, 2)}</pre>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Verificações:</h6>
+                            <ul class="small">
+                                <li><strong>É Diretor:</strong> ${isDiretor ? 'SIM ✅' : 'NÃO ❌'}</li>
+                                <li><strong>Departamento ID:</strong> ${usuario.departamento_id} (tipo: ${typeof usuario.departamento_id})</li>
+                                <li><strong>Departamento == 1:</strong> ${usuario.departamento_id == 1 ? 'SIM ✅' : 'NÃO ❌'}</li>
+                                <li><strong>Departamento === 1:</strong> ${usuario.departamento_id === 1 ? 'SIM ✅' : 'NÃO ❌'}</li>
+                                <li><strong>Departamento === '1':</strong> ${usuario.departamento_id === '1' ? 'SIM ✅' : 'NÃO ❌'}</li>
+                                <li><strong>Tem Permissão Final:</strong> ${temPermissao ? 'SIM ✅' : 'NÃO ❌'}</li>
+                            </ul>
+                            
+                            <div class="mt-3">
+                                <strong>Regra de Acesso:</strong><br>
+                                <code>departamento_id == 1</code><br><br>
+                                
+                                <strong>Resultado:</strong><br>
+                                <code>${usuario.departamento_id == 1}</code>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    <small class="text-muted">
+                        <strong>Dica:</strong> Se você deveria ter acesso mas não consegue, verifique:
+                        <br>1. Se seu departamento_id está correto no banco de dados (deve ser 1 para presidência)
+                        <br>2. Se não há cache ou sessão antiga
+                        <br>3. Se os logs do servidor mostram algum erro
+                    </small>
+                </div>
+            `;
+            
+            // Criar modal customizado
+            const modal = document.createElement('div');
+            modal.className = 'modal fade';
+            modal.innerHTML = `
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Debug de Permissões</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            ${debugHtml}
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                            <button type="button" class="btn btn-primary" onclick="window.location.reload()">
+                                <i class="fas fa-sync me-1"></i>
+                                Recarregar Página
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            const bsModal = new bootstrap.Modal(modal);
+            bsModal.show();
+            
+            modal.addEventListener('hidden.bs.modal', () => {
+                modal.remove();
+            });
+        }
+        async function executarDebug() {
+            console.log('🔍 EXECUTANDO DEBUG SISTEMA...');
+            
+            const debugInfo = {
+                usuario: <?php echo json_encode($usuarioLogado); ?>,
+                timestamp: new Date().toISOString(),
+                documentosCarregados: documentosPendentes.length,
+                cacheAtivo: cache.cache.size,
+                autoUpdateAtivo: autoUpdater.isActive,
+                temPermissao: temPermissao
+            };
+            
+            console.log('📊 Info do Sistema:', debugInfo);
+            
+            let debugReport = `
+                <div class="debug-report">
+                    <h6><i class="fas fa-info-circle"></i> Debug do Sistema</h6>
+                    <small class="text-muted">Timestamp: ${debugInfo.timestamp}</small>
+                    
+                    <div class="mt-3">
+                        <strong>👤 Usuário:</strong><br>
+                        Nome: ${debugInfo.usuario.nome}<br>
+                        Cargo: ${debugInfo.usuario.cargo || 'N/A'}<br>
+                        Departamento ID: ${debugInfo.usuario.departamento_id || 'N/A'}<br>
+                        Tem permissão: ${debugInfo.temPermissao ? 'Sim' : 'Não'}
+                    </div>
+                    
+                    <div class="mt-3">
+                        <strong>📁 Documentos:</strong><br>
+                        Carregados: ${debugInfo.documentosCarregados}<br>
+                        Cache: ${debugInfo.cacheAtivo} itens<br>
+                        Auto-update: ${debugInfo.autoUpdateAtivo ? 'Ativo' : 'Inativo'}
+                    </div>
+                    
+                    <div class="mt-3">
+                        <strong>🔗 API Status:</strong><br>
+                        <div id="debugApiStatus">Testando...</div>
+                    </div>
+                </div>
+            `;
+            
+            notifications.show(debugReport, 'info', 15000);
+            
+            // Teste simples da API apenas se tem permissão
+            if (temPermissao) {
+                try {
+                    const response = await fetch('../api/documentos/documentos_presidencia_listar.php?status=AGUARDANDO_ASSINATURA');
+                    const status = response.status;
+                    
+                    document.getElementById('debugApiStatus').innerHTML = `
+                        <span class="${status === 200 ? 'text-success' : 'text-danger'}">
+                            <i class="fas fa-${status === 200 ? 'check' : 'times'}"></i>
+                            API Documentos: ${status} ${response.statusText}
+                        </span>
+                    `;
+                    
+                } catch (error) {
+                    document.getElementById('debugApiStatus').innerHTML = `
+                        <span class="text-danger">
+                            <i class="fas fa-times"></i>
+                            API Documentos: Erro - ${error.message}
+                        </span>
+                    `;
+                }
+            } else {
+                document.getElementById('debugApiStatus').innerHTML = `
+                    <span class="text-warning">
+                        <i class="fas fa-lock"></i>
+                        API Documentos: Sem permissão para testar
+                    </span>
+                `;
+            }
+            
+            console.log('🔍 DEBUG FINALIZADO');
+        }
+
         // Atualizar contadores
         function atualizarContadores() {
             const totalPendentes = documentosPendentes.length;
@@ -2094,7 +2362,7 @@ $headerComponent = HeaderComponent::create([
             }
         }
 
-        console.log('✓ Sistema da Presidência carregado com sucesso! (Versão Completa com Relatórios, Histórico e Configurações)');
+
     </script>
 </body>
 
