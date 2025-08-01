@@ -26,38 +26,55 @@ if (!$auth->isLoggedIn()) {
 // Pega dados do usuário logado
 $usuarioLogado = $auth->getUser();
 
-// NOVA LÓGICA: Verificar permissões e determinar escopo de visualização
-$temPermissaoFuncionarios = false;
+// NOVA LÓGICA: Sistema flexível de permissões
+$temPermissaoFuncionarios = true; // Todos têm acesso à página
 $motivoNegacao = '';
-$escopoVisualizacao = ''; // 'TODOS' para presidência, 'DEPARTAMENTO' para diretor
+$escopoVisualizacao = ''; // 'TODOS', 'DEPARTAMENTO' ou 'PROPRIO'
 $departamentoPermitido = null;
+$podeEditar = false;
+$podeCriar = false;
 
 // Log para debug
 error_log("=== DEBUG PERMISSÕES FUNCIONÁRIOS ===");
 error_log("Usuário: " . $usuarioLogado['nome']);
+error_log("Cargo: " . ($usuarioLogado['cargo'] ?? 'Sem cargo'));
 error_log("É Diretor: " . ($auth->isDiretor() ? 'SIM' : 'NÃO'));
 error_log("Departamento ID: " . ($usuarioLogado['departamento_id'] ?? 'NULL'));
 
-if (isset($usuarioLogado['departamento_id']) && $usuarioLogado['departamento_id'] == 1) {
-    // Funcionários da PRESIDÊNCIA veem TODOS os funcionários
-    $temPermissaoFuncionarios = true;
-    $escopoVisualizacao = 'TODOS';
-    error_log("✅ PRESIDÊNCIA: Pode ver TODOS os funcionários");
-} elseif ($auth->isDiretor()) {
-    // DIRETORES veem apenas funcionários do SEU departamento
-    $temPermissaoFuncionarios = true;
-    $escopoVisualizacao = 'DEPARTAMENTO';
-    $departamentoPermitido = $usuarioLogado['departamento_id'];
-    error_log("✅ DIRETOR: Pode ver apenas funcionários do departamento " . $departamentoPermitido);
-} else {
-    $motivoNegacao = 'Acesso restrito a diretores e funcionários da presidência.';
-    error_log("❌ SEM PERMISSÃO: " . $motivoNegacao);
-}
+// Sistema de permissões baseado em cargo e departamento
+$cargoUsuario = $usuarioLogado['cargo'] ?? '';
+$departamentoUsuario = $usuarioLogado['departamento_id'] ?? null;
 
-// Se não tem permissão, redireciona
-if (!$temPermissaoFuncionarios) {
-    header('Location: ../pages/dashboard.php');
-    exit;
+// Cargos com permissões especiais
+$cargosAcessoTotal = ['Diretor', 'Presidente', 'Vice-Presidente'];
+$cargosAcessoDepartamento = ['Gerente', 'Supervisor', 'Coordenador'];
+
+// Define escopo de visualização
+if ($departamentoUsuario == 1) {
+    // PRESIDÊNCIA - vê todos
+    $escopoVisualizacao = 'TODOS';
+    $podeEditar = true;
+    $podeCriar = true;
+    error_log("✅ PRESIDÊNCIA: Acesso total");
+} elseif (in_array($cargoUsuario, $cargosAcessoTotal)) {
+    // Cargos de alta gestão - veem todos
+    $escopoVisualizacao = 'TODOS';
+    $podeEditar = true;
+    $podeCriar = true;
+    error_log("✅ {$cargoUsuario}: Acesso total");
+} elseif (in_array($cargoUsuario, $cargosAcessoDepartamento)) {
+    // Cargos de gestão intermediária - veem seu departamento
+    $escopoVisualizacao = 'DEPARTAMENTO';
+    $departamentoPermitido = $departamentoUsuario;
+    $podeEditar = true;
+    $podeCriar = true;
+    error_log("✅ {$cargoUsuario}: Acesso ao departamento {$departamentoPermitido}");
+} else {
+    // Funcionários comuns - veem apenas seus dados
+    $escopoVisualizacao = 'PROPRIO';
+    $podeEditar = false;
+    $podeCriar = false;
+    error_log("✅ Funcionário comum: Acesso apenas aos próprios dados");
 }
 
 // Define o título da página
@@ -66,17 +83,20 @@ $page_title = 'Funcionários - ASSEGO';
 // Inicializa classe de funcionários
 $funcionarios = new Funcionarios();
 
-// Busca estatísticas (com filtro por departamento se necessário)
+// Busca estatísticas (com filtro por escopo)
 try {
     $db = Database::getInstance(DB_NAME_CADASTRO)->getConnection();
     
-    // Preparar filtro de departamento baseado no escopo
+    // Preparar filtro baseado no escopo
     $filtroSQL = '';
     $params = [];
     
     if ($escopoVisualizacao === 'DEPARTAMENTO' && $departamentoPermitido) {
         $filtroSQL = ' WHERE departamento_id = ?';
         $params = [$departamentoPermitido];
+    } elseif ($escopoVisualizacao === 'PROPRIO') {
+        $filtroSQL = ' WHERE id = ?';
+        $params = [$usuarioLogado['id']];
     }
     
     // Total de funcionários (com filtro)
@@ -85,23 +105,21 @@ try {
     $totalFuncionarios = $stmt->fetch()['total'] ?? 0;
     
     // Funcionários ativos (com filtro)
-    $stmt = $db->prepare("SELECT COUNT(*) as total FROM Funcionarios" . $filtroSQL . ($filtroSQL ? ' AND' : ' WHERE') . " ativo = 1");
-    $params2 = $params;
-    $params2[] = 1;
-    $stmt->execute($params2);
+    $sqlAtivos = "SELECT COUNT(*) as total FROM Funcionarios" . 
+                 ($filtroSQL ? $filtroSQL . ' AND' : ' WHERE') . " ativo = 1";
+    $stmt = $db->prepare($sqlAtivos);
+    $stmt->execute($params);
     $funcionariosAtivos = $stmt->fetch()['total'] ?? 0;
     
     // Funcionários inativos
     $funcionariosInativos = $totalFuncionarios - $funcionariosAtivos;
     
     // Novos funcionários (últimos 30 dias) (com filtro)
-    $stmt = $db->prepare("
-        SELECT COUNT(*) as total 
-        FROM Funcionarios 
-        " . ($filtroSQL ? "WHERE departamento_id = ? AND" : "WHERE") . " criado_em >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
-    ");
-    $paramsNovos = $filtroSQL ? [$departamentoPermitido] : [];
-    $stmt->execute($paramsNovos);
+    $sqlNovos = "SELECT COUNT(*) as total FROM Funcionarios " . 
+                ($filtroSQL ? str_replace('WHERE', 'WHERE', $filtroSQL) . ' AND' : 'WHERE') . 
+                " criado_em >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)";
+    $stmt = $db->prepare($sqlNovos);
+    $stmt->execute($params);
     $novosFuncionarios = $stmt->fetch()['total'] ?? 0;
     
     // Total de departamentos (sempre todos, para contexto)
@@ -114,9 +132,9 @@ try {
     $totalFuncionarios = $funcionariosAtivos = $funcionariosInativos = $novosFuncionarios = $totalDepartamentos = 0;
 }
 
-// CORREÇÃO: Cria instância do Header Component - Passa TODO o array do usuário
+// CORREÇÃO: Cria instância do Header Component
 $headerComponent = HeaderComponent::create([
-    'usuario' => $usuarioLogado, // ← CORRIGIDO: Agora passa TODO o array (incluindo departamento_id)
+    'usuario' => $usuarioLogado,
     'isDiretor' => $auth->isDiretor(),
     'activeTab' => 'funcionarios',
     'notificationCount' => 0,
@@ -361,6 +379,28 @@ $headerComponent = HeaderComponent::create([
         .dropdown-overlay.show {
             display: block;
         }
+        
+        /* Estilos para permissões limitadas */
+        .permission-notice {
+            background: rgba(255, 193, 7, 0.1);
+            border: 1px solid rgba(255, 193, 7, 0.3);
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .permission-notice i {
+            color: #ffc107;
+            font-size: 20px;
+        }
+        
+        .action-disabled {
+            opacity: 0.5;
+            cursor: not-allowed !important;
+        }
     </style>
 </head>
 
@@ -387,15 +427,26 @@ $headerComponent = HeaderComponent::create([
                 <p class="page-subtitle">
                     <?php if ($escopoVisualizacao === 'TODOS'): ?>
                         Gerencie todos os funcionários e departamentos do sistema
-                    <?php else: ?>
+                    <?php elseif ($escopoVisualizacao === 'DEPARTAMENTO'): ?>
                         Gerencie os funcionários do seu departamento
+                    <?php else: ?>
+                        Visualize seus dados pessoais
                     <?php endif; ?>
                 </p>
                 
                 <?php if ($escopoVisualizacao === 'DEPARTAMENTO'): ?>
-                    <div class="alert alert-info mt-2">
+                    <div class="permission-notice">
                         <i class="fas fa-info-circle"></i>
-                        <strong>Visualização por Departamento:</strong> Como diretor, você visualiza apenas funcionários do seu departamento.
+                        <div>
+                            <strong>Visualização por Departamento:</strong> Como <?php echo $cargoUsuario; ?>, você visualiza funcionários do seu departamento.
+                        </div>
+                    </div>
+                <?php elseif ($escopoVisualizacao === 'PROPRIO'): ?>
+                    <div class="permission-notice">
+                        <i class="fas fa-info-circle"></i>
+                        <div>
+                            <strong>Visualização Limitada:</strong> Você pode visualizar apenas seus próprios dados.
+                        </div>
                     </div>
                 <?php endif; ?>
             </div>
@@ -407,12 +458,22 @@ $headerComponent = HeaderComponent::create([
                         <div>
                             <div class="stat-value"><?php echo number_format($totalFuncionarios, 0, ',', '.'); ?></div>
                             <div class="stat-label">
-                                <?php echo $escopoVisualizacao === 'TODOS' ? 'Total de Funcionários' : 'Funcionários do Departamento'; ?>
+                                <?php 
+                                if ($escopoVisualizacao === 'TODOS') {
+                                    echo 'Total de Funcionários';
+                                } elseif ($escopoVisualizacao === 'DEPARTAMENTO') {
+                                    echo 'Funcionários do Departamento';
+                                } else {
+                                    echo 'Seu Perfil';
+                                }
+                                ?>
                             </div>
+                            <?php if ($escopoVisualizacao !== 'PROPRIO'): ?>
                             <div class="stat-change positive">
                                 <i class="fas fa-arrow-up"></i>
                                 12% este mês
                             </div>
+                            <?php endif; ?>
                         </div>
                         <div class="stat-icon primary">
                             <i class="fas fa-user-tie"></i>
@@ -420,6 +481,7 @@ $headerComponent = HeaderComponent::create([
                     </div>
                 </div>
 
+                <?php if ($escopoVisualizacao !== 'PROPRIO'): ?>
                 <div class="stat-card">
                     <div class="stat-header">
                         <div>
@@ -483,9 +545,11 @@ $headerComponent = HeaderComponent::create([
                         </div>
                     </div>
                 </div>
+                <?php endif; ?>
             </div>
 
             <!-- Actions Bar with Filters -->
+            <?php if ($escopoVisualizacao !== 'PROPRIO'): ?>
             <div class="actions-bar" data-aos="fade-up" data-aos-delay="100">
                 <div class="filters-row">
                     <div class="search-box">
@@ -537,17 +601,33 @@ $headerComponent = HeaderComponent::create([
                         <i class="fas fa-sync-alt"></i>
                         Atualizar
                     </button>
+                    <?php if ($podeCriar): ?>
                     <button class="btn-modern btn-primary" onclick="abrirModalNovo()">
                         <i class="fas fa-plus"></i>
                         Novo Funcionário
                     </button>
+                    <?php else: ?>
+                    <button class="btn-modern btn-primary action-disabled" disabled title="Sem permissão para criar funcionários">
+                        <i class="fas fa-plus"></i>
+                        Novo Funcionário
+                    </button>
+                    <?php endif; ?>
                 </div>
             </div>
+            <?php endif; ?>
 
             <!-- Table Container -->
             <div class="table-container" data-aos="fade-up" data-aos-delay="200">
                 <div class="table-header">
-                    <h3 class="table-title">Lista de Funcionários</h3>
+                    <h3 class="table-title">
+                        <?php 
+                        if ($escopoVisualizacao === 'PROPRIO') {
+                            echo 'Meus Dados';
+                        } else {
+                            echo 'Lista de Funcionários';
+                        }
+                        ?>
+                    </h3>
                     <span class="table-info">Mostrando <span id="showingCount">0</span> registros</span>
                 </div>
 
@@ -788,10 +868,12 @@ $headerComponent = HeaderComponent::create([
                     <button class="btn-modern btn-secondary" onclick="fecharModalVisualizacao()">
                         Fechar
                     </button>
+                    <?php if ($podeEditar): ?>
                     <button class="btn-modern btn-primary" onclick="editarDoVisualizacao()">
                         <i class="fas fa-edit"></i>
                         Editar Funcionário
                     </button>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
@@ -817,19 +899,24 @@ $headerComponent = HeaderComponent::create([
         let todosFuncionarios = [];
         let funcionariosFiltrados = [];
         let departamentosDisponiveis = [];
-        let dropdownOpen = false; // ← NOVA VARIÁVEL PARA CONTROLE DO DROPDOWN
+        let dropdownOpen = false;
         
-        // NOVA VARIÁVEL: Define o escopo de visualização
+        // Configurações de permissão
         const escopoVisualizacao = <?php echo json_encode($escopoVisualizacao); ?>;
         const departamentoPermitido = <?php echo json_encode($departamentoPermitido); ?>;
+        const podeEditar = <?php echo json_encode($podeEditar); ?>;
+        const podeCriar = <?php echo json_encode($podeCriar); ?>;
+        const usuarioLogadoId = <?php echo json_encode($usuarioLogado['id']); ?>;
         
         console.log('=== CONFIG FUNCIONÁRIOS ===');
         console.log('Escopo:', escopoVisualizacao);
         console.log('Departamento permitido:', departamentoPermitido);
+        console.log('Pode editar:', podeEditar);
+        console.log('Pode criar:', podeCriar);
 
         // ===== FUNÇÕES CORRIGIDAS PARA O DROPDOWN =====
         
-        // Função principal para toggle do dropdown - CORRIGIDA
+        // Função principal para toggle do dropdown
         function toggleUserDropdown(event) {
             if (event) {
                 event.stopPropagation();
@@ -840,31 +927,24 @@ $headerComponent = HeaderComponent::create([
             const dropdownOverlay = document.getElementById('dropdownOverlay');
             
             if (!userMenu || !userDropdown) {
-                console.error('❌ Elementos do dropdown não encontrados:', {
-                    userMenu: !!userMenu,
-                    userDropdown: !!userDropdown
-                });
+                console.error('❌ Elementos do dropdown não encontrados');
                 return;
             }
 
-            // Toggle do estado
             dropdownOpen = !dropdownOpen;
             
             if (dropdownOpen) {
-                // Abrir dropdown
                 userDropdown.classList.add('show');
                 userMenu.classList.add('active');
                 if (dropdownOverlay) {
                     dropdownOverlay.classList.add('show');
                 }
-                console.log('✅ Dropdown aberto');
             } else {
-                // Fechar dropdown
                 closeUserDropdown();
             }
         }
 
-        // Função para fechar o dropdown - CORRIGIDA
+        // Função para fechar o dropdown
         function closeUserDropdown() {
             const userMenu = document.getElementById('userMenu');
             const userDropdown = document.getElementById('userDropdown');
@@ -879,106 +959,59 @@ $headerComponent = HeaderComponent::create([
                     dropdownOverlay.classList.remove('show');
                 }
                 dropdownOpen = false;
-                console.log('❌ Dropdown fechado');
             }
         }
 
-        // Função para lidar com cliques nos itens do menu - CORRIGIDA
+        // Função para lidar com cliques nos itens do menu
         function handleMenuClick(action, event) {
             if (event) {
                 event.preventDefault();
                 event.stopPropagation();
             }
             
-            console.log(`🎯 Ação selecionada: ${action}`);
-            
-            // Fechar o dropdown
             closeUserDropdown();
             
-            // Simular diferentes ações
             switch(action) {
                 case 'profile':
-                    alert('Redirecionando para perfil...');
-                    // window.location.href = 'perfil.php';
+                    window.location.href = 'perfil.php';
                     break;
                 case 'settings':
-                    alert('Abrindo configurações...');
-                    // window.location.href = 'configuracoes.php';
+                    window.location.href = 'configuracoes.php';
                     break;
                 case 'logout':
                     if(confirm('Deseja realmente sair do sistema?')) {
-                        alert('Fazendo logout...');
-                        // window.location.href = '../auth/logout.php';
+                        window.location.href = '../auth/logout.php';
                     }
                     break;
-                default:
-                    console.log('Ação não reconhecida:', action);
             }
         }
 
-        // ===== EVENT LISTENERS - CORRIGIDOS =====
+        // ===== EVENT LISTENERS =====
         document.addEventListener('DOMContentLoaded', function() {
             console.log('=== INICIALIZANDO PÁGINA FUNCIONÁRIOS ===');
             
-            // Aguardar um pouco para garantir que todos os elementos foram renderizados
+            // Configurar dropdown
             setTimeout(() => {
-                // Verificar elementos do dropdown
                 const userMenu = document.getElementById('userMenu');
                 const userDropdown = document.getElementById('userDropdown');
                 const dropdownOverlay = document.getElementById('dropdownOverlay');
                 
-                console.log('🔍 Verificando elementos do dropdown:');
-                console.log('userMenu encontrado:', !!userMenu);
-                console.log('userDropdown encontrado:', !!userDropdown);
-                console.log('dropdownOverlay encontrado:', !!dropdownOverlay);
-                
                 if (userMenu && userDropdown) {
-                    console.log('✅ Dropdown inicializado com sucesso');
-                    
-                    // Remover event listeners antigos se existirem
-                    userMenu.removeEventListener('click', toggleUserDropdown);
-                    
-                    // Adicionar event listener correto
                     userMenu.addEventListener('click', function(event) {
                         toggleUserDropdown(event);
                     });
-                    
-                } else {
-                    console.error('❌ Elementos críticos do dropdown não encontrados');
-                    
-                    // Tentar encontrar por outras formas
-                    const alternativeMenu = document.querySelector('.header-user');
-                    const alternativeDropdown = document.querySelector('.user-dropdown');
-                    
-                    console.log('🔄 Tentativas alternativas:');
-                    console.log('header-user:', !!alternativeMenu);
-                    console.log('user-dropdown:', !!alternativeDropdown);
-                    
-                    if (alternativeMenu && alternativeDropdown) {
-                        alternativeMenu.id = 'userMenu';
-                        alternativeDropdown.id = 'userDropdown';
-                        
-                        alternativeMenu.addEventListener('click', function(event) {
-                            toggleUserDropdown(event);
-                        });
-                        
-                        console.log('✅ Dropdown alternativo configurado');
-                    }
                 }
                 
-                // Event listener para overlay
                 if (dropdownOverlay) {
                     dropdownOverlay.addEventListener('click', closeUserDropdown);
                 }
-                
             }, 200);
             
-            // Fechar dropdown ao clicar fora - MELHORADO
+            // Fechar dropdown ao clicar fora
             document.addEventListener('click', function(event) {
                 const userMenu = document.getElementById('userMenu');
                 const userDropdown = document.getElementById('userDropdown');
                 
-                // Verificar se o clique foi fora do dropdown
                 if (userMenu && userDropdown && 
                     !userMenu.contains(event.target) && 
                     !userDropdown.contains(event.target)) {
@@ -992,37 +1025,26 @@ $headerComponent = HeaderComponent::create([
                     closeUserDropdown();
                 }
             });
-            
-            // Prevenir que cliques no dropdown fechem o menu
-            document.addEventListener('click', function(event) {
-                const userDropdown = document.getElementById('userDropdown');
-                if (userDropdown && userDropdown.contains(event.target)) {
-                    // Se clicou em um item do menu, deixa a função handleMenuClick lidar
-                    if (!event.target.classList.contains('dropdown-item') && 
-                        !event.target.closest('.dropdown-item')) {
-                        event.stopPropagation();
-                    }
-                }
-            });
 
-            // ===== RESTO DA INICIALIZAÇÃO =====
-            
             // Máscaras
             if (typeof $ !== 'undefined' && $('#cpf').length) {
                 $('#cpf').mask('000.000.000-00');
             }
 
-            // Event listeners dos filtros
-            const searchInput = document.getElementById('searchInput');
-            const filterStatus = document.getElementById('filterStatus');
-            const filterDepartamento = document.getElementById('filterDepartamento');
-            const filterCargo = document.getElementById('filterCargo');
-            const formFuncionario = document.getElementById('formFuncionario');
+            // Event listeners dos filtros (apenas se não for visualização própria)
+            if (escopoVisualizacao !== 'PROPRIO') {
+                const searchInput = document.getElementById('searchInput');
+                const filterStatus = document.getElementById('filterStatus');
+                const filterDepartamento = document.getElementById('filterDepartamento');
+                const filterCargo = document.getElementById('filterCargo');
+                
+                if (searchInput) searchInput.addEventListener('input', aplicarFiltros);
+                if (filterStatus) filterStatus.addEventListener('change', aplicarFiltros);
+                if (filterDepartamento) filterDepartamento.addEventListener('change', aplicarFiltros);
+                if (filterCargo) filterCargo.addEventListener('change', aplicarFiltros);
+            }
             
-            if (searchInput) searchInput.addEventListener('input', aplicarFiltros);
-            if (filterStatus) filterStatus.addEventListener('change', aplicarFiltros);
-            if (filterDepartamento) filterDepartamento.addEventListener('change', aplicarFiltros);
-            if (filterCargo) filterCargo.addEventListener('change', aplicarFiltros);
+            const formFuncionario = document.getElementById('formFuncionario');
             if (formFuncionario) formFuncionario.addEventListener('submit', salvarFuncionario);
 
             // Carrega dados
@@ -1055,6 +1077,8 @@ $headerComponent = HeaderComponent::create([
             let params = {};
             if (escopoVisualizacao === 'DEPARTAMENTO' && departamentoPermitido) {
                 params.departamento_filtro = departamentoPermitido;
+            } else if (escopoVisualizacao === 'PROPRIO') {
+                params.proprio_id = usuarioLogadoId;
             }
 
             $.ajax({
@@ -1108,7 +1132,7 @@ $headerComponent = HeaderComponent::create([
             const selectFilter = document.getElementById('filterDepartamento');
             const selectForm = document.getElementById('departamento_id');
             
-            // Filtro de departamento só aparece para presidência
+            // Filtro de departamento só aparece para visualização total
             if (selectFilter && escopoVisualizacao === 'TODOS') {
                 selectFilter.innerHTML = '<option value="">Todos</option>';
                 departamentosDisponiveis.forEach(dep => {
@@ -1119,23 +1143,23 @@ $headerComponent = HeaderComponent::create([
                 });
             }
             
-            // Formulário: Para diretores, só permite o próprio departamento
+            // Formulário
             if (selectForm) {
                 selectForm.innerHTML = '<option value="">Selecione um departamento</option>';
                 
                 if (escopoVisualizacao === 'DEPARTAMENTO' && departamentoPermitido) {
-                    // Diretor: só seu departamento
+                    // Para gerentes/supervisores: pode escolher apenas seu departamento
                     const deptPermitido = departamentosDisponiveis.find(d => d.id == departamentoPermitido);
                     if (deptPermitido) {
                         const option = document.createElement('option');
                         option.value = deptPermitido.id;
                         option.textContent = deptPermitido.nome;
-                        option.selected = true; // Pré-seleciona
+                        option.selected = true;
                         selectForm.appendChild(option);
-                        selectForm.disabled = true; // Desabilita mudança
+                        selectForm.disabled = true;
                     }
-                } else {
-                    // Presidência: todos os departamentos
+                } else if (escopoVisualizacao === 'TODOS') {
+                    // Presidência e diretores: todos os departamentos
                     departamentosDisponiveis.forEach(dep => {
                         const option = document.createElement('option');
                         option.value = dep.id;
@@ -1146,7 +1170,7 @@ $headerComponent = HeaderComponent::create([
             }
         }
 
-        // Renderiza tabela - AJUSTADO PARA ESCOPO
+        // Renderiza tabela - AJUSTADO PARA PERMISSÕES
         function renderizarTabela() {
             const tbody = document.getElementById('tableBody');
             const totalColunas = escopoVisualizacao === 'TODOS' ? 9 : 8;
@@ -1201,6 +1225,15 @@ $headerComponent = HeaderComponent::create([
                 }
                 badgesHtml += '</div>';
                 
+                // Determinar se pode editar este funcionário
+                let podeEditarEste = false;
+                if (escopoVisualizacao === 'PROPRIO') {
+                    // Só pode editar se for o próprio
+                    podeEditarEste = (funcionario.id == usuarioLogadoId);
+                } else {
+                    podeEditarEste = podeEditar;
+                }
+                
                 const row = document.createElement('tr');
                 
                 // Monta HTML da linha baseado no escopo
@@ -1233,12 +1266,29 @@ $headerComponent = HeaderComponent::create([
                             <button class="btn-icon view" onclick="visualizarFuncionario(${funcionario.id})" title="Visualizar">
                                 <i class="fas fa-eye"></i>
                             </button>
+                `;
+                
+                if (podeEditarEste) {
+                    rowHtml += `
                             <button class="btn-icon edit" onclick="editarFuncionario(${funcionario.id})" title="Editar">
                                 <i class="fas fa-edit"></i>
                             </button>
                             <button class="btn-icon delete" onclick="desativarFuncionario(${funcionario.id})" title="Desativar">
                                 <i class="fas fa-ban"></i>
                             </button>
+                    `;
+                } else {
+                    rowHtml += `
+                            <button class="btn-icon edit action-disabled" disabled title="Sem permissão">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn-icon delete action-disabled" disabled title="Sem permissão">
+                                <i class="fas fa-ban"></i>
+                            </button>
+                    `;
+                }
+                
+                rowHtml += `
                         </div>
                     </td>
                 `;
@@ -1253,7 +1303,7 @@ $headerComponent = HeaderComponent::create([
             }
         }
 
-        // Aplica filtros - AJUSTADO PARA ESCOPO
+        // Aplica filtros
         function aplicarFiltros() {
             const searchInput = document.getElementById('searchInput');
             const filterStatus = document.getElementById('filterStatus');
@@ -1272,10 +1322,7 @@ $headerComponent = HeaderComponent::create([
                     (funcionario.cargo && funcionario.cargo.toLowerCase().includes(searchTerm));
                 
                 const matchStatus = !filterStatusValue || funcionario.ativo == filterStatusValue;
-                
-                // Filtro de departamento só se aplicável
                 const matchDepartamento = !filterDepartamentoValue || funcionario.departamento_id == filterDepartamentoValue;
-                
                 const matchCargo = !filterCargoValue || funcionario.cargo === filterCargoValue;
                 
                 return matchSearch && matchStatus && matchDepartamento && matchCargo;
@@ -1284,7 +1331,7 @@ $headerComponent = HeaderComponent::create([
             renderizarTabela();
         }
 
-        // Limpa filtros - AJUSTADO PARA ESCOPO
+        // Limpa filtros
         function limparFiltros() {
             const searchInput = document.getElementById('searchInput');
             const filterStatus = document.getElementById('filterStatus');
@@ -1304,6 +1351,11 @@ $headerComponent = HeaderComponent::create([
         
         // Abre modal para novo funcionário
         function abrirModalNovo() {
+            if (!podeCriar) {
+                alert('Você não tem permissão para criar funcionários');
+                return;
+            }
+            
             const modalTitle = document.getElementById('modalTitle');
             const form = document.getElementById('formFuncionario');
             const funcionarioId = document.getElementById('funcionarioId');
@@ -1324,7 +1376,7 @@ $headerComponent = HeaderComponent::create([
             if (senhaInfo) senhaInfo.style.display = 'inline';
             if (senhaEditInfo) senhaEditInfo.style.display = 'none';
             
-            // Se for diretor, pré-seleciona o departamento
+            // Se for gerente/supervisor, pré-seleciona o departamento
             if (escopoVisualizacao === 'DEPARTAMENTO' && departamentoPermitido) {
                 setTimeout(() => {
                     const departamentoSelect = document.getElementById('departamento_id');
@@ -1339,14 +1391,15 @@ $headerComponent = HeaderComponent::create([
             }
         }
 
-        // RESTO DAS FUNÇÕES PERMANECEM IGUAIS...
-        // [Todas as outras funções do código original]
-
         // Edita funcionário
         function editarFuncionario(id) {
+            if (!podeEditar && !(escopoVisualizacao === 'PROPRIO' && id == usuarioLogadoId)) {
+                alert('Você não tem permissão para editar funcionários');
+                return;
+            }
+            
             showLoading();
             
-            // Busca dados completos do funcionário
             $.ajax({
                 url: '../api/funcionarios_detalhes.php',
                 method: 'GET',
@@ -1358,22 +1411,16 @@ $headerComponent = HeaderComponent::create([
                     if (response.status === 'success') {
                         const funcionario = response.funcionario;
                         
-                        // Debug para ver os dados retornados
-                        console.log('Dados do funcionário:', funcionario);
-                        console.log('Cargo retornado:', funcionario.cargo);
-                        
-                        // Preenche o formulário com todos os dados
                         document.getElementById('modalTitle').textContent = 'Editar Funcionário';
                         document.getElementById('funcionarioId').value = funcionario.id;
                         document.getElementById('nome').value = funcionario.nome;
                         document.getElementById('email').value = funcionario.email;
                         document.getElementById('departamento_id').value = funcionario.departamento_id || '';
                         
-                        // Preenche o cargo com comparação flexível
+                        // Preenche o cargo
                         const cargoSelect = document.getElementById('cargo');
                         const cargoValue = funcionario.cargo || '';
                         
-                        // Limpa o select e adiciona as opções
                         cargoSelect.innerHTML = `
                             <option value="">Selecione um cargo</option>
                             <option value="Diretor">Diretor</option>
@@ -1386,30 +1433,15 @@ $headerComponent = HeaderComponent::create([
                             <option value="Estagiário">Estagiário</option>
                         `;
                         
-                        // Se tem um cargo, tenta selecionar
                         if (cargoValue) {
-                            // Primeiro tenta selecionar exatamente
                             cargoSelect.value = cargoValue;
                             
-                            // Se não funcionou, tenta comparação case-insensitive
-                            if (cargoSelect.value === '') {
-                                const cargoLower = cargoValue.toLowerCase().trim();
-                                for (let option of cargoSelect.options) {
-                                    if (option.value.toLowerCase() === cargoLower) {
-                                        cargoSelect.value = option.value;
-                                        break;
-                                    }
-                                }
-                            }
-                            
-                            // Se ainda não funcionou, adiciona como nova opção
                             if (cargoSelect.value === '' && cargoValue.trim() !== '') {
                                 const newOption = document.createElement('option');
                                 newOption.value = cargoValue;
                                 newOption.textContent = cargoValue;
                                 newOption.selected = true;
                                 cargoSelect.appendChild(newOption);
-                                console.log('Cargo personalizado adicionado:', cargoValue);
                             }
                         }
                         
@@ -1417,7 +1449,7 @@ $headerComponent = HeaderComponent::create([
                         document.getElementById('rg').value = funcionario.rg || '';
                         document.getElementById('ativo').checked = funcionario.ativo == 1;
                         
-                        // Senha não é obrigatória na edição
+                        // Senha
                         document.getElementById('senha').required = false;
                         document.getElementById('senha').value = '';
                         document.getElementById('senha').readOnly = false;
@@ -1639,11 +1671,11 @@ $headerComponent = HeaderComponent::create([
             // Ajusta valor do checkbox
             dados.ativo = document.getElementById('ativo').checked ? 1 : 0;
             
-            // Para novo funcionário, garante que a senha padrão seja enviada
+            // Para novo funcionário
             if (!dados.id) {
                 dados.senha = 'Assego@123';
                 
-                // Se for diretor, força o departamento
+                // Se for gerente/supervisor, força o departamento
                 if (escopoVisualizacao === 'DEPARTAMENTO' && departamentoPermitido) {
                     dados.departamento_id = departamentoPermitido;
                 }
@@ -1690,6 +1722,11 @@ $headerComponent = HeaderComponent::create([
 
         // Desativa funcionário
         function desativarFuncionario(id) {
+            if (!podeEditar && !(escopoVisualizacao === 'PROPRIO' && id == usuarioLogadoId)) {
+                alert('Você não tem permissão para desativar funcionários');
+                return;
+            }
+            
             const funcionario = todosFuncionarios.find(f => f.id == id);
             if (!funcionario) return;
             
