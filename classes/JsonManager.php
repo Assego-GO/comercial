@@ -222,6 +222,20 @@ class JsonManager {
             ]
         ];
     }
+
+
+    /**
+     * Método público para obter dados completos estruturados
+     * Para uso em integrações externas (como ZapSign)
+     * 
+     * @param array $dados Dados do formulário
+     * @param int $associadoId ID do associado
+     * @param string $operacao Operação realizada
+     * @return array Dados estruturados
+     */
+    public function obterDadosCompletos($dados, $associadoId, $operacao = 'CREATE') {
+        return $this->prepararDadosCompletos($dados, $associadoId, $operacao);
+    }
     
     /**
      * Processa os serviços contratados

@@ -1,6 +1,6 @@
 <?php
 /**
- * API para criar novo associado - VERSÃO COM SALVAMENTO EM JSON
+ * API para criar novo associado - VERSÃO COM SALVAMENTO EM JSON + ZAPSIGN
  * api/criar_associado.php
  */
 
@@ -42,6 +42,9 @@ try {
     
     // ✅ NOVA LINHA - JsonManager para salvar em JSON
     require_once '../classes/JsonManager.php';
+    
+    // ✅ NOVA LINHA - API ZapSign
+    require_once '../api/zapsign_api.php';
 
     // Sessão
     if (session_status() === PHP_SESSION_NONE) {
@@ -57,7 +60,7 @@ try {
         $_SESSION['user_name'] = 'Sistema';
     }
 
-    error_log("=== CRIAR PRÉ-CADASTRO COM FLUXO INTEGRADO + JSON ===");
+    error_log("=== CRIAR PRÉ-CADASTRO COM FLUXO INTEGRADO + JSON + ZAPSIGN ===");
     error_log("Usuário: " . ($_SESSION['user_name'] ?? 'N/A'));
     error_log("POST fields: " . count($_POST));
 
@@ -68,6 +71,79 @@ try {
             throw new Exception("Campo '$campo' é obrigatório");
         }
     }
+    
+    // ✅ VALIDAÇÃO ESPECÍFICA PARA DATAS
+    if (!empty($_POST['dataFiliacao'])) {
+        $dataFiliacao = $_POST['dataFiliacao'];
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $dataFiliacao) && !preg_match('/^\d{2}\/\d{2}\/\d{4}$/', $dataFiliacao)) {
+            throw new Exception("Data de filiação deve estar no formato YYYY-MM-DD ou DD/MM/YYYY");
+        }
+    }
+    
+    // Valida data de nascimento se preenchida
+    if (!empty($_POST['nasc'])) {
+        $dataNasc = $_POST['nasc'];
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $dataNasc) && !preg_match('/^\d{2}\/\d{2}\/\d{4}$/', $dataNasc)) {
+            throw new Exception("Data de nascimento deve estar no formato YYYY-MM-DD ou DD/MM/YYYY");
+        }
+    }
+
+    // ✅ FUNÇÃO AUXILIAR - Limpa campos de data vazios
+    function limparCamposData(&$dados) {
+        $camposData = ['nasc', 'dataFiliacao', 'dataDesfiliacao'];
+        
+        foreach ($camposData as $campo) {
+            if (isset($dados[$campo]) && $dados[$campo] === '') {
+                $dados[$campo] = null;
+            } elseif (isset($dados[$campo]) && !empty($dados[$campo])) {
+                // Converte data brasileira para formato MySQL se necessário
+                $dados[$campo] = converterDataParaMySQL($dados[$campo]);
+            }
+        }
+        
+        // Limpa datas dos dependentes também
+        if (isset($dados['dependentes'])) {
+            foreach ($dados['dependentes'] as &$dep) {
+                if (isset($dep['data_nascimento']) && $dep['data_nascimento'] === '') {
+                    $dep['data_nascimento'] = null;
+                } elseif (isset($dep['data_nascimento']) && !empty($dep['data_nascimento'])) {
+                    $dep['data_nascimento'] = converterDataParaMySQL($dep['data_nascimento']);
+                }
+            }
+        }
+    }
+    
+    // ✅ FUNÇÃO AUXILIAR - Converte data para formato MySQL
+    function converterDataParaMySQL($data) {
+        if (empty($data)) return null;
+        
+        // Se já está no formato MySQL (YYYY-MM-DD)
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $data)) {
+            return $data;
+        }
+        
+        // Se está no formato brasileiro (DD/MM/YYYY)
+        if (preg_match('/^(\d{2})\/(\d{2})\/(\d{4})$/', $data, $matches)) {
+            return $matches[3] . '-' . $matches[2] . '-' . $matches[1];
+        }
+        
+        // Tenta usar DateTime para converter outros formatos
+        try {
+            $dateTime = new DateTime($data);
+            return $dateTime->format('Y-m-d');
+        } catch (Exception $e) {
+            error_log("Erro ao converter data: {$data} - " . $e->getMessage());
+            return null;
+        }
+    }
+    
+    // ✅ APLICA LIMPEZA DOS CAMPOS DE DATA
+    limparCamposData($dados);
+    
+    // ✅ DEBUG - Log das datas processadas
+    error_log("Datas processadas: nasc=" . ($dados['nasc'] ?? 'NULL') . 
+              ", dataFiliacao=" . ($dados['dataFiliacao'] ?? 'NULL') . 
+              ", dataDesfiliacao=" . ($dados['dataDesfiliacao'] ?? 'NULL'));
 
     // Verifica se tem documento anexado (ficha assinada)
   
@@ -75,7 +151,7 @@ try {
     // Prepara dados do associado
     $dados = [
         'nome' => trim($_POST['nome']),
-        'nasc' => $_POST['nasc'] ?? null,
+        'nasc' => !empty($_POST['nasc']) ? $_POST['nasc'] : null, // ✅ CORRIGIDO
         'sexo' => $_POST['sexo'] ?? null,
         'rg' => trim($_POST['rg']),
         'cpf' => preg_replace('/[^0-9]/', '', $_POST['cpf']),
@@ -85,14 +161,14 @@ try {
         'estadoCivil' => $_POST['estadoCivil'] ?? null,
         'telefone' => preg_replace('/[^0-9]/', '', $_POST['telefone']),
         'indicacao' => trim($_POST['indicacao'] ?? '') ?: null,
-        'dataFiliacao' => $_POST['dataFiliacao'],
-        'dataDesfiliacao' => $_POST['dataDesfiliacao'] ?? null,
+        'dataFiliacao' => !empty($_POST['dataFiliacao']) ? $_POST['dataFiliacao'] : null, // ✅ CORRIGIDO
+        'dataDesfiliacao' => !empty($_POST['dataDesfiliacao']) ? $_POST['dataDesfiliacao'] : null, // ✅ CORRIGIDO
         // Dados militares
         'corporacao' => $_POST['corporacao'] ?? null,
         'patente' => $_POST['patente'] ?? null,
         'categoria' => $_POST['categoria'] ?? null,
         'lotacao' => trim($_POST['lotacao'] ?? '') ?: null,
-        'telefoneLotacao' => preg_replace('/[^0-9]/', '', $_POST['telefoneLotacao'] ?? '') ?: null, // ✅ NOVO CAMPO
+        'telefoneLotacao' => preg_replace('/[^0-9]/', '', $_POST['telefoneLotacao'] ?? '') ?: null, // ✅ CAMPO PARA ZAPSIGN
         'unidade' => trim($_POST['unidade'] ?? '') ?: null,
         // Endereço
         'cep' => preg_replace('/[^0-9]/', '', $_POST['cep'] ?? '') ?: null,
@@ -101,6 +177,7 @@ try {
         'complemento' => trim($_POST['complemento'] ?? '') ?: null,
         'bairro' => trim($_POST['bairro'] ?? '') ?: null,
         'cidade' => trim($_POST['cidade'] ?? '') ?: null,
+        'estado' => trim($_POST['estado'] ?? '') ?: null, // ✅ CAMPO PARA ZAPSIGN
         // Financeiro
         'tipoAssociado' => $_POST['tipoAssociado'] ?? null,
         'situacaoFinanceira' => $_POST['situacaoFinanceira'] ?? null,
@@ -134,10 +211,10 @@ try {
                 if ($dep['parentesco'] === 'Cônjuge') {
                     // Cônjuge tem AMBOS os campos
                     $dependente['telefone'] = preg_replace('/[^0-9]/', '', $dep['telefone'] ?? '');
-                    $dependente['data_nascimento'] = $dep['data_nascimento'] ?? null;
+                    $dependente['data_nascimento'] = !empty($dep['data_nascimento']) ? $dep['data_nascimento'] : null; // ✅ CORRIGIDO
                 } else {
                     // Outros parentes só têm data de nascimento
-                    $dependente['data_nascimento'] = $dep['data_nascimento'] ?? null;
+                    $dependente['data_nascimento'] = !empty($dep['data_nascimento']) ? $dep['data_nascimento'] : null; // ✅ CORRIGIDO
                     $dependente['telefone'] = null; // Limpa telefone
                 }
                 
@@ -322,6 +399,82 @@ try {
         // Não falha a operação por causa do JSON
     }
 
+    // =====================================
+    // ✅ PASSO 6: ENVIA PARA ZAPSIGN
+    // =====================================
+    
+    $resultadoZapSign = ['sucesso' => false, 'erro' => 'Não processado'];
+    
+    try {
+        error_log("=== INICIANDO ENVIO PARA ZAPSIGN ===");
+        
+        // ✅ VERIFICA SE O ARQUIVO DA API EXISTE
+        $arquivoZapSign = '../api/zapsign_api.php';
+        if (!file_exists($arquivoZapSign)) {
+            throw new Exception("Arquivo zapsign_api.php não encontrado: " . $arquivoZapSign);
+        }
+        
+        // ✅ VERIFICA SE A FUNÇÃO EXISTE
+        if (!function_exists('enviarParaZapSign')) {
+            throw new Exception("Função enviarParaZapSign() não encontrada. Verifique se o arquivo foi incluído corretamente.");
+        }
+        
+        // ✅ VERIFICA SE O MÉTODO DO JSONMANAGER EXISTE
+        if (!method_exists($jsonManager, 'obterDadosCompletos')) {
+            throw new Exception("Método obterDadosCompletos() não encontrado na classe JsonManager. Adicione o método público.");
+        }
+        
+        // ✅ USA A FUNÇÃO DO JSONMANAGER PARA PREPARAR DADOS
+        $dadosCompletos = $jsonManager->obterDadosCompletos($dados, $associadoId, 'CREATE');
+        
+        error_log("Dados completos preparados. Seções: " . implode(', ', array_keys($dadosCompletos)));
+        
+        // ✅ ENVIA PARA ZAPSIGN
+        $resultadoZapSign = enviarParaZapSign($dadosCompletos);
+        
+        if ($resultadoZapSign['sucesso']) {
+            error_log("✓ ZapSign enviado com sucesso!");
+            error_log("✓ Documento ID: " . ($resultadoZapSign['documento_id'] ?? 'N/A'));
+            error_log("✓ Link assinatura: " . ($resultadoZapSign['link_assinatura'] ?? 'N/A'));
+            
+            // ✅ ATUALIZA BANCO COM DADOS DO ZAPSIGN
+            try {
+                $db = Database::getInstance(DB_NAME_CADASTRO)->getConnection();
+                $stmt = $db->prepare("
+                    UPDATE associados 
+                    SET zapsign_documento_id = ?, 
+                        zapsign_link_assinatura = ?,
+                        zapsign_status = 'ENVIADO',
+                        zapsign_data_envio = NOW()
+                    WHERE id = ?
+                ");
+                $stmt->execute([
+                    $resultadoZapSign['documento_id'],
+                    $resultadoZapSign['link_assinatura'],
+                    $associadoId
+                ]);
+                error_log("✓ Dados ZapSign salvos no banco");
+            } catch (Exception $e) {
+                error_log("⚠ Erro ao salvar dados ZapSign no banco: " . $e->getMessage());
+            }
+            
+        } else {
+            error_log("⚠ Erro ao enviar para ZapSign: " . $resultadoZapSign['erro']);
+        }
+        
+    } catch (Exception $e) {
+        $resultadoZapSign = [
+            'sucesso' => false,
+            'erro' => $e->getMessage()
+        ];
+        error_log("✗ ERRO CRÍTICO no ZapSign: " . $e->getMessage());
+        // Não falha a operação por causa do ZapSign
+    }
+
+    // =====================================
+    // RESPOSTA FINAL
+    // =====================================
+
     // Monta resposta de sucesso
     $response = [
         'status' => 'success',
@@ -354,7 +507,7 @@ try {
                 'tem_conjuge' => temConjugeComTelefone($dados['dependentes']) // ✅ ATUALIZADO
             ],
             
-            // ✅ NOVA SEÇÃO - Informações sobre o JSON
+            // ✅ SEÇÃO JSON
             'json_export' => [
                 'salvo' => $resultadoJson['sucesso'],
                 'arquivo' => $resultadoJson['arquivo_individual'] ?? null,
@@ -362,18 +515,34 @@ try {
                 'timestamp' => $resultadoJson['timestamp'] ?? null,
                 'erro' => $resultadoJson['sucesso'] ? null : $resultadoJson['erro'],
                 'pronto_para_zapsing' => $resultadoJson['sucesso']
+            ],
+            
+            // ✅ NOVA SEÇÃO - ZAPSIGN
+            'zapsign' => [
+                'enviado' => $resultadoZapSign['sucesso'],
+                'documento_id' => $resultadoZapSign['documento_id'] ?? null,
+                'link_assinatura' => $resultadoZapSign['link_assinatura'] ?? null,
+                'erro' => $resultadoZapSign['sucesso'] ? null : $resultadoZapSign['erro'],
+                'http_code' => $resultadoZapSign['http_code'] ?? null,
+                'status' => $resultadoZapSign['sucesso'] ? 'ENVIADO' : 'ERRO',
+                'debug_info' => !$resultadoZapSign['sucesso'] ? $resultadoZapSign : null // ✅ TEMPORÁRIO PARA DEBUG
             ]
         ]
     ];
     
-    // ✅ Adiciona informação na mensagem se JSON foi salvo
+    // ✅ Atualiza mensagens
     if ($resultadoJson['sucesso']) {
         $response['message'] .= ' Dados exportados para integração.';
+    }
+    
+    if ($resultadoZapSign['sucesso']) {
+        $response['message'] .= ' Documento enviado para assinatura eletrônica.';
     }
 
     error_log("=== PRÉ-CADASTRO CONCLUÍDO COM SUCESSO ===");
     error_log("ID: {$associadoId} | Documento: " . ($documentoId ?? 'N/A') . " | Status: {$statusFluxo}");
     error_log("JSON: " . ($resultadoJson['sucesso'] ? '✓ Salvo' : '✗ Falhou') . " | Arquivo: " . ($resultadoJson['arquivo_individual'] ?? 'N/A'));
+    error_log("ZapSign: " . ($resultadoZapSign['sucesso'] ? '✓ Enviado' : '✗ Falhou') . " | Doc ID: " . ($resultadoZapSign['documento_id'] ?? 'N/A'));
 
 } catch (Exception $e) {
     error_log("✗ ERRO GERAL: " . $e->getMessage());
@@ -406,7 +575,6 @@ function temConjugeComTelefone($dependentes) {
 }
 
 // Limpa buffer e envia resposta
-
 ob_end_clean();
 echo json_encode($response, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
 exit;
