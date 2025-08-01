@@ -521,11 +521,7 @@ class HeaderComponent {
             </div>
 
             <div class="header-right">
-                <?php if ($this->showSearch): ?>
-                <button class="header-btn" onclick="toggleSearch()">
-                    <i class="fas fa-search"></i>
-                </button>
-                <?php endif; ?>
+                
                 
                 <button class="header-btn" onclick="toggleNotifications()">
                     <i class="fas fa-bell"></i>
@@ -723,9 +719,6 @@ $header->renderJS();
 
         <script>
             // Funções de exemplo para os botões
-            function toggleSearch() {
-                alert('Busca clicada!');
-            }
             
             function toggleNotifications() {
                 alert('Notificações clicadas!');
