@@ -20,17 +20,45 @@ if (!$auth->isLoggedIn()) {
     exit;
 }
 
-// Verificar se é diretor
-if (!$auth->isDiretor()) {
+// Pega dados do usuário logado
+$usuarioLogado = $auth->getUser();
+
+// NOVA LÓGICA: Verificar permissões e determinar escopo de visualização
+$temPermissaoFuncionarios = false;
+$escopoVisualizacao = ''; // 'TODOS' para presidência, 'DEPARTAMENTO' para diretor
+$departamentoPermitido = null;
+
+// Log para debug
+error_log("=== DEBUG API FUNCIONÁRIOS ===");
+error_log("Usuário: " . $usuarioLogado['nome']);
+error_log("É Diretor: " . ($auth->isDiretor() ? 'SIM' : 'NÃO'));
+error_log("Departamento ID: " . ($usuarioLogado['departamento_id'] ?? 'NULL'));
+
+if (isset($usuarioLogado['departamento_id']) && $usuarioLogado['departamento_id'] == 1) {
+    // Funcionários da PRESIDÊNCIA veem TODOS os funcionários
+    $temPermissaoFuncionarios = true;
+    $escopoVisualizacao = 'TODOS';
+    error_log("✅ PRESIDÊNCIA: API retornará TODOS os funcionários");
+} elseif ($auth->isDiretor()) {
+    // DIRETORES veem apenas funcionários do SEU departamento
+    $temPermissaoFuncionarios = true;
+    $escopoVisualizacao = 'DEPARTAMENTO';
+    $departamentoPermitido = $usuarioLogado['departamento_id'];
+    error_log("✅ DIRETOR: API retornará apenas funcionários do departamento " . $departamentoPermitido);
+} else {
+    error_log("❌ SEM PERMISSÃO para API de funcionários");
+}
+
+if (!$temPermissaoFuncionarios) {
     http_response_code(403);
-    echo json_encode(['status' => 'error', 'message' => 'Acesso negado']);
+    echo json_encode(['status' => 'error', 'message' => 'Acesso restrito a diretores e funcionários da presidência']);
     exit;
 }
 
 try {
     $funcionarios = new Funcionarios();
     
-    // Filtros opcionais
+    // Filtros opcionais vindos da requisição
     $filtros = [];
     if (isset($_GET['ativo'])) {
         $filtros['ativo'] = $_GET['ativo'];
@@ -45,12 +73,28 @@ try {
         $filtros['busca'] = $_GET['busca'];
     }
     
+    // NOVO FILTRO: Baseado no escopo do usuário
+    if ($escopoVisualizacao === 'DEPARTAMENTO' && $departamentoPermitido) {
+        // Diretor: força filtro pelo próprio departamento
+        $filtros['departamento_id'] = $departamentoPermitido;
+        error_log("🔒 Filtro forçado por departamento: " . $departamentoPermitido);
+    } elseif (isset($_GET['departamento_filtro'])) {
+        // Parâmetro específico para filtro de departamento (usado internamente)
+        $filtros['departamento_id'] = $_GET['departamento_filtro'];
+        error_log("🔍 Filtro de departamento aplicado: " . $_GET['departamento_filtro']);
+    }
+    
     $lista = $funcionarios->listar($filtros);
+    
+    // Log do resultado
+    error_log("📊 Retornando " . count($lista) . " funcionários");
     
     echo json_encode([
         'status' => 'success',
         'funcionarios' => $lista,
-        'total' => count($lista)
+        'total' => count($lista),
+        'escopo' => $escopoVisualizacao, // Para debug
+        'filtros_aplicados' => $filtros // Para debug
     ]);
     
 } catch (Exception $e) {
@@ -58,6 +102,7 @@ try {
     http_response_code(500);
     echo json_encode([
         'status' => 'error',
-        'message' => 'Erro ao buscar funcionários'
+        'message' => 'Erro ao buscar funcionários: ' . $e->getMessage()
     ]);
-}   
+}
+?>

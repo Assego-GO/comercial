@@ -43,40 +43,34 @@ error_log("Departamento ID (valor): " . ($usuarioLogado['departamento_id'] ?? 'N
 error_log("Departamento ID (tipo): " . gettype($usuarioLogado['departamento_id'] ?? null));
 error_log("É Diretor (método): " . ($auth->isDiretor() ? 'SIM' : 'NÃO'));
 
-// Verificações de permissão:
-// 1. É diretor OU
-// 2. Está no departamento da presidência (APENAS ID: 1)
-if ($auth->isDiretor()) {
-    $temPermissaoPresidencia = true;
-    error_log("✅ Permissão concedida: É DIRETOR");
-} elseif (isset($usuarioLogado['departamento_id'])) {
+// NOVA VALIDAÇÃO: APENAS usuários do departamento da presidência (ID: 1)
+// Não importa se é diretor ou não - só quem é da presidência pode acessar
+if (isset($usuarioLogado['departamento_id'])) {
     $deptId = $usuarioLogado['departamento_id'];
     
-    // Testar diferentes tipos de comparação
-    $isString1 = ($deptId === '1');
-    $isInt1 = ($deptId === 1);
-    $isEqual1 = ($deptId == 1);
-    
+    // Debug dos testes de comparação
     error_log("Testes de comparação:");
-    error_log("  deptId === '1': " . ($isString1 ? 'true' : 'false'));
-    error_log("  deptId === 1: " . ($isInt1 ? 'true' : 'false'));
-    error_log("  deptId == 1: " . ($isEqual1 ? 'true' : 'false'));
+    error_log("  deptId === '1': " . ($deptId === '1' ? 'true' : 'false'));
+    error_log("  deptId === 1: " . ($deptId === 1 ? 'true' : 'false'));
+    error_log("  deptId == 1: " . ($deptId == 1 ? 'true' : 'false'));
     
     if ($deptId == 1) { // Comparação flexível para pegar string ou int
         $temPermissaoPresidencia = true;
-        error_log("✅ Permissão concedida: Departamento ID = 1");
+        error_log("✅ Permissão concedida: Usuário pertence ao Departamento da Presidência (ID = 1)");
     } else {
-        error_log("❌ Departamento incorreto. Valor: '$deptId' (tipo: " . gettype($deptId) . ")");
+        $motivoNegacao = 'Acesso restrito ao departamento da Presidência.';
+        error_log("❌ Acesso negado. Departamento: '$deptId' (tipo: " . gettype($deptId) . "). Necessário: Presidência (ID = 1)");
     }
 } else {
+    $motivoNegacao = 'Departamento não identificado. Acesso restrito ao departamento da Presidência.';
     error_log("❌ departamento_id não existe no array do usuário");
 }
 
+// Log final do resultado
 if (!$temPermissaoPresidencia) {
-    $motivoNegacao = 'Para acessar a presidência, você precisa ser diretor ou estar no departamento da Presidência.';
     error_log("❌ ACESSO NEGADO: " . $motivoNegacao);
 } else {
-    error_log("✅ ACESSO PERMITIDO");
+    error_log("✅ ACESSO PERMITIDO - Usuário da Presidência");
 }
 
 // Busca estatísticas de documentos (apenas se tem permissão)
@@ -98,13 +92,9 @@ if ($temPermissaoPresidencia) {
     $aguardandoAssinatura = $assinadosHoje = $assinadosMes = $tempoMedio = 0;
 }
 
-// Cria instância do Header Component
+// Cria instância do Header Component - CORRIGIDO: passa TODO o array do usuário
 $headerComponent = HeaderComponent::create([
-    'usuario' => [
-        'nome' => $usuarioLogado['nome'],
-        'cargo' => $usuarioLogado['cargo'] ?? 'Funcionário',
-        'avatar' => $usuarioLogado['avatar'] ?? null
-    ],
+    'usuario' => $usuarioLogado, // ← CORRIGIDO: Agora passa TODO o array (incluindo departamento_id)
     'isDiretor' => $auth->isDiretor(),
     'activeTab' => 'presidencia',
     'notificationCount' => $aguardandoAssinatura,
@@ -183,7 +173,6 @@ $headerComponent = HeaderComponent::create([
                     <div class="col-md-6">
                         <h6>Requisitos para acesso:</h6>
                         <ul class="mb-3">
-                            <li>Ser diretor <strong>OU</strong></li>
                             <li>Estar no departamento da Presidência</li>
                         </ul>
                         
@@ -202,13 +191,26 @@ $headerComponent = HeaderComponent::create([
             
             <!-- Page Header -->
             <div class="page-header" data-aos="fade-right">
-                <h1 class="page-title">
-                    <div class="page-title-icon">
-                        <i class="fas fa-stamp"></i>
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h1 class="page-title">
+                            <div class="page-title-icon">
+                                <i class="fas fa-stamp"></i>
+                            </div>
+                            Área da Presidência
+                        </h1>
+                        <p class="page-subtitle">Gerencie e assine documentos de filiação dos associados</p>
                     </div>
-                    Área da Presidência
-                </h1>
-                <p class="page-subtitle">Gerencie e assine documentos de filiação dos associados</p>
+                    
+                    <!-- BOTÃO DE FUNCIONÁRIOS - PARA USUÁRIOS DA PRESIDÊNCIA -->
+                    <?php if ($temPermissaoPresidencia): ?>
+                    <div class="header-actions">
+                        <a href="funcionarios.php" class="btn btn-primary btn-lg">
+                            <i class="fas fa-users me-2"></i> Funcionários
+                        </a>
+                    </div>
+                    <?php endif; ?>
+                </div>
             </div>
 
             <!-- Stats Grid -->
@@ -633,6 +635,94 @@ $headerComponent = HeaderComponent::create([
 
         const debouncedFilter = debounce(filtrarDocumentos, 300);
 
+        // FUNÇÃO ROBUSTA PARA INICIALIZAR DROPDOWN DO USUÁRIO
+        function initializeUserDropdown() {
+            console.log('🎯 Inicializando dropdown do usuário na presidência...');
+            
+            // Diferentes possibilidades de seletores
+            const menuSelectors = [
+                '#userMenu',
+                '.user-menu-btn',
+                '[data-user-menu]',
+                '.user-profile-btn',
+                '.user-avatar'
+            ];
+            
+            const dropdownSelectors = [
+                '#userDropdown',
+                '.user-dropdown',
+                '[data-user-dropdown]',
+                '.user-menu-dropdown'
+            ];
+            
+            let userMenu = null;
+            let userDropdown = null;
+            
+            // Procura pelo botão do menu
+            for (const selector of menuSelectors) {
+                userMenu = document.querySelector(selector);
+                if (userMenu) {
+                    console.log('✅ Menu encontrado com seletor:', selector);
+                    break;
+                }
+            }
+            
+            // Procura pelo dropdown
+            for (const selector of dropdownSelectors) {
+                userDropdown = document.querySelector(selector);
+                if (userDropdown) {
+                    console.log('✅ Dropdown encontrado com seletor:', selector);
+                    break;
+                }
+            }
+            
+            if (userMenu && userDropdown) {
+                // Remove listeners antigos se existirem
+                userMenu.removeEventListener('click', handleUserMenuClick);
+                document.removeEventListener('click', handleDocumentClick);
+                
+                // Adiciona novos listeners
+                userMenu.addEventListener('click', handleUserMenuClick);
+                document.addEventListener('click', handleDocumentClick);
+                
+                console.log('✅ User dropdown inicializado com sucesso na presidência!');
+                
+                // Função para lidar com clique no menu
+                function handleUserMenuClick(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    const isVisible = userDropdown.classList.contains('show');
+                    
+                    // Fecha outros dropdowns abertos
+                    document.querySelectorAll('.user-dropdown.show').forEach(dropdown => {
+                        if (dropdown !== userDropdown) {
+                            dropdown.classList.remove('show');
+                        }
+                    });
+                    
+                    // Alterna o dropdown atual
+                    userDropdown.classList.toggle('show', !isVisible);
+                    
+                    console.log('Dropdown toggled:', !isVisible);
+                }
+                
+                // Função para lidar com cliques no documento
+                function handleDocumentClick(e) {
+                    if (!userMenu.contains(e.target) && !userDropdown.contains(e.target)) {
+                        userDropdown.classList.remove('show');
+                    }
+                }
+                
+            } else {
+                console.warn('⚠️ Elementos do dropdown não encontrados na presidência');
+                console.log('Elementos com ID disponíveis:', 
+                    Array.from(document.querySelectorAll('[id]')).map(el => `#${el.id}`));
+                console.log('Elementos com classes de usuário:', 
+                    Array.from(document.querySelectorAll('[class*="user"]')).map(el => el.className));
+            }
+        }
+
         // Inicialização - CORRIGIDA
         document.addEventListener('DOMContentLoaded', function() {
             // Inicializa AOS
@@ -640,6 +730,14 @@ $headerComponent = HeaderComponent::create([
                 duration: 800,
                 once: true
             });
+
+            // INICIALIZA DROPDOWN DO USUÁRIO - VERSÃO ROBUSTA
+            initializeUserDropdown();
+            
+            // Tenta novamente após delays (caso elementos sejam carregados assincronamente)
+            setTimeout(initializeUserDropdown, 500);
+            setTimeout(initializeUserDropdown, 1000);
+            setTimeout(initializeUserDropdown, 2000);
 
             // Debug inicial DETALHADO
             console.log('=== DEBUG PRESIDÊNCIA FRONTEND DETALHADO ===');
@@ -650,6 +748,7 @@ $headerComponent = HeaderComponent::create([
             console.log('🏢 Departamento ID:', usuario.departamento_id, '(tipo:', typeof usuario.departamento_id, ')');
             console.log('👔 É diretor:', isDiretor);
             console.log('🔐 Tem permissão:', temPermissao);
+            console.log('🎯 Botão Funcionários deve aparecer:', temPermissao ? 'SIM' : 'NÃO');
             
             // Teste das comparações
             console.log('🧪 Testes de comparação:');
@@ -658,8 +757,8 @@ $headerComponent = HeaderComponent::create([
             console.log('  departamento_id === "1":', usuario.departamento_id === "1");
             
             // Resultado final da lógica
-            const resultadoLogica = isDiretor || usuario.departamento_id == 1;
-            console.log('📋 Lógica de acesso (isDiretor || dept==1):', resultadoLogica);
+            const resultadoLogica = usuario.departamento_id == 1;
+            console.log('📋 Lógica de acesso (dept==1):', resultadoLogica);
             console.log('📋 Permissão PHP vs JS:', temPermissao, '===', resultadoLogica, '?', temPermissao === resultadoLogica);
             
             console.log('🔗 URL da API:', '../api/documentos/documentos_presidencia_listar.php');
@@ -1311,7 +1410,7 @@ $headerComponent = HeaderComponent::create([
 
         // Placeholder functions para ações rápidas
         function abrirRelatorios() {
-            notifications.show('Funcionalidade de relatórios em desenvolvimento', 'info');
+            window.location.href = 'relatorios.php';
         }
 
         function verHistorico() {
@@ -1351,10 +1450,10 @@ $headerComponent = HeaderComponent::create([
                             
                             <div class="mt-3">
                                 <strong>Regra de Acesso:</strong><br>
-                                <code>isDiretor || departamento_id == 1</code><br><br>
+                                <code>departamento_id == 1</code><br><br>
                                 
                                 <strong>Resultado:</strong><br>
-                                <code>${isDiretor} || ${usuario.departamento_id == 1} = ${isDiretor || usuario.departamento_id == 1}</code>
+                                <code>${usuario.departamento_id == 1}</code>
                             </div>
                         </div>
                     </div>
@@ -1362,9 +1461,9 @@ $headerComponent = HeaderComponent::create([
                     <hr>
                     <small class="text-muted">
                         <strong>Dica:</strong> Se você deveria ter acesso mas não consegue, verifique:
-                        <br>1. Se você é diretor no sistema
-                        <br>2. Se seu departamento_id está correto no banco de dados
-                        <br>3. Se não há cache ou sessão antiga
+                        <br>1. Se seu departamento_id está correto no banco de dados (deve ser 1 para presidência)
+                        <br>2. Se não há cache ou sessão antiga
+                        <br>3. Se os logs do servidor mostram algum erro
                     </small>
                 </div>
             `;
@@ -1536,7 +1635,7 @@ $headerComponent = HeaderComponent::create([
             }
         }
 
-        console.log('✓ Sistema da Presidência carregado com sucesso! (Versão Completa Corrigida)');
+        console.log('✓ Sistema da Presidência carregado com sucesso! (Versão Completa Corrigida com Dropdown e Botão Funcionários)');
     </script>
 </body>
 
