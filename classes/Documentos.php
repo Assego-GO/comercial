@@ -791,6 +791,7 @@ class Documentos
 
     /**
      * Obter histórico de assinaturas do funcionário
+     * CORRIGIDO: Agora aceita funcionário null para buscar todos
      */
     public function getHistoricoAssinaturas($funcionarioId = null, $periodo = 30)
     {
@@ -798,22 +799,36 @@ class Documentos
             $sql = "
                 SELECT 
                     d.id,
-                    d.data_assinatura,
-                    a.nome as associado_nome,
-                    a.cpf as associado_cpf,
+                    d.tipo_documento,
+                    d.nome_arquivo,
                     d.tipo_origem,
-                    TIMESTAMPDIFF(HOUR, d.data_envio_assinatura, d.data_assinatura) as tempo_processamento
+                    d.data_assinatura,
+                    d.data_upload,
+                    d.observacoes_fluxo,
+                    a.nome AS associado_nome,
+                    a.cpf AS associado_cpf,
+                    f.nome AS assinado_por_nome,
+                    TIMESTAMPDIFF(HOUR, d.data_upload, d.data_assinatura) AS tempo_processamento
                 FROM Documentos_Associado d
-                JOIN Associados a ON d.associado_id = a.id
-                WHERE d.assinado_por = ?
-                AND d.data_assinatura >= DATE_SUB(CURDATE(), INTERVAL ? DAY)
-                ORDER BY d.data_assinatura DESC
+                INNER JOIN Associados a ON d.associado_id = a.id
+                LEFT JOIN Funcionarios f ON d.assinado_por = f.id
+                WHERE d.status_fluxo = 'ASSINADO'
+                AND d.data_assinatura IS NOT NULL
+                AND d.data_assinatura >= DATE_SUB(NOW(), INTERVAL :periodo DAY)
             ";
 
-            $funcionarioId = $funcionarioId ?? $_SESSION['funcionario_id'];
+            $params = ['periodo' => $periodo];
+
+            // Adicionar filtro de funcionário se especificado
+            if ($funcionarioId !== null) {
+                $sql .= " AND d.assinado_por = :funcionario_id";
+                $params['funcionario_id'] = $funcionarioId;
+            }
+
+            $sql .= " ORDER BY d.data_assinatura DESC LIMIT 100";
 
             $stmt = $this->db->prepare($sql);
-            $stmt->execute([$funcionarioId, $periodo]);
+            $stmt->execute($params);
 
             return $stmt->fetchAll();
 
@@ -825,87 +840,174 @@ class Documentos
 
     /**
      * Relatório de produtividade da presidência
+     * CORRIGIDO: Alterado $this->pdo para $this->db
      */
-    public function getRelatorioProdutividade($dataInicio = null, $dataFim = null)
+    public function getRelatorioProdutividade($dataInicio, $dataFim)
     {
         try {
-            if (!$dataInicio) {
-                $dataInicio = date('Y-m-01'); // Primeiro dia do mês
-            }
-            if (!$dataFim) {
-                $dataFim = date('Y-m-t'); // Último dia do mês
-            }
+            // Adiciona horário para incluir o dia completo
+            $dataInicioCompleta = $dataInicio . ' 00:00:00';
+            $dataFimCompleta = $dataFim . ' 23:59:59';
 
-            $relatorio = [];
+            $resultado = [
+                'resumo' => [],
+                'por_dia_semana' => [],
+                'por_origem' => [],
+                'por_funcionario' => []
+            ];
 
-            // Total de documentos processados no período
-            $stmt = $this->db->prepare("
-                SELECT 
-                    COUNT(*) as total_processados,
-                    AVG(TIMESTAMPDIFF(HOUR, data_envio_assinatura, data_assinatura)) as tempo_medio,
-                    MIN(TIMESTAMPDIFF(HOUR, data_envio_assinatura, data_assinatura)) as tempo_minimo,
-                    MAX(TIMESTAMPDIFF(HOUR, data_envio_assinatura, data_assinatura)) as tempo_maximo
-                FROM Documentos_Associado
-                WHERE data_assinatura BETWEEN ? AND ?
-                AND status_fluxo IN ('ASSINADO', 'FINALIZADO')
+            // 1. RESUMO GERAL
+            $sqlResumo = "
+            SELECT 
+                COUNT(*) as total_processados,
+                AVG(TIMESTAMPDIFF(HOUR, data_envio_assinatura, data_assinatura)) as tempo_medio,
+                MIN(TIMESTAMPDIFF(HOUR, data_envio_assinatura, data_assinatura)) as tempo_minimo,
+                MAX(TIMESTAMPDIFF(HOUR, data_envio_assinatura, data_assinatura)) as tempo_maximo
+            FROM Documentos_Associado
+            WHERE status_fluxo IN ('ASSINADO', 'FINALIZADO')
+                AND data_assinatura BETWEEN ? AND ?
+                AND data_envio_assinatura IS NOT NULL
                 AND tipo_documento IN ('ficha_associacao', 'contrato_associacao')
-            ");
-            $stmt->execute([$dataInicio, $dataFim . ' 23:59:59']);
-            $relatorio['resumo'] = $stmt->fetch();
+        ";
 
-            // Por funcionário
-            $stmt = $this->db->prepare("
-                SELECT 
-                    f.nome as funcionario,
-                    COUNT(*) as total_assinados,
-                    AVG(TIMESTAMPDIFF(HOUR, d.data_envio_assinatura, d.data_assinatura)) as tempo_medio
-                FROM Documentos_Associado d
-                JOIN Funcionarios f ON d.assinado_por = f.id
-                WHERE d.data_assinatura BETWEEN ? AND ?
-                AND d.status_fluxo IN ('ASSINADO', 'FINALIZADO')
+            $stmt = $this->db->prepare($sqlResumo);
+            $stmt->execute([$dataInicioCompleta, $dataFimCompleta]);
+            $resumo = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            $resultado['resumo'] = [
+                'total_processados' => (int) ($resumo['total_processados'] ?? 0),
+                'tempo_medio' => round($resumo['tempo_medio'] ?? 0, 1),
+                'tempo_minimo' => round($resumo['tempo_minimo'] ?? 0, 1),
+                'tempo_maximo' => round($resumo['tempo_maximo'] ?? 0, 1)
+            ];
+
+            // 2. POR DIA DA SEMANA
+            $sqlDiaSemana = "
+            SELECT 
+                DAYOFWEEK(data_assinatura) as dia_numero,
+                CASE DAYOFWEEK(data_assinatura)
+                    WHEN 1 THEN 'Domingo'
+                    WHEN 2 THEN 'Segunda'
+                    WHEN 3 THEN 'Terça'
+                    WHEN 4 THEN 'Quarta'
+                    WHEN 5 THEN 'Quinta'
+                    WHEN 6 THEN 'Sexta'
+                    WHEN 7 THEN 'Sábado'
+                END as dia_nome,
+                COUNT(*) as total
+            FROM Documentos_Associado
+            WHERE status_fluxo IN ('ASSINADO', 'FINALIZADO')
+                AND data_assinatura BETWEEN ? AND ?
+                AND tipo_documento IN ('ficha_associacao', 'contrato_associacao')
+            GROUP BY DAYOFWEEK(data_assinatura)
+            ORDER BY DAYOFWEEK(data_assinatura)
+        ";
+
+            $stmt = $this->db->prepare($sqlDiaSemana);
+            $stmt->execute([$dataInicioCompleta, $dataFimCompleta]);
+
+            while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                $resultado['por_dia_semana'][] = [
+                    'dia_numero' => (int) $row['dia_numero'],
+                    'dia_nome' => $row['dia_nome'],
+                    'total' => (int) $row['total']
+                ];
+            }
+
+            // Garantir que todos os dias estejam representados
+            $diasCompletos = [
+                1 => 'Domingo',
+                2 => 'Segunda',
+                3 => 'Terça',
+                4 => 'Quarta',
+                5 => 'Quinta',
+                6 => 'Sexta',
+                7 => 'Sábado'
+            ];
+
+            $diasExistentes = array_column($resultado['por_dia_semana'], 'dia_numero');
+            foreach ($diasCompletos as $numero => $nome) {
+                if (!in_array($numero, $diasExistentes)) {
+                    $resultado['por_dia_semana'][] = [
+                        'dia_numero' => $numero,
+                        'dia_nome' => $nome,
+                        'total' => 0
+                    ];
+                }
+            }
+
+            // Ordenar por dia da semana
+            usort($resultado['por_dia_semana'], function ($a, $b) {
+                return $a['dia_numero'] - $b['dia_numero'];
+            });
+
+            // 3. POR ORIGEM (FÍSICO/VIRTUAL)
+            $sqlOrigem = "
+            SELECT 
+                tipo_origem,
+                COUNT(*) as total,
+                AVG(TIMESTAMPDIFF(HOUR, data_envio_assinatura, data_assinatura)) as tempo_medio
+            FROM Documentos_Associado
+            WHERE status_fluxo IN ('ASSINADO', 'FINALIZADO')
+                AND data_assinatura BETWEEN ? AND ?
+                AND data_envio_assinatura IS NOT NULL
+                AND tipo_documento IN ('ficha_associacao', 'contrato_associacao')
+            GROUP BY tipo_origem
+        ";
+
+            $stmt = $this->db->prepare($sqlOrigem);
+            $stmt->execute([$dataInicioCompleta, $dataFimCompleta]);
+
+            while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                $resultado['por_origem'][] = [
+                    'tipo_origem' => $row['tipo_origem'],
+                    'total' => (int) $row['total'],
+                    'tempo_medio' => round($row['tempo_medio'] ?? 0, 1)
+                ];
+            }
+
+            // 4. POR FUNCIONÁRIO
+            $sqlFuncionario = "
+            SELECT 
+                f.id,
+                f.nome as funcionario,
+                COUNT(d.id) as total_assinados,
+                AVG(TIMESTAMPDIFF(HOUR, d.data_envio_assinatura, d.data_assinatura)) as tempo_medio,
+                MIN(TIMESTAMPDIFF(HOUR, d.data_envio_assinatura, d.data_assinatura)) as tempo_minimo,
+                MAX(TIMESTAMPDIFF(HOUR, d.data_envio_assinatura, d.data_assinatura)) as tempo_maximo
+            FROM Documentos_Associado d
+            INNER JOIN Funcionarios f ON d.assinado_por = f.id
+            WHERE d.status_fluxo IN ('ASSINADO', 'FINALIZADO')
+                AND d.data_assinatura BETWEEN ? AND ?
+                AND d.data_envio_assinatura IS NOT NULL
                 AND d.tipo_documento IN ('ficha_associacao', 'contrato_associacao')
-                GROUP BY f.id
-                ORDER BY total_assinados DESC
-            ");
-            $stmt->execute([$dataInicio, $dataFim . ' 23:59:59']);
-            $relatorio['por_funcionario'] = $stmt->fetchAll();
+            GROUP BY f.id, f.nome
+            ORDER BY total_assinados DESC
+        ";
 
-            // Por dia da semana
-            $stmt = $this->db->prepare("
-                SELECT 
-                    DAYNAME(data_assinatura) as dia_semana,
-                    DAYOFWEEK(data_assinatura) as dia_numero,
-                    COUNT(*) as total
-                FROM Documentos_Associado
-                WHERE data_assinatura BETWEEN ? AND ?
-                AND status_fluxo IN ('ASSINADO', 'FINALIZADO')
-                AND tipo_documento IN ('ficha_associacao', 'contrato_associacao')
-                GROUP BY DAYOFWEEK(data_assinatura)
-                ORDER BY dia_numero
-            ");
-            $stmt->execute([$dataInicio, $dataFim . ' 23:59:59']);
-            $relatorio['por_dia_semana'] = $stmt->fetchAll();
+            $stmt = $this->db->prepare($sqlFuncionario);
+            $stmt->execute([$dataInicioCompleta, $dataFimCompleta]);
 
-            // Por origem
-            $stmt = $this->db->prepare("
-                SELECT 
-                    tipo_origem,
-                    COUNT(*) as total,
-                    AVG(TIMESTAMPDIFF(HOUR, data_envio_assinatura, data_assinatura)) as tempo_medio
-                FROM Documentos_Associado
-                WHERE data_assinatura BETWEEN ? AND ?
-                AND status_fluxo IN ('ASSINADO', 'FINALIZADO')
-                AND tipo_documento IN ('ficha_associacao', 'contrato_associacao')
-                GROUP BY tipo_origem
-            ");
-            $stmt->execute([$dataInicio, $dataFim . ' 23:59:59']);
-            $relatorio['por_origem'] = $stmt->fetchAll();
+            while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                $resultado['por_funcionario'][] = [
+                    'id' => (int) $row['id'],
+                    'funcionario' => $row['funcionario'],
+                    'total_assinados' => (int) $row['total_assinados'],
+                    'tempo_medio' => round($row['tempo_medio'] ?? 0, 1),
+                    'tempo_minimo' => round($row['tempo_minimo'] ?? 0, 1),
+                    'tempo_maximo' => round($row['tempo_maximo'] ?? 0, 1)
+                ];
+            }
 
-            return $relatorio;
+            // Log de sucesso
+            error_log("Relatório de produtividade gerado com sucesso para o período {$dataInicio} a {$dataFim}");
+
+            return $resultado;
 
         } catch (PDOException $e) {
             error_log("Erro ao gerar relatório de produtividade: " . $e->getMessage());
-            return [];
+            error_log("SQL Error: " . print_r($e->errorInfo, true));
+            throw new Exception("Erro ao gerar relatório: " . $e->getMessage());
         }
     }
 
@@ -1223,9 +1325,11 @@ class Documentos
             }
 
             // NOVA VALIDAÇÃO: Verificar se o documento está em fluxo de assinatura
-            if (isset($documento['status_fluxo']) && 
-                in_array($documento['tipo_documento'], ['ficha_associacao', 'contrato_associacao'])) {
-                
+            if (
+                isset($documento['status_fluxo']) &&
+                in_array($documento['tipo_documento'], ['ficha_associacao', 'contrato_associacao'])
+            ) {
+
                 // Se o documento já foi enviado para assinatura, não pode ser excluído
                 if ($documento['status_fluxo'] !== self::STATUS_DIGITALIZADO) {
                     $statusDescricao = [
@@ -1233,9 +1337,9 @@ class Documentos
                         self::STATUS_ASSINADO => 'já assinado',
                         self::STATUS_FINALIZADO => 'finalizado'
                     ];
-                    
+
                     $status = $statusDescricao[$documento['status_fluxo']] ?? $documento['status_fluxo'];
-                    
+
                     throw new Exception("Não é possível excluir este documento pois ele está {$status}. Apenas documentos que ainda não foram enviados para assinatura podem ser excluídos.");
                 }
             }
@@ -1275,10 +1379,10 @@ class Documentos
             }
 
             $this->db->commit();
-            
+
             // Log de sucesso
             error_log("Documento ID {$id} excluído com sucesso por funcionário ID " . ($_SESSION['funcionario_id'] ?? 'N/A'));
-            
+
             return true;
 
         } catch (Exception $e) {
@@ -1296,18 +1400,20 @@ class Documentos
     {
         try {
             $documento = $this->getById($id);
-            
+
             if (!$documento) {
                 return ['pode' => false, 'motivo' => 'Documento não encontrado'];
             }
 
             // Verificar se é documento de fluxo
-            if (in_array($documento['tipo_documento'], ['ficha_associacao', 'contrato_associacao']) && 
-                isset($documento['status_fluxo'])) {
-                
+            if (
+                in_array($documento['tipo_documento'], ['ficha_associacao', 'contrato_associacao']) &&
+                isset($documento['status_fluxo'])
+            ) {
+
                 if ($documento['status_fluxo'] !== self::STATUS_DIGITALIZADO) {
                     return [
-                        'pode' => false, 
+                        'pode' => false,
                         'motivo' => 'Documento já está em processo de assinatura',
                         'status_atual' => $documento['status_fluxo']
                     ];
