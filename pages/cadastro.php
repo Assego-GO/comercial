@@ -293,8 +293,8 @@ try {
                                 <option value="Solteiro(a)" <?php echo (isset($associadoData['estadoCivil']) && $associadoData['estadoCivil'] == 'Solteiro(a)') ? 'selected' : ''; ?>>Solteiro(a)</option>
                                 <option value="Casado(a)" <?php echo (isset($associadoData['estadoCivil']) && $associadoData['estadoCivil'] == 'Casado(a)') ? 'selected' : ''; ?>>Casado(a)</option>
                                 <option value="Divorciado(a)" <?php echo (isset($associadoData['estadoCivil']) && $associadoData['estadoCivil'] == 'Divorciado(a)') ? 'selected' : ''; ?>>Divorciado(a)</option>
-                                <option value="Viúvo(a)" <?php echo (isset($associadoData['estadoCivil']) && $associadoData['estadoCivil'] == 'Viúvo(a)') ? 'selected' : ''; ?>>Viúvo(a)</option>
-                                <option value="União Estável" <?php echo (isset($associadoData['estadoCivil']) && $associadoData['estadoCivil'] == 'União Estável') ? 'selected' : ''; ?>>União Estável</option>
+                                <option value="separacao judicial" <?php echo (isset($associadoData['estadoCivil']) && $associadoData['estadoCivil'] == 'Separação Judicial') ? 'selected' : ''; ?>>Separação Judicial</option>
+                                <option value="outro" <?php echo (isset($associadoData['estadoCivil']) && $associadoData['estadoCivil'] == 'outro') ? 'selected' : ''; ?>>Outro</option>
                             </select>
                         </div>
 
