@@ -451,11 +451,9 @@ try {
                             </label>
                             <select class="form-input form-select" name="corporacao" id="corporacao">
                                 <option value="">Selecione...</option>
-                                <option value="Polícia Militar" <?php echo (isset($associadoData['corporacao']) && $associadoData['corporacao'] == 'Polícia Militar') ? 'selected' : ''; ?>>Polícia Militar</option>
-                                <option value="Corpo de Bombeiros" <?php echo (isset($associadoData['corporacao']) && $associadoData['corporacao'] == 'Corpo de Bombeiros') ? 'selected' : ''; ?>>Corpo de Bombeiros</option>
-                                <option value="Polícia Civil" <?php echo (isset($associadoData['corporacao']) && $associadoData['corporacao'] == 'Polícia Civil') ? 'selected' : ''; ?>>Polícia Civil</option>
-                                <option value="Polícia Federal" <?php echo (isset($associadoData['corporacao']) && $associadoData['corporacao'] == 'Polícia Federal') ? 'selected' : ''; ?>>Polícia Federal</option>
-                                <option value="Forças Armadas" <?php echo (isset($associadoData['corporacao']) && $associadoData['corporacao'] == 'Forças Armadas') ? 'selected' : ''; ?>>Forças Armadas</option>
+                                <option value="pm" <?php echo (isset($associadoData['corporacao']) && $associadoData['corporacao'] == 'Polícia Militar') ? 'selected' : ''; ?>>Polícia Militar</option>
+                                <option value="bm" <?php echo (isset($associadoData['corporacao']) && $associadoData['corporacao'] == 'Corpo de Bombeiros') ? 'selected' : ''; ?>>Corpo de Bombeiros</option>
+                                <option value="pensionista" <?php echo (isset($associadoData['corporacao']) && $associadoData['corporacao'] == 'Pensionista') ? 'selected' : ''; ?>>Pensionista</option>
                             </select>
                         </div>
 
@@ -504,6 +502,16 @@ try {
                             <input type="text" class="form-input" name="lotacao" id="lotacao"
                                    value="<?php echo $associadoData['lotacao'] ?? ''; ?>"
                                    placeholder="Local de lotação">
+                        </div>
+
+                        <!-- NOVO CAMPO: Telefone da Lotação -->
+                        <div class="form-group">
+                            <label class="form-label">
+                                Telefone da Lotação
+                            </label>
+                            <input type="text" class="form-input" name="telefoneLotacao" id="telefoneLotacao"
+                                   value="<?php echo $associadoData['telefoneLotacao'] ?? ''; ?>"
+                                   placeholder="(00) 0000-0000">
                         </div>
 
                         <div class="form-group full-width">
@@ -803,14 +811,25 @@ try {
                                                value="<?php echo $dependente['nome'] ?? ''; ?>"
                                                placeholder="Nome do dependente">
                                     </div>
-                                    <div class="form-group">
+                                    
+                                    <!-- Campo Data de Nascimento (sempre visível) -->
+                                    <div class="form-group campo-data-nascimento">
                                         <label class="form-label">Data de Nascimento</label>
                                         <input type="date" class="form-input" name="dependentes[<?php echo $index; ?>][data_nascimento]"
                                                value="<?php echo $dependente['data_nascimento'] ?? ''; ?>">
                                     </div>
+                                    
+                                    <!-- Campo Telefone (visível só para cônjuge) -->
+                                    <div class="form-group campo-telefone" style="display: <?php echo ($dependente['parentesco'] == 'Cônjuge') ? 'block' : 'none'; ?>;">
+                                        <label class="form-label">Telefone</label>
+                                        <input type="text" class="form-input telefone-dependente" name="dependentes[<?php echo $index; ?>][telefone]"
+                                               value="<?php echo $dependente['telefone'] ?? ''; ?>"
+                                               placeholder="(00) 00000-0000">
+                                    </div>
+                                    
                                     <div class="form-group">
                                         <label class="form-label">Parentesco</label>
-                                        <select class="form-input form-select" name="dependentes[<?php echo $index; ?>][parentesco]">
+                                        <select class="form-input form-select parentesco-select" name="dependentes[<?php echo $index; ?>][parentesco]" onchange="toggleCamposDependente(this)">
                                             <option value="">Selecione...</option>
                                             <option value="Cônjuge" <?php echo ($dependente['parentesco'] == 'Cônjuge') ? 'selected' : ''; ?>>Cônjuge</option>
                                             <option value="Filho(a)" <?php echo ($dependente['parentesco'] == 'Filho(a)') ? 'selected' : ''; ?>>Filho(a)</option>
@@ -923,6 +942,12 @@ document.addEventListener('DOMContentLoaded', function() {
             $('#cpf').mask('000.000.000-00');
             $('#telefone').mask('(00) 00000-0000');
             $('#cep').mask('00000-000');
+            $('#telefoneLotacao').mask('(00) 0000-0000'); // Nova máscara para telefone da lotação
+            
+            // Máscara para telefones dos dependentes
+            $(document).on('focus', '.telefone-dependente', function() {
+                $(this).mask('(00) 00000-0000');
+            });
             
             // Select2
             $('.form-select').select2({
@@ -958,6 +983,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 carregarServicosAssociado();
             }
             
+            // Inicializa campos dos dependentes existentes
+            document.querySelectorAll('.parentesco-select').forEach(select => {
+                toggleCamposDependente(select);
+            });
+            
             // Atualiza interface
             updateProgressBar();
             updateNavigationButtons();
@@ -968,6 +998,31 @@ document.addEventListener('DOMContentLoaded', function() {
             showAlert('Erro ao carregar dados do sistema. Algumas funcionalidades podem não funcionar.', 'warning');
         });
 });
+
+// NOVA FUNÇÃO: Alternar campos do dependente baseado no parentesco
+function toggleCamposDependente(selectElement) {
+    const dependenteCard = selectElement.closest('.dependente-card');
+    if (!dependenteCard) return;
+    
+    const campoDataNascimento = dependenteCard.querySelector('.campo-data-nascimento');
+    const campoTelefone = dependenteCard.querySelector('.campo-telefone');
+    const parentesco = selectElement.value;
+    
+    if (parentesco === 'Cônjuge') {
+        // Para cônjuge, mostra AMBOS os campos
+        campoDataNascimento.style.display = 'block';
+        campoTelefone.style.display = 'block';
+        
+    } else {
+        // Para outros parentescos, mostra só data de nascimento e esconde telefone
+        campoDataNascimento.style.display = 'block';
+        campoTelefone.style.display = 'none';
+        
+        // Limpa o campo de telefone
+        const inputTelefone = campoTelefone.querySelector('input');
+        if (inputTelefone) inputTelefone.value = '';
+    }
+}
 
 // FUNÇÃO CORRIGIDA: Carrega dados de serviços via AJAX
 function carregarDadosServicos() {
@@ -1469,7 +1524,7 @@ function buscarCEP() {
         });
 }
 
-// Gerenciar dependentes
+// Gerenciar dependentes - FUNÇÃO MODIFICADA
 function adicionarDependente() {
     const container = document.getElementById('dependentesContainer');
     if (!container) return;
@@ -1490,13 +1545,23 @@ function adicionarDependente() {
                     <input type="text" class="form-input" name="dependentes[${novoIndex}][nome]" 
                            placeholder="Nome do dependente">
                 </div>
-                <div class="form-group">
+                
+                <!-- Campo Data de Nascimento (sempre visível) -->
+                <div class="form-group campo-data-nascimento">
                     <label class="form-label">Data de Nascimento</label>
                     <input type="date" class="form-input" name="dependentes[${novoIndex}][data_nascimento]">
                 </div>
+                
+                <!-- Campo Telefone (visível só para cônjuge) -->
+                <div class="form-group campo-telefone" style="display: none;">
+                    <label class="form-label">Telefone</label>
+                    <input type="text" class="form-input telefone-dependente" name="dependentes[${novoIndex}][telefone]"
+                           placeholder="(00) 00000-0000">
+                </div>
+                
                 <div class="form-group">
                     <label class="form-label">Parentesco</label>
-                    <select class="form-input form-select" name="dependentes[${novoIndex}][parentesco]">
+                    <select class="form-input form-select parentesco-select" name="dependentes[${novoIndex}][parentesco]" onchange="toggleCamposDependente(this)">
                         <option value="">Selecione...</option>
                         <option value="Cônjuge">Cônjuge</option>
                         <option value="Filho(a)">Filho(a)</option>
@@ -1526,6 +1591,9 @@ function adicionarDependente() {
         theme: 'default',
         width: '100%'
     });
+    
+    // Aplica máscara no novo campo de telefone
+    $(`[data-index="${novoIndex}"] .telefone-dependente`).mask('(00) 00000-0000');
 }
 
 function removerDependente(button) {
@@ -2336,6 +2404,7 @@ function selecionarNome(nome) {
     
     console.log('✓ Nome selecionado:', nome);
 }
+//oi
 
 function hideSuggestions() {
     const suggestionsContainer = document.getElementById('indicacaoSuggestions');

@@ -1,0 +1,92 @@
+ /* Estilos específicos para auditoria */
+        .audit-table {
+            width: 100%;
+            margin-top: 1rem;
+        }
+        
+        .audit-table th,
+        .audit-table td {
+            padding: 0.75rem;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 0.9rem;
+        }
+        
+        .audit-table th {
+            background: #f8fafc;
+            font-weight: 600;
+            color: #1e293b;
+        }
+        
+        .audit-table tbody tr:hover {
+            background: rgba(37, 99, 235, 0.05);
+        }
+        
+        .action-badge {
+            padding: 0.25rem 0.6rem;
+            border-radius: 15px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .action-badge.INSERT {
+            background: rgba(16, 185, 129, 0.1);
+            color: #059669;
+        }
+        
+        .action-badge.UPDATE {
+            background: rgba(245, 158, 11, 0.1);
+            color: #d97706;
+        }
+        
+        .action-badge.DELETE {
+            background: rgba(239, 68, 68, 0.1);
+            color: #dc2626;
+        }
+        
+        .action-badge.LOGIN {
+            background: rgba(59, 130, 246, 0.1);
+            color: #2563eb;
+        }
+        
+        .action-badge.LOGOUT {
+            background: rgba(100, 116, 139, 0.1);
+            color: #64748b;
+        }
+        
+        .filter-bar {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+        
+        .filter-input,
+        .filter-select {
+            padding: 0.5rem 1rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            min-width: 200px;
+        }
+        
+        .filter-input:focus,
+        .filter-select:focus {
+            border-color: #2563eb;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+        }
+        
+        .pagination-wrapper {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid #e2e8f0;
+        }

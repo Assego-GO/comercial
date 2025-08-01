@@ -26,6 +26,22 @@ if (!$auth->isLoggedIn()) {
 // Pega dados do usuário logado
 $usuarioLogado = $auth->getUser();
 
+// DEBUG USUÁRIO LOGADO - CONSOLE (REMOVER APÓS TESTE)
+echo "<script>";
+echo "console.log('=== DEBUG USUÁRIO LOGADO ===');";
+echo "console.log('Array completo:', " . json_encode($usuarioLogado) . ");";
+echo "console.log('Tem departamento_id?', " . (isset($usuarioLogado['departamento_id']) ? 'true' : 'false') . ");";
+if (isset($usuarioLogado['departamento_id'])) {
+    echo "console.log('Departamento ID valor:', " . json_encode($usuarioLogado['departamento_id']) . ");";
+    echo "console.log('Departamento ID tipo:', '" . gettype($usuarioLogado['departamento_id']) . "');";
+    echo "console.log('É igual a 1?', " . ($usuarioLogado['departamento_id'] == 1 ? 'true' : 'false') . ");";
+    echo "console.log('É idêntico a 1?', " . ($usuarioLogado['departamento_id'] === 1 ? 'true' : 'false') . ");";
+    echo "console.log('É idêntico a \"1\"?', " . ($usuarioLogado['departamento_id'] === '1' ? 'true' : 'false') . ");";
+}
+echo "console.log('isDiretor:', " . ($auth->isDiretor() ? 'true' : 'false') . ");";
+echo "console.log('=============================');";
+echo "</script>";
+
 // Define o título da página
 $page_title = 'Associados - ASSEGO';
 
@@ -67,13 +83,9 @@ try {
     $totalAssociados = $associadosFiliados = $associadosDesfiliados = $novosAssociados = 0;
 }
 
-// Cria instância do Header Component
+// CORREÇÃO: Cria instância do Header Component - Passa TODO o array do usuário
 $headerComponent = HeaderComponent::create([
-    'usuario' => [
-        'nome' => $usuarioLogado['nome'],
-        'cargo' => $usuarioLogado['cargo'] ?? 'Funcionário',
-        'avatar' => $usuarioLogado['avatar'] ?? null
-    ],
+    'usuario' => $usuarioLogado, // ← CORRIGIDO: Agora passa TODO o array (incluindo departamento_id)
     'isDiretor' => $auth->isDiretor(),
     'activeTab' => 'associados',
     'notificationCount' => 0,
