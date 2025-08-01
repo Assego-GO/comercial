@@ -352,6 +352,37 @@ class HeaderComponent {
      * Gera as tabs do sistema
      */
     private function getTabs() {
+        // DEBUG HEADER - CONSOLE
+        echo "<script>";
+        echo "console.log('=== DEBUG HEADER TABS ===');";
+        echo "console.log('this.isDiretor:', " . ($this->isDiretor ? 'true' : 'false') . ");";
+        echo "console.log('this.usuario:', " . json_encode($this->usuario) . ");";
+        echo "console.log('Tem departamento_id no usuario?', " . (isset($this->usuario['departamento_id']) ? 'true' : 'false') . ");";
+        
+        if (isset($this->usuario['departamento_id'])) {
+            echo "console.log('Departamento ID valor:', " . json_encode($this->usuario['departamento_id']) . ");";
+            echo "console.log('Departamento ID tipo:', '" . gettype($this->usuario['departamento_id']) . "');";
+            echo "console.log('departamento_id == 1:', " . ($this->usuario['departamento_id'] == 1 ? 'true' : 'false') . ");";
+            echo "console.log('departamento_id === 1:', " . ($this->usuario['departamento_id'] === 1 ? 'true' : 'false') . ");";
+            echo "console.log('departamento_id === \"1\":', " . ($this->usuario['departamento_id'] === '1' ? 'true' : 'false') . ");";
+        }
+        
+        // Teste da lógica de permissão
+        $podeVerFuncionarios = false;
+        if ($this->isDiretor) {
+            $podeVerFuncionarios = true;
+            echo "console.log('✅ Permissão por DIRETOR');";
+        } elseif (isset($this->usuario['departamento_id']) && $this->usuario['departamento_id'] == 1) {
+            $podeVerFuncionarios = true;
+            echo "console.log('✅ Permissão por PRESIDÊNCIA');";
+        } else {
+            echo "console.log('❌ SEM PERMISSÃO');";
+        }
+        
+        echo "console.log('podeVerFuncionarios:', " . ($podeVerFuncionarios ? 'true' : 'false') . ");";
+        echo "console.log('========================');";
+        echo "</script>";
+        
         if ($this->customTabs) {
             return $this->customTabs;
         }
@@ -365,13 +396,29 @@ class HeaderComponent {
             ]
         ];
 
+        // CORREÇÃO: Permite acesso tanto para DIRETORES quanto para usuários da PRESIDÊNCIA
+        $podeVerFuncionarios = false;
+
+        // Verifica se é diretor OU se é da presidência (departamento_id = 1)
         if ($this->isDiretor) {
+            $podeVerFuncionarios = true;
+        } elseif (isset($this->usuario['departamento_id']) && $this->usuario['departamento_id'] == 1) {
+            $podeVerFuncionarios = true;
+        }
+
+        // Adiciona a aba se tiver permissão
+        if ($podeVerFuncionarios) {
             $tabs[] = [
                 'id' => 'funcionarios',
                 'label' => 'Funcionários',
                 'icon' => 'fas fa-user-tie',
-                'href' => 'funcionarios.php'
+                'href' => './funcionarios.php' // ← CORRIGIDO: Caminho relativo correto
             ];
+            
+            // Debug final
+            echo "<script>console.log('✅ ABA FUNCIONÁRIOS ADICIONADA!');</script>";
+        } else {
+            echo "<script>console.log('❌ ABA FUNCIONÁRIOS NÃO ADICIONADA');</script>";
         }
 
         $tabs[] = [
@@ -450,6 +497,15 @@ class HeaderComponent {
     public function render() {
         $tabs = $this->getTabs();
         $userInitials = $this->getUserInitials($this->usuario['nome']);
+        
+        // DEBUG DOS LINKS - CONSOLE
+        echo "<script>";
+        echo "console.log('=== DEBUG LINKS DAS ABAS ===');";
+        foreach ($tabs as $tab) {
+            echo "console.log('Aba: " . $tab['label'] . " → Link: " . $tab['href'] . "');";
+        }
+        echo "console.log('============================');";
+        echo "</script>";
         ?>
         
         <!-- Header Principal -->
@@ -536,6 +592,45 @@ class HeaderComponent {
                 <?php endforeach; ?>
             </ul>
         </nav>
+        
+        <!-- DEBUG - Event listeners para cliques -->
+        <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🔧 Adicionando listeners para debug de cliques...');
+            const links = document.querySelectorAll('.nav-tab-link');
+            links.forEach(function(link, index) {
+                const texto = link.querySelector('.nav-tab-text').textContent;
+                console.log(`Aba ${index + 1}: ${texto} → ${link.href}`);
+                
+                link.addEventListener('click', function(e) {
+                    console.log(`🖱️ CLICOU: ${texto}`);
+                    console.log(`🔗 URL de destino: ${this.href}`);
+                    console.log(`📍 URL atual: ${window.location.href}`);
+                    
+                    // Se for funcionários, vamos debugar mais
+                    if (texto === 'Funcionários') {
+                        console.log('🔍 DEBUG ESPECIAL - FUNCIONÁRIOS:');
+                        console.log('- Link absoluto:', this.href);
+                        console.log('- Pathname:', new URL(this.href).pathname);
+                        console.log('- Arquivo de destino:', this.href.split('/').pop());
+                        
+                        // Teste se o arquivo existe fazendo uma requisição
+                        fetch(this.href, {method: 'HEAD'})
+                            .then(response => {
+                                if (response.ok) {
+                                    console.log('✅ Arquivo funcionarios.php EXISTE e é acessível');
+                                } else {
+                                    console.log('❌ Arquivo funcionarios.php NÃO EXISTE (status:', response.status, ')');
+                                }
+                            })
+                            .catch(error => {
+                                console.log('❌ Erro ao verificar arquivo:', error);
+                            });
+                    }
+                });
+            });
+        });
+        </script>
         
         <?php
     }
