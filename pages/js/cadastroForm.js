@@ -1,12 +1,13 @@
 // JavaScript Completo com FALLBACKS e FICHA DE FILIAÇÃO
 
-const isEdit = typeof associadoId !== 'undefined' && associadoId !== null;
-const associadoId = isEdit ? parseInt(document.querySelector('input[name="id"]')?.value) : null;
-
-// Estado do formulário
+// Estado do formulário - DECLARADO PRIMEIRO
 let currentStep = 1;
 const totalSteps = 6;
 let dependenteIndex = 0;
+
+// Depois pega os dados da página
+const isEdit = window.pageData ? window.pageData.isEdit : false;
+const associadoId = window.pageData ? window.pageData.associadoId : null;
 
 // Dados carregados dos serviços (para edição)
 let servicosCarregados = null;
@@ -20,6 +21,7 @@ let dadosCarregados = false;
 // Inicialização
 document.addEventListener('DOMContentLoaded', function () {
     console.log('Iniciando formulário de filiação...');
+    console.log('Modo edição:', isEdit, 'ID:', associadoId);
 
     // Atalho ESC para voltar ao dashboard
     document.addEventListener('keydown', function(e) {
@@ -60,7 +62,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     const reader = new FileReader();
                     reader.onload = function (e) {
                         document.getElementById('photoPreview').innerHTML =
-                            `<img src="${e.target.result}" alt="Preview">`;
+                            `<img src="${e.target.result}" alt="Preview" style="width: 100%; height: 100%; object-fit: cover;">`;
                     };
                     reader.readAsDataURL(file);
                 }
@@ -109,12 +111,20 @@ document.addEventListener('DOMContentLoaded', function () {
 
             // Carrega dados dos serviços se estiver editando
             if (isEdit && associadoId) {
-                carregarServicosAssociado();
+                setTimeout(() => {
+                    carregarServicosAssociado();
+                }, 1000);
             }
 
             // Atualiza interface
             updateProgressBar();
             updateNavigationButtons();
+
+            // Se for modo edição e houver dependentes já carregados, atualiza o índice
+            const dependentesExistentes = document.querySelectorAll('.dependente-card');
+            if (dependentesExistentes.length > 0) {
+                dependenteIndex = dependentesExistentes.length;
+            }
 
         })
         .catch(error => {
@@ -261,21 +271,70 @@ function useHardcodedData() {
 
 // Função para carregar serviços do associado (modo edição)
 function carregarServicosAssociado() {
-    console.log('Carregando serviços do associado...');
+    if (!associadoId) {
+        console.log('Não é modo edição, pulando carregamento de serviços');
+        return;
+    }
+
+    console.log('=== CARREGANDO SERVIÇOS DO ASSOCIADO ===');
+    console.log('ID do associado:', associadoId);
+
+    // Mostra loading
+    const loadingHtml = `
+<div style="text-align: center; padding: 1rem; color: var(--gray-500);">
+    <i class="fas fa-spinner fa-spin"></i> Carregando serviços...
+</div>
+`;
+
+    const servicosContainer = document.querySelector('[data-step="4"] .form-group.full-width');
+    if (servicosContainer) {
+        const serviceDiv = servicosContainer.querySelector('div[style*="background: var(--white)"]');
+        if (serviceDiv) {
+            serviceDiv.innerHTML = loadingHtml;
+        }
+    }
 
     fetch(`../api/buscar_servicos_associado.php?associado_id=${associadoId}`)
-        .then(response => response.json())
+        .then(response => {
+            console.log('Response status:', response.status);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            return response.json();
+        })
         .then(data => {
-            if (data.status === 'success') {
+            console.log('Resposta da API:', data);
+
+            if (data.status === 'success' && data.data) {
                 servicosCarregados = data.data;
                 preencherDadosServicos(data.data);
-                console.log('Serviços carregados:', data.data);
+
+                // Restaura o HTML original dos serviços
+                restaurarHtmlServicos();
+
+                console.log('✓ Serviços carregados e preenchidos com sucesso');
             } else {
-                console.warn('Nenhum serviço encontrado para este associado');
+                console.warn('API retornou erro:', data.message || 'Erro desconhecido');
+                // Mesmo assim, tenta calcular com os dados atuais
+                restaurarHtmlServicos();
+                setTimeout(() => {
+                    if (document.getElementById('tipoAssociadoServico').value) {
+                        calcularServicos();
+                    }
+                }, 500);
             }
         })
         .catch(error => {
             console.error('Erro ao carregar serviços:', error);
+
+            // Restaura o HTML e tenta calcular
+            restaurarHtmlServicos();
+
+            setTimeout(() => {
+                if (document.getElementById('tipoAssociadoServico').value) {
+                    calcularServicos();
+                }
+            }, 500);
         });
 }
 
@@ -469,8 +528,14 @@ function validarStepAtual() {
         // Valida foto do associado
         const fotoField = document.getElementById('foto');
         if (!isEdit && (!fotoField.files || fotoField.files.length === 0)) {
-            showAlert('Por favor, adicione uma foto do associado!', 'error');
-            isValid = false;
+            // Verifica se já tem preview de foto
+            const photoPreview = document.getElementById('photoPreview');
+            const hasPhoto = photoPreview && photoPreview.querySelector('img');
+            
+            if (!hasPhoto) {
+                showAlert('Por favor, adicione uma foto do associado!', 'error');
+                isValid = false;
+            }
         }
 
         // NOVA VALIDAÇÃO: Valida ficha assinada (apenas para novos cadastros)
@@ -815,74 +880,6 @@ function updateElementSafe(elementId, value, property = 'textContent') {
     }
 }
 
-// Função para carregar serviços do associado (modo edição) - VERSÃO CORRIGIDA
-function carregarServicosAssociado() {
-    if (!associadoId) {
-        console.log('Não é modo edição, pulando carregamento de serviços');
-        return;
-    }
-
-    console.log('=== CARREGANDO SERVIÇOS DO ASSOCIADO ===');
-    console.log('ID do associado:', associadoId);
-
-    // Mostra loading
-    const loadingHtml = `
-<div style="text-align: center; padding: 1rem; color: var(--gray-500);">
-    <i class="fas fa-spinner fa-spin"></i> Carregando serviços...
-</div>
-`;
-
-    const servicosContainer = document.querySelector('[data-step="4"] .form-group.full-width');
-    if (servicosContainer) {
-        const serviceDiv = servicosContainer.querySelector('div[style*="background: var(--white)"]');
-        if (serviceDiv) {
-            serviceDiv.innerHTML = loadingHtml;
-        }
-    }
-
-    fetch(`../api/buscar_servicos_associado.php?associado_id=${associadoId}`)
-        .then(response => {
-            console.log('Response status:', response.status);
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-            return response.json();
-        })
-        .then(data => {
-            console.log('Resposta da API:', data);
-
-            if (data.status === 'success' && data.data) {
-                servicosCarregados = data.data;
-                preencherDadosServicos(data.data);
-
-                // Restaura o HTML original dos serviços
-                restaurarHtmlServicos();
-
-                console.log('✓ Serviços carregados e preenchidos com sucesso');
-            } else {
-                console.warn('API retornou erro:', data.message || 'Erro desconhecido');
-                // Mesmo assim, tenta calcular com os dados atuais
-                setTimeout(() => {
-                    if (document.getElementById('tipoAssociadoServico').value) {
-                        calcularServicos();
-                    }
-                }, 500);
-            }
-        })
-        .catch(error => {
-            console.error('Erro ao carregar serviços:', error);
-
-            // Restaura o HTML e tenta calcular
-            restaurarHtmlServicos();
-
-            setTimeout(() => {
-                if (document.getElementById('tipoAssociadoServico').value) {
-                    calcularServicos();
-                }
-            }, 500);
-        });
-}
-
 // Função para restaurar HTML dos serviços
 function restaurarHtmlServicos() {
     const servicosContainer = document.querySelector('[data-step="4"] .form-group.full-width');
@@ -1029,16 +1026,9 @@ function salvarAssociado() {
     console.log('=== FIM SALVAMENTO ===');
 }
 
-// Garanta que esta função seja chamada no carregamento da página se for edição
+// Adiciona listeners aos campos de serviços
 document.addEventListener('DOMContentLoaded', function () {
     console.log('DOM carregado - Modo edição:', isEdit);
-
-    if (isEdit && associadoId) {
-        // Aguarda um pouco para garantir que tudo está carregado
-        setTimeout(() => {
-            carregarServicosAssociado();
-        }, 1000);
-    }
 
     // Adiciona listeners aos campos de serviços
     const tipoAssociadoEl = document.getElementById('tipoAssociadoServico');
@@ -1125,6 +1115,11 @@ function validarFormularioCompleto() {
     let isValid = true;
 
     requiredFields.forEach(field => {
+        // Pula validação da foto se for modo edição
+        if (isEdit && field.name === 'foto') {
+            return;
+        }
+
         if (!field.value.trim()) {
             field.classList.add('error');
             isValid = false;
