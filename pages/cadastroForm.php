@@ -158,6 +158,15 @@ try {
     <!-- Custom CSS Files -->
     <link rel="stylesheet" href="estilizacao/cadastroForm.css">
     <link rel="stylesheet" href="estilizacao/autocomplete.css">
+    
+    <!-- Passar dados para o JavaScript -->
+    <script>
+        // Dados essenciais para o JavaScript
+        window.pageData = {
+            isEdit: <?php echo $isEdit ? 'true' : 'false'; ?>,
+            associadoId: <?php echo $associadoId ? $associadoId : 'null'; ?>
+        };
+    </script>
 </head>
 
 <body>
@@ -434,7 +443,14 @@ try {
                             <div class="photo-upload-container">
                                 <div class="photo-preview" id="photoPreview">
                                     <?php if (isset($associadoData['foto']) && $associadoData['foto']): ?>
-                                        <img src="<?php echo $associadoData['foto']; ?>" alt="Foto do associado">
+                                        <?php 
+                                        // Corrige o caminho da foto
+                                        $fotoPath = $associadoData['foto'];
+                                        if (!str_starts_with($fotoPath, 'http') && !str_starts_with($fotoPath, '../')) {
+                                            $fotoPath = '../' . $fotoPath;
+                                        }
+                                        ?>
+                                        <img src="<?php echo $fotoPath; ?>" alt="Foto do associado" style="width: 100%; height: 100%; object-fit: cover;">
                                     <?php else: ?>
                                         <div class="photo-preview-placeholder">
                                             <i class="fas fa-camera"></i>
