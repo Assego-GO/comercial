@@ -52,7 +52,7 @@ class Funcionarios {
     }
     
     /**
-     * Lista todos os funcionários
+     * Lista todos os funcionários com suporte a novos filtros
      */
     public function listar($filtros = []) {
         try {
@@ -89,7 +89,82 @@ class Funcionarios {
                 $params[] = "%{$filtros['busca']}%";
             }
             
-            $sql .= " ORDER BY f.nome ASC";
+            // NOVO: Filtro para ID específico (visualização própria)
+            if (isset($filtros['id_especifico'])) {
+                $sql .= " AND f.id = ?";
+                $params[] = $filtros['id_especifico'];
+            }
+            
+            // NOVO: Filtro para múltiplos IDs
+            if (isset($filtros['ids']) && is_array($filtros['ids']) && !empty($filtros['ids'])) {
+                $placeholders = str_repeat('?,', count($filtros['ids']) - 1) . '?';
+                $sql .= " AND f.id IN ($placeholders)";
+                $params = array_merge($params, $filtros['ids']);
+            }
+            
+            // NOVO: Filtro para excluir IDs
+            if (isset($filtros['excluir_ids']) && is_array($filtros['excluir_ids']) && !empty($filtros['excluir_ids'])) {
+                $placeholders = str_repeat('?,', count($filtros['excluir_ids']) - 1) . '?';
+                $sql .= " AND f.id NOT IN ($placeholders)";
+                $params = array_merge($params, $filtros['excluir_ids']);
+            }
+            
+            // NOVO: Filtro por múltiplos departamentos
+            if (isset($filtros['departamentos']) && is_array($filtros['departamentos']) && !empty($filtros['departamentos'])) {
+                $placeholders = str_repeat('?,', count($filtros['departamentos']) - 1) . '?';
+                $sql .= " AND f.departamento_id IN ($placeholders)";
+                $params = array_merge($params, $filtros['departamentos']);
+            }
+            
+            // NOVO: Filtro por data de cadastro
+            if (isset($filtros['data_inicio'])) {
+                $sql .= " AND DATE(f.criado_em) >= ?";
+                $params[] = $filtros['data_inicio'];
+            }
+            
+            if (isset($filtros['data_fim'])) {
+                $sql .= " AND DATE(f.criado_em) <= ?";
+                $params[] = $filtros['data_fim'];
+            }
+            
+            // Ordenação
+            $orderBy = " ORDER BY ";
+            if (isset($filtros['ordenar_por'])) {
+                switch ($filtros['ordenar_por']) {
+                    case 'nome_desc':
+                        $orderBy .= "f.nome DESC";
+                        break;
+                    case 'data_asc':
+                        $orderBy .= "f.criado_em ASC";
+                        break;
+                    case 'data_desc':
+                        $orderBy .= "f.criado_em DESC";
+                        break;
+                    case 'departamento':
+                        $orderBy .= "d.nome ASC, f.nome ASC";
+                        break;
+                    case 'cargo':
+                        $orderBy .= "f.cargo ASC, f.nome ASC";
+                        break;
+                    default:
+                        $orderBy .= "f.nome ASC";
+                }
+            } else {
+                $orderBy .= "f.nome ASC";
+            }
+            
+            $sql .= $orderBy;
+            
+            // Limite e offset para paginação
+            if (isset($filtros['limite'])) {
+                $sql .= " LIMIT ?";
+                $params[] = intval($filtros['limite']);
+                
+                if (isset($filtros['offset'])) {
+                    $sql .= " OFFSET ?";
+                    $params[] = intval($filtros['offset']);
+                }
+            }
             
             $stmt = $this->db->prepare($sql);
             $stmt->execute($params);
@@ -97,6 +172,58 @@ class Funcionarios {
         } catch (PDOException $e) {
             error_log("Erro ao listar funcionários: " . $e->getMessage());
             return [];
+        }
+    }
+    
+    /**
+     * Conta total de funcionários com filtros
+     */
+    public function contar($filtros = []) {
+        try {
+            $sql = "
+                SELECT COUNT(*) as total
+                FROM Funcionarios f
+                LEFT JOIN Departamentos d ON f.departamento_id = d.id
+                WHERE 1=1
+            ";
+            
+            $params = [];
+            
+            // Aplicar os mesmos filtros do método listar
+            if (isset($filtros['ativo'])) {
+                $sql .= " AND f.ativo = ?";
+                $params[] = $filtros['ativo'];
+            }
+            
+            if (isset($filtros['departamento_id'])) {
+                $sql .= " AND f.departamento_id = ?";
+                $params[] = $filtros['departamento_id'];
+            }
+            
+            if (isset($filtros['cargo'])) {
+                $sql .= " AND f.cargo LIKE ?";
+                $params[] = "%{$filtros['cargo']}%";
+            }
+            
+            if (isset($filtros['busca'])) {
+                $sql .= " AND (f.nome LIKE ? OR f.email LIKE ?)";
+                $params[] = "%{$filtros['busca']}%";
+                $params[] = "%{$filtros['busca']}%";
+            }
+            
+            if (isset($filtros['id_especifico'])) {
+                $sql .= " AND f.id = ?";
+                $params[] = $filtros['id_especifico'];
+            }
+            
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute($params);
+            $result = $stmt->fetch();
+            
+            return $result['total'] ?? 0;
+        } catch (PDOException $e) {
+            error_log("Erro ao contar funcionários: " . $e->getMessage());
+            return 0;
         }
     }
     
@@ -379,6 +506,118 @@ class Funcionarios {
     }
     
     /**
+     * Buscar estatísticas gerais
+     */
+    public function getEstatisticasGerais($filtros = []) {
+        try {
+            $where = "WHERE 1=1";
+            $params = [];
+            
+            // Aplicar filtros
+            if (isset($filtros['departamento_id'])) {
+                $where .= " AND f.departamento_id = ?";
+                $params[] = $filtros['departamento_id'];
+            }
+            
+            // Total de funcionários
+            $stmt = $this->db->prepare("
+                SELECT COUNT(*) as total
+                FROM Funcionarios f
+                $where
+            ");
+            $stmt->execute($params);
+            $total = $stmt->fetch()['total'] ?? 0;
+            
+            // Funcionários ativos
+            $stmt = $this->db->prepare("
+                SELECT COUNT(*) as total
+                FROM Funcionarios f
+                $where AND f.ativo = 1
+            ");
+            $stmt->execute($params);
+            $ativos = $stmt->fetch()['total'] ?? 0;
+            
+            // Funcionários por departamento
+            $stmt = $this->db->prepare("
+                SELECT d.nome as departamento, COUNT(f.id) as total
+                FROM Funcionarios f
+                LEFT JOIN Departamentos d ON f.departamento_id = d.id
+                $where
+                GROUP BY f.departamento_id, d.nome
+                ORDER BY total DESC
+            ");
+            $stmt->execute($params);
+            $por_departamento = $stmt->fetchAll();
+            
+            // Funcionários por cargo
+            $stmt = $this->db->prepare("
+                SELECT f.cargo, COUNT(*) as total
+                FROM Funcionarios f
+                $where AND f.cargo IS NOT NULL
+                GROUP BY f.cargo
+                ORDER BY total DESC
+            ");
+            $stmt->execute($params);
+            $por_cargo = $stmt->fetchAll();
+            
+            return [
+                'total' => $total,
+                'ativos' => $ativos,
+                'inativos' => $total - $ativos,
+                'por_departamento' => $por_departamento,
+                'por_cargo' => $por_cargo
+            ];
+        } catch (PDOException $e) {
+            error_log("Erro ao buscar estatísticas gerais: " . $e->getMessage());
+            return [
+                'total' => 0,
+                'ativos' => 0,
+                'inativos' => 0,
+                'por_departamento' => [],
+                'por_cargo' => []
+            ];
+        }
+    }
+    
+    /**
+     * Verificar permissão de edição
+     */
+    public function podeEditar($funcionario_id, $usuario_id, $usuario_cargo, $usuario_departamento) {
+        try {
+            // Buscar dados do funcionário alvo
+            $funcionario = $this->getById($funcionario_id);
+            if (!$funcionario) {
+                return false;
+            }
+            
+            // Se é o próprio funcionário
+            if ($funcionario_id == $usuario_id) {
+                return true;
+            }
+            
+            // Se é da presidência
+            if ($usuario_departamento == 1) {
+                return true;
+            }
+            
+            // Se é diretor
+            if (in_array($usuario_cargo, ['Diretor', 'Presidente', 'Vice-Presidente'])) {
+                return true;
+            }
+            
+            // Se é gerente/supervisor do mesmo departamento
+            if (in_array($usuario_cargo, ['Gerente', 'Supervisor', 'Coordenador'])) {
+                return $funcionario['departamento_id'] == $usuario_departamento;
+            }
+            
+            return false;
+        } catch (Exception $e) {
+            error_log("Erro ao verificar permissão de edição: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
      * Registrar auditoria
      */
     private function registrarAuditoria($acao, $registro_id, $dados_novos = [], $dados_antigos = []) {
@@ -415,6 +654,27 @@ class Funcionarios {
             
         } catch (PDOException $e) {
             error_log("Erro ao registrar auditoria: " . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Exportar funcionários para CSV
+     */
+    public function exportarCSV($filtros = []) {
+        try {
+            $funcionarios = $this->listar($filtros);
+            
+            $csv = "ID,Nome,Email,Departamento,Cargo,Status,Data Cadastro\n";
+            
+            foreach ($funcionarios as $f) {
+                $status = $f['ativo'] == 1 ? 'Ativo' : 'Inativo';
+                $csv .= "{$f['id']},\"{$f['nome']}\",{$f['email']},\"{$f['departamento_nome']}\",\"{$f['cargo']}\",{$status},{$f['criado_em']}\n";
+            }
+            
+            return $csv;
+        } catch (Exception $e) {
+            error_log("Erro ao exportar CSV: " . $e->getMessage());
+            return false;
         }
     }
 }

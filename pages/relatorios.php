@@ -30,12 +30,29 @@ if (!$auth->isLoggedIn()) {
 // Pega dados do usuário logado
 $usuarioLogado = $auth->getUser();
 
+// DEBUG USUÁRIO LOGADO - CONSOLE (IGUAL À DASHBOARD)
+echo "<script>";
+echo "console.log('=== DEBUG USUÁRIO LOGADO ===');";
+echo "console.log('Array completo:', " . json_encode($usuarioLogado) . ");";
+echo "console.log('Tem departamento_id?', " . (isset($usuarioLogado['departamento_id']) ? 'true' : 'false') . ");";
+if (isset($usuarioLogado['departamento_id'])) {
+    echo "console.log('Departamento ID valor:', " . json_encode($usuarioLogado['departamento_id']) . ");";
+    echo "console.log('Departamento ID tipo:', '" . gettype($usuarioLogado['departamento_id']) . "');";
+    echo "console.log('É igual a 1?', " . ($usuarioLogado['departamento_id'] == 1 ? 'true' : 'false') . ");";
+    echo "console.log('É idêntico a 1?', " . ($usuarioLogado['departamento_id'] === 1 ? 'true' : 'false') . ");";
+    echo "console.log('É idêntico a \"1\"?', " . ($usuarioLogado['departamento_id'] === '1' ? 'true' : 'false') . ");";
+}
+echo "console.log('isDiretor:', " . ($auth->isDiretor() ? 'true' : 'false') . ");";
+echo "console.log('=============================');";
+echo "</script>";
+
 // Define o título da página
 $page_title = 'Relatórios - ASSEGO';
 
-// NOVA VERIFICAÇÃO: Igual à da presidência - Verificar se o usuário tem permissão para acessar relatórios
+// Verificar se o usuário tem permissão para acessar relatórios
 $temPermissaoRelatorios = false;
 $motivoNegacao = '';
+$isPresidencia = false; // NOVA FLAG para identificar se é da presidência
 
 // Debug completo ANTES das verificações
 error_log("=== DEBUG DETALHADO PERMISSÕES RELATÓRIOS ===");
@@ -45,56 +62,48 @@ error_log("Departamento ID (valor): " . ($usuarioLogado['departamento_id'] ?? 'N
 error_log("Departamento ID (tipo): " . gettype($usuarioLogado['departamento_id'] ?? null));
 error_log("É Diretor (método): " . ($auth->isDiretor() ? 'SIM' : 'NÃO'));
 
-// Verificações de permissão (IGUAL À PRESIDÊNCIA):
-// 1. É diretor OU
-// 2. Está no departamento da presidência (APENAS ID: 1)
-if ($auth->isDiretor()) {
-    $temPermissaoRelatorios = true;
-    error_log("✅ Permissão concedida: É DIRETOR");
-} elseif (isset($usuarioLogado['departamento_id'])) {
+// NOVA VALIDAÇÃO: APENAS usuários do departamento da presidência (ID: 1)
+if (isset($usuarioLogado['departamento_id'])) {
     $deptId = $usuarioLogado['departamento_id'];
     
-    // Testar diferentes tipos de comparação
-    $isString1 = ($deptId === '1');
-    $isInt1 = ($deptId === 1);
-    $isEqual1 = ($deptId == 1);
-    
+    // Debug dos testes de comparação
     error_log("Testes de comparação:");
-    error_log("  deptId === '1': " . ($isString1 ? 'true' : 'false'));
-    error_log("  deptId === 1: " . ($isInt1 ? 'true' : 'false'));
-    error_log("  deptId == 1: " . ($isEqual1 ? 'true' : 'false'));
+    error_log("  deptId === '1': " . ($deptId === '1' ? 'true' : 'false'));
+    error_log("  deptId === 1: " . ($deptId === 1 ? 'true' : 'false'));
+    error_log("  deptId == 1: " . ($deptId == 1 ? 'true' : 'false'));
     
     if ($deptId == 1) { // Comparação flexível para pegar string ou int
         $temPermissaoRelatorios = true;
-        error_log("✅ Permissão concedida: Departamento ID = 1");
+        $isPresidencia = true; // MARCA como presidência
+        error_log("✅ Permissão concedida: Usuário pertence ao Departamento da Presidência (ID = 1)");
     } else {
-        error_log("❌ Departamento incorreto. Valor: '$deptId' (tipo: " . gettype($deptId) . ")");
+        $motivoNegacao = 'Acesso restrito ao departamento da Presidência.';
+        error_log("❌ Acesso negado. Departamento: '$deptId' (tipo: " . gettype($deptId) . "). Necessário: Presidência (ID = 1)");
     }
 } else {
+    $motivoNegacao = 'Departamento não identificado. Acesso restrito ao departamento da Presidência.';
     error_log("❌ departamento_id não existe no array do usuário");
 }
 
+// Log final do resultado
 if (!$temPermissaoRelatorios) {
-    $motivoNegacao = 'Para acessar relatórios, você precisa ser diretor ou estar no departamento da Presidência.';
     error_log("❌ ACESSO NEGADO: " . $motivoNegacao);
 } else {
-    error_log("✅ ACESSO PERMITIDO");
+    error_log("✅ ACESSO PERMITIDO - Usuário da Presidência");
 }
 
-// Só continua se tiver permissão
+// Se não tem permissão, mostra página de erro
 if (!$temPermissaoRelatorios) {
-    // Cria instância do Header Component para a página de erro
+    // CORREÇÃO: Cria instância do Header Component - Passa TODO o array do usuário (IGUAL À DASHBOARD)
     $headerComponent = HeaderComponent::create([
-        'usuario' => [
-            'nome' => $usuarioLogado['nome'],
-            'cargo' => $usuarioLogado['cargo'] ?? 'Funcionário',
-            'avatar' => $usuarioLogado['avatar'] ?? null
-        ],
+        'usuario' => $usuarioLogado, // ← CORRIGIDO: Agora passa TODO o array (incluindo departamento_id)
         'isDiretor' => $auth->isDiretor(),
         'activeTab' => 'relatorios',
         'notificationCount' => 0,
         'showSearch' => false
     ]);
+    
+    // Renderiza página de erro
     ?>
     <!DOCTYPE html>
     <html lang="pt-BR">
@@ -158,7 +167,6 @@ if (!$temPermissaoRelatorios) {
                         <div class="col-md-6">
                             <h6>Requisitos para acesso:</h6>
                             <ul class="mb-3">
-                                <li>Ser diretor <strong>OU</strong></li>
                                 <li>Estar no departamento da Presidência</li>
                             </ul>
                             
@@ -184,86 +192,75 @@ if (!$temPermissaoRelatorios) {
                 duration: 800,
                 once: true
             });
+            
+            // FUNÇÃO ROBUSTA PARA INICIALIZAR DROPDOWN
+            function initializeUserDropdown() {
+                console.log('🎯 Inicializando dropdown do usuário...');
+                
+                // Diferentes possibilidades de seletores
+                const menuSelectors = [
+                    '#userMenu',
+                    '.user-menu-btn',
+                    '[data-user-menu]',
+                    '.user-profile-btn',
+                    '.user-avatar'
+                ];
+                
+                const dropdownSelectors = [
+                    '#userDropdown',
+                    '.user-dropdown',
+                    '[data-user-dropdown]',
+                    '.user-menu-dropdown'
+                ];
+                
+                let userMenu = null;
+                let userDropdown = null;
+                
+                // Procura pelo botão do menu
+                for (const selector of menuSelectors) {
+                    userMenu = document.querySelector(selector);
+                    if (userMenu) {
+                        console.log('✅ Menu encontrado com seletor:', selector);
+                        break;
+                    }
+                }
+                
+                // Procura pelo dropdown
+                for (const selector of dropdownSelectors) {
+                    userDropdown = document.querySelector(selector);
+                    if (userDropdown) {
+                        console.log('✅ Dropdown encontrado com seletor:', selector);
+                        break;
+                    }
+                }
+                
+                if (userMenu && userDropdown) {
+                    userMenu.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        userDropdown.classList.toggle('show');
+                        console.log('Dropdown toggled:', userDropdown.classList.contains('show'));
+                    });
 
-            // Função de debug completo (igual à da presidência)
-            function mostrarDebugCompleto() {
-                const usuario = <?php echo json_encode($usuarioLogado); ?>;
-                const isDiretor = <?php echo json_encode($auth->isDiretor()); ?>;
-                const temPermissao = <?php echo json_encode($temPermissaoRelatorios); ?>;
-                
-                let debugHtml = `
-                    <div class="debug-completo">
-                        <h6><i class="fas fa-bug"></i> Debug Completo de Permissões</h6>
-                        <hr>
-                        
-                        <div class="row">
-                            <div class="col-md-6">
-                                <h6>Dados do Usuário:</h6>
-                                <pre class="bg-light p-2 small">${JSON.stringify(usuario, null, 2)}</pre>
-                            </div>
-                            <div class="col-md-6">
-                                <h6>Verificações:</h6>
-                                <ul class="small">
-                                    <li><strong>É Diretor:</strong> ${isDiretor ? 'SIM ✅' : 'NÃO ❌'}</li>
-                                    <li><strong>Departamento ID:</strong> ${usuario.departamento_id} (tipo: ${typeof usuario.departamento_id})</li>
-                                    <li><strong>Departamento == 1:</strong> ${usuario.departamento_id == 1 ? 'SIM ✅' : 'NÃO ❌'}</li>
-                                    <li><strong>Departamento === 1:</strong> ${usuario.departamento_id === 1 ? 'SIM ✅' : 'NÃO ❌'}</li>
-                                    <li><strong>Departamento === '1':</strong> ${usuario.departamento_id === '1' ? 'SIM ✅' : 'NÃO ❌'}</li>
-                                    <li><strong>Tem Permissão Final:</strong> ${temPermissao ? 'SIM ✅' : 'NÃO ❌'}</li>
-                                </ul>
-                                
-                                <div class="mt-3">
-                                    <strong>Regra de Acesso:</strong><br>
-                                    <code>isDiretor || departamento_id == 1</code><br><br>
-                                    
-                                    <strong>Resultado:</strong><br>
-                                    <code>${isDiretor} || ${usuario.departamento_id == 1} = ${isDiretor || usuario.departamento_id == 1}</code>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <hr>
-                        <small class="text-muted">
-                            <strong>Dica:</strong> Se você deveria ter acesso mas não consegue, verifique:
-                            <br>1. Se você é diretor no sistema
-                            <br>2. Se seu departamento_id está correto no banco de dados
-                            <br>3. Se não há cache ou sessão antiga
-                        </small>
-                    </div>
-                `;
-                
-                // Criar modal customizado
-                const modal = document.createElement('div');
-                modal.className = 'modal fade';
-                modal.innerHTML = `
-                    <div class="modal-dialog modal-lg">
-                        <div class="modal-content">
-                            <div class="modal-header">
-                                <h5 class="modal-title">Debug de Permissões - Relatórios</h5>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                            </div>
-                            <div class="modal-body">
-                                ${debugHtml}
-                            </div>
-                            <div class="modal-footer">
-                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
-                                <button type="button" class="btn btn-primary" onclick="window.location.reload()">
-                                    <i class="fas fa-sync me-1"></i>
-                                    Recarregar Página
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                `;
-                
-                document.body.appendChild(modal);
-                const bsModal = new bootstrap.Modal(modal);
-                bsModal.show();
-                
-                modal.addEventListener('hidden.bs.modal', () => {
-                    modal.remove();
-                });
+                    document.addEventListener('click', function(e) {
+                        if (!userMenu.contains(e.target) && !userDropdown.contains(e.target)) {
+                            userDropdown.classList.remove('show');
+                        }
+                    });
+                    
+                    console.log('✅ User dropdown inicializado com sucesso!');
+                } else {
+                    console.warn('⚠️ Elementos do dropdown não encontrados');
+                    console.log('Available elements with ID:', Array.from(document.querySelectorAll('[id]')).map(el => el.id));
+                }
             }
+            
+            // Inicializa quando DOM carregar
+            document.addEventListener('DOMContentLoaded', initializeUserDropdown);
+            
+            // Também tenta após delays (caso o header seja carregado assincronamente)
+            setTimeout(initializeUserDropdown, 500);
+            setTimeout(initializeUserDropdown, 1000);
         </script>
     </body>
     </html>
@@ -285,13 +282,9 @@ try {
     $estatisticas = $modelosDisponiveis = $historicoRecente = [];
 }
 
-// Cria instância do Header Component
+// CORREÇÃO: Cria instância do Header Component - Passa TODO o array do usuário (IGUAL À DASHBOARD)
 $headerComponent = HeaderComponent::create([
-    'usuario' => [
-        'nome' => $usuarioLogado['nome'],
-        'cargo' => $usuarioLogado['cargo'] ?? 'Funcionário',
-        'avatar' => $usuarioLogado['avatar'] ?? null
-    ],
+    'usuario' => $usuarioLogado, // ← CORRIGIDO: Agora passa TODO o array (incluindo departamento_id)
     'isDiretor' => $auth->isDiretor(),
     'activeTab' => 'relatorios',
     'notificationCount' => 0,
@@ -346,8 +339,21 @@ $headerComponent = HeaderComponent::create([
         <div class="content-area">
             <!-- Page Header -->
             <div class="page-header mb-4" data-aos="fade-right">
-                <h1 class="page-title">Central de Relatórios</h1>
-                <p class="page-subtitle">Gere relatórios personalizados e análises detalhadas</p>
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h1 class="page-title">Central de Relatórios</h1>
+                        <p class="page-subtitle">Gere relatórios personalizados e análises detalhadas</p>
+                    </div>
+                    
+                    <!-- BOTÃO DE FUNCIONÁRIOS - SOMENTE PARA PRESIDÊNCIA -->
+                    <?php if ($isPresidencia): ?>
+                    <div class="header-actions">
+                        <a href="funcionarios.php" class="btn btn-primary btn-lg">
+                            <i class="fas fa-users me-2"></i> Funcionários
+                        </a>
+                    </div>
+                    <?php endif; ?>
+                </div>
             </div>
 
             <!-- Stats Grid -->
@@ -835,7 +841,30 @@ $headerComponent = HeaderComponent::create([
     <!-- JavaScript do Header Component -->
     <?php $headerComponent->renderJS(); ?>
 
+    <!-- JavaScript customizado para os botões do header (IGUAL À DASHBOARD) -->
     <script>
+        function toggleSearch() {
+            // Implementar funcionalidade de busca global
+            console.log('Busca global ativada');
+            // Você pode focar no campo de busca da tabela ou abrir um modal de busca
+            const searchInput = document.getElementById('searchInput');
+            if (searchInput) {
+                searchInput.focus();
+            }
+        }
+        
+        function toggleNotifications() {
+            // Implementar painel de notificações
+            console.log('Painel de notificações');
+            alert('Painel de notificações em desenvolvimento');
+        }
+    </script>
+
+    <script>
+        // Configuração inicial (IGUAL À DASHBOARD)
+        console.log('=== INICIANDO SISTEMA RELATÓRIOS ===');
+        console.log('jQuery versão:', jQuery.fn.jquery);
+
         // Inicializa AOS
         AOS.init({
             duration: 800,
@@ -847,6 +876,7 @@ $headerComponent = HeaderComponent::create([
         let camposDisponiveis = {};
         let camposOrdenados = [];
         let isDiretor = <?php echo $auth->isDiretor() ? 'true' : 'false'; ?>;
+        let isPresidencia = <?php echo $isPresidencia ? 'true' : 'false'; ?>; // Para debug
         let temPermissao = <?php echo json_encode($temPermissaoRelatorios); ?>;
         let camposBasicos = {
             'associados': ['nome', 'cpf', 'telefone', 'email', 'situacao'],
@@ -856,22 +886,105 @@ $headerComponent = HeaderComponent::create([
             'documentos': ['nome', 'cpf', 'tipo_documento', 'data_upload', 'verificado']
         };
 
+        // FUNÇÃO ROBUSTA PARA INICIALIZAR DROPDOWN DO USUÁRIO
+        function initializeUserDropdown() {
+            console.log('🎯 Inicializando dropdown do usuário...');
+            
+            // Diferentes possibilidades de seletores
+            const menuSelectors = [
+                '#userMenu',
+                '.user-menu-btn',
+                '[data-user-menu]',
+                '.user-profile-btn',
+                '.user-avatar'
+            ];
+            
+            const dropdownSelectors = [
+                '#userDropdown',
+                '.user-dropdown',
+                '[data-user-dropdown]',
+                '.user-menu-dropdown'
+            ];
+            
+            let userMenu = null;
+            let userDropdown = null;
+            
+            // Procura pelo botão do menu
+            for (const selector of menuSelectors) {
+                userMenu = document.querySelector(selector);
+                if (userMenu) {
+                    console.log('✅ Menu encontrado com seletor:', selector);
+                    break;
+                }
+            }
+            
+            // Procura pelo dropdown
+            for (const selector of dropdownSelectors) {
+                userDropdown = document.querySelector(selector);
+                if (userDropdown) {
+                    console.log('✅ Dropdown encontrado com seletor:', selector);
+                    break;
+                }
+            }
+            
+            if (userMenu && userDropdown) {
+                // Remove listeners antigos se existirem
+                userMenu.removeEventListener('click', handleUserMenuClick);
+                document.removeEventListener('click', handleDocumentClick);
+                
+                // Adiciona novos listeners
+                userMenu.addEventListener('click', handleUserMenuClick);
+                document.addEventListener('click', handleDocumentClick);
+                
+                console.log('✅ User dropdown inicializado com sucesso!');
+                
+                // Função para lidar com clique no menu
+                function handleUserMenuClick(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    const isVisible = userDropdown.classList.contains('show');
+                    
+                    // Fecha outros dropdowns abertos
+                    document.querySelectorAll('.user-dropdown.show').forEach(dropdown => {
+                        if (dropdown !== userDropdown) {
+                            dropdown.classList.remove('show');
+                        }
+                    });
+                    
+                    // Alterna o dropdown atual
+                    userDropdown.classList.toggle('show', !isVisible);
+                    
+                    console.log('Dropdown toggled:', !isVisible);
+                }
+                
+                // Função para lidar com cliques no documento
+                function handleDocumentClick(e) {
+                    if (!userMenu.contains(e.target) && !userDropdown.contains(e.target)) {
+                        userDropdown.classList.remove('show');
+                    }
+                }
+                
+            } else {
+                console.warn('⚠️ Elementos do dropdown não encontrados');
+                console.log('Elementos com ID disponíveis:', 
+                    Array.from(document.querySelectorAll('[id]')).map(el => `#${el.id}`));
+                console.log('Elementos com classes de usuário:', 
+                    Array.from(document.querySelectorAll('[class*="user"]')).map(el => el.className));
+            }
+        }
+
         // Inicialização
         document.addEventListener('DOMContentLoaded', function() {
-            // CORRIGIDO: User Dropdown Menu (igual à presidência)
-            const userMenu = document.getElementById('userMenu');
-            const userDropdown = document.getElementById('userDropdown');
-
-            if (userMenu && userDropdown) {
-                userMenu.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    userDropdown.classList.toggle('show');
-                });
-
-                document.addEventListener('click', function() {
-                    userDropdown.classList.remove('show');
-                });
-            }
+            console.log('🚀 DOM carregado, inicializando componentes...');
+            
+            // INICIALIZA DROPDOWN DO USUÁRIO - VERSÃO ROBUSTA
+            initializeUserDropdown();
+            
+            // Tenta novamente após delays (caso elementos sejam carregados assincronamente)
+            setTimeout(initializeUserDropdown, 500);
+            setTimeout(initializeUserDropdown, 1000);
+            setTimeout(initializeUserDropdown, 2000);
 
             // Event listeners dos formulários
             const formFiltrosRapidos = document.getElementById('formFiltrosRapidos');
@@ -917,28 +1030,20 @@ $headerComponent = HeaderComponent::create([
                 }
             });
 
-            // Debug inicial (igual à presidência)
-            console.log('=== DEBUG RELATÓRIOS FRONTEND DETALHADO ===');
+            // Debug inicial (igual à dashboard)
+            console.log('=== DEBUG RELATÓRIOS FRONTEND ===');
             const usuario = <?php echo json_encode($usuarioLogado); ?>;
             const isDiretorLocal = <?php echo json_encode($auth->isDiretor()); ?>;
             
             console.log('👤 Usuário completo:', usuario);
             console.log('🏢 Departamento ID:', usuario.departamento_id, '(tipo:', typeof usuario.departamento_id, ')');
             console.log('👔 É diretor:', isDiretorLocal);
+            console.log('🏛️ É Presidência (PHP):', isPresidencia);
             console.log('🔐 Tem permissão:', temPermissao);
+            console.log('🎯 É Presidência (JS check):', usuario.departamento_id == 1);
+            console.log('🎯 Botão deve aparecer:', <?php echo $isPresidencia ? 'true' : 'false'; ?>);
             
-            // Teste das comparações
-            console.log('🧪 Testes de comparação:');
-            console.log('  departamento_id == 1:', usuario.departamento_id == 1);
-            console.log('  departamento_id === 1:', usuario.departamento_id === 1);
-            console.log('  departamento_id === "1":', usuario.departamento_id === "1");
-            
-            // Resultado final da lógica
-            const resultadoLogica = isDiretorLocal || usuario.departamento_id == 1;
-            console.log('📋 Lógica de acesso (isDiretor || dept==1):', resultadoLogica);
-            console.log('📋 Permissão PHP vs JS:', temPermissao, '===', resultadoLogica, '?', temPermissao === resultadoLogica);
-            
-            console.log('✅ Sistema de Relatórios carregado com sucesso! (Versão Corrigida)');
+            console.log('✅ Sistema de Relatórios iniciado - Dropdown do usuário CORRIGIDO!');
         });
 
         // Loading functions
@@ -2099,7 +2204,7 @@ $headerComponent = HeaderComponent::create([
             });
         }
 
-        console.log('✓ Sistema de Relatórios carregado com sucesso! (Versão Completa Corrigida com Bloqueio)');
+        console.log('✅ Sistema de Relatórios carregado - Dropdown do usuário TOTALMENTE CORRIGIDO!');
     </script>
 </body>
 </html>

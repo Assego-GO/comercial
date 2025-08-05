@@ -43,40 +43,34 @@ error_log("Departamento ID (valor): " . ($usuarioLogado['departamento_id'] ?? 'N
 error_log("Departamento ID (tipo): " . gettype($usuarioLogado['departamento_id'] ?? null));
 error_log("É Diretor (método): " . ($auth->isDiretor() ? 'SIM' : 'NÃO'));
 
-// Verificações de permissão:
-// 1. É diretor OU
-// 2. Está no departamento da presidência (APENAS ID: 1)
-if ($auth->isDiretor()) {
-    $temPermissaoPresidencia = true;
-    error_log("✅ Permissão concedida: É DIRETOR");
-} elseif (isset($usuarioLogado['departamento_id'])) {
+// NOVA VALIDAÇÃO: APENAS usuários do departamento da presidência (ID: 1)
+// Não importa se é diretor ou não - só quem é da presidência pode acessar
+if (isset($usuarioLogado['departamento_id'])) {
     $deptId = $usuarioLogado['departamento_id'];
     
-    // Testar diferentes tipos de comparação
-    $isString1 = ($deptId === '1');
-    $isInt1 = ($deptId === 1);
-    $isEqual1 = ($deptId == 1);
-    
+    // Debug dos testes de comparação
     error_log("Testes de comparação:");
-    error_log("  deptId === '1': " . ($isString1 ? 'true' : 'false'));
-    error_log("  deptId === 1: " . ($isInt1 ? 'true' : 'false'));
-    error_log("  deptId == 1: " . ($isEqual1 ? 'true' : 'false'));
+    error_log("  deptId === '1': " . ($deptId === '1' ? 'true' : 'false'));
+    error_log("  deptId === 1: " . ($deptId === 1 ? 'true' : 'false'));
+    error_log("  deptId == 1: " . ($deptId == 1 ? 'true' : 'false'));
     
     if ($deptId == 1) { // Comparação flexível para pegar string ou int
         $temPermissaoPresidencia = true;
-        error_log("✅ Permissão concedida: Departamento ID = 1");
+        error_log("✅ Permissão concedida: Usuário pertence ao Departamento da Presidência (ID = 1)");
     } else {
-        error_log("❌ Departamento incorreto. Valor: '$deptId' (tipo: " . gettype($deptId) . ")");
+        $motivoNegacao = 'Acesso restrito ao departamento da Presidência.';
+        error_log("❌ Acesso negado. Departamento: '$deptId' (tipo: " . gettype($deptId) . "). Necessário: Presidência (ID = 1)");
     }
 } else {
+    $motivoNegacao = 'Departamento não identificado. Acesso restrito ao departamento da Presidência.';
     error_log("❌ departamento_id não existe no array do usuário");
 }
 
+// Log final do resultado
 if (!$temPermissaoPresidencia) {
-    $motivoNegacao = 'Para acessar a presidência, você precisa ser diretor ou estar no departamento da Presidência.';
     error_log("❌ ACESSO NEGADO: " . $motivoNegacao);
 } else {
-    error_log("✅ ACESSO PERMITIDO");
+    error_log("✅ ACESSO PERMITIDO - Usuário da Presidência");
 }
 
 // Busca estatísticas de documentos (apenas se tem permissão)
@@ -98,13 +92,9 @@ if ($temPermissaoPresidencia) {
     $aguardandoAssinatura = $assinadosHoje = $assinadosMes = $tempoMedio = 0;
 }
 
-// Cria instância do Header Component
+// Cria instância do Header Component - CORRIGIDO: passa TODO o array do usuário
 $headerComponent = HeaderComponent::create([
-    'usuario' => [
-        'nome' => $usuarioLogado['nome'],
-        'cargo' => $usuarioLogado['cargo'] ?? 'Funcionário',
-        'avatar' => $usuarioLogado['avatar'] ?? null
-    ],
+    'usuario' => $usuarioLogado, // ← CORRIGIDO: Agora passa TODO o array (incluindo departamento_id)
     'isDiretor' => $auth->isDiretor(),
     'activeTab' => 'presidencia',
     'notificationCount' => $aguardandoAssinatura,
@@ -134,6 +124,9 @@ $headerComponent = HeaderComponent::create([
 
     <!-- AOS Animation -->
     <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <!-- CSS do Header Component -->
     <?php $headerComponent->renderCSS(); ?>
@@ -208,7 +201,7 @@ $headerComponent = HeaderComponent::create([
             border-color: var(--primary);
             box-shadow: 0 4px 12px rgba(var(--primary-rgb), 0.1);
         }
-/* Variáveis CSS */
+
 :root {
     --primary: #007bff;
     --primary-rgb: 0, 123, 255;
@@ -798,7 +791,6 @@ $headerComponent = HeaderComponent::create([
     }
 }
 
-
     </style>
 </head>
 
@@ -845,7 +837,6 @@ $headerComponent = HeaderComponent::create([
                     <div class="col-md-6">
                         <h6>Requisitos para acesso:</h6>
                         <ul class="mb-3">
-                            <li>Ser diretor <strong>OU</strong></li>
                             <li>Estar no departamento da Presidência</li>
                         </ul>
                         
@@ -864,13 +855,26 @@ $headerComponent = HeaderComponent::create([
             
             <!-- Page Header -->
             <div class="page-header" data-aos="fade-right">
-                <h1 class="page-title">
-                    <div class="page-title-icon">
-                        <i class="fas fa-stamp"></i>
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h1 class="page-title">
+                            <div class="page-title-icon">
+                                <i class="fas fa-stamp"></i>
+                            </div>
+                            Área da Presidência
+                        </h1>
+                        <p class="page-subtitle">Gerencie e assine documentos de filiação dos associados</p>
                     </div>
-                    Área da Presidência
-                </h1>
-                <p class="page-subtitle">Gerencie e assine documentos de filiação dos associados</p>
+                    
+                    <!-- BOTÃO DE FUNCIONÁRIOS - PARA USUÁRIOS DA PRESIDÊNCIA -->
+                    <?php if ($temPermissaoPresidencia): ?>
+                    <div class="header-actions">
+                        <a href="funcionarios.php" class="btn btn-primary btn-lg">
+                            <i class="fas fa-users me-2"></i> Funcionários
+                        </a>
+                    </div>
+                    <?php endif; ?>
+                </div>
             </div>
 
             <!-- Stats Grid -->
@@ -1185,6 +1189,259 @@ $headerComponent = HeaderComponent::create([
                     <button type="button" class="btn-action success" onclick="confirmarAssinaturaLote()">
                         <i class="fas fa-check-double"></i>
                         Assinar Todos
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Relatórios -->
+    <div class="modal fade" id="relatoriosModal" tabindex="-1" aria-labelledby="relatoriosModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="relatoriosModalLabel">
+                        <i class="fas fa-chart-line" style="color: var(--primary);"></i>
+                        Relatórios da Presidência
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Filtros de Período -->
+                    <div class="row mb-4">
+                        <div class="col-md-4">
+                            <label class="form-label">Data Inicial</label>
+                            <input type="date" class="form-control" id="relatorioDataInicio" value="">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Data Final</label>
+                            <input type="date" class="form-control" id="relatorioDataFim" value="">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">&nbsp;</label>
+                            <button class="btn btn-primary w-100" onclick="carregarRelatorios()">
+                                <i class="fas fa-search"></i> Buscar
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Estatísticas Resumidas -->
+                    <div class="row mb-4" id="estatisticasResumo">
+                        <!-- Será preenchido dinamicamente -->
+                    </div>
+
+                    <!-- Gráficos -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h6 class="mb-0">Documentos por Dia da Semana</h6>
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="chartDiaSemana" height="200"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h6 class="mb-0">Tempo Médio de Processamento</h6>
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="chartTempoProcessamento" height="200"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tabela de Produtividade -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0">Produtividade por Funcionário</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-hover" id="tabelaProdutividade">
+                                    <thead>
+                                        <tr>
+                                            <th>Funcionário</th>
+                                            <th>Total Assinados</th>
+                                            <th>Tempo Médio (horas)</th>
+                                            <th>Eficiência</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <!-- Será preenchido dinamicamente -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                    <button type="button" class="btn btn-success" onclick="exportarRelatorio('pdf')">
+                        <i class="fas fa-file-pdf"></i> Exportar PDF
+                    </button>
+                    <button type="button" class="btn btn-success" onclick="exportarRelatorio('excel')">
+                        <i class="fas fa-file-excel"></i> Exportar Excel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Histórico -->
+    <div class="modal fade" id="historicoModal" tabindex="-1" aria-labelledby="historicoModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="historicoModalLabel">
+                        <i class="fas fa-history" style="color: var(--primary);"></i>
+                        Histórico de Assinaturas
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Filtros -->
+                    <div class="row mb-4">
+                        <div class="col-md-4">
+                            <label class="form-label">Período</label>
+                            <select class="form-select" id="filtroPeriodoHistorico">
+                                <option value="7">Últimos 7 dias</option>
+                                <option value="30" selected>Últimos 30 dias</option>
+                                <option value="60">Últimos 60 dias</option>
+                                <option value="90">Últimos 90 dias</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Funcionário</label>
+                            <select class="form-select" id="filtroFuncionarioHistorico">
+                                <option value="">Todos</option>
+                                <option value="<?php echo $_SESSION['funcionario_id']; ?>">Minhas assinaturas</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">&nbsp;</label>
+                            <button class="btn btn-primary w-100" onclick="carregarHistorico()">
+                                <i class="fas fa-search"></i> Filtrar
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Timeline de Assinaturas -->
+                    <div id="timelineHistorico" class="timeline-container">
+                        <!-- Será preenchido dinamicamente -->
+                    </div>
+
+                    <!-- Estatísticas do Histórico -->
+                    <div class="row mt-4">
+                        <div class="col-md-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h6 class="mb-0">Resumo do Período</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row text-center" id="resumoHistorico">
+                                        <!-- Será preenchido dinamicamente -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                    <button type="button" class="btn btn-primary" onclick="imprimirHistorico()">
+                        <i class="fas fa-print"></i> Imprimir
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Configurações -->
+    <div class="modal fade" id="configuracoesModal" tabindex="-1" aria-labelledby="configuracoesModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="configuracoesModalLabel">
+                        <i class="fas fa-cog" style="color: var(--primary);"></i>
+                        Configurações da Presidência
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Configuração de Notificações -->
+                    <div class="config-card">
+                        <h6 class="mb-3">
+                            <i class="fas fa-bell"></i> Notificações
+                        </h6>
+                        <div class="form-check form-switch mb-3">
+                            <input class="form-check-input" type="checkbox" id="notifNovoDoc" checked>
+                            <label class="form-check-label" for="notifNovoDoc">
+                                Notificar quando novos documentos chegarem para assinatura
+                            </label>
+                        </div>
+                        <div class="form-check form-switch mb-3">
+                            <input class="form-check-input" type="checkbox" id="notifUrgente" checked>
+                            <label class="form-check-label" for="notifUrgente">
+                                Alertar sobre documentos urgentes (mais de 3 dias aguardando)
+                            </label>
+                        </div>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="notifRelatorio">
+                            <label class="form-check-label" for="notifRelatorio">
+                                Enviar relatório semanal por e-mail
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Configuração de Assinatura -->
+                    <div class="config-card">
+                        <h6 class="mb-3">
+                            <i class="fas fa-signature"></i> Assinatura Padrão
+                        </h6>
+                        <div class="mb-3">
+                            <label class="form-label">Método de assinatura preferido</label>
+                            <select class="form-select" id="configMetodoAssinatura">
+                                <option value="digital">Assinatura Digital</option>
+                                <option value="upload">Upload de Arquivo Assinado</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Observação padrão</label>
+                            <textarea class="form-control" id="configObsPadrao" rows="2" 
+                                placeholder="Ex: Aprovado conforme normas vigentes"></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Configuração de Interface -->
+                    <div class="config-card">
+                        <h6 class="mb-3">
+                            <i class="fas fa-desktop"></i> Interface
+                        </h6>
+                        <div class="form-check form-switch mb-3">
+                            <input class="form-check-input" type="checkbox" id="configAutoUpdate" checked>
+                            <label class="form-check-label" for="configAutoUpdate">
+                                Atualizar lista de documentos automaticamente (30 segundos)
+                            </label>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Documentos por página</label>
+                            <select class="form-select" id="configDocsPorPagina">
+                                <option value="10">10 documentos</option>
+                                <option value="20" selected>20 documentos</option>
+                                <option value="50">50 documentos</option>
+                                <option value="100">100 documentos</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" onclick="salvarConfiguracoes()">
+                        <i class="fas fa-save"></i> Salvar Configurações
                     </button>
                 </div>
             </div>
@@ -2493,6 +2750,27 @@ function atualizarContadores() {
         let arquivoAssinado = null;
         const temPermissao = <?php echo json_encode($temPermissaoPresidencia); ?>;
 
+        // Gráficos Chart.js
+        let chartDiaSemana = null;
+        let chartTempoProcessamento = null;
+
+        // Configurações (podem ser salvas no localStorage)
+        const configuracoes = {
+            notificacoes: {
+                novoDoc: true,
+                urgente: true,
+                relatorio: false
+            },
+            assinatura: {
+                metodo: 'digital',
+                obsPadrao: ''
+            },
+            interface: {
+                autoUpdate: true,
+                docsPorPagina: 20
+            }
+        };
+
         // Debounce para filtros
         function debounce(func, wait) {
             let timeout;
@@ -2508,6 +2786,94 @@ function atualizarContadores() {
 
         const debouncedFilter = debounce(filtrarDocumentos, 300);
 
+        // FUNÇÃO ROBUSTA PARA INICIALIZAR DROPDOWN DO USUÁRIO
+        function initializeUserDropdown() {
+            console.log('🎯 Inicializando dropdown do usuário na presidência...');
+            
+            // Diferentes possibilidades de seletores
+            const menuSelectors = [
+                '#userMenu',
+                '.user-menu-btn',
+                '[data-user-menu]',
+                '.user-profile-btn',
+                '.user-avatar'
+            ];
+            
+            const dropdownSelectors = [
+                '#userDropdown',
+                '.user-dropdown',
+                '[data-user-dropdown]',
+                '.user-menu-dropdown'
+            ];
+            
+            let userMenu = null;
+            let userDropdown = null;
+            
+            // Procura pelo botão do menu
+            for (const selector of menuSelectors) {
+                userMenu = document.querySelector(selector);
+                if (userMenu) {
+                    console.log('✅ Menu encontrado com seletor:', selector);
+                    break;
+                }
+            }
+            
+            // Procura pelo dropdown
+            for (const selector of dropdownSelectors) {
+                userDropdown = document.querySelector(selector);
+                if (userDropdown) {
+                    console.log('✅ Dropdown encontrado com seletor:', selector);
+                    break;
+                }
+            }
+            
+            if (userMenu && userDropdown) {
+                // Remove listeners antigos se existirem
+                userMenu.removeEventListener('click', handleUserMenuClick);
+                document.removeEventListener('click', handleDocumentClick);
+                
+                // Adiciona novos listeners
+                userMenu.addEventListener('click', handleUserMenuClick);
+                document.addEventListener('click', handleDocumentClick);
+                
+                console.log('✅ User dropdown inicializado com sucesso na presidência!');
+                
+                // Função para lidar com clique no menu
+                function handleUserMenuClick(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    const isVisible = userDropdown.classList.contains('show');
+                    
+                    // Fecha outros dropdowns abertos
+                    document.querySelectorAll('.user-dropdown.show').forEach(dropdown => {
+                        if (dropdown !== userDropdown) {
+                            dropdown.classList.remove('show');
+                        }
+                    });
+                    
+                    // Alterna o dropdown atual
+                    userDropdown.classList.toggle('show', !isVisible);
+                    
+                    console.log('Dropdown toggled:', !isVisible);
+                }
+                
+                // Função para lidar com cliques no documento
+                function handleDocumentClick(e) {
+                    if (!userMenu.contains(e.target) && !userDropdown.contains(e.target)) {
+                        userDropdown.classList.remove('show');
+                    }
+                }
+                
+            } else {
+                console.warn('⚠️ Elementos do dropdown não encontrados na presidência');
+                console.log('Elementos com ID disponíveis:', 
+                    Array.from(document.querySelectorAll('[id]')).map(el => `#${el.id}`));
+                console.log('Elementos com classes de usuário:', 
+                    Array.from(document.querySelectorAll('[class*="user"]')).map(el => el.className));
+            }
+        }
+
         // Inicialização - CORRIGIDA
         document.addEventListener('DOMContentLoaded', function() {
             // Inicializa AOS
@@ -2515,6 +2881,14 @@ function atualizarContadores() {
                 duration: 800,
                 once: true
             });
+
+            // INICIALIZA DROPDOWN DO USUÁRIO - VERSÃO ROBUSTA
+            initializeUserDropdown();
+            
+            // Tenta novamente após delays (caso elementos sejam carregados assincronamente)
+            setTimeout(initializeUserDropdown, 500);
+            setTimeout(initializeUserDropdown, 1000);
+            setTimeout(initializeUserDropdown, 2000);
 
             // Debug inicial DETALHADO
             console.log('=== DEBUG PRESIDÊNCIA FRONTEND DETALHADO ===');
@@ -2525,6 +2899,7 @@ function atualizarContadores() {
             console.log('🏢 Departamento ID:', usuario.departamento_id, '(tipo:', typeof usuario.departamento_id, ')');
             console.log('👔 É diretor:', isDiretor);
             console.log('🔐 Tem permissão:', temPermissao);
+            console.log('🎯 Botão Funcionários deve aparecer:', temPermissao ? 'SIM' : 'NÃO');
             
             // Teste das comparações
             console.log('🧪 Testes de comparação:');
@@ -2533,8 +2908,8 @@ function atualizarContadores() {
             console.log('  departamento_id === "1":', usuario.departamento_id === "1");
             
             // Resultado final da lógica
-            const resultadoLogica = isDiretor || usuario.departamento_id == 1;
-            console.log('📋 Lógica de acesso (isDiretor || dept==1):', resultadoLogica);
+            const resultadoLogica = usuario.departamento_id == 1;
+            console.log('📋 Lógica de acesso (dept==1):', resultadoLogica);
             console.log('📋 Permissão PHP vs JS:', temPermissao, '===', resultadoLogica, '?', temPermissao === resultadoLogica);
             
             console.log('🔗 URL da API:', '../api/documentos/documentos_presidencia_listar.php');
@@ -2547,6 +2922,15 @@ function atualizarContadores() {
             }
 
             console.log('✅ Usuário autorizado - carregando funcionalidades...');
+
+            // Carregar configurações do localStorage
+            carregarConfiguracoes();
+            
+            // Definir datas padrão nos relatórios
+            const hoje = new Date();
+            const mesPassado = new Date(hoje.getFullYear(), hoje.getMonth() - 1, hoje.getDate());
+            document.getElementById('relatorioDataInicio').value = mesPassado.toISOString().split('T')[0];
+            document.getElementById('relatorioDataFim').value = hoje.toISOString().split('T')[0];
 
             // Carregar documentos automaticamente
             carregarDocumentosPendentes();
@@ -2585,8 +2969,10 @@ function atualizarContadores() {
         statsGrid.appendChild(refreshBtn);
     }
             
-            // Iniciar auto-update
-            autoUpdater.start();
+            // Iniciar auto-update se configurado
+            if (configuracoes.interface.autoUpdate) {
+                autoUpdater.start();
+            }
         });
 
         // ===== FUNÇÕES PRINCIPAIS - CORRIGIDAS =====
@@ -2595,6 +2981,7 @@ function atualizarContadores() {
 async function carregarDocumentosPendentes() {
     await carregarDocumentosZapSign(true);
 }
+
 
 if (typeof autoUpdater !== 'undefined') {
     const originalStart = autoUpdater.start;
@@ -2612,6 +2999,7 @@ if (typeof autoUpdater !== 'undefined') {
         if (this.statsTimer) {
             clearInterval(this.statsTimer);
             this.statsTimer = null;
+
         }
     };
 }
@@ -2801,10 +3189,12 @@ if (typeof autoUpdater !== 'undefined') {
             document.getElementById('previewOrigem').textContent = documentoSelecionado.tipo_origem === 'VIRTUAL' ? 'Virtual' : 'Físico';
             document.getElementById('previewSubtitulo').textContent = documentoSelecionado.tipo_origem === 'VIRTUAL' ? 'Gerado pelo sistema' : 'Digitalizado';
 
-            // Resetar formulário
-            document.querySelector('input[name="metodoAssinatura"][value="digital"]').checked = true;
+            // Aplicar configurações
+            document.querySelector(`input[name="metodoAssinatura"][value="${configuracoes.assinatura.metodo}"]`).checked = true;
+            document.getElementById('observacoes').value = configuracoes.assinatura.obsPadrao || '';
+            
+            // Resetar upload
             document.getElementById('uploadSection').classList.add('d-none');
-            document.getElementById('observacoes').value = '';
             document.getElementById('fileInfo').innerHTML = '';
             arquivoAssinado = null;
 
@@ -3040,6 +3430,363 @@ if (typeof autoUpdater !== 'undefined') {
             }
         }
 
+        // ===== FUNÇÕES DE RELATÓRIOS =====
+
+        async function abrirRelatorios() {
+            const modal = new bootstrap.Modal(document.getElementById('relatoriosModal'));
+            modal.show();
+            
+            // Carregar relatórios ao abrir
+            await carregarRelatorios();
+        }
+
+        async function carregarRelatorios() {
+            const dataInicio = document.getElementById('relatorioDataInicio').value;
+            const dataFim = document.getElementById('relatorioDataFim').value;
+            
+            if (!dataInicio || !dataFim) {
+                notifications.show('Por favor, selecione o período', 'warning');
+                return;
+            }
+            
+            try {
+                const response = await fetch('../api/documentos/relatorio_produtividade.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        data_inicio: dataInicio,
+                        data_fim: dataFim
+                    })
+                });
+                
+                if (!response.ok) throw new Error('Erro ao carregar relatórios');
+                
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    renderizarRelatorios(data.data);
+                } else {
+                    throw new Error(data.message || 'Erro ao processar relatórios');
+                }
+                
+            } catch (error) {
+                console.error('Erro:', error);
+                notifications.show('Erro ao carregar relatórios: ' + error.message, 'error');
+            }
+        }
+
+        function renderizarRelatorios(dados) {
+            // Estatísticas resumidas
+            const resumoHtml = `
+                <div class="col-md-3">
+                    <div class="stat-mini-card">
+                        <div class="stat-mini-value">${dados.resumo?.total_processados || 0}</div>
+                        <div class="stat-mini-label">Total Processados</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-mini-card">
+                        <div class="stat-mini-value">${Math.round(dados.resumo?.tempo_medio || 0)}h</div>
+                        <div class="stat-mini-label">Tempo Médio</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-mini-card">
+                        <div class="stat-mini-value">${Math.round(dados.resumo?.tempo_minimo || 0)}h</div>
+                        <div class="stat-mini-label">Tempo Mínimo</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-mini-card">
+                        <div class="stat-mini-value">${Math.round(dados.resumo?.tempo_maximo || 0)}h</div>
+                        <div class="stat-mini-label">Tempo Máximo</div>
+                    </div>
+                </div>
+            `;
+            document.getElementById('estatisticasResumo').innerHTML = resumoHtml;
+            
+            // Gráfico por dia da semana
+            if (dados.por_dia_semana) {
+                renderizarGraficoDiaSemana(dados.por_dia_semana);
+            }
+            
+            // Gráfico de tempo de processamento
+            if (dados.por_origem) {
+                renderizarGraficoTempoProcessamento(dados.por_origem);
+            }
+            
+            // Tabela de produtividade
+            if (dados.por_funcionario) {
+                renderizarTabelaProdutividade(dados.por_funcionario);
+            }
+        }
+
+        function renderizarGraficoDiaSemana(dados) {
+            const ctx = document.getElementById('chartDiaSemana').getContext('2d');
+            
+            if (chartDiaSemana) {
+                chartDiaSemana.destroy();
+            }
+            
+            const diasSemana = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+            
+            chartDiaSemana = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: dados.map(d => diasSemana[d.dia_numero - 1]),
+                    datasets: [{
+                        label: 'Documentos Assinados',
+                        data: dados.map(d => d.total),
+                        backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderizarGraficoTempoProcessamento(dados) {
+            const ctx = document.getElementById('chartTempoProcessamento').getContext('2d');
+            
+            if (chartTempoProcessamento) {
+                chartTempoProcessamento.destroy();
+            }
+            
+            chartTempoProcessamento = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: dados.map(d => d.tipo_origem),
+                    datasets: [{
+                        label: 'Tempo Médio (horas)',
+                        data: dados.map(d => Math.round(d.tempo_medio)),
+                        backgroundColor: [
+                            'rgba(255, 99, 132, 0.5)',
+                            'rgba(54, 162, 235, 0.5)'
+                        ],
+                        borderColor: [
+                            'rgba(255, 99, 132, 1)',
+                            'rgba(54, 162, 235, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false
+                }
+            });
+        }
+
+        function renderizarTabelaProdutividade(dados) {
+            const tbody = document.querySelector('#tabelaProdutividade tbody');
+            tbody.innerHTML = '';
+            
+            dados.forEach(func => {
+                const eficiencia = func.tempo_medio < 24 ? 'Alta' : func.tempo_medio < 48 ? 'Média' : 'Baixa';
+                const corEficiencia = func.tempo_medio < 24 ? 'success' : func.tempo_medio < 48 ? 'warning' : 'danger';
+                
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${func.funcionario}</td>
+                        <td>${func.total_assinados}</td>
+                        <td>${Math.round(func.tempo_medio)}h</td>
+                        <td><span class="badge bg-${corEficiencia}">${eficiencia}</span></td>
+                    </tr>
+                `;
+            });
+        }
+
+        async function exportarRelatorio(formato) {
+            const dataInicio = document.getElementById('relatorioDataInicio').value;
+            const dataFim = document.getElementById('relatorioDataFim').value;
+            
+            if (!dataInicio || !dataFim) {
+                notifications.show('Por favor, selecione o período', 'warning');
+                return;
+            }
+            
+            notifications.show(`Exportação em ${formato.toUpperCase()} em desenvolvimento`, 'info');
+            
+            // TODO: Implementar exportação real
+            // window.open(`../api/documentos/exportar_relatorio.php?formato=${formato}&inicio=${dataInicio}&fim=${dataFim}`);
+        }
+
+        // ===== FUNÇÕES DE HISTÓRICO =====
+
+        async function verHistorico() {
+            const modal = new bootstrap.Modal(document.getElementById('historicoModal'));
+            modal.show();
+            
+            // Carregar histórico ao abrir
+            await carregarHistorico();
+        }
+
+        async function carregarHistorico() {
+            const periodo = document.getElementById('filtroPeriodoHistorico').value;
+            const funcionarioId = document.getElementById('filtroFuncionarioHistorico').value;
+            
+            try {
+                const params = new URLSearchParams({
+                    periodo: periodo,
+                    funcionario_id: funcionarioId || ''
+                });
+                
+                const response = await fetch(`../api/documentos/historico_assinaturas.php?${params}`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (!response.ok) throw new Error('Erro ao carregar histórico');
+                
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    renderizarHistorico(data.data);
+                } else {
+                    throw new Error(data.message || 'Erro ao processar histórico');
+                }
+                
+            } catch (error) {
+                console.error('Erro:', error);
+                notifications.show('Erro ao carregar histórico: ' + error.message, 'error');
+            }
+        }
+
+        function renderizarHistorico(dados) {
+            // Timeline
+            let timelineHtml = '';
+            
+            if (dados.historico && dados.historico.length > 0) {
+                dados.historico.forEach(item => {
+                    const data = new Date(item.data_assinatura);
+                    const tempoProcessamento = item.tempo_processamento || 0;
+                    
+                    timelineHtml += `
+                        <div class="timeline-item">
+                            <div class="timeline-marker"></div>
+                            <div class="timeline-content">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <h6 class="mb-1">${item.associado_nome}</h6>
+                                        <p class="text-muted mb-0">
+                                            <small>
+                                                CPF: ${formatarCPF(item.associado_cpf)} | 
+                                                Origem: ${item.tipo_origem}
+                                            </small>
+                                        </p>
+                                    </div>
+                                    <div class="text-end">
+                                        <small class="text-muted">
+                                            ${data.toLocaleDateString('pt-BR')} às ${data.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'})}
+                                        </small>
+                                        <br>
+                                        <span class="badge bg-info">
+                                            <i class="fas fa-clock"></i> ${tempoProcessamento}h
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+            } else {
+                timelineHtml = '<p class="text-center text-muted">Nenhuma assinatura encontrada no período</p>';
+            }
+            
+            document.getElementById('timelineHistorico').innerHTML = timelineHtml;
+            
+            // Resumo do período
+            const resumoHtml = `
+                <div class="col-md-3 text-center">
+                    <h2 class="text-primary">${dados.resumo?.total_assinados || 0}</h2>
+                    <p class="text-muted">Total Assinados</p>
+                </div>
+                <div class="col-md-3 text-center">
+                    <h2 class="text-info">${Math.round(dados.resumo?.tempo_medio || 0)}h</h2>
+                    <p class="text-muted">Tempo Médio</p>
+                </div>
+                <div class="col-md-3 text-center">
+                    <h2 class="text-success">${dados.resumo?.origem_fisica || 0}</h2>
+                    <p class="text-muted">Origem Física</p>
+                </div>
+                <div class="col-md-3 text-center">
+                    <h2 class="text-warning">${dados.resumo?.origem_virtual || 0}</h2>
+                    <p class="text-muted">Origem Virtual</p>
+                </div>
+            `;
+            
+            document.getElementById('resumoHistorico').innerHTML = resumoHtml;
+        }
+
+        function imprimirHistorico() {
+            window.print();
+        }
+
+        // ===== FUNÇÕES DE CONFIGURAÇÕES =====
+
+        function configurarAssinatura() {
+            // Carregar configurações atuais
+            document.getElementById('notifNovoDoc').checked = configuracoes.notificacoes.novoDoc;
+            document.getElementById('notifUrgente').checked = configuracoes.notificacoes.urgente;
+            document.getElementById('notifRelatorio').checked = configuracoes.notificacoes.relatorio;
+            document.getElementById('configMetodoAssinatura').value = configuracoes.assinatura.metodo;
+            document.getElementById('configObsPadrao').value = configuracoes.assinatura.obsPadrao;
+            document.getElementById('configAutoUpdate').checked = configuracoes.interface.autoUpdate;
+            document.getElementById('configDocsPorPagina').value = configuracoes.interface.docsPorPagina;
+            
+            const modal = new bootstrap.Modal(document.getElementById('configuracoesModal'));
+            modal.show();
+        }
+
+        function salvarConfiguracoes() {
+            // Coletar valores
+            configuracoes.notificacoes.novoDoc = document.getElementById('notifNovoDoc').checked;
+            configuracoes.notificacoes.urgente = document.getElementById('notifUrgente').checked;
+            configuracoes.notificacoes.relatorio = document.getElementById('notifRelatorio').checked;
+            configuracoes.assinatura.metodo = document.getElementById('configMetodoAssinatura').value;
+            configuracoes.assinatura.obsPadrao = document.getElementById('configObsPadrao').value;
+            configuracoes.interface.autoUpdate = document.getElementById('configAutoUpdate').checked;
+            configuracoes.interface.docsPorPagina = parseInt(document.getElementById('configDocsPorPagina').value);
+            
+            // Salvar no localStorage
+            localStorage.setItem('configuracoes_presidencia', JSON.stringify(configuracoes));
+            
+            // Aplicar configurações
+            if (configuracoes.interface.autoUpdate) {
+                autoUpdater.start();
+            } else {
+                autoUpdater.stop();
+            }
+            
+            bootstrap.Modal.getInstance(document.getElementById('configuracoesModal')).hide();
+            notifications.show('Configurações salvas com sucesso!', 'success');
+        }
+
+        function carregarConfiguracoes() {
+            const saved = localStorage.getItem('configuracoes_presidencia');
+            if (saved) {
+                try {
+                    const parsed = JSON.parse(saved);
+                    Object.assign(configuracoes, parsed);
+                } catch (e) {
+                    console.error('Erro ao carregar configurações:', e);
+                }
+            }
+        }
+
         // ===== CONFIGURAÇÕES E EVENTOS =====
 
         // Configurar método de assinatura
@@ -3175,9 +3922,10 @@ if (typeof autoUpdater !== 'undefined') {
             carregarDocumentosPendentes();
         }
 
+
         // Placeholder functions para ações rápidas
         function abrirRelatorios() {
-            notifications.show('Funcionalidade de relatórios em desenvolvimento', 'info');
+            window.location.href = 'relatorios.php';
         }
 
         function verHistorico() {
@@ -3217,10 +3965,10 @@ if (typeof autoUpdater !== 'undefined') {
                             
                             <div class="mt-3">
                                 <strong>Regra de Acesso:</strong><br>
-                                <code>isDiretor || departamento_id == 1</code><br><br>
+                                <code>departamento_id == 1</code><br><br>
                                 
                                 <strong>Resultado:</strong><br>
-                                <code>${isDiretor} || ${usuario.departamento_id == 1} = ${isDiretor || usuario.departamento_id == 1}</code>
+                                <code>${usuario.departamento_id == 1}</code>
                             </div>
                         </div>
                     </div>
@@ -3228,9 +3976,9 @@ if (typeof autoUpdater !== 'undefined') {
                     <hr>
                     <small class="text-muted">
                         <strong>Dica:</strong> Se você deveria ter acesso mas não consegue, verifique:
-                        <br>1. Se você é diretor no sistema
-                        <br>2. Se seu departamento_id está correto no banco de dados
-                        <br>3. Se não há cache ou sessão antiga
+                        <br>1. Se seu departamento_id está correto no banco de dados (deve ser 1 para presidência)
+                        <br>2. Se não há cache ou sessão antiga
+                        <br>3. Se os logs do servidor mostram algum erro
                     </small>
                 </div>
             `;
@@ -3402,7 +4150,7 @@ if (typeof autoUpdater !== 'undefined') {
             }
         }
 
-        console.log('✓ Sistema da Presidência carregado com sucesso! (Versão Completa Corrigida)');
+
     </script>
 </body>
 

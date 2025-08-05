@@ -1,4 +1,4 @@
-      body {
+ body {
             font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
             background-color: var(--gray-100);
             color: var(--dark);
@@ -1457,4 +1457,306 @@
 
         .fade-in {
             animation: fadeIn 0.5s ease forwards;
+        }
+        /* Estilos específicos para o fluxo de documentos no modal */
+        .document-flow-container {
+            padding: 1.5rem;
+        }
+
+        .document-flow-card {
+            background: var(--gray-100);
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .document-flow-card:hover {
+            background: var(--gray-200);
+            transform: translateY(-2px);
+        }
+
+        .document-flow-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .document-flow-icon {
+            width: 50px;
+            height: 50px;
+            background: rgba(220, 53, 69, 0.1);
+            color: #dc3545;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+        }
+
+        .document-flow-info h6 {
+            margin: 0 0 0.25rem 0;
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        .document-flow-info p {
+            margin: 0;
+            font-size: 0.8125rem;
+            color: var(--gray-600);
+        }
+
+        /* Progress do Fluxo no Modal */
+        .fluxo-progress-modal {
+            background: var(--white);
+            border-radius: 12px;
+            padding: 1rem;
+            margin: 1rem 0;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .fluxo-steps-modal {
+            display: flex;
+            justify-content: space-between;
+            position: relative;
+        }
+
+        .fluxo-step-modal {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex: 1;
+            position: relative;
+        }
+
+        .fluxo-step-icon-modal {
+            width: 36px;
+            height: 36px;
+            background: var(--gray-300);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--white);
+            font-size: 0.875rem;
+            z-index: 2;
+            transition: all 0.3s ease;
+        }
+
+        .fluxo-step-modal.completed .fluxo-step-icon-modal {
+            background: var(--success);
+        }
+
+        .fluxo-step-modal.active .fluxo-step-icon-modal {
+            background: var(--primary);
+            box-shadow: 0 0 0 4px rgba(0, 86, 210, 0.2);
+        }
+
+        .fluxo-step-label-modal {
+            font-size: 0.625rem;
+            color: var(--gray-600);
+            margin-top: 0.5rem;
+            text-align: center;
+        }
+
+        .fluxo-line-modal {
+            position: absolute;
+            top: 18px;
+            left: 50%;
+            right: -50%;
+            height: 2px;
+            background: var(--gray-300);
+            z-index: 1;
+        }
+
+        .fluxo-step-modal:last-child .fluxo-line-modal {
+            display: none;
+        }
+
+        .fluxo-step-modal.completed .fluxo-line-modal {
+            background: var(--success);
+        }
+
+        /* Status Badge no Modal */
+        .status-badge-modal {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            padding: 0.25rem 0.875rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .status-badge-modal.digitalizado {
+            background: var(--info);
+            color: white;
+        }
+
+        .status-badge-modal.aguardando-assinatura {
+            background: var(--warning);
+            color: white;
+        }
+
+        .status-badge-modal.assinado {
+            background: var(--success);
+            color: white;
+        }
+
+        .status-badge-modal.finalizado {
+            background: var(--gray-600);
+            color: white;
+        }
+
+        .document-meta-modal {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            font-size: 0.8125rem;
+            color: var(--gray-600);
+            margin-bottom: 1rem;
+        }
+
+        .meta-item-modal {
+            display: flex;
+            align-items: center;
+            gap: 0.375rem;
+        }
+
+        .meta-item-modal i {
+            color: var(--gray-400);
+        }
+
+        .document-actions-modal {
+            display: flex;
+            gap: 0.5rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--gray-200);
+        }
+
+        .btn-sm {
+            padding: 0.5rem 1rem;
+            font-size: 0.8125rem;
+        }
+
+        /* Empty state para documentos */
+        .empty-documents-state {
+            text-align: center;
+            padding: 3rem 2rem;
+            color: var(--gray-500);
+        }
+
+        .empty-documents-state i {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.3;
+        }
+
+        .empty-documents-state h5 {
+            font-weight: 600;
+            color: var(--gray-700);
+            margin-bottom: 0.5rem;
+        }
+
+        .empty-documents-state p {
+            margin: 0;
+            font-size: 0.875rem;
+        }
+
+        /* Timeline Styles */
+        .timeline {
+            position: relative;
+            padding-left: 2.5rem;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 0.75rem;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: var(--gray-300);
+        }
+
+        .timeline-item {
+            position: relative;
+            padding-bottom: 1.5rem;
+        }
+
+        .timeline-item.last {
+            padding-bottom: 0;
+        }
+
+        .timeline-marker {
+            position: absolute;
+            left: -1.75rem;
+            top: 0;
+            width: 28px;
+            height: 28px;
+            background: var(--white);
+            border: 3px solid var(--primary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            color: var(--primary);
+        }
+
+        .timeline-content {
+            background: var(--gray-100);
+            border-radius: 12px;
+            padding: 1rem;
+        }
+
+        .timeline-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .timeline-title {
+            font-weight: 600;
+            color: var(--dark);
+            font-size: 0.875rem;
+            margin: 0;
+        }
+
+        .timeline-date {
+            font-size: 0.75rem;
+            color: var(--gray-500);
+        }
+
+        .timeline-description {
+            font-size: 0.8125rem;
+            color: var(--gray-600);
+            margin-bottom: 0.5rem;
+        }
+
+        .timeline-meta {
+            font-size: 0.75rem;
+            color: var(--gray-500);
+        }
+
+        /* Alert Custom Styles */
+        .alert-info-custom,
+        .alert-warning-custom,
+        .alert-success-custom,
+        .alert-primary-custom {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .document-count-info {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
         }

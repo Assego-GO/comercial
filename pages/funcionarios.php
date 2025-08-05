@@ -23,14 +23,59 @@ if (!$auth->isLoggedIn()) {
     exit;
 }
 
-// Verifica se é diretor
-if (!$auth->isDiretor()) {
-    header('Location: ../pages/dashboard.php');
-    exit;
-}
-
 // Pega dados do usuário logado
 $usuarioLogado = $auth->getUser();
+
+// NOVA LÓGICA: Sistema flexível de permissões
+$temPermissaoFuncionarios = true; // Todos têm acesso à página
+$motivoNegacao = '';
+$escopoVisualizacao = ''; // 'TODOS', 'DEPARTAMENTO' ou 'PROPRIO'
+$departamentoPermitido = null;
+$podeEditar = false;
+$podeCriar = false;
+
+// Log para debug
+error_log("=== DEBUG PERMISSÕES FUNCIONÁRIOS ===");
+error_log("Usuário: " . $usuarioLogado['nome']);
+error_log("Cargo: " . ($usuarioLogado['cargo'] ?? 'Sem cargo'));
+error_log("É Diretor: " . ($auth->isDiretor() ? 'SIM' : 'NÃO'));
+error_log("Departamento ID: " . ($usuarioLogado['departamento_id'] ?? 'NULL'));
+
+// Sistema de permissões baseado em cargo e departamento
+$cargoUsuario = $usuarioLogado['cargo'] ?? '';
+$departamentoUsuario = $usuarioLogado['departamento_id'] ?? null;
+
+// Cargos com permissões especiais
+$cargosAcessoTotal = ['Diretor', 'Presidente', 'Vice-Presidente'];
+$cargosAcessoDepartamento = ['Gerente', 'Supervisor', 'Coordenador'];
+
+// Define escopo de visualização
+if ($departamentoUsuario == 1) {
+    // PRESIDÊNCIA - vê todos
+    $escopoVisualizacao = 'TODOS';
+    $podeEditar = true;
+    $podeCriar = true;
+    error_log("✅ PRESIDÊNCIA: Acesso total");
+} elseif (in_array($cargoUsuario, $cargosAcessoTotal)) {
+    // Cargos de alta gestão - veem todos
+    $escopoVisualizacao = 'TODOS';
+    $podeEditar = true;
+    $podeCriar = true;
+    error_log("✅ {$cargoUsuario}: Acesso total");
+} elseif (in_array($cargoUsuario, $cargosAcessoDepartamento)) {
+    // Cargos de gestão intermediária - veem seu departamento
+    $escopoVisualizacao = 'DEPARTAMENTO';
+    $departamentoPermitido = $departamentoUsuario;
+    $podeEditar = true;
+    $podeCriar = true;
+    error_log("✅ {$cargoUsuario}: Acesso ao departamento {$departamentoPermitido}");
+} else {
+    // Funcionários comuns - veem apenas seus dados
+    $escopoVisualizacao = 'PROPRIO';
+    $podeEditar = false;
+    $podeCriar = false;
+    error_log("✅ Funcionário comum: Acesso apenas aos próprios dados");
+}
 
 // Define o título da página
 $page_title = 'Funcionários - ASSEGO';
@@ -38,33 +83,46 @@ $page_title = 'Funcionários - ASSEGO';
 // Inicializa classe de funcionários
 $funcionarios = new Funcionarios();
 
-// Busca estatísticas
+// Busca estatísticas (com filtro por escopo)
 try {
     $db = Database::getInstance(DB_NAME_CADASTRO)->getConnection();
     
-    // Total de funcionários
-    $stmt = $db->prepare("SELECT COUNT(*) as total FROM Funcionarios");
-    $stmt->execute();
+    // Preparar filtro baseado no escopo
+    $filtroSQL = '';
+    $params = [];
+    
+    if ($escopoVisualizacao === 'DEPARTAMENTO' && $departamentoPermitido) {
+        $filtroSQL = ' WHERE departamento_id = ?';
+        $params = [$departamentoPermitido];
+    } elseif ($escopoVisualizacao === 'PROPRIO') {
+        $filtroSQL = ' WHERE id = ?';
+        $params = [$usuarioLogado['id']];
+    }
+    
+    // Total de funcionários (com filtro)
+    $stmt = $db->prepare("SELECT COUNT(*) as total FROM Funcionarios" . $filtroSQL);
+    $stmt->execute($params);
     $totalFuncionarios = $stmt->fetch()['total'] ?? 0;
     
-    // Funcionários ativos
-    $stmt = $db->prepare("SELECT COUNT(*) as total FROM Funcionarios WHERE ativo = 1");
-    $stmt->execute();
+    // Funcionários ativos (com filtro)
+    $sqlAtivos = "SELECT COUNT(*) as total FROM Funcionarios" . 
+                 ($filtroSQL ? $filtroSQL . ' AND' : ' WHERE') . " ativo = 1";
+    $stmt = $db->prepare($sqlAtivos);
+    $stmt->execute($params);
     $funcionariosAtivos = $stmt->fetch()['total'] ?? 0;
     
     // Funcionários inativos
     $funcionariosInativos = $totalFuncionarios - $funcionariosAtivos;
     
-    // Novos funcionários (últimos 30 dias)
-    $stmt = $db->prepare("
-        SELECT COUNT(*) as total 
-        FROM Funcionarios 
-        WHERE criado_em >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
-    ");
-    $stmt->execute();
+    // Novos funcionários (últimos 30 dias) (com filtro)
+    $sqlNovos = "SELECT COUNT(*) as total FROM Funcionarios " . 
+                ($filtroSQL ? str_replace('WHERE', 'WHERE', $filtroSQL) . ' AND' : 'WHERE') . 
+                " criado_em >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)";
+    $stmt = $db->prepare($sqlNovos);
+    $stmt->execute($params);
     $novosFuncionarios = $stmt->fetch()['total'] ?? 0;
     
-    // Total de departamentos
+    // Total de departamentos (sempre todos, para contexto)
     $stmt = $db->prepare("SELECT COUNT(*) as total FROM Departamentos WHERE ativo = 1");
     $stmt->execute();
     $totalDepartamentos = $stmt->fetch()['total'] ?? 0;
@@ -74,15 +132,11 @@ try {
     $totalFuncionarios = $funcionariosAtivos = $funcionariosInativos = $novosFuncionarios = $totalDepartamentos = 0;
 }
 
-// Cria instância do Header Component
+// CORREÇÃO: Cria instância do Header Component
 $headerComponent = HeaderComponent::create([
-    'usuario' => [
-        'nome' => $usuarioLogado['nome'],
-        'cargo' => $usuarioLogado['cargo'] ?? 'Funcionário',
-        'avatar' => $usuarioLogado['avatar'] ?? null
-    ],
+    'usuario' => $usuarioLogado,
     'isDiretor' => $auth->isDiretor(),
-    'activeTab' => 'funcionarios', // CORREÇÃO: mudei para 'funcionarios'
+    'activeTab' => 'funcionarios',
     'notificationCount' => 0,
     'showSearch' => true
 ]);
@@ -117,6 +171,237 @@ $headerComponent = HeaderComponent::create([
     <!-- CSS do Header Component -->
     <?php $headerComponent->renderCSS(); ?>
     <link rel="stylesheet" href="estilizacao/funcionarios.css">
+    
+    <style>
+        /* ===== ESTILOS CORRIGIDOS PARA O DROPDOWN ===== */
+        :root {
+            --primary: #0056d2;
+            --primary-dark: #003d99;
+            --primary-light: rgba(0, 86, 210, 0.1);
+            --white: #ffffff;
+            --gray-100: #f8f9fa;
+            --gray-200: #e9ecef;
+            --gray-300: #dee2e6;
+            --gray-500: #6c757d;
+            --gray-600: #495057;
+            --gray-700: #343a40;
+            --dark: #212529;
+            --success: #00c853;
+            --danger: #ff3b30;
+            --warning: #ff9500;
+            --info: #00b8d4;
+            --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
+            --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.15);
+            --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Header User Section - CORRIGIDO */
+        .header-user {
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.5rem;
+            background: var(--white);
+            border-radius: 12px;
+            box-shadow: var(--shadow-sm);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 1px solid var(--gray-200);
+        }
+
+        .header-user:hover {
+            box-shadow: var(--shadow-md);
+            transform: translateY(-1px);
+            border-color: var(--primary);
+        }
+
+        .header-user.active {
+            border-color: var(--primary);
+            box-shadow: var(--shadow-md);
+        }
+
+        .user-avatar {
+            width: 48px;
+            height: 48px;
+            background: var(--primary);
+            color: var(--white);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 1.125rem;
+            flex-shrink: 0;
+        }
+
+        .user-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .user-name {
+            font-weight: 700;
+            color: var(--dark);
+            font-size: 0.875rem;
+            line-height: 1.2;
+            margin-bottom: 0.125rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .user-role {
+            font-size: 0.75rem;
+            color: var(--gray-500);
+            line-height: 1;
+        }
+
+        .dropdown-arrow {
+            color: var(--gray-500);
+            font-size: 0.75rem;
+            transition: transform 0.2s ease;
+            flex-shrink: 0;
+        }
+
+        .header-user.active .dropdown-arrow {
+            transform: rotate(180deg);
+            color: var(--primary);
+        }
+
+        /* Dropdown Menu - CORRIGIDO */
+        .user-dropdown {
+            position: absolute;
+            top: calc(100% + 8px);
+            right: 0;
+            width: 240px;
+            background: var(--white);
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+            border: 1px solid var(--gray-200);
+            overflow: hidden;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px) scale(0.95);
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 9999;
+            backdrop-filter: blur(10px);
+        }
+
+        .user-dropdown.show {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0) scale(1);
+        }
+
+        .dropdown-header {
+            padding: 1.25rem;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: var(--white);
+        }
+
+        .dropdown-user-name {
+            font-weight: 700;
+            color: var(--white);
+            font-size: 0.9375rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .dropdown-user-role {
+            font-size: 0.8125rem;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .dropdown-menu {
+            padding: 0.5rem 0;
+        }
+
+        .dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.875rem 1.25rem;
+            color: var(--gray-700);
+            text-decoration: none;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            border: none;
+            background: none;
+            width: 100%;
+            text-align: left;
+        }
+
+        .dropdown-item:hover {
+            background: var(--gray-100);
+            color: var(--dark);
+            transform: translateX(4px);
+        }
+
+        .dropdown-item i {
+            width: 18px;
+            color: var(--gray-500);
+            font-size: 0.9375rem;
+            text-align: center;
+        }
+
+        .dropdown-divider {
+            height: 1px;
+            background: var(--gray-200);
+            margin: 0.5rem 0;
+        }
+
+        .dropdown-item.logout {
+            color: var(--danger);
+        }
+
+        .dropdown-item.logout:hover {
+            background: rgba(255, 59, 48, 0.1);
+            color: var(--danger);
+        }
+
+        .dropdown-item.logout i {
+            color: var(--danger);
+        }
+
+        /* Overlay para fechar dropdown */
+        .dropdown-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 9998;
+            display: none;
+        }
+
+        .dropdown-overlay.show {
+            display: block;
+        }
+        
+        /* Estilos para permissões limitadas */
+        .permission-notice {
+            background: rgba(255, 193, 7, 0.1);
+            border: 1px solid rgba(255, 193, 7, 0.3);
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .permission-notice i {
+            color: #ffc107;
+            font-size: 20px;
+        }
+        
+        .action-disabled {
+            opacity: 0.5;
+            cursor: not-allowed !important;
+        }
+    </style>
 </head>
 
 <body>
@@ -125,6 +410,9 @@ $headerComponent = HeaderComponent::create([
         <div class="loading-spinner"></div>
         <div class="loading-text">Carregando dados...</div>
     </div>
+
+    <!-- Dropdown Overlay -->
+    <div class="dropdown-overlay" id="dropdownOverlay"></div>
 
     <!-- Main Content -->
     <div class="main-wrapper">
@@ -136,7 +424,31 @@ $headerComponent = HeaderComponent::create([
             <!-- Page Header -->
             <div class="page-header mb-4" data-aos="fade-right">
                 <h1 class="page-title">Gestão de Funcionários</h1>
-                <p class="page-subtitle">Gerencie os funcionários e departamentos do sistema</p>
+                <p class="page-subtitle">
+                    <?php if ($escopoVisualizacao === 'TODOS'): ?>
+                        Gerencie todos os funcionários e departamentos do sistema
+                    <?php elseif ($escopoVisualizacao === 'DEPARTAMENTO'): ?>
+                        Gerencie os funcionários do seu departamento
+                    <?php else: ?>
+                        Visualize seus dados pessoais
+                    <?php endif; ?>
+                </p>
+                
+                <?php if ($escopoVisualizacao === 'DEPARTAMENTO'): ?>
+                    <div class="permission-notice">
+                        <i class="fas fa-info-circle"></i>
+                        <div>
+                            <strong>Visualização por Departamento:</strong> Como <?php echo $cargoUsuario; ?>, você visualiza funcionários do seu departamento.
+                        </div>
+                    </div>
+                <?php elseif ($escopoVisualizacao === 'PROPRIO'): ?>
+                    <div class="permission-notice">
+                        <i class="fas fa-info-circle"></i>
+                        <div>
+                            <strong>Visualização Limitada:</strong> Você pode visualizar apenas seus próprios dados.
+                        </div>
+                    </div>
+                <?php endif; ?>
             </div>
 
             <!-- Stats Grid -->
@@ -145,11 +457,23 @@ $headerComponent = HeaderComponent::create([
                     <div class="stat-header">
                         <div>
                             <div class="stat-value"><?php echo number_format($totalFuncionarios, 0, ',', '.'); ?></div>
-                            <div class="stat-label">Total de Funcionários</div>
+                            <div class="stat-label">
+                                <?php 
+                                if ($escopoVisualizacao === 'TODOS') {
+                                    echo 'Total de Funcionários';
+                                } elseif ($escopoVisualizacao === 'DEPARTAMENTO') {
+                                    echo 'Funcionários do Departamento';
+                                } else {
+                                    echo 'Seu Perfil';
+                                }
+                                ?>
+                            </div>
+                            <?php if ($escopoVisualizacao !== 'PROPRIO'): ?>
                             <div class="stat-change positive">
                                 <i class="fas fa-arrow-up"></i>
                                 12% este mês
                             </div>
+                            <?php endif; ?>
                         </div>
                         <div class="stat-icon primary">
                             <i class="fas fa-user-tie"></i>
@@ -157,6 +481,7 @@ $headerComponent = HeaderComponent::create([
                     </div>
                 </div>
 
+                <?php if ($escopoVisualizacao !== 'PROPRIO'): ?>
                 <div class="stat-card">
                     <div class="stat-header">
                         <div>
@@ -220,9 +545,11 @@ $headerComponent = HeaderComponent::create([
                         </div>
                     </div>
                 </div>
+                <?php endif; ?>
             </div>
 
             <!-- Actions Bar with Filters -->
+            <?php if ($escopoVisualizacao !== 'PROPRIO'): ?>
             <div class="actions-bar" data-aos="fade-up" data-aos-delay="100">
                 <div class="filters-row">
                     <div class="search-box">
@@ -243,12 +570,14 @@ $headerComponent = HeaderComponent::create([
                         </select>
                     </div>
 
+                    <?php if ($escopoVisualizacao === 'TODOS'): ?>
                     <div class="filter-group">
                         <label class="filter-label">Departamento</label>
                         <select class="filter-select" id="filterDepartamento">
                             <option value="">Todos</option>
                         </select>
                     </div>
+                    <?php endif; ?>
 
                     <div class="filter-group">
                         <label class="filter-label">Cargo</label>
@@ -272,17 +601,33 @@ $headerComponent = HeaderComponent::create([
                         <i class="fas fa-sync-alt"></i>
                         Atualizar
                     </button>
+                    <?php if ($podeCriar): ?>
                     <button class="btn-modern btn-primary" onclick="abrirModalNovo()">
                         <i class="fas fa-plus"></i>
                         Novo Funcionário
                     </button>
+                    <?php else: ?>
+                    <button class="btn-modern btn-primary action-disabled" disabled title="Sem permissão para criar funcionários">
+                        <i class="fas fa-plus"></i>
+                        Novo Funcionário
+                    </button>
+                    <?php endif; ?>
                 </div>
             </div>
+            <?php endif; ?>
 
             <!-- Table Container -->
             <div class="table-container" data-aos="fade-up" data-aos-delay="200">
                 <div class="table-header">
-                    <h3 class="table-title">Lista de Funcionários</h3>
+                    <h3 class="table-title">
+                        <?php 
+                        if ($escopoVisualizacao === 'PROPRIO') {
+                            echo 'Meus Dados';
+                        } else {
+                            echo 'Lista de Funcionários';
+                        }
+                        ?>
+                    </h3>
                     <span class="table-info">Mostrando <span id="showingCount">0</span> registros</span>
                 </div>
 
@@ -293,7 +638,9 @@ $headerComponent = HeaderComponent::create([
                                 <th style="width: 60px;">Foto</th>
                                 <th>Nome</th>
                                 <th>Email</th>
+                                <?php if ($escopoVisualizacao === 'TODOS'): ?>
                                 <th>Departamento</th>
+                                <?php endif; ?>
                                 <th>Cargo</th>
                                 <th>Badges</th>
                                 <th>Status</th>
@@ -303,7 +650,7 @@ $headerComponent = HeaderComponent::create([
                         </thead>
                         <tbody id="tableBody">
                             <tr>
-                                <td colspan="9" class="text-center py-5">
+                                <td colspan="<?php echo $escopoVisualizacao === 'TODOS' ? '9' : '8'; ?>" class="text-center py-5">
                                     <div class="d-flex flex-column align-items-center">
                                         <div class="loading-spinner mb-3"></div>
                                         <p class="text-muted mb-0">Carregando funcionários...</p>
@@ -521,10 +868,12 @@ $headerComponent = HeaderComponent::create([
                     <button class="btn-modern btn-secondary" onclick="fecharModalVisualizacao()">
                         Fechar
                     </button>
+                    <?php if ($podeEditar): ?>
                     <button class="btn-modern btn-primary" onclick="editarDoVisualizacao()">
                         <i class="fas fa-edit"></i>
                         Editar Funcionário
                     </button>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
@@ -539,66 +888,203 @@ $headerComponent = HeaderComponent::create([
     <?php $headerComponent->renderJS(); ?>
 
     <script>
+        // ===== INICIALIZAÇÃO E CONFIGURAÇÃO =====
         // Inicializa AOS
         AOS.init({
             duration: 800,
             once: true
         });
 
-        // Variáveis globais
+        // Variáveis globais - INCLUINDO ESCOPO DE VISUALIZAÇÃO
         let todosFuncionarios = [];
         let funcionariosFiltrados = [];
         let departamentosDisponiveis = [];
+        let dropdownOpen = false;
+        
+        // Configurações de permissão
+        const escopoVisualizacao = <?php echo json_encode($escopoVisualizacao); ?>;
+        const departamentoPermitido = <?php echo json_encode($departamentoPermitido); ?>;
+        const podeEditar = <?php echo json_encode($podeEditar); ?>;
+        const podeCriar = <?php echo json_encode($podeCriar); ?>;
+        const usuarioLogadoId = <?php echo json_encode($usuarioLogado['id']); ?>;
+        
+        console.log('=== CONFIG FUNCIONÁRIOS ===');
+        console.log('Escopo:', escopoVisualizacao);
+        console.log('Departamento permitido:', departamentoPermitido);
+        console.log('Pode editar:', podeEditar);
+        console.log('Pode criar:', podeCriar);
 
-        // User Dropdown Menu
-        document.addEventListener('DOMContentLoaded', function() {
+        // ===== FUNÇÕES CORRIGIDAS PARA O DROPDOWN =====
+        
+        // Função principal para toggle do dropdown
+        function toggleUserDropdown(event) {
+            if (event) {
+                event.stopPropagation();
+            }
+            
             const userMenu = document.getElementById('userMenu');
             const userDropdown = document.getElementById('userDropdown');
-
-            if (userMenu && userDropdown) {
-                userMenu.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    userDropdown.classList.toggle('show');
-                });
-
-                document.addEventListener('click', function() {
-                    userDropdown.classList.remove('show');
-                });
+            const dropdownOverlay = document.getElementById('dropdownOverlay');
+            
+            if (!userMenu || !userDropdown) {
+                console.error('❌ Elementos do dropdown não encontrados');
+                return;
             }
 
+            dropdownOpen = !dropdownOpen;
+            
+            if (dropdownOpen) {
+                userDropdown.classList.add('show');
+                userMenu.classList.add('active');
+                if (dropdownOverlay) {
+                    dropdownOverlay.classList.add('show');
+                }
+            } else {
+                closeUserDropdown();
+            }
+        }
+
+        // Função para fechar o dropdown
+        function closeUserDropdown() {
+            const userMenu = document.getElementById('userMenu');
+            const userDropdown = document.getElementById('userDropdown');
+            const dropdownOverlay = document.getElementById('dropdownOverlay');
+            
+            if (userDropdown && userDropdown.classList.contains('show')) {
+                userDropdown.classList.remove('show');
+                if (userMenu) {
+                    userMenu.classList.remove('active');
+                }
+                if (dropdownOverlay) {
+                    dropdownOverlay.classList.remove('show');
+                }
+                dropdownOpen = false;
+            }
+        }
+
+        // Função para lidar com cliques nos itens do menu
+        function handleMenuClick(action, event) {
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            
+            closeUserDropdown();
+            
+            switch(action) {
+                case 'profile':
+                    window.location.href = 'perfil.php';
+                    break;
+                case 'settings':
+                    window.location.href = 'configuracoes.php';
+                    break;
+                case 'logout':
+                    if(confirm('Deseja realmente sair do sistema?')) {
+                        window.location.href = '../auth/logout.php';
+                    }
+                    break;
+            }
+        }
+
+        // ===== EVENT LISTENERS =====
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('=== INICIALIZANDO PÁGINA FUNCIONÁRIOS ===');
+            
+            // Configurar dropdown
+            setTimeout(() => {
+                const userMenu = document.getElementById('userMenu');
+                const userDropdown = document.getElementById('userDropdown');
+                const dropdownOverlay = document.getElementById('dropdownOverlay');
+                
+                if (userMenu && userDropdown) {
+                    userMenu.addEventListener('click', function(event) {
+                        toggleUserDropdown(event);
+                    });
+                }
+                
+                if (dropdownOverlay) {
+                    dropdownOverlay.addEventListener('click', closeUserDropdown);
+                }
+            }, 200);
+            
+            // Fechar dropdown ao clicar fora
+            document.addEventListener('click', function(event) {
+                const userMenu = document.getElementById('userMenu');
+                const userDropdown = document.getElementById('userDropdown');
+                
+                if (userMenu && userDropdown && 
+                    !userMenu.contains(event.target) && 
+                    !userDropdown.contains(event.target)) {
+                    closeUserDropdown();
+                }
+            });
+            
+            // Fechar dropdown com tecla ESC
+            document.addEventListener('keydown', function(event) {
+                if (event.key === 'Escape') {
+                    closeUserDropdown();
+                }
+            });
+
             // Máscaras
-            $('#cpf').mask('000.000.000-00');
+            if (typeof $ !== 'undefined' && $('#cpf').length) {
+                $('#cpf').mask('000.000.000-00');
+            }
 
-            // Event listeners
-            document.getElementById('searchInput').addEventListener('input', aplicarFiltros);
-            document.getElementById('filterStatus').addEventListener('change', aplicarFiltros);
-            document.getElementById('filterDepartamento').addEventListener('change', aplicarFiltros);
-            document.getElementById('filterCargo').addEventListener('change', aplicarFiltros);
-
-            // Form submit
-            document.getElementById('formFuncionario').addEventListener('submit', salvarFuncionario);
+            // Event listeners dos filtros (apenas se não for visualização própria)
+            if (escopoVisualizacao !== 'PROPRIO') {
+                const searchInput = document.getElementById('searchInput');
+                const filterStatus = document.getElementById('filterStatus');
+                const filterDepartamento = document.getElementById('filterDepartamento');
+                const filterCargo = document.getElementById('filterCargo');
+                
+                if (searchInput) searchInput.addEventListener('input', aplicarFiltros);
+                if (filterStatus) filterStatus.addEventListener('change', aplicarFiltros);
+                if (filterDepartamento) filterDepartamento.addEventListener('change', aplicarFiltros);
+                if (filterCargo) filterCargo.addEventListener('change', aplicarFiltros);
+            }
+            
+            const formFuncionario = document.getElementById('formFuncionario');
+            if (formFuncionario) formFuncionario.addEventListener('submit', salvarFuncionario);
 
             // Carrega dados
             carregarFuncionarios();
             carregarDepartamentos();
         });
 
-        // Loading functions
+        // ===== FUNÇÕES DE LOADING =====
         function showLoading() {
-            document.getElementById('loadingOverlay').classList.add('active');
+            const overlay = document.getElementById('loadingOverlay');
+            if (overlay) {
+                overlay.classList.add('active');
+            }
         }
 
         function hideLoading() {
-            document.getElementById('loadingOverlay').classList.remove('active');
+            const overlay = document.getElementById('loadingOverlay');
+            if (overlay) {
+                overlay.classList.remove('active');
+            }
         }
 
-        // Carrega lista de funcionários
+        // ===== FUNÇÕES DE DADOS =====
+        
+        // Carrega lista de funcionários - AJUSTADO PARA ESCOPO
         function carregarFuncionarios() {
             showLoading();
+            
+            // Parâmetros baseados no escopo
+            let params = {};
+            if (escopoVisualizacao === 'DEPARTAMENTO' && departamentoPermitido) {
+                params.departamento_filtro = departamentoPermitido;
+            } else if (escopoVisualizacao === 'PROPRIO') {
+                params.proprio_id = usuarioLogadoId;
+            }
 
             $.ajax({
                 url: '../api/funcionarios_listar.php',
                 method: 'GET',
+                data: params,
                 dataType: 'json',
                 success: function(response) {
                     hideLoading();
@@ -607,15 +1093,18 @@ $headerComponent = HeaderComponent::create([
                         todosFuncionarios = response.funcionarios;
                         funcionariosFiltrados = [...todosFuncionarios];
                         renderizarTabela();
+                        
+                        console.log(`✅ Carregados ${todosFuncionarios.length} funcionários (escopo: ${escopoVisualizacao})`);
                     } else {
                         console.error('Erro ao carregar funcionários:', response);
-                        alert('Erro ao carregar dados');
+                        alert('Erro ao carregar dados: ' + (response.message || 'Erro desconhecido'));
                     }
                 },
                 error: function(xhr, status, error) {
                     hideLoading();
                     console.error('Erro:', error);
-                    alert('Erro ao carregar funcionários');
+                    console.error('Response:', xhr.responseText);
+                    alert('Erro ao carregar funcionários: ' + error);
                 }
             });
         }
@@ -638,36 +1127,65 @@ $headerComponent = HeaderComponent::create([
             });
         }
 
-        // Preenche select de departamentos
+        // Preenche select de departamentos - AJUSTADO PARA ESCOPO
         function preencherSelectDepartamentos() {
             const selectFilter = document.getElementById('filterDepartamento');
             const selectForm = document.getElementById('departamento_id');
             
-            selectFilter.innerHTML = '<option value="">Todos</option>';
-            selectForm.innerHTML = '<option value="">Selecione um departamento</option>';
+            // Filtro de departamento só aparece para visualização total
+            if (selectFilter && escopoVisualizacao === 'TODOS') {
+                selectFilter.innerHTML = '<option value="">Todos</option>';
+                departamentosDisponiveis.forEach(dep => {
+                    const optionFilter = document.createElement('option');
+                    optionFilter.value = dep.id;
+                    optionFilter.textContent = dep.nome;
+                    selectFilter.appendChild(optionFilter);
+                });
+            }
             
-            departamentosDisponiveis.forEach(dep => {
-                const optionFilter = document.createElement('option');
-                optionFilter.value = dep.id;
-                optionFilter.textContent = dep.nome;
-                selectFilter.appendChild(optionFilter);
+            // Formulário
+            if (selectForm) {
+                selectForm.innerHTML = '<option value="">Selecione um departamento</option>';
                 
-                const optionForm = document.createElement('option');
-                optionForm.value = dep.id;
-                optionForm.textContent = dep.nome;
-                selectForm.appendChild(optionForm);
-            });
+                if (escopoVisualizacao === 'DEPARTAMENTO' && departamentoPermitido) {
+                    // Para gerentes/supervisores: pode escolher apenas seu departamento
+                    const deptPermitido = departamentosDisponiveis.find(d => d.id == departamentoPermitido);
+                    if (deptPermitido) {
+                        const option = document.createElement('option');
+                        option.value = deptPermitido.id;
+                        option.textContent = deptPermitido.nome;
+                        option.selected = true;
+                        selectForm.appendChild(option);
+                        selectForm.disabled = true;
+                    }
+                } else if (escopoVisualizacao === 'TODOS') {
+                    // Presidência e diretores: todos os departamentos
+                    departamentosDisponiveis.forEach(dep => {
+                        const option = document.createElement('option');
+                        option.value = dep.id;
+                        option.textContent = dep.nome;
+                        selectForm.appendChild(option);
+                    });
+                }
+            }
         }
 
-        // Renderiza tabela
+        // Renderiza tabela - AJUSTADO PARA PERMISSÕES
         function renderizarTabela() {
             const tbody = document.getElementById('tableBody');
+            const totalColunas = escopoVisualizacao === 'TODOS' ? 9 : 8;
+            
+            if (!tbody) {
+                console.error('Elemento tableBody não encontrado');
+                return;
+            }
+            
             tbody.innerHTML = '';
             
             if (funcionariosFiltrados.length === 0) {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="9" class="text-center py-5">
+                        <td colspan="${totalColunas}" class="text-center py-5">
                             <div class="d-flex flex-column align-items-center">
                                 <i class="fas fa-inbox fa-3x text-muted mb-3" style="opacity: 0.3;"></i>
                                 <p class="text-muted mb-0">Nenhum funcionário encontrado</p>
@@ -707,8 +1225,19 @@ $headerComponent = HeaderComponent::create([
                 }
                 badgesHtml += '</div>';
                 
+                // Determinar se pode editar este funcionário
+                let podeEditarEste = false;
+                if (escopoVisualizacao === 'PROPRIO') {
+                    // Só pode editar se for o próprio
+                    podeEditarEste = (funcionario.id == usuarioLogadoId);
+                } else {
+                    podeEditarEste = podeEditar;
+                }
+                
                 const row = document.createElement('tr');
-                row.innerHTML = `
+                
+                // Monta HTML da linha baseado no escopo
+                let rowHtml = `
                     <td>
                         <div class="table-avatar">
                             <span>${funcionario.nome ? funcionario.nome.charAt(0).toUpperCase() : '?'}</span>
@@ -720,7 +1249,14 @@ $headerComponent = HeaderComponent::create([
                         <small class="text-muted">ID: ${funcionario.id}</small>
                     </td>
                     <td>${funcionario.email}</td>
-                    <td>${funcionario.departamento_nome || '-'}</td>
+                `;
+                
+                // Só mostra departamento se for visualização completa
+                if (escopoVisualizacao === 'TODOS') {
+                    rowHtml += `<td>${funcionario.departamento_nome || '-'}</td>`;
+                }
+                
+                rowHtml += `
                     <td>${cargoBadge}</td>
                     <td>${badgesHtml}</td>
                     <td>${statusBadge}</td>
@@ -730,27 +1266,54 @@ $headerComponent = HeaderComponent::create([
                             <button class="btn-icon view" onclick="visualizarFuncionario(${funcionario.id})" title="Visualizar">
                                 <i class="fas fa-eye"></i>
                             </button>
+                `;
+                
+                if (podeEditarEste) {
+                    rowHtml += `
                             <button class="btn-icon edit" onclick="editarFuncionario(${funcionario.id})" title="Editar">
                                 <i class="fas fa-edit"></i>
                             </button>
                             <button class="btn-icon delete" onclick="desativarFuncionario(${funcionario.id})" title="Desativar">
                                 <i class="fas fa-ban"></i>
                             </button>
+                    `;
+                } else {
+                    rowHtml += `
+                            <button class="btn-icon edit action-disabled" disabled title="Sem permissão">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn-icon delete action-disabled" disabled title="Sem permissão">
+                                <i class="fas fa-ban"></i>
+                            </button>
+                    `;
+                }
+                
+                rowHtml += `
                         </div>
                     </td>
                 `;
+                
+                row.innerHTML = rowHtml;
                 tbody.appendChild(row);
             });
             
-            document.getElementById('showingCount').textContent = funcionariosFiltrados.length;
+            const showingCount = document.getElementById('showingCount');
+            if (showingCount) {
+                showingCount.textContent = funcionariosFiltrados.length;
+            }
         }
 
         // Aplica filtros
         function aplicarFiltros() {
-            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-            const filterStatus = document.getElementById('filterStatus').value;
-            const filterDepartamento = document.getElementById('filterDepartamento').value;
-            const filterCargo = document.getElementById('filterCargo').value;
+            const searchInput = document.getElementById('searchInput');
+            const filterStatus = document.getElementById('filterStatus');
+            const filterDepartamento = document.getElementById('filterDepartamento');
+            const filterCargo = document.getElementById('filterCargo');
+            
+            const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
+            const filterStatusValue = filterStatus ? filterStatus.value : '';
+            const filterDepartamentoValue = filterDepartamento ? filterDepartamento.value : '';
+            const filterCargoValue = filterCargo ? filterCargo.value : '';
             
             funcionariosFiltrados = todosFuncionarios.filter(funcionario => {
                 const matchSearch = !searchTerm || 
@@ -758,9 +1321,9 @@ $headerComponent = HeaderComponent::create([
                     funcionario.email.toLowerCase().includes(searchTerm) ||
                     (funcionario.cargo && funcionario.cargo.toLowerCase().includes(searchTerm));
                 
-                const matchStatus = !filterStatus || funcionario.ativo == filterStatus;
-                const matchDepartamento = !filterDepartamento || funcionario.departamento_id == filterDepartamento;
-                const matchCargo = !filterCargo || funcionario.cargo === filterCargo;
+                const matchStatus = !filterStatusValue || funcionario.ativo == filterStatusValue;
+                const matchDepartamento = !filterDepartamentoValue || funcionario.departamento_id == filterDepartamentoValue;
+                const matchCargo = !filterCargoValue || funcionario.cargo === filterCargoValue;
                 
                 return matchSearch && matchStatus && matchDepartamento && matchCargo;
             });
@@ -770,35 +1333,73 @@ $headerComponent = HeaderComponent::create([
 
         // Limpa filtros
         function limparFiltros() {
-            document.getElementById('searchInput').value = '';
-            document.getElementById('filterStatus').value = '';
-            document.getElementById('filterDepartamento').value = '';
-            document.getElementById('filterCargo').value = '';
+            const searchInput = document.getElementById('searchInput');
+            const filterStatus = document.getElementById('filterStatus');
+            const filterDepartamento = document.getElementById('filterDepartamento');
+            const filterCargo = document.getElementById('filterCargo');
+            
+            if (searchInput) searchInput.value = '';
+            if (filterStatus) filterStatus.value = '';
+            if (filterDepartamento) filterDepartamento.value = '';
+            if (filterCargo) filterCargo.value = '';
             
             funcionariosFiltrados = [...todosFuncionarios];
             renderizarTabela();
         }
 
+        // ===== FUNÇÕES DOS MODAIS =====
+        
         // Abre modal para novo funcionário
         function abrirModalNovo() {
-            document.getElementById('modalTitle').textContent = 'Novo Funcionário';
-            document.getElementById('formFuncionario').reset();
-            document.getElementById('funcionarioId').value = '';
+            if (!podeCriar) {
+                alert('Você não tem permissão para criar funcionários');
+                return;
+            }
+            
+            const modalTitle = document.getElementById('modalTitle');
+            const form = document.getElementById('formFuncionario');
+            const funcionarioId = document.getElementById('funcionarioId');
+            const senha = document.getElementById('senha');
+            const senhaInfo = document.getElementById('senhaInfo');
+            const senhaEditInfo = document.getElementById('senhaEditInfo');
+            const modal = document.getElementById('modalFuncionario');
+            
+            if (modalTitle) modalTitle.textContent = 'Novo Funcionário';
+            if (form) form.reset();
+            if (funcionarioId) funcionarioId.value = '';
             
             // Para novo funcionário, define a senha padrão
-            document.getElementById('senha').value = 'Assego@123';
-            document.getElementById('senha').readOnly = true;
-            document.getElementById('senhaInfo').style.display = 'inline';
-            document.getElementById('senhaEditInfo').style.display = 'none';
+            if (senha) {
+                senha.value = 'Assego@123';
+                senha.readOnly = true;
+            }
+            if (senhaInfo) senhaInfo.style.display = 'inline';
+            if (senhaEditInfo) senhaEditInfo.style.display = 'none';
             
-            document.getElementById('modalFuncionario').classList.add('show');
+            // Se for gerente/supervisor, pré-seleciona o departamento
+            if (escopoVisualizacao === 'DEPARTAMENTO' && departamentoPermitido) {
+                setTimeout(() => {
+                    const departamentoSelect = document.getElementById('departamento_id');
+                    if (departamentoSelect) {
+                        departamentoSelect.value = departamentoPermitido;
+                    }
+                }, 100);
+            }
+            
+            if (modal) {
+                modal.classList.add('show');
+            }
         }
 
         // Edita funcionário
         function editarFuncionario(id) {
+            if (!podeEditar && !(escopoVisualizacao === 'PROPRIO' && id == usuarioLogadoId)) {
+                alert('Você não tem permissão para editar funcionários');
+                return;
+            }
+            
             showLoading();
             
-            // Busca dados completos do funcionário
             $.ajax({
                 url: '../api/funcionarios_detalhes.php',
                 method: 'GET',
@@ -810,22 +1411,16 @@ $headerComponent = HeaderComponent::create([
                     if (response.status === 'success') {
                         const funcionario = response.funcionario;
                         
-                        // Debug para ver os dados retornados
-                        console.log('Dados do funcionário:', funcionario);
-                        console.log('Cargo retornado:', funcionario.cargo);
-                        
-                        // Preenche o formulário com todos os dados
                         document.getElementById('modalTitle').textContent = 'Editar Funcionário';
                         document.getElementById('funcionarioId').value = funcionario.id;
                         document.getElementById('nome').value = funcionario.nome;
                         document.getElementById('email').value = funcionario.email;
                         document.getElementById('departamento_id').value = funcionario.departamento_id || '';
                         
-                        // Preenche o cargo com comparação flexível
+                        // Preenche o cargo
                         const cargoSelect = document.getElementById('cargo');
                         const cargoValue = funcionario.cargo || '';
                         
-                        // Limpa o select e adiciona as opções
                         cargoSelect.innerHTML = `
                             <option value="">Selecione um cargo</option>
                             <option value="Diretor">Diretor</option>
@@ -838,30 +1433,15 @@ $headerComponent = HeaderComponent::create([
                             <option value="Estagiário">Estagiário</option>
                         `;
                         
-                        // Se tem um cargo, tenta selecionar
                         if (cargoValue) {
-                            // Primeiro tenta selecionar exatamente
                             cargoSelect.value = cargoValue;
                             
-                            // Se não funcionou, tenta comparação case-insensitive
-                            if (cargoSelect.value === '') {
-                                const cargoLower = cargoValue.toLowerCase().trim();
-                                for (let option of cargoSelect.options) {
-                                    if (option.value.toLowerCase() === cargoLower) {
-                                        cargoSelect.value = option.value;
-                                        break;
-                                    }
-                                }
-                            }
-                            
-                            // Se ainda não funcionou, adiciona como nova opção
                             if (cargoSelect.value === '' && cargoValue.trim() !== '') {
                                 const newOption = document.createElement('option');
                                 newOption.value = cargoValue;
                                 newOption.textContent = cargoValue;
                                 newOption.selected = true;
                                 cargoSelect.appendChild(newOption);
-                                console.log('Cargo personalizado adicionado:', cargoValue);
                             }
                         }
                         
@@ -869,7 +1449,7 @@ $headerComponent = HeaderComponent::create([
                         document.getElementById('rg').value = funcionario.rg || '';
                         document.getElementById('ativo').checked = funcionario.ativo == 1;
                         
-                        // Senha não é obrigatória na edição
+                        // Senha
                         document.getElementById('senha').required = false;
                         document.getElementById('senha').value = '';
                         document.getElementById('senha').readOnly = false;
@@ -1091,9 +1671,14 @@ $headerComponent = HeaderComponent::create([
             // Ajusta valor do checkbox
             dados.ativo = document.getElementById('ativo').checked ? 1 : 0;
             
-            // Para novo funcionário, garante que a senha padrão seja enviada
+            // Para novo funcionário
             if (!dados.id) {
                 dados.senha = 'Assego@123';
+                
+                // Se for gerente/supervisor, força o departamento
+                if (escopoVisualizacao === 'DEPARTAMENTO' && departamentoPermitido) {
+                    dados.departamento_id = departamentoPermitido;
+                }
             } else {
                 // Para edição, remove senha se estiver vazia
                 if (!dados.senha) {
@@ -1137,6 +1722,11 @@ $headerComponent = HeaderComponent::create([
 
         // Desativa funcionário
         function desativarFuncionario(id) {
+            if (!podeEditar && !(escopoVisualizacao === 'PROPRIO' && id == usuarioLogadoId)) {
+                alert('Você não tem permissão para desativar funcionários');
+                return;
+            }
+            
             const funcionario = todosFuncionarios.find(f => f.id == id);
             if (!funcionario) return;
             
@@ -1178,8 +1768,11 @@ $headerComponent = HeaderComponent::create([
 
         // Fecha modal
         function fecharModal() {
-            document.getElementById('modalFuncionario').classList.remove('show');
-            document.getElementById('formFuncionario').reset();
+            const modal = document.getElementById('modalFuncionario');
+            const form = document.getElementById('formFuncionario');
+            
+            if (modal) modal.classList.remove('show');
+            if (form) form.reset();
         }
 
         // Fecha modal ao clicar fora
@@ -1206,6 +1799,8 @@ $headerComponent = HeaderComponent::create([
         document.addEventListener('keydown', function(event) {
             if (event.key === 'Escape') {
                 fecharModal();
+                fecharModalVisualizacao();
+                closeUserDropdown();
             }
         });
     </script>
