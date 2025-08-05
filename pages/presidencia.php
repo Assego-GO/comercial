@@ -138,6 +138,668 @@ $headerComponent = HeaderComponent::create([
     <!-- CSS do Header Component -->
     <?php $headerComponent->renderCSS(); ?>
     <link rel="stylesheet" href="estilizacao/presidencia.css">
+    
+    <style>
+        /* Estilos adicionais para as novas funcionalidades */
+        .stat-mini-card {
+            background: var(--white);
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            text-align: center;
+            transition: transform 0.3s ease;
+        }
+        
+        .stat-mini-card:hover {
+            transform: translateY(-2px);
+        }
+        
+        .stat-mini-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+        }
+        
+        .stat-mini-label {
+            color: var(--gray-600);
+            font-size: 0.875rem;
+        }
+        
+        .timeline-item {
+            position: relative;
+            padding-left: 2rem;
+            padding-bottom: 1.5rem;
+            border-left: 2px solid var(--gray-200);
+        }
+        
+        .timeline-item:last-child {
+            border-left: none;
+        }
+        
+        .timeline-marker {
+            position: absolute;
+            left: -9px;
+            top: 0;
+            width: 16px;
+            height: 16px;
+            background: var(--primary);
+            border-radius: 50%;
+            border: 3px solid var(--white);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .timeline-content {
+            background: var(--gray-50);
+            padding: 1rem;
+            border-radius: 8px;
+        }
+        
+        .config-card {
+            background: var(--white);
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 1rem;
+            border: 1px solid var(--gray-200);
+            transition: all 0.3s ease;
+        }
+        
+        .config-card:hover {
+            border-color: var(--primary);
+            box-shadow: 0 4px 12px rgba(var(--primary-rgb), 0.1);
+        }
+/* Variáveis CSS */
+:root {
+    --primary: #007bff;
+    --primary-rgb: 0, 123, 255;
+    --success: #28a745;
+    --warning: #ffc107;
+    --danger: #dc3545;
+    --secondary: #6c757d;
+    --white: #ffffff;
+    --gray-100: #f8f9fa;
+    --gray-200: #e9ecef;
+    --gray-300: #dee2e6;
+    --gray-400: #ced4da;
+    --gray-500: #adb5bd;
+    --gray-600: #6c757d;
+    --gray-700: #495057;
+    --gray-800: #343a40;
+    --gray-900: #212529;
+    --border-radius: 8px;
+    --border-radius-lg: 12px;
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
+    --shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.1);
+    --transition: all 0.3s ease;
+}
+
+/* Barra de filtros */
+.filter-bar {
+    background: var(--white);
+    padding: 1.5rem;
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow);
+    margin-bottom: 2rem;
+    border: 1px solid var(--gray-200);
+}
+
+.filter-row {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+}
+
+.filter-row:last-child {
+    margin-bottom: 0;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    min-width: 200px;
+    flex: 1;
+}
+
+.filter-label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--gray-700);
+    margin-bottom: 0.25rem;
+}
+
+.filter-select, 
+.filter-input {
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--gray-300);
+    border-radius: var(--border-radius);
+    font-size: 0.875rem;
+    background: var(--white);
+    transition: var(--transition);
+    width: 100%;
+}
+
+.filter-select:focus, 
+.filter-input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(var(--primary-rgb), 0.1);
+}
+
+.filter-select:hover,
+.filter-input:hover {
+    border-color: var(--gray-400);
+}
+
+/* Botões de filtro */
+.filter-buttons {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    margin-top: 1rem;
+}
+
+.btn-filter {
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--primary);
+    background: var(--primary);
+    color: var(--white);
+    border-radius: var(--border-radius);
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.btn-filter:hover {
+    background: #0056b3;
+    border-color: #0056b3;
+}
+
+.btn-filter-clear {
+    background: transparent;
+    color: var(--gray-600);
+    border-color: var(--gray-300);
+}
+
+.btn-filter-clear:hover {
+    background: var(--gray-100);
+    color: var(--gray-700);
+}
+
+/* Filtros ativos */
+.filtros-ativos {
+    padding-top: 1rem;
+    margin-top: 1rem;
+    border-top: 1px solid var(--gray-200);
+}
+
+.filtros-ativos-titulo {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--gray-700);
+    margin-bottom: 0.5rem;
+}
+
+.tag-filtro {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: var(--primary);
+    color: var(--white);
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    margin-right: 0.5rem;
+    margin-bottom: 0.5rem;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.tag-filtro:hover {
+    background: #0056b3;
+}
+
+.tag-filtro .remove-filter {
+    margin-left: 0.25rem;
+    cursor: pointer;
+    opacity: 0.7;
+}
+
+.tag-filtro .remove-filter:hover {
+    opacity: 1;
+}
+
+/* Items de documento */
+.document-item {
+    background: var(--white);
+    border-radius: var(--border-radius-lg);
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--gray-200);
+    border-left: 4px solid var(--gray-300);
+    transition: var(--transition);
+    position: relative;
+}
+
+.document-item:hover {
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-1px);
+}
+
+/* Layout interno do documento */
+.document-content {
+    width: 100%;
+}
+
+.document-content .d-flex.justify-content-between {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    width: 100%;
+    gap: 1rem;
+}
+
+.document-content .d-flex.justify-content-between > div {
+    flex: 0 0 auto;
+    min-width: 0;
+}
+
+.document-content .d-flex.justify-content-between > div:not(:last-child) {
+    margin-right: 1.5rem;
+}
+
+/* Informações do documento distribuídas */
+.document-info-row {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    width: 100% !important;
+    margin-bottom: 1rem !important;
+    gap: 1rem !important;
+    flex-wrap: nowrap !important;
+}
+
+.document-info-item {
+    display: inline-flex !important;
+    align-items: center !important;
+    white-space: nowrap !important;
+    gap: 0.25rem !important;
+    flex: 1 !important;
+    min-width: 0 !important;
+}
+
+.document-info-item i {
+    flex-shrink: 0 !important;
+    margin-right: 0.25rem !important;
+}
+
+.document-info-item span {
+    white-space: nowrap !important;
+}
+
+.document-info-item .text-truncate {
+    max-width: 100px !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+}
+
+/* Seção do associado */
+.associado-info-row {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    width: 100%;
+    gap: 1rem;
+}
+
+.associado-info-left {
+    display: flex;
+    align-items: center;
+    flex: 0 0 auto;
+}
+
+.associado-info-right {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    flex: 0 0 auto;
+}
+
+/* Status do documento */
+.document-item.status-pending {
+    border-left-color: var(--warning);
+}
+
+.document-item.status-signed {
+    border-left-color: var(--success);
+}
+
+.document-item.status-refused {
+    border-left-color: var(--danger);
+}
+
+.document-item.status-expired {
+    border-left-color: var(--secondary);
+}
+
+/* Badges de status */
+.document-status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    border: 1px solid transparent;
+}
+
+.document-status-badge.pending {
+    background: rgba(255, 193, 7, 0.1);
+    color: #856404;
+    border-color: rgba(255, 193, 7, 0.3);
+}
+
+.document-status-badge.signed {
+    background: rgba(40, 167, 69, 0.1);
+    color: #155724;
+    border-color: rgba(40, 167, 69, 0.3);
+}
+
+.document-status-badge.refused {
+    background: rgba(220, 53, 69, 0.1);
+    color: #721c24;
+    border-color: rgba(220, 53, 69, 0.3);
+}
+
+.document-status-badge.expired {
+    background: rgba(108, 117, 125, 0.1);
+    color: #495057;
+    border-color: rgba(108, 117, 125, 0.3);
+}
+
+/* Cards de estatísticas */
+.stats-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.stat-mini-card {
+    background: var(--white);
+    border-radius: var(--border-radius-lg);
+    padding: 1.5rem;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--gray-200);
+    text-align: center;
+    transition: var(--transition);
+}
+
+.stat-mini-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+.stat-mini-value {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    color: var(--primary);
+}
+
+.stat-mini-label {
+    color: var(--gray-600);
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+/* Estados de carregamento */
+.loading-skeleton {
+    background: linear-gradient(90deg, var(--gray-200) 25%, var(--gray-300) 50%, var(--gray-200) 75%);
+    background-size: 200% 100%;
+    animation: loading 1.5s infinite;
+    border-radius: var(--border-radius);
+    height: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+@keyframes loading {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+/* Estado vazio */
+.empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: var(--gray-600);
+    background: var(--white);
+    border-radius: var(--border-radius-lg);
+    border: 1px solid var(--gray-200);
+}
+
+.empty-state-icon {
+    font-size: 4rem;
+    color: var(--gray-400);
+    margin-bottom: 1rem;
+}
+
+.empty-state-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    color: var(--gray-700);
+}
+
+.empty-state-description {
+    font-size: 1rem;
+    margin-bottom: 2rem;
+    color: var(--gray-600);
+}
+
+/* Paginação */
+.paginacaoContainer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 2rem;
+    padding: 1rem;
+    background: var(--white);
+    border-radius: var(--border-radius-lg);
+    border: 1px solid var(--gray-200);
+}
+
+.paginacao {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.paginacao button {
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--gray-300);
+    background: var(--white);
+    color: var(--gray-700);
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.paginacao button:hover {
+    background: var(--gray-100);
+}
+
+.paginacao button.active {
+    background: var(--primary);
+    color: var(--white);
+    border-color: var(--primary);
+}
+
+.paginacao button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .filter-bar {
+        padding: 1rem;
+    }
+    
+    .filter-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .filter-group {
+        min-width: unset;
+        width: 100%;
+    }
+    
+    .stats-container {
+        grid-template-columns: 1fr;
+    }
+    
+    .paginacaoContainer {
+        flex-direction: column;
+        gap: 1rem;
+        text-align: center;
+    }
+    
+    .document-item {
+        padding: 1rem;
+    }
+    
+    /* Layout responsivo do documento */
+    .document-info-row {
+        flex-wrap: wrap !important;
+        gap: 0.5rem !important;
+    }
+    
+    .document-info-item {
+        flex: none !important;
+        min-width: 45% !important;
+        white-space: normal !important;
+    }
+    
+    .associado-info-row {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 0.5rem;
+    }
+    
+    .associado-info-right {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .filter-buttons {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .btn-filter {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .tag-filtro {
+        font-size: 0.7rem;
+        padding: 0.2rem 0.6rem;
+    }
+    
+    /* Layout mobile do documento */
+    .document-info-row {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 0.5rem !important;
+    }
+    
+    .document-info-item {
+        width: 100% !important;
+        min-width: unset !important;
+        white-space: normal !important;
+    }
+}
+
+.document-content .row .col-md-6 {
+    flex: 0 0 100% !important;
+    max-width: 100% !important;
+}
+
+/* Transformar document-meta em flexbox horizontal */
+.document-meta {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    gap: 1rem !important;
+    flex-wrap: nowrap !important;
+    width: 100% !important;
+}
+
+/* Cada meta-item deve ocupar espaço igual */
+.meta-item {
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.5rem !important;
+    flex: 1 !important;
+    min-width: 0 !important;
+    white-space: nowrap !important;
+}
+
+/* Ícones não devem encolher */
+.meta-item i {
+    flex-shrink: 0 !important;
+}
+
+/* Textos podem ser truncados se necessário */
+.meta-item span {
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+}
+
+/* Responsividade para tablets */
+@media (max-width: 768px) {
+    .document-meta {
+        flex-wrap: wrap !important;
+        gap: 0.75rem !important;
+    }
+    
+    .meta-item {
+        flex: 0 0 48% !important;
+        white-space: normal !important;
+    }
+    
+    .meta-item span {
+        white-space: normal !important;
+    }
+}
+
+/* Responsividade para mobile */
+@media (max-width: 480px) {
+    .document-meta {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 0.5rem !important;
+    }
+    
+    .meta-item {
+        flex: none !important;
+        width: 100% !important;
+    }
+}
+
+
+    </style>
 </head>
 
 <body>
@@ -314,18 +976,56 @@ $headerComponent = HeaderComponent::create([
 
                 <!-- Filter Bar -->
                 <div class="filter-bar">
-                    <input type="text" class="filter-input" id="searchInput" placeholder="Buscar por nome ou CPF...">
-                    <select class="filter-select" id="filterUrgencia">
-                        <option value="">Todas as prioridades</option>
-                        <option value="urgente">Urgente</option>
-                        <option value="normal">Normal</option>
+                    <!-- Filtro por status -->
+                    <select class="filter-select" id="filterStatus">
+                        <option value="">Todos os documentos</option>
+                        <option value="pending">📋 Aguardando Assinatura</option>
+                        <option value="signed">✅ Assinados</option>
+                        <option value="refused">❌ Recusados</option>
+                        <option value="expired">⏰ Expirados</option>
                     </select>
-                    <select class="filter-select" id="filterOrigem">
-                        <option value="">Todas as origens</option>
-                        <option value="FISICO">Físico</option>
-                        <option value="VIRTUAL">Virtual</option>
+                    
+                    <!-- Filtro de busca -->
+                    <input type="text" class="filter-input" id="searchInput" placeholder="Buscar por nome, CPF ou documento...">
+                    
+                    <!-- Filtro de ordenação -->
+                    <select class="filter-select" id="filterOrdenacao">
+                        <option value="desc">Mais recentes primeiro</option>
+                        <option value="asc">Mais antigos primeiro</option>
                     </select>
+                    
+                    <!-- Botão de atualizar -->
+                    <button class="btn-action secondary" onclick="atualizarDocumentos()" title="Atualizar lista">
+                        <i class="fas fa-sync-alt"></i>
+                        Atualizar
+                    </button>
+                    
+                    <!-- Indicador de filtros ativos -->
+                    <div id="filtrosAtivos" class="filtros-ativos" style="display: none;">
+                        <small class="text-muted">Filtros aplicados:</small>
+                        <div id="tagsFiltros" class="d-inline"></div>
+                        <button class="btn btn-sm btn-outline-secondary ms-2" onclick="limparFiltros()">
+                            <i class="fas fa-times"></i> Limpar
+                        </button>
+                    </div>
                 </div>
+
+
+
+<!-- PAGINAÇÃO -->
+<div class="d-flex justify-content-between align-items-center mb-3" id="paginacaoContainer" style="display: none;">
+    <div>
+        <small class="text-muted" id="infoPaginacao"></small>
+    </div>
+    <div class="btn-group" id="botoesNavegacao">
+        <button class="btn btn-outline-primary btn-sm" id="btnPaginaAnterior" onclick="navegarPagina(-1)" disabled>
+            <i class="fas fa-chevron-left"></i> Anterior
+        </button>
+        <button class="btn btn-outline-primary btn-sm" id="btnProximaPagina" onclick="navegarPagina(1)" disabled>
+            Próxima <i class="fas fa-chevron-right"></i>
+        </button>
+    </div>
+</div>
 
                 <!-- Documents List -->
                 <div class="documents-list" id="documentsList">
@@ -499,6 +1199,1181 @@ $headerComponent = HeaderComponent::create([
     <?php $headerComponent->renderJS(); ?>
 
     <script>
+
+        let documentosZapSign = [];
+let paginaAtual = 1;
+let statusFiltro = '';
+let termoBusca = '';
+let ordenacao = 'desc';
+let carregandoDocumentos = false;
+let estatisticasGlobais = {};
+
+// ===== FUNÇÃO PRINCIPAL ATUALIZADA =====
+
+/**
+ * Carrega documentos do ZapSign com filtros
+ */
+async function carregarDocumentosZapSign(resetarPagina = false) {
+    if (carregandoDocumentos) return;
+    
+    if (resetarPagina) paginaAtual = 1;
+    
+    carregandoDocumentos = true;
+    
+    // Obter valores dos filtros
+    statusFiltro = document.getElementById('filterStatus')?.value || '';
+    termoBusca = document.getElementById('searchInput')?.value || '';
+    ordenacao = document.getElementById('filterOrdenacao')?.value || 'desc';
+    
+    const container = document.getElementById('documentsList');
+    
+    if (!container) {
+        console.error('Container de documentos não encontrado');
+        carregandoDocumentos = false;
+        return;
+    }
+    
+    // Mostrar loading
+    if (resetarPagina || paginaAtual === 1) {
+        mostrarSkeletonLoading();
+    }
+    
+    try {
+        console.log('🔄 Carregando documentos ZapSign...', {
+            pagina: paginaAtual,
+            status: statusFiltro,
+            busca: termoBusca,
+            ordenacao: ordenacao
+        });
+        
+        // Monta parâmetros da URL
+        const params = new URLSearchParams({
+            page: paginaAtual,
+            sort_order: ordenacao
+        });
+        
+        if (statusFiltro) params.append('status', statusFiltro);
+        if (termoBusca) params.append('search', termoBusca);
+        
+        const response = await fetch(`../api/documentos/zapsign_listar_documentos.php?${params}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            credentials: 'same-origin'
+        });
+        
+        console.log('📡 Response status:', response.status);
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('Erro HTTP:', response.status, errorText);
+            throw new Error(`Erro HTTP ${response.status}: ${errorText}`);
+        }
+        
+        const data = await response.json();
+        console.log('✅ Resposta da API:', data);
+        
+        if (data.status === 'success') {
+            documentosZapSign = data.data || [];
+            estatisticasGlobais = data.estatisticas || {};
+            
+            renderizarDocumentosZapSign(documentosZapSign);
+            atualizarPaginacao(data.paginacao || {});
+            atualizarEstatisticasResumo();
+            atualizarIndicadorFiltros();
+            
+            notifications.show(`${documentosZapSign.length} documento(s) carregado(s)`, 'success', 3000);
+        } else {
+            throw new Error(data.message || 'Erro desconhecido ao carregar documentos');
+        }
+        
+    } catch (error) {
+        console.error('❌ Erro ao carregar documentos:', error);
+        mostrarErroCarregamento(error.message);
+        notifications.show('Erro ao carregar documentos: ' + error.message, 'error');
+    } finally {
+        carregandoDocumentos = false;
+    }
+}
+
+/**
+ * Renderiza a lista de documentos ZapSign
+ */
+function renderizarDocumentosZapSign(documentos) {
+    const container = document.getElementById('documentsList');
+    
+    if (!container) {
+        console.error('Container de documentos não encontrado');
+        return;
+    }
+    
+    container.innerHTML = '';
+    
+    if (documentos.length === 0) {
+        mostrarEstadoVazio();
+        return;
+    }
+    
+    documentos.forEach(doc => {
+        const itemDiv = document.createElement('div');
+        itemDiv.className = `document-item status-${doc.status}`;
+        itemDiv.dataset.docId = doc.id;
+        itemDiv.dataset.token = doc.token;
+        
+        // Define ícone baseado no status
+        const statusIcon = getStatusIcon(doc.status);
+        const actionButtons = getActionButtons(doc);
+        
+        itemDiv.innerHTML = `
+            <div class="document-content">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div class="d-flex align-items-center">
+                        <div class="document-icon-wrapper me-3">
+                            <i class="fas fa-file-pdf text-danger"></i>
+                        </div>
+                        <div>
+                            <h5 class="document-title mb-1">${escapeHtml(doc.name)}</h5>
+                            <span class="document-status-badge ${doc.status}">
+                                ${statusIcon} ${doc.status_label}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="document-actions">
+                        ${actionButtons}
+                    </div>
+                </div>
+                
+                <div class="row">
+                    
+                    <div class="col-md-6">
+                        <div class="document-meta">
+                            <div class="meta-item">
+                                <i class="fas fa-calendar-plus text-primary"></i>
+                                <span><strong>Criado em:</strong> ${doc.created_at_formatted}</span>
+                            </div>
+                            <div class="meta-item">
+                                <i class="fas fa-clock text-info"></i>
+                                <span><strong>Atualizado:</strong> ${doc.last_update_formatted}</span>
+                            </div>
+                            <div class="meta-item">
+                                <i class="fas fa-hourglass-half text-warning"></i>
+                                <span><strong>Tempo:</strong> ${doc.tempo_desde_criacao}</span>
+                            </div>
+                            <div class="meta-item">
+                                <i class="fas fa-folder text-secondary"></i>
+                                <span><strong>Pasta:</strong> ${doc.folder_path}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                ${doc.associado?.id ? `
+                <div class="mt-3 pt-3 border-top">
+                    <small class="text-muted">
+                        <i class="fas fa-link"></i>
+                        <strong>Vinculado ao associado ID:</strong> ${doc.associado.id} | 
+                        <strong>Situação:</strong> ${escapeHtml(doc.associado.situacao || 'N/A')} |
+                        <strong>Data filiação:</strong> ${formatarData(doc.associado.data_filiacao)}
+                    </small>
+                </div>
+                ` : ''}
+            </div>
+        `;
+        
+        container.appendChild(itemDiv);
+    });
+}
+
+/**
+ * Retorna ícone baseado no status
+ */
+function getStatusIcon(status) {
+    const icons = {
+        'pending': '<i class="fas fa-clock"></i>',
+        'signed': '<i class="fas fa-check-circle"></i>',
+        'refused': '<i class="fas fa-times-circle"></i>',
+        'expired': '<i class="fas fa-hourglass-end"></i>'
+    };
+    
+    return icons[status] || '<i class="fas fa-question-circle"></i>';
+}
+
+/**
+ * Retorna botões de ação baseados no status
+ */
+
+/**
+ * Atualiza os botões de ação - com botão para presidente assinar
+ */
+function getActionButtons(doc) {
+    let buttons = '';
+    
+    // Botão visualizar (sempre disponível se tiver arquivo)
+    if (doc.original_file || doc.signed_file) {
+        buttons += `
+            <button class="btn-action secondary me-2" onclick="visualizarDocumentoZapSign('${doc.token}', '${doc.status}')" title="Visualizar documento">
+                <i class="fas fa-eye"></i>
+                Visualizar
+            </button>
+        `;
+    }
+    
+    // ✅ BOTÃO PRESIDENTE ASSINAR
+    // Lógica: Se documento está pending E já tem signed_file (associado assinou), presidente pode assinar
+    if (doc.status === 'pending' && doc.signed_file) {
+        buttons += `
+            <button class="btn-action primary me-2" onclick="abrirLinkAssinaturaPresidente('${doc.token}')" title="Assinar como presidente">
+                <i class="fas fa-signature"></i>
+                Assinar
+            </button>
+        `;
+    }
+    
+    // Botões específicos por status
+    switch (doc.status) {
+        case 'pending':
+            buttons += `
+                <button class="btn-action warning" onclick="acompanharDocumento('${doc.token}')" title="Ver detalhes e signatários">
+                    <i class="fas fa-users"></i>
+                    Detalhes
+                </button>
+            `;
+            break;
+            
+        case 'signed':
+            if (doc.signed_file) {
+                buttons += `
+                    <button class="btn-action success" onclick="baixarDocumentoAssinado('${doc.token}')" title="Baixar documento assinado">
+                        <i class="fas fa-download"></i>
+                        Baixar Assinado
+                    </button>
+                `;
+            }
+            break;
+            
+        case 'refused':
+            buttons += `
+                <button class="btn-action danger" onclick="verMotivoRecusa('${doc.token}')" title="Ver detalhes da recusa">
+                    <i class="fas fa-info-circle"></i>
+                    Ver Detalhes
+                </button>
+            `;
+            break;
+            
+        case 'expired':
+            buttons += `
+                <button class="btn-action secondary" onclick="reenviarDocumento('${doc.token}')" title="Reenviar documento">
+                    <i class="fas fa-redo"></i>
+                    Reenviar
+                </button>
+            `;
+            break;
+    }
+    
+    return buttons;
+}
+
+function precisaAssinaturaPresidente(doc) {
+    // Verifica se existe informação dos signatários
+    if (!doc.signers || !Array.isArray(doc.signers) || doc.signers.length < 2) {
+        return false; // Se não tem info dos signatários, não mostra botão
+    }
+    
+    const associado = doc.signers[0]; // Primeiro signatário (associado)
+    const presidente = doc.signers[1]; // Segundo signatário (presidente)
+    
+    // Verifica se associado JÁ assinou
+    const associadoAssinou = associado && associado.status === 'signed';
+    
+    // Verifica se presidente ainda NÃO assinou
+    const presidenteNaoAssinou = presidente && presidente.status !== 'signed';
+    
+    // Só mostra botão se associado assinou E presidente não assinou
+    return associadoAssinou && presidenteNaoAssinou;
+}
+
+async function abrirLinkAssinaturaPresidente(token) {
+    try {
+        notifications.show('Buscando link de assinatura...', 'info', 2000);
+        
+        const response = await fetch(`../api/documentos/zapsign_detalhar_documento.php?token=${token}`);
+        const data = await response.json();
+        
+        if (data.status === 'success' && data.data.signers) {
+            // Pega o segundo signatário (presidente) - índice 1
+            const presidente = data.data.signers[1];
+            
+            if (!presidente) {
+                throw new Error('Presidente (signatário 2) não encontrado');
+            }
+            
+            if (!presidente.sign_url) {
+                throw new Error('Link de assinatura do presidente não disponível');
+            }
+            
+            // Abre link específico de assinatura do presidente
+            window.open(presidente.sign_url, '_blank');
+            notifications.show('Link de assinatura aberto!', 'success', 3000);
+            
+        } else {
+            throw new Error('Dados do documento não encontrados');
+        }
+        
+    } catch (error) {
+        console.error('Erro ao abrir link de assinatura:', error);
+        notifications.show('Erro: ' + error.message, 'error');
+    }
+}
+/**
+ * Mostra skeleton loading
+ */
+function mostrarSkeletonLoading() {
+    const container = document.getElementById('documentsList');
+    container.innerHTML = '';
+    
+    for (let i = 0; i < 3; i++) {
+        const skeleton = document.createElement('div');
+        skeleton.className = 'document-item loading-skeleton';
+        skeleton.style.height = '150px';
+        skeleton.innerHTML = `
+            <div class="d-flex">
+                <div style="width: 60px; height: 60px; background: #e0e0e0; border-radius: 8px; margin-right: 1rem;"></div>
+                <div style="flex: 1;">
+                    <div style="height: 20px; background: #e0e0e0; border-radius: 4px; margin-bottom: 0.5rem; width: 60%;"></div>
+                    <div style="height: 16px; background: #e0e0e0; border-radius: 4px; margin-bottom: 0.5rem; width: 40%;"></div>
+                    <div style="height: 16px; background: #e0e0e0; border-radius: 4px; width: 80%;"></div>
+                </div>
+            </div>
+        `;
+        container.appendChild(skeleton);
+    }
+}
+
+/**
+ * Mostra estado vazio
+ */
+function mostrarEstadoVazio() {
+    const container = document.getElementById('documentsList');
+    
+    let mensagem = 'Nenhum documento encontrado';
+    let icone = 'fas fa-inbox';
+    
+    if (statusFiltro) {
+        const statusLabels = {
+            'pending': 'aguardando assinatura',
+            'signed': 'assinados',
+            'refused': 'recusados',
+            'expired': 'expirados'
+        };
+        mensagem = `Nenhum documento ${statusLabels[statusFiltro] || 'com este status'} encontrado`;
+        icone = 'fas fa-filter';
+    }
+    
+    if (termoBusca) {
+        mensagem += ` para "${termoBusca}"`;
+        icone = 'fas fa-search';
+    }
+    
+    container.innerHTML = `
+        <div class="empty-state">
+            <i class="${icone} empty-state-icon"></i>
+            <h5 class="empty-state-title">${mensagem}</h5>
+            <p class="empty-state-description">
+                ${statusFiltro || termoBusca ? 
+                    'Tente ajustar os filtros ou fazer uma nova busca.' : 
+                    'Ainda não há documentos ZapSign registrados no sistema.'
+                }
+            </p>
+            ${statusFiltro || termoBusca ? `
+                <button class="btn-action primary" onclick="limparFiltros()">
+                    <i class="fas fa-times"></i>
+                    Limpar Filtros
+                </button>
+            ` : ''}
+        </div>
+    `;
+}
+
+/**
+ * Mostra erro de carregamento
+ */
+function mostrarErroCarregamento(mensagem) {
+    const container = document.getElementById('documentsList');
+    container.innerHTML = `
+        <div class="empty-state">
+            <i class="fas fa-exclamation-triangle empty-state-icon text-danger"></i>
+            <h5 class="empty-state-title">Erro ao carregar documentos</h5>
+            <p class="empty-state-description">${escapeHtml(mensagem)}</p>
+            <button class="btn-action primary" onclick="carregarDocumentosZapSign(true)">
+                <i class="fas fa-redo"></i>
+                Tentar Novamente
+            </button>
+        </div>
+    `;
+}
+
+/**
+ * Atualiza controles de paginação
+ */
+function atualizarPaginacao(paginacao) {
+    const container = document.getElementById('paginacaoContainer');
+    const infoPaginacao = document.getElementById('infoPaginacao');
+    const btnAnterior = document.getElementById('btnPaginaAnterior');
+    const btnProxima = document.getElementById('btnProximaPagina');
+    
+    if (!container) return;
+    
+    if (paginacao.total_itens > 0) {
+        container.style.display = 'flex';
+        
+        // Info da paginação
+        const inicio = ((paginaAtual - 1) * 25) + 1;
+        const fim = Math.min(paginaAtual * 25, paginacao.total_itens);
+        infoPaginacao.textContent = `Mostrando ${inicio}-${fim} de ${paginacao.total_itens} documentos`;
+        
+        // Botões de navegação
+        btnAnterior.disabled = !paginacao.tem_anterior;
+        btnProxima.disabled = !paginacao.tem_proxima;
+    } else {
+        container.style.display = 'none';
+    }
+}
+
+/**
+ * Navega entre páginas
+ */
+function navegarPagina(direcao) {
+    if (carregandoDocumentos) return;
+    
+    const novaPagina = paginaAtual + direcao;
+    if (novaPagina < 1) return;
+    
+    paginaAtual = novaPagina;
+    carregarDocumentosZapSign();
+}
+
+/**
+ * Atualiza estatísticas resumidas
+ */
+function atualizarEstatisticasResumo() {
+    // Esta função precisaria de dados adicionais da API
+    // Por enquanto, vamos esconder as estatísticas
+    const container = document.getElementById('estatisticasResumo');
+    if (container) {
+        container.style.display = 'none';
+    }
+}
+
+/**
+ * Atualiza indicador de filtros ativos
+ */
+function atualizarIndicadorFiltros() {
+    const container = document.getElementById('filtrosAtivos');
+    const tagsContainer = document.getElementById('tagsFiltros');
+    
+    if (!container || !tagsContainer) return;
+    
+    const filtrosAtivos = [];
+    
+    if (statusFiltro) {
+        const statusLabels = {
+            'pending': 'Aguardando Assinatura',
+            'signed': 'Assinados',
+            'refused': 'Recusados',
+            'expired': 'Expirados'
+        };
+        filtrosAtivos.push(`Status: ${statusLabels[statusFiltro]}`);
+    }
+    
+    if (termoBusca) {
+        filtrosAtivos.push(`Busca: "${termoBusca}"`);
+    }
+    
+    if (ordenacao !== 'desc') {
+        filtrosAtivos.push('Ordem: Mais antigos primeiro');
+    }
+    
+    if (filtrosAtivos.length > 0) {
+        tagsContainer.innerHTML = filtrosAtivos.map(filtro => 
+            `<span class="tag-filtro">${escapeHtml(filtro)}</span>`
+        ).join('');
+        container.style.display = 'block';
+    } else {
+        container.style.display = 'none';
+    }
+}
+
+/**
+ * Limpa todos os filtros
+ */
+function limparFiltros() {
+    document.getElementById('filterStatus').value = '';
+    document.getElementById('searchInput').value = '';
+    document.getElementById('filterOrdenacao').value = 'desc';
+    
+    statusFiltro = '';
+    termoBusca = '';
+    ordenacao = 'desc';
+    paginaAtual = 1;
+    
+    carregarDocumentosZapSign(true);
+}
+
+/**
+ * Atualiza documentos (botão refresh)
+ */
+function atualizarDocumentos() {
+    carregarDocumentosZapSign(true);
+}
+
+// ===== FUNÇÕES DE AÇÕES DOS DOCUMENTOS =====
+
+/**
+ * Visualiza documento do ZapSign
+ */
+function visualizarDocumentoZapSign(token, status) {
+    // Busca o documento na lista atual
+    const documento = documentosZapSign.find(doc => doc.token === token);
+    
+    if (!documento) {
+        notifications.show('Documento não encontrado na lista atual', 'error');
+        return;
+    }
+    
+    let linkParaAbrir = null;
+    
+    // Determina qual link usar baseado no status e disponibilidade
+    if (status === 'signed' && documento.signed_file) {
+        linkParaAbrir = documento.signed_file;
+    } else if (documento.original_file) {
+        linkParaAbrir = documento.original_file;
+    } else {
+        notifications.show('Nenhum arquivo disponível para visualização', 'warning');
+        return;
+    }
+    
+    // Abrir documento em nova aba
+    window.open(linkParaAbrir, '_blank');
+}
+/**
+ * Acompanha documento pendente
+ */
+function acompanharDocumento(token) {
+    const documento = documentosZapSign.find(doc => doc.token === token);
+    
+    if (!documento) {
+        notifications.show('Documento não encontrado', 'error');
+        return;
+    }
+    
+    // Modal simples com informações básicas
+    const modal = document.createElement('div');
+    modal.className = 'modal fade';
+    modal.innerHTML = `
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-info-circle"></i>
+                        Informações do Documento
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <table class="table table-sm">
+                        <tr>
+                            <td><strong>Nome:</strong></td>
+                            <td>${escapeHtml(documento.name || 'N/A')}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Status:</strong></td>
+                            <td>
+                                <span class="badge bg-${getStatusBadgeClass(documento.status)}">
+                                    ${documento.status_label || documento.status}
+                                </span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><strong>Token:</strong></td>
+                            <td><code>${documento.token}</code></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Criado:</strong></td>
+                            <td>${documento.created_at_formatted || 'N/A'}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Tempo:</strong></td>
+                            <td>${documento.tempo_desde_criacao || 'N/A'}</td>
+                        </tr>
+                    </table>
+                    
+                    ${documento.associado && documento.associado.nome ? `
+                        <hr>
+                        <h6>Associado Vinculado</h6>
+                        <p>
+                            <strong>Nome:</strong> ${escapeHtml(documento.associado.nome)}<br>
+                            <strong>CPF:</strong> ${documento.associado.cpf_formatted || 'N/A'}<br>
+                            <strong>Email:</strong> ${escapeHtml(documento.associado.email || 'N/A')}
+                        </p>
+                    ` : ''}
+                    
+                    <div class="d-flex gap-2 mt-3">
+                        ${documento.original_file ? `
+                            <button class="btn btn-outline-primary btn-sm" onclick="window.open('${documento.original_file}', '_blank')">
+                                <i class="fas fa-file-pdf"></i> Ver Original
+                            </button>
+                        ` : ''}
+                        ${documento.signed_file ? `
+                            <button class="btn btn-outline-success btn-sm" onclick="window.open('${documento.signed_file}', '_blank')">
+                                <i class="fas fa-file-pdf"></i> Ver Assinado
+                            </button>
+                        ` : ''}
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    const bsModal = new bootstrap.Modal(modal);
+    bsModal.show();
+    
+    modal.addEventListener('hidden.bs.modal', () => {
+        modal.remove();
+    });
+}
+
+
+/**
+ * Baixa documento assinado
+ */
+function baixarDocumentoAssinado(token) {
+    const documento = documentosZapSign.find(doc => doc.token === token);
+    
+    if (!documento) {
+        notifications.show('Documento não encontrado', 'error');
+        return;
+    }
+    
+    if (!documento.signed_file) {
+        notifications.show('Documento assinado não disponível', 'warning');
+        return;
+    }
+    
+    // Criar link temporário para download
+    const link = document.createElement('a');
+    link.href = documento.signed_file;
+    link.download = `${documento.name}_assinado.pdf`;
+    link.target = '_blank';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    notifications.show('Download iniciado', 'success');
+}
+/**
+ * Ver motivo da recusa
+ */
+function verMotivoRecusa(token) {
+    acompanharDocumento(token);
+}
+
+/**
+ * Reenvia documento expirado
+ */
+function reenviarDocumento(token) {
+    notifications.show('Funcionalidade de reenvio em desenvolvimento', 'info');
+    // Implementar chamada para API de reenvio
+}
+
+// ===== CONFIGURAÇÃO DE EVENTOS =====
+
+/**
+ * Configura eventos dos filtros
+ */
+function configurarFiltrosZapSign() {
+    const filterStatus = document.getElementById('filterStatus');
+    const searchInput = document.getElementById('searchInput');
+    const filterOrdenacao = document.getElementById('filterOrdenacao');
+    
+    if (filterStatus) {
+        filterStatus.addEventListener('change', () => {
+            carregarDocumentosZapSign(true);
+        });
+    }
+    
+    if (searchInput) {
+        searchInput.addEventListener('input', debounce(() => {
+            carregarDocumentosZapSign(true);
+        }, 500));
+    }
+    
+    if (filterOrdenacao) {
+        filterOrdenacao.addEventListener('change', () => {
+            carregarDocumentosZapSign(true);
+        });
+    }
+}
+
+// ===== FUNÇÕES AUXILIARES =====
+
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function formatarData(data) {
+    if (!data) return 'N/A';
+    try {
+        return new Date(data).toLocaleDateString('pt-BR');
+    } catch (e) {
+        return 'N/A';
+    }
+}
+
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
+
+
+
+
+
+async function carregarEstatisticasZapSign() {
+    try {
+        console.log('🔄 Carregando estatísticas ZapSign...');
+        
+        const response = await fetch('../api/documentos/zapsign_estatisticas.php', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            credentials: 'same-origin'
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Erro HTTP ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data.status === 'success') {
+            atualizarCardsEstatisticas(data.data);
+            atualizarEstatisticasResumoZapSign(data.data);
+            
+            if (data.cache) {
+                console.log('📊 Estatísticas carregadas do cache');
+            } else {
+                console.log('📊 Estatísticas obtidas da API ZapSign');
+            }
+            
+            // Atualizar novamente em 5 minutos se não for cache
+            if (!data.cache) {
+                setTimeout(carregarEstatisticasZapSign, 5 * 60 * 1000);
+            }
+        } else {
+            throw new Error(data.message || 'Erro desconhecido');
+        }
+        
+    } catch (error) {
+        console.error('❌ Erro ao carregar estatísticas:', error);
+        mostrarEstatisticasErro();
+        
+        // Tentar novamente em 30 segundos em caso de erro
+        setTimeout(carregarEstatisticasZapSign, 30 * 1000);
+    }
+}
+
+/**
+ * Atualiza os cards principais de estatísticas
+ */
+function atualizarCardsEstatisticas(dados) {
+    // Card 1: Aguardando Assinatura
+    const aguardandoElement = document.querySelector('.stat-card:nth-child(1) .stat-value');
+    const aguardandoStatus = document.querySelector('.stat-card:nth-child(1) .stat-change');
+    
+    if (aguardandoElement) {
+        aguardandoElement.textContent = dados.pending || 0;
+        
+        if (aguardandoStatus) {
+            if (dados.pending > 0) {
+                aguardandoStatus.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Requer atenção';
+                aguardandoStatus.className = 'stat-change negative';
+            } else {
+                aguardandoStatus.innerHTML = '<i class="fas fa-check-circle"></i> Tudo em dia';
+                aguardandoStatus.className = 'stat-change positive';
+            }
+        }
+    }
+    
+    // Card 2: Assinados Hoje (usaremos documentos recentes)
+    const assinadosHojeElement = document.querySelector('.stat-card:nth-child(2) .stat-value');
+    const assinadosHojeStatus = document.querySelector('.stat-card:nth-child(2) .stat-change');
+    
+    if (assinadosHojeElement) {
+        // Contar documentos assinados hoje
+        const hoje = new Date().toDateString();
+        const assinadosHoje = (dados.documentos_recentes || []).filter(doc => {
+            if (doc.status === 'signed' && doc.created_at) {
+                const docDate = new Date(doc.created_at).toDateString();
+                return docDate === hoje;
+            }
+            return false;
+        }).length;
+        
+        assinadosHojeElement.textContent = assinadosHoje;
+        
+        if (assinadosHojeStatus) {
+            assinadosHojeStatus.innerHTML = '<i class="fas fa-arrow-up"></i> Produtividade';
+            assinadosHojeStatus.className = 'stat-change positive';
+        }
+    }
+    
+    // Card 3: Total Assinados
+    const totalAssinadosElement = document.querySelector('.stat-card:nth-child(3) .stat-value');
+    if (totalAssinadosElement) {
+        totalAssinadosElement.textContent = dados.signed || 0;
+    }
+    
+    // Card 4: Tempo Médio
+    const tempoMedioElement = document.querySelector('.stat-card:nth-child(4) .stat-value');
+    if (tempoMedioElement) {
+        const tempo = dados.tempo_medio_assinatura || 0;
+        tempoMedioElement.textContent = tempo > 0 ? `${tempo}h` : '-';
+    }
+    
+    // Atualizar ícones dos cards baseado no status
+    atualizarIconesCards(dados);
+}
+
+/**
+ * Atualiza ícones dos cards baseado nos dados
+ */
+function atualizarIconesCards(dados) {
+    const cards = document.querySelectorAll('.stat-card');
+    
+    // Card 1: Cor baseada em pendentes
+    if (cards[0]) {
+        const icon = cards[0].querySelector('.stat-icon');
+        if (icon) {
+            if (dados.pending > 5) {
+                icon.className = 'stat-icon danger';
+            } else if (dados.pending > 0) {
+                icon.className = 'stat-icon warning';
+            } else {
+                icon.className = 'stat-icon success';
+            }
+        }
+    }
+    
+    // Card 2: Sempre success para assinados
+    if (cards[1]) {
+        const icon = cards[1].querySelector('.stat-icon');
+        if (icon) {
+            icon.className = 'stat-icon success';
+        }
+    }
+    
+    // Card 3: Primary para total
+    if (cards[2]) {
+        const icon = cards[2].querySelector('.stat-icon');
+        if (icon) {
+            icon.className = 'stat-icon primary';
+        }
+    }
+    
+    // Card 4: Info para tempo médio
+    if (cards[3]) {
+        const icon = cards[3].querySelector('.stat-icon');
+        if (icon) {
+            if (dados.tempo_medio_assinatura > 48) {
+                icon.className = 'stat-icon warning';
+            } else if (dados.tempo_medio_assinatura > 24) {
+                icon.className = 'stat-icon info';
+            } else {
+                icon.className = 'stat-icon success';
+            }
+        }
+    }
+}
+
+/**
+ * Atualiza estatísticas resumidas (mini cards)
+ */
+function atualizarEstatisticasResumoZapSign(dados) {
+    const container = document.getElementById('estatisticasResumo');
+    
+    if (!container) return;
+    
+    // Atualizar valores dos mini cards
+    const elements = {
+        'statPendentes': dados.pending || 0,
+        'statAssinados': dados.signed || 0,
+        'statRecusados': dados.refused || 0,
+        'statExpirados': dados.expired || 0
+    };
+    
+    Object.entries(elements).forEach(([id, value]) => {
+        const element = document.getElementById(id);
+        if (element) {
+            element.textContent = value;
+            
+            // Adicionar efeito de contagem animada
+            animarContador(element, 0, value, 1000);
+        }
+    });
+    
+    // Mostrar container se tiver dados
+    if (dados.total > 0) {
+        container.style.display = 'block';
+        
+        // Adicionar informações adicionais
+        adicionarInfoAdicional(container, dados);
+    }
+}
+
+/**
+ * Anima contador de números
+ */
+function animarContador(element, start, end, duration) {
+    if (start === end) {
+        element.textContent = end;
+        return;
+    }
+    
+    const range = end - start;
+    const startTime = performance.now();
+    
+    function updateCounter(currentTime) {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        
+        const currentValue = Math.floor(start + (range * progress));
+        element.textContent = currentValue;
+        
+        if (progress < 1) {
+            requestAnimationFrame(updateCounter);
+        } else {
+            element.textContent = end;
+        }
+    }
+    
+    requestAnimationFrame(updateCounter);
+}
+
+/**
+ * Adiciona informações adicionais às estatísticas
+ */
+function adicionarInfoAdicional(container, dados) {
+    // Remove info adicional existente
+    const existingInfo = container.querySelector('.info-adicional');
+    if (existingInfo) {
+        existingInfo.remove();
+    }
+    
+    // Criar nova info adicional
+    const infoDiv = document.createElement('div');
+    infoDiv.className = 'info-adicional mt-3 pt-3 border-top';
+    
+    let infoHtml = `
+        <div class="row text-center">
+            <div class="col-md-3">
+                <small class="text-muted d-block">Taxa de Assinatura</small>
+                <strong class="text-success">${dados.taxa_assinatura || 0}%</strong>
+            </div>
+            <div class="col-md-3">
+                <small class="text-muted d-block">Total de Documentos</small>
+                <strong class="text-primary">${dados.total || 0}</strong>
+            </div>
+            <div class="col-md-3">
+                <small class="text-muted d-block">Tempo Médio</small>
+                <strong class="text-info">${dados.tempo_medio_assinatura || 0}h</strong>
+            </div>
+            <div class="col-md-3">
+                <small class="text-muted d-block">Última Atualização</small>
+                <strong class="text-secondary">${formatarHora(dados.ultima_atualizacao)}</strong>
+            </div>
+        </div>
+    `;
+    
+    // Adicionar documentos urgentes se existirem
+    if (dados.documentos_urgentes && dados.documentos_urgentes.length > 0) {
+        infoHtml += `
+            <div class="mt-3">
+                <h6 class="text-warning mb-2">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    Documentos Urgentes (${dados.documentos_urgentes.length})
+                </h6>
+                <div class="row">
+        `;
+        
+        dados.documentos_urgentes.slice(0, 3).forEach(doc => {
+            infoHtml += `
+                <div class="col-md-4 mb-2">
+                    <div class="p-2 bg-warning bg-opacity-10 rounded">
+                        <small class="d-block">
+                            <strong>${escapeHtml(doc.nome)}</strong><br>
+                            CPF: ${doc.cpf}<br>
+                            <span class="text-danger">${doc.dias_pendente} dias aguardando</span>
+                        </small>
+                    </div>
+                </div>
+            `;
+        });
+        
+        infoHtml += '</div></div>';
+    }
+    
+    // Adicionar documentos recentes
+    if (dados.documentos_recentes && dados.documentos_recentes.length > 0) {
+        infoHtml += `
+            <div class="mt-3">
+                <h6 class="text-info mb-2">
+                    <i class="fas fa-clock"></i>
+                    Documentos Recentes (${Math.min(dados.documentos_recentes.length, 5)})
+                </h6>
+                <div class="row">
+        `;
+        
+        dados.documentos_recentes.slice(0, 5).forEach(doc => {
+            const statusClass = getStatusBadgeClass(doc.status);
+            infoHtml += `
+                <div class="col-md-2 mb-2">
+                    <div class="p-2 border rounded text-center">
+                        <small class="d-block">
+                            <span class="badge bg-${statusClass} mb-1">${doc.status_label}</span><br>
+                            ${doc.tempo_desde_criacao}
+                        </small>
+                    </div>
+                </div>
+            `;
+        });
+        
+        infoHtml += '</div></div>';
+    }
+    
+    infoDiv.innerHTML = infoHtml;
+    container.appendChild(infoDiv);
+}
+
+/**
+ * Retorna classe CSS para badge de status
+ */
+function getStatusBadgeClass(status) {
+    const classes = {
+        'pending': 'warning',
+        'signed': 'success',
+        'refused': 'danger',
+        'expired': 'secondary'
+    };
+    
+    return classes[status] || 'secondary';
+}
+
+/**
+ * Mostra erro nas estatísticas
+ */
+function mostrarEstatisticasErro() {
+    // Zerar todos os valores
+    const elements = [
+        '.stat-card .stat-value',
+        '#statPendentes',
+        '#statAssinados', 
+        '#statRecusados',
+        '#statExpirados'
+    ];
+    
+    elements.forEach(selector => {
+        const element = document.querySelector(selector);
+        if (element) {
+            element.textContent = '-';
+        }
+    });
+    
+    // Mostrar mensagem de erro nos status changes
+    const statusChanges = document.querySelectorAll('.stat-change');
+    statusChanges.forEach(element => {
+        element.innerHTML = '<i class="fas fa-exclamation-circle"></i> Erro ao carregar';
+        element.className = 'stat-change negative';
+    });
+    
+    notifications.show('Erro ao carregar estatísticas do ZapSign. Tentando novamente...', 'warning', 5000);
+}
+
+/**
+ * Formatar horas para exibição
+ */
+function formatarHora(dataHora) {
+    if (!dataHora) return '-';
+    
+    try {
+        const date = new Date(dataHora);
+        return date.toLocaleTimeString('pt-BR', {
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    } catch (e) {
+        return '-';
+    }
+}
+
+/**
+ * Força atualização das estatísticas
+ */
+function forcarAtualizacaoEstatisticas() {
+    // Limpar cache forçando nova requisição
+    carregarEstatisticasZapSign();
+    notifications.show('Atualizando estatísticas...', 'info', 2000);
+}
+
+// ===== INTEGRAÇÃO COM SISTEMA EXISTENTE =====
+
+/**
+ * Substitui a função original de carregar estatísticas
+ */
+function carregarEstatisticasPresidencia() {
+    return carregarEstatisticasZapSign();
+}
+
+/**
+ * Atualiza contadores (integração com sistema existente)
+ */
+function atualizarContadores() {
+    // Mantém a funcionalidade original se necessário
+    const totalPendentes = documentosZapSign.filter(doc => doc.status === 'pending').length;
+    
+    if (window.updateNotificationCount) {
+        window.updateNotificationCount(totalPendentes);
+    }
+    
+    // Força atualização das estatísticas se há mudança significativa
+    const ultimoTotal = localStorage.getItem('ultimo_total_documentos');
+    const totalAtual = documentosZapSign.length;
+    
+    if (!ultimoTotal || Math.abs(parseInt(ultimoTotal) - totalAtual) > 0) {
+        localStorage.setItem('ultimo_total_documentos', totalAtual.toString());
+        setTimeout(carregarEstatisticasZapSign, 2000); // Aguarda 2s para atualizar estatísticas
+    }
+}
+
         // ===== CLASSES E SISTEMAS AUXILIARES =====
 
         // Sistema de Notificações Toast
@@ -679,6 +2554,36 @@ $headerComponent = HeaderComponent::create([
             configurarUpload();
             configurarMetodoAssinatura();
             configurarEventos();
+            configurarFiltrosZapSign();
+    
+            // Carregar documentos ZapSign em vez dos documentos locais
+            if (temPermissao) {
+                carregarDocumentosZapSign(true);
+            }
+
+
+                // Carregar estatísticas ZapSign se tiver permissão
+    if (temPermissao) {
+        // Aguardar um pouco para não sobrecarregar
+        setTimeout(carregarEstatisticasZapSign, 1000);
+        
+        // Configurar refresh automático das estatísticas (a cada 5 minutos)
+        setInterval(carregarEstatisticasZapSign, 5 * 60 * 1000);
+    }
+    
+    // Adicionar botão de refresh manual nas estatísticas se não existir
+    const statsGrid = document.querySelector('.stats-grid');
+    if (statsGrid && temPermissao) {
+        const refreshBtn = document.createElement('button');
+        refreshBtn.className = 'btn btn-sm btn-outline-secondary position-absolute';
+        refreshBtn.style.cssText = 'top: 10px; right: 10px; z-index: 10;';
+        refreshBtn.innerHTML = '<i class="fas fa-sync-alt"></i>';
+        refreshBtn.title = 'Atualizar estatísticas';
+        refreshBtn.onclick = forcarAtualizacaoEstatisticas;
+        
+        statsGrid.style.position = 'relative';
+        statsGrid.appendChild(refreshBtn);
+    }
             
             // Iniciar auto-update
             autoUpdater.start();
@@ -687,105 +2592,29 @@ $headerComponent = HeaderComponent::create([
         // ===== FUNÇÕES PRINCIPAIS - CORRIGIDAS =====
 
         // Carregar documentos pendentes - CORRIGIDA
-        async function carregarDocumentosPendentes() {
-            // Verificar permissão primeiro
-            if (!temPermissao) {
-                console.log('❌ Sem permissão para carregar documentos');
-                return;
-            }
-            
-            const container = document.getElementById('documentsList');
-            
-            // Verificar cache primeiro
-            const cached = cache.get('documentos_pendentes');
-            if (cached) {
-                documentosPendentes = cached;
-                renderizarDocumentos(cached);
-                atualizarContadores();
-                return;
-            }
-            
-            // Mostra loading
-            container.innerHTML = `
-                <div class="text-center py-5">
-                    <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">Carregando...</span>
-                    </div>
-                    <p class="text-muted mt-3">Carregando documentos pendentes...</p>
-                </div>
-            `;
+async function carregarDocumentosPendentes() {
+    await carregarDocumentosZapSign(true);
+}
 
-            try {
-                console.log('🔄 Carregando documentos...');
-                
-                const response = await fetch('../api/documentos/documentos_presidencia_listar.php?status=AGUARDANDO_ASSINATURA', {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest'
-                    },
-                    credentials: 'same-origin'
-                });
-                
-                console.log('📡 Response status:', response.status);
-                
-                if (response.status === 403) {
-                    // Erro de permissão específico
-                    const errorText = await response.text();
-                    console.error('403 Error details:', errorText);
-                    
-                    container.innerHTML = `
-                        <div class="alert alert-danger">
-                            <h5><i class="fas fa-ban me-2"></i>Acesso Negado</h5>
-                            <p>Você não tem permissão para acessar os documentos da presidência.</p>
-                            <details class="mt-2">
-                                <summary>Detalhes do erro</summary>
-                                <pre class="mt-2 small bg-light p-2">${errorText}</pre>
-                            </details>
-                        </div>
-                    `;
-                    return;
-                }
-                
-                if (response.status === 401) {
-                    // Não autenticado - redirecionar para login
-                    container.innerHTML = `
-                        <div class="alert alert-warning">
-                            <h5><i class="fas fa-sign-out-alt me-2"></i>Sessão Expirada</h5>
-                            <p>Redirecionando para o login...</p>
-                        </div>
-                    `;
-                    setTimeout(() => {
-                        window.location.href = '../pages/index.php';
-                    }, 2000);
-                    return;
-                }
-                
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    console.error('HTTP Error Details:', errorText);
-                    throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
-                }
-                
-                const data = await response.json();
-                console.log('✅ API Response:', data);
-                
-                if (data.status === 'success') {
-                    documentosPendentes = data.data || [];
-                    cache.set('documentos_pendentes', documentosPendentes); // Armazenar em cache
-                    renderizarDocumentos(documentosPendentes);
-                    atualizarContadores();
-                    
-                    notifications.show(`${documentosPendentes.length} documento(s) carregado(s)`, 'success');
-                } else {
-                    throw new Error(data.message || 'Erro ao carregar documentos');
-                }
-            } catch (error) {
-                console.error('❌ Erro completo:', error);
-                mostrarErro('Erro ao carregar documentos: ' + error.message);
-            }
+if (typeof autoUpdater !== 'undefined') {
+    const originalStart = autoUpdater.start;
+    autoUpdater.start = function() {
+        originalStart.call(this);
+        
+        // Também atualizar estatísticas periodicamente
+        this.statsTimer = setInterval(carregarEstatisticasZapSign, 10 * 60 * 1000); // 10 minutos
+    };
+    
+    const originalStop = autoUpdater.stop;
+    autoUpdater.stop = function() {
+        originalStop.call(this);
+        
+        if (this.statsTimer) {
+            clearInterval(this.statsTimer);
+            this.statsTimer = null;
         }
-
+    };
+}
         // Renderizar documentos
         function renderizarDocumentos(documentos) {
             const container = document.getElementById('documentsList');
@@ -818,48 +2647,85 @@ $headerComponent = HeaderComponent::create([
                 
                 itemDiv.innerHTML = `
                     <div class="document-content">
-                        <div class="document-icon-wrapper ${urgente ? 'urgent' : ''}">
-                            <i class="fas fa-file-pdf"></i>
-                        </div>
-                        <div class="document-info">
-                            <h4 class="document-title">
-                                Ficha de Associação
-                                ${urgente ? '<span class="document-status urgent"><i class="fas fa-fire"></i> Urgente</span>' : '<span class="document-status waiting"><i class="fas fa-clock"></i> Aguardando</span>'}
-                            </h4>
-                            <div class="document-meta">
-                                <div class="meta-item">
-                                    <i class="fas fa-user"></i>
-                                    <span>${doc.associado_nome}</span>
-                                </div>
-                                <div class="meta-item">
-                                    <i class="fas fa-id-card"></i>
-                                    <span>CPF: ${formatarCPF(doc.associado_cpf)}</span>
-                                </div>
-                                <div class="meta-item">
-                                    <i class="fas fa-${doc.tipo_origem === 'VIRTUAL' ? 'laptop' : 'paper-plane'}"></i>
-                                    <span>${doc.tipo_origem === 'VIRTUAL' ? 'Virtual' : 'Físico'}</span>
-                                </div>
-                                <div class="meta-item">
-                                    <i class="fas fa-calendar"></i>
-                                    <span>${formatarData(doc.data_upload)}</span>
-                                </div>
-                                <div class="meta-item">
-                                    <i class="fas fa-hourglass-half"></i>
-                                    <span>${doc.dias_em_processo} dias aguardando</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="document-actions">
-                            <button class="btn-action secondary" onclick="visualizarDocumento(${doc.id})">
-                                <i class="fas fa-eye"></i>
-                                Visualizar
-                            </button>
-                            <button class="btn-action success" onclick="abrirModalAssinatura(${doc.id})">
-                                <i class="fas fa-signature"></i>
-                                Assinar
-                            </button>
-                        </div>
+    <!-- Cabeçalho -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div class="d-flex align-items-center">
+            <i class="fas fa-file-pdf text-danger me-3"></i>
+            <div>
+                <h6 class="mb-1 fw-semibold">${escapeHtml(doc.name)}</h6>
+                <span class="badge ${doc.status} badge-sm">${statusIcon} ${doc.status_label}</span>
+            </div>
+        </div>
+        <div class="document-actions">
+            ${actionButtons}
+        </div>
+    </div>
+    
+    <!-- Grid de informações distribuído -->
+    <div class="d-flex justify-content-between align-items-center flex-wrap small mb-3">
+        <div class="d-flex align-items-center me-4 mb-2">
+            <i class="fas fa-calendar-plus text-primary me-2"></i>
+            <div>
+                <span class="text-muted">Criado em:</span>
+                <span class="text-dark fw-medium ms-1">${doc.created_at_formatted}</span>
+            </div>
+        </div>
+        
+        <div class="d-flex align-items-center me-4 mb-2">
+            <i class="fas fa-clock text-info me-2"></i>
+            <div>
+                <span class="text-muted">Atualizado:</span>
+                <span class="text-dark fw-medium ms-1">${doc.last_update_formatted}</span>
+            </div>
+        </div>
+        
+        <div class="d-flex align-items-center me-4 mb-2">
+            <i class="fas fa-hourglass-half text-warning me-2"></i>
+            <div>
+                <span class="text-muted">Tempo:</span>
+                <span class="text-dark fw-medium ms-1">${doc.tempo_desde_criacao}</span>
+            </div>
+        </div>
+        
+        <div class="d-flex align-items-center mb-2">
+            <i class="fas fa-folder text-secondary me-2"></i>
+            <div>
+                <span class="text-muted">Pasta:</span>
+                <span class="text-dark fw-medium ms-1" title="${doc.folder_path}">${doc.folder_path}</span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Linha separadora e informação do associado -->
+    ${doc.associado?.id ? `
+        <div class="border-top pt-2">
+            <div class="d-flex align-items-center justify-content-between flex-wrap small">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-user text-primary me-2"></i>
+                    <span class="text-muted me-2">Associado ID:</span>
+                    <span class="fw-semibold text-dark">${doc.associado.id}</span>
+                </div>
+                <div class="d-flex align-items-center gap-3">
+                    <div>
+                        <span class="text-muted me-1">Situação:</span>
+                        <span class="badge bg-secondary">${escapeHtml(doc.associado.situacao || 'N/A')}</span>
                     </div>
+                    <div>
+                        <span class="text-muted me-1">Filiação:</span>
+                        <span class="text-dark">${formatarData(doc.associado.data_filiacao)}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    ` : `
+        <div class="border-top pt-2">
+            <div class="d-flex align-items-center small">
+                <i class="fas fa-info-circle text-secondary me-2"></i>
+                <span class="text-muted">Documento não vinculado a nenhum associado</span>
+            </div>
+        </div>
+    `}
+</div>
                 `;
                 container.appendChild(itemDiv);
             });
