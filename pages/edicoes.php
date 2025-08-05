@@ -1,6 +1,6 @@
 <?php
 /**
- * Página de Edições - Sistema ASSEGO
+ * Página de Edições - Sistema ASSEGO - CORRIGIDA
  * pages/edicoes.php
  */
 
@@ -192,370 +192,11 @@ $headerComponent = HeaderComponent::create([
 
     <!-- AOS Animation -->
     <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    <link rel="stylesheet" href="./estilizacao/edicoes.css">
 
     <!-- CSS do Header Component -->
     <?php $headerComponent->renderCSS(); ?>
-    
-    <style>
-        :root {
-            --primary: #2563eb;
-            --primary-dark: #1d4ed8;
-            --success: #10b981;
-            --warning: #f59e0b;
-            --danger: #ef4444;
-            --info: #06b6d4;
-            --light: #f8fafc;
-            --dark: #1e293b;
-            --border-color: #e2e8f0;
-        }
 
-        body {
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-        }
-
-        .main-wrapper {
-            margin-left: 0;
-            transition: margin-left 0.3s ease;
-        }
-
-        .content-area {
-            padding: 2rem;
-            margin-top: 80px;
-        }
-
-        /* Page Header */
-        .page-header {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border-radius: 16px;
-            padding: 2rem;
-            margin-bottom: 2rem;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-        }
-
-        .page-title {
-            display: flex;
-            align-items: center;
-            font-size: 2rem;
-            font-weight: 700;
-            color: var(--dark);
-            margin: 0;
-        }
-
-        .page-title-icon {
-            width: 50px;
-            height: 50px;
-            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-right: 1rem;
-            color: white;
-            font-size: 1.5rem;
-        }
-
-        .page-subtitle {
-            color: #64748b;
-            font-size: 1.1rem;
-            margin-top: 0.5rem;
-        }
-
-        /* Stats Grid */
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 2rem;
-        }
-
-        .stat-card {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border-radius: 16px;
-            padding: 1.5rem;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-
-        .stat-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
-        }
-
-        .stat-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-        }
-
-        .stat-value {
-            font-size: 2.5rem;
-            font-weight: 800;
-            color: var(--dark);
-            line-height: 1;
-        }
-
-        .stat-label {
-            color: #64748b;
-            font-size: 0.9rem;
-            font-weight: 600;
-            margin-top: 0.5rem;
-        }
-
-        .stat-change {
-            display: flex;
-            align-items: center;
-            font-size: 0.8rem;
-            font-weight: 600;
-            margin-top: 0.5rem;
-        }
-
-        .stat-change.positive { color: var(--success); }
-        .stat-change.negative { color: var(--danger); }
-        .stat-change.neutral { color: var(--info); }
-
-        .stat-icon {
-            width: 60px;
-            height: 60px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-            color: white;
-        }
-
-        .stat-icon.primary { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); }
-        .stat-icon.success { background: linear-gradient(135deg, var(--success), #059669); }
-        .stat-icon.warning { background: linear-gradient(135deg, var(--warning), #d97706); }
-        .stat-icon.info { background: linear-gradient(135deg, var(--info), #0891b2); }
-
-        /* Filters */
-        .filters-section {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border-radius: 16px;
-            padding: 1.5rem;
-            margin-bottom: 2rem;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-        }
-
-        .filter-row {
-            display: grid;
-            grid-template-columns: 2fr 1fr 1fr 1fr auto;
-            gap: 1rem;
-            align-items: end;
-        }
-
-        .filter-input, .filter-select {
-            padding: 0.75rem;
-            border: 2px solid var(--border-color);
-            border-radius: 8px;
-            font-size: 0.9rem;
-            transition: border-color 0.3s ease;
-        }
-
-        .filter-input:focus, .filter-select:focus {
-            outline: none;
-            border-color: var(--primary);
-        }
-
-        .btn-filter {
-            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-            color: white;
-            border: none;
-            padding: 0.75rem 1.5rem;
-            border-radius: 8px;
-            font-weight: 600;
-            transition: transform 0.2s ease;
-        }
-
-        .btn-filter:hover {
-            transform: translateY(-2px);
-            color: white;
-        }
-
-        /* Edições Table */
-        .edicoes-section {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border-radius: 16px;
-            padding: 1.5rem;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-        }
-
-        .section-header {
-            display: flex;
-            justify-content: between;
-            align-items: center;
-            margin-bottom: 1.5rem;
-        }
-
-        .section-title {
-            display: flex;
-            align-items: center;
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: var(--dark);
-            margin: 0;
-        }
-
-        .section-title-icon {
-            width: 40px;
-            height: 40px;
-            background: linear-gradient(135deg, var(--warning), #d97706);
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-right: 1rem;
-            color: white;
-        }
-
-        .edicoes-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        .edicoes-table thead th {
-            background: var(--light);
-            color: var(--dark);
-            font-weight: 600;
-            padding: 1rem;
-            text-align: left;
-            border-bottom: 2px solid var(--border-color);
-        }
-
-        .edicoes-table tbody td {
-            padding: 1rem;
-            border-bottom: 1px solid var(--border-color);
-            vertical-align: middle;
-        }
-
-        .edicoes-table tbody tr:hover {
-            background: rgba(37, 99, 235, 0.05);
-        }
-
-        .edit-badge {
-            background: linear-gradient(135deg, var(--warning), #d97706);
-            color: white;
-            padding: 0.25rem 0.75rem;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            font-weight: 600;
-        }
-
-        .table-badge {
-            padding: 0.25rem 0.75rem;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            font-weight: 600;
-        }
-
-        .table-badge.associados {
-            background: rgba(16, 185, 129, 0.1);
-            color: var(--success);
-        }
-
-        .table-badge.funcionarios {
-            background: rgba(37, 99, 235, 0.1);
-            color: var(--primary);
-        }
-
-        .btn-details {
-            background: var(--info);
-            color: white;
-            border: none;
-            padding: 0.5rem 1rem;
-            border-radius: 6px;
-            font-size: 0.8rem;
-            transition: background 0.3s ease;
-        }
-
-        .btn-details:hover {
-            background: #0891b2;
-            color: white;
-        }
-
-        /* Pagination */
-        .pagination-wrapper {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-top: 2rem;
-            padding-top: 1rem;
-            border-top: 1px solid var(--border-color);
-        }
-
-        .pagination-info {
-            color: #64748b;
-            font-size: 0.9rem;
-        }
-
-        .pagination {
-            display: flex;
-            list-style: none;
-            margin: 0;
-            padding: 0;
-        }
-
-        .pagination .page-item {
-            margin: 0 0.25rem;
-        }
-
-        .pagination .page-link {
-            display: block;
-            padding: 0.5rem 0.75rem;
-            background: white;
-            border: 1px solid var(--border-color);
-            color: var(--dark);
-            text-decoration: none;
-            border-radius: 6px;
-            transition: all 0.3s ease;
-        }
-
-        .pagination .page-link:hover {
-            background: var(--primary);
-            color: white;
-        }
-
-        .pagination .page-item.active .page-link {
-            background: var(--primary);
-            color: white;
-            border-color: var(--primary);
-        }
-
-        /* Loading */
-        .loading-row {
-            text-align: center;
-            padding: 3rem;
-        }
-
-        .spinner-border {
-            width: 3rem;
-            height: 3rem;
-        }
-
-        /* Responsive */
-        @media (max-width: 768px) {
-            .content-area { padding: 1rem; }
-            .stats-grid { grid-template-columns: 1fr; }
-            .filter-row { grid-template-columns: 1fr; }
-            .pagination-wrapper { flex-direction: column; gap: 1rem; }
-        }
-
-        /* Toast Container */
-        .toast-container {
-            z-index: 1050;
-        }
-
-        .toast {
-            border-radius: 8px;
-        }
-    </style>
 </head>
 
 <body>
@@ -904,6 +545,28 @@ $headerComponent = HeaderComponent::create([
 
         const debouncedFilter = debounce(aplicarFiltros, 300);
 
+        // ===== FUNÇÃO PARA OBTER PARÂMETROS DEPARTAMENTAIS - CORRIGIDA =====
+        function obterParametrosDepartamentais() {
+            const params = {};
+            
+            console.log('🔍 Verificando filtros departamentais...');
+            console.log('isPresidencia:', isPresidencia);
+            console.log('isDiretor:', isDiretor);
+            console.log('departamentoUsuario:', departamentoUsuario);
+            
+            // Se não é presidência E é diretor E tem departamento, aplicar filtro
+            if (!isPresidencia && isDiretor && departamentoUsuario) {
+                params.departamento_usuario = departamentoUsuario;
+                console.log('✅ Filtro departamental aplicado:', departamentoUsuario);
+            } else if (isPresidencia) {
+                console.log('✅ Acesso total - Presidência');
+            } else {
+                console.warn('⚠️ Configuração de permissão inconsistente');
+            }
+            
+            return params;
+        }
+
         // ===== INICIALIZAÇÃO =====
         document.addEventListener('DOMContentLoaded', function() {
             AOS.init({ duration: 800, once: true });
@@ -913,6 +576,7 @@ $headerComponent = HeaderComponent::create([
             console.log('É presidência:', isPresidencia);
             console.log('É diretor:', isDiretor);
             console.log('Departamento:', departamentoUsuario);
+            console.log('Filtros departamentais:', obterParametrosDepartamentais());
 
             if (!temPermissao) {
                 console.log('❌ Usuário sem permissão - não carregará funcionalidades');
@@ -924,18 +588,7 @@ $headerComponent = HeaderComponent::create([
             configurarEventos();
         });
 
-        // ===== FUNÇÕES PRINCIPAIS =====
-
-        // Função para obter parâmetros departamentais
-        function obterParametrosDepartamentais() {
-            const params = {};
-            if (!isPresidencia && isDiretor && departamentoUsuario) {
-                params.departamento_usuario = departamentoUsuario;
-            }
-            return params;
-        }
-
-        // Carregar edições
+        // ===== CARREGAR EDIÇÕES - FUNÇÃO CORRIGIDA =====
         async function carregarEdicoes(page = 1, filters = {}) {
             if (!temPermissao) {
                 console.log('❌ Sem permissão para carregar edições');
@@ -957,13 +610,22 @@ $headerComponent = HeaderComponent::create([
             `;
 
             try {
-                // Construir filtros específicos para edições
+                // *** CORREÇÃO 1: Usar a API correta para edições ***
+                const baseUrl = '../api/auditoria/edicoes.php';
+                
+                // *** CORREÇÃO 2: Construir filtros específicos para edições com filtro departamental ***
                 const allFilters = {
-                    acao: 'UPDATE', // Apenas edições
+                    // Filtros base para edições
+                    page: page,
+                    limit: 20,
+                    
+                    // Filtros de busca
                     tabela: filters.tabela || '',
                     search: filters.search || '',
                     data_inicio: filters.data_inicio || '',
                     data_fim: filters.data_fim || '',
+                    
+                    // *** CORREÇÃO 3: Garantir que o filtro departamental seja aplicado ***
                     ...obterParametrosDepartamentais()
                 };
 
@@ -989,21 +651,12 @@ $headerComponent = HeaderComponent::create([
                     }
                 }
 
-                // Se há filtro de tabela específica, limitar às tabelas relevantes
-                if (!allFilters.tabela) {
-                    // Se não especificou tabela, garantir que só pegue Associados e Funcionarios
-                    allFilters.tabela_in = 'Associados,Funcionarios';
-                }
-
-                const params = new URLSearchParams({
-                    page: page,
-                    limit: 20,
-                    ...allFilters
-                });
+                const params = new URLSearchParams(allFilters);
                 
-                console.log('📡 Parâmetros da requisição:', allFilters);
+                console.log('📡 Parâmetros da requisição (CORRIGIDOS):', allFilters);
+                console.log('🌐 URL da requisição:', `${baseUrl}?${params}`);
                 
-                const response = await fetch(`../api/auditoria/registros.php?${params}`, {
+                const response = await fetch(`${baseUrl}?${params}`, {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1018,8 +671,10 @@ $headerComponent = HeaderComponent::create([
                 
                 const data = await response.json();
                 
+                console.log('📥 Resposta da API:', data);
+                
                 if (data.status === 'success') {
-                    edicoesData = data.data.registros || [];
+                    edicoesData = data.data.edicoes || [];
                     
                     renderizarTabelaEdicoes(edicoesData);
                     atualizarPaginacao(data.data.paginacao);
@@ -1029,6 +684,24 @@ $headerComponent = HeaderComponent::create([
                         : `${edicoesData.length} edição(ões) carregada(s) (Departamento ${departamentoUsuario})`;
                     
                     notifications.show(mensagem, 'success', 2000);
+                    
+                    // *** CORREÇÃO 4: Log detalhado para debug ***
+                    console.log(`✅ Edições carregadas: ${edicoesData.length}`);
+                    console.log(`🏢 Escopo: ${isPresidencia ? 'Sistema Completo' : 'Departamento ' + departamentoUsuario}`);
+                    
+                    // Verificar se todas as edições pertencem ao departamento correto
+                    if (!isPresidencia && edicoesData.length > 0) {
+                        console.log('🔍 Verificando filtro departamental nas edições retornadas...');
+                        edicoesData.forEach((edicao, index) => {
+                            console.log(`Edição ${index + 1}:`, {
+                                id: edicao.id,
+                                funcionario: edicao.funcionario_nome,
+                                departamento_funcionario: edicao.funcionario_departamento_id,
+                                departamento_esperado: departamentoUsuario
+                            });
+                        });
+                    }
+                    
                 } else {
                     throw new Error(data.message || 'Erro ao carregar edições');
                 }
@@ -1114,15 +787,18 @@ $headerComponent = HeaderComponent::create([
             }
         }
 
-        // Mostrar detalhes da edição
+        // ===== MOSTRAR DETALHES DA EDIÇÃO - FUNÇÃO CORRIGIDA =====
         async function mostrarDetalhesEdicao(edicaoId) {
             console.log('🔍 Mostrando detalhes da edição ID:', edicaoId);
             
             try {
+                // *** CORREÇÃO 5: Garantir filtro departamental nos detalhes ***
                 const params = new URLSearchParams({
                     id: edicaoId,
                     ...obterParametrosDepartamentais()
                 });
+                
+                console.log('📡 Parâmetros dos detalhes:', params.toString());
                 
                 const response = await fetch(`../api/auditoria/detalhes.php?${params}`);
                 
@@ -1132,9 +808,23 @@ $headerComponent = HeaderComponent::create([
                 
                 const data = await response.json();
                 
+                console.log('📥 Detalhes recebidos:', data);
+                
                 if (data.status === 'success' && data.data) {
                     const modalBody = document.getElementById('detalhesEdicaoModalBody');
                     const edicao = data.data;
+                    
+                    // *** CORREÇÃO 6: Verificar se a edição pertence ao departamento do usuário ***
+                    if (!isPresidencia && edicao.funcionario_departamento_id && 
+                        edicao.funcionario_departamento_id != departamentoUsuario) {
+                        
+                        console.warn('⚠️ Tentativa de acesso a edição de outro departamento!', {
+                            edicao_departamento: edicao.funcionario_departamento_id,
+                            usuario_departamento: departamentoUsuario
+                        });
+                        
+                        throw new Error('Você não tem permissão para ver esta edição.');
+                    }
                     
                     modalBody.innerHTML = gerarHtmlDetalhesEdicao(edicao);
                     
@@ -1358,7 +1048,7 @@ $headerComponent = HeaderComponent::create([
             notifications.show(mensagem, 'success');
         }
 
-        // Exportar edições
+        // ===== EXPORTAR EDIÇÕES - FUNÇÃO CORRIGIDA =====
         async function exportarEdicoes() {
             try {
                 const mensagem = isPresidencia 
@@ -1367,14 +1057,16 @@ $headerComponent = HeaderComponent::create([
                 
                 notifications.show(mensagem, 'info');
                 
+                // *** CORREÇÃO 7: Usar API correta e filtros departamentais para exportação ***
                 const filters = {
-                    acao: 'UPDATE',
-                    tabela_in: 'Associados,Funcionarios',
+                    export: 1,
                     ...obterParametrosDepartamentais()
                 };
                 
+                console.log('📤 Parâmetros de exportação:', filters);
+                
                 const params = new URLSearchParams(filters);
-                const response = await fetch(`../api/auditoria/exportar.php?${params}`);
+                const response = await fetch(`../api/auditoria/edicoes.php?${params}`);
                 
                 if (response.ok) {
                     const blob = await response.blob();
