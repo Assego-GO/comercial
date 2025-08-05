@@ -1,51 +1,110 @@
 <?php
 /**
- * API específica para edições de associados e funcionários
+ * API específica para edições de associados e funcionários - VERSÃO ROBUSTA
  * /api/auditoria/edicoes.php
  */
 
+// IMPORTANTE: Não mostrar erros na saída para não quebrar o JSON
+ini_set('display_errors', 0);
+ini_set('log_errors', 1);
+error_reporting(E_ALL);
+
+// Headers obrigatórios
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET');
 header('Access-Control-Allow-Headers: Content-Type, X-Requested-With');
 
-// Configurar tratamento de erros
-error_reporting(E_ALL);
-ini_set('display_errors', 0);
-ini_set('log_errors', 1);
+// Função para retornar erro em JSON
+function retornarErro($message, $code = 500, $details = null) {
+    http_response_code($code);
+    $error = [
+        'status' => 'error',
+        'message' => $message,
+        'timestamp' => date('Y-m-d H:i:s'),
+        'endpoint' => 'edicoes'
+    ];
+    
+    if ($details) {
+        $error['details'] = $details;
+    }
+    
+    echo json_encode($error, JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+// Função para log de debug
+function debugLog($message) {
+    error_log("[EDICOES_API] " . $message);
+}
 
 try {
+    debugLog("=== INÍCIO DA REQUISIÇÃO ===");
+    debugLog("Método: " . $_SERVER['REQUEST_METHOD']);
+    debugLog("Parâmetros GET: " . json_encode($_GET));
+    
     // Verificar método
     if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
-        throw new Exception('Método não permitido');
+        retornarErro('Método não permitido', 405);
     }
 
+    // Verificar se os arquivos necessários existem
+    $arquivosNecessarios = [
+        '../../config/config.php',
+        '../../config/database.php', 
+        '../../classes/Database.php'
+    ];
+    
+    foreach ($arquivosNecessarios as $arquivo) {
+        if (!file_exists($arquivo)) {
+            retornarErro("Arquivo necessário não encontrado: " . basename($arquivo), 500);
+        }
+    }
+    
     // Incluir arquivos necessários
     require_once '../../config/config.php';
     require_once '../../config/database.php';
     require_once '../../classes/Database.php';
-    require_once '../../classes/Auth.php';
     
-    // Verificar autenticação (opcional, mas recomendado)
-    session_start();
-    if (!isset($_SESSION['funcionario_id'])) {
-        error_log("API de edições acessada sem sessão ativa");
+    debugLog("Arquivos carregados com sucesso");
+    
+    // Verificar se as constantes necessárias existem
+    if (!defined('DB_NAME_CADASTRO')) {
+        retornarErro('Configuração do banco de dados não encontrada', 500);
     }
     
     // Conectar ao banco
-    $db = Database::getInstance(DB_NAME_CADASTRO)->getConnection();
+    try {
+        $db = Database::getInstance(DB_NAME_CADASTRO)->getConnection();
+        debugLog("Conexão com banco estabelecida");
+    } catch (Exception $e) {
+        debugLog("Erro na conexão: " . $e->getMessage());
+        retornarErro('Erro na conexão com banco de dados', 500, $e->getMessage());
+    }
+    
+    // Verificar se é solicitação de exportação
+    if (isset($_GET['export']) && $_GET['export'] == 1) {
+        debugLog("Solicitação de exportação detectada");
+        exportarEdicoes($db);
+        exit;
+    }
     
     // Parâmetros de paginação
     $page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
     $limit = isset($_GET['limit']) ? min(100, max(10, (int)$_GET['limit'])) : 20;
     $offset = ($page - 1) * $limit;
     
-    // Preparar filtros específicos para edições
+    debugLog("Paginação - Página: $page, Limit: $limit, Offset: $offset");
+    
+    // Preparar filtros básicos
     $whereConditions = ["a.acao = 'UPDATE'"]; // Apenas edições
     $params = [];
     
-    // Filtrar apenas por associados e funcionários por padrão
+    // Filtrar apenas por associados e funcionários
     $tabelasPermitidas = ['Associados', 'Funcionarios'];
+    $whereConditions[] = "a.tabela IN ('" . implode("','", $tabelasPermitidas) . "')";
+    
+    debugLog("Filtros básicos aplicados");
     
     // Filtro por tabela específica
     if (!empty($_GET['tabela'])) {
@@ -53,65 +112,67 @@ try {
         if (in_array($tabelaSolicitada, $tabelasPermitidas)) {
             $whereConditions[] = "a.tabela = :tabela";
             $params[':tabela'] = $tabelaSolicitada;
-        } else {
-            throw new Exception('Tabela não permitida para edições');
+            debugLog("Filtro por tabela: $tabelaSolicitada");
         }
-    } else {
-        // Se não especificou tabela, filtrar pelas permitidas
-        $whereConditions[] = "a.tabela IN ('" . implode("','", $tabelasPermitidas) . "')";
     }
     
     // Filtro por funcionário
     if (!empty($_GET['funcionario_id'])) {
         $whereConditions[] = "a.funcionario_id = :funcionario_id";
         $params[':funcionario_id'] = (int)$_GET['funcionario_id'];
+        debugLog("Filtro por funcionário: " . $_GET['funcionario_id']);
     }
     
     // Filtro por associado
     if (!empty($_GET['associado_id'])) {
         $whereConditions[] = "a.associado_id = :associado_id";
         $params[':associado_id'] = (int)$_GET['associado_id'];
+        debugLog("Filtro por associado: " . $_GET['associado_id']);
     }
     
     // Filtro por data início
     if (!empty($_GET['data_inicio'])) {
         $whereConditions[] = "DATE(a.data_hora) >= :data_inicio";
         $params[':data_inicio'] = $_GET['data_inicio'];
+        debugLog("Filtro data início: " . $_GET['data_inicio']);
     }
     
     // Filtro por data fim
     if (!empty($_GET['data_fim'])) {
         $whereConditions[] = "DATE(a.data_hora) <= :data_fim";
         $params[':data_fim'] = $_GET['data_fim'];
+        debugLog("Filtro data fim: " . $_GET['data_fim']);
     }
     
-    // Filtro por busca (funcionário, associado ou tabela)
+    // Filtro por busca
     if (!empty($_GET['search'])) {
         $search = '%' . $_GET['search'] . '%';
         $whereConditions[] = "(f.nome LIKE :search OR ass.nome LIKE :search2 OR a.tabela LIKE :search3)";
         $params[':search'] = $search;
         $params[':search2'] = $search;
         $params[':search3'] = $search;
+        debugLog("Filtro de busca: " . $_GET['search']);
     }
     
-    // Filtros departamentais (se aplicável)
+    // *** FILTRO DEPARTAMENTAL - CORREÇÃO PRINCIPAL ***
     if (!empty($_GET['departamento_usuario'])) {
         $deptUsuario = (int)$_GET['departamento_usuario'];
-        $whereConditions[] = "(
-            f.departamento_id = :departamento_usuario 
-            OR a.funcionario_id IN (
-                SELECT id FROM Funcionarios WHERE departamento_id = :departamento_usuario2
-            )
-        )";
+        debugLog("🔍 Aplicando filtro departamental para departamento: $deptUsuario");
+        
+        // Filtro restritivo - apenas edições de funcionários do departamento
+        $whereConditions[] = "f.departamento_id = :departamento_usuario";
         $params[':departamento_usuario'] = $deptUsuario;
-        $params[':departamento_usuario2'] = $deptUsuario;
+        
+        debugLog("✅ Filtro departamental configurado");
+    } else {
+        debugLog("⚠️ Sem filtro departamental");
     }
     
     // Construir cláusula WHERE
     $whereClause = 'WHERE ' . implode(' AND ', $whereConditions);
+    debugLog("WHERE clause: $whereClause");
     
-    // === BUSCAR EDIÇÕES ===
-    
+    // === QUERY PRINCIPAL ===
     $sql = "
         SELECT 
             a.id,
@@ -124,6 +185,7 @@ try {
             a.sessao_id,
             a.alteracoes,
             a.associado_id,
+            a.funcionario_id,
             f.nome as funcionario_nome,
             f.email as funcionario_email,
             f.cargo as funcionario_cargo,
@@ -141,20 +203,30 @@ try {
         LIMIT :limit OFFSET :offset
     ";
     
-    $stmt = $db->prepare($sql);
+    debugLog("SQL Query preparada");
     
-    // Bind dos parâmetros
-    foreach ($params as $key => $value) {
-        $stmt->bindValue($key, $value);
+    try {
+        $stmt = $db->prepare($sql);
+        
+        // Bind dos parâmetros
+        foreach ($params as $key => $value) {
+            $stmt->bindValue($key, $value);
+            debugLog("Parâmetro $key: $value");
+        }
+        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+        $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+        
+        $stmt->execute();
+        $edicoes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        debugLog("Query executada - " . count($edicoes) . " edições encontradas");
+        
+    } catch (PDOException $e) {
+        debugLog("Erro na query principal: " . $e->getMessage());
+        retornarErro('Erro na consulta ao banco de dados', 500, $e->getMessage());
     }
-    $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
-    $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
     
-    $stmt->execute();
-    $edicoes = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    
-    // === CONTAR TOTAL DE EDIÇÕES ===
-    
+    // === CONTAR TOTAL ===
     $sqlCount = "
         SELECT COUNT(*) as total
         FROM Auditoria a
@@ -164,21 +236,40 @@ try {
         $whereClause
     ";
     
-    $stmtCount = $db->prepare($sqlCount);
-    foreach ($params as $key => $value) {
-        if ($key !== ':limit' && $key !== ':offset') {
-            $stmtCount->bindValue($key, $value);
+    try {
+        $stmtCount = $db->prepare($sqlCount);
+        foreach ($params as $key => $value) {
+            if ($key !== ':limit' && $key !== ':offset') {
+                $stmtCount->bindValue($key, $value);
+            }
         }
+        $stmtCount->execute();
+        $totalEdicoes = $stmtCount->fetch(PDO::FETCH_ASSOC)['total'];
+        
+        debugLog("Total de edições: $totalEdicoes");
+        
+    } catch (PDOException $e) {
+        debugLog("Erro na query de contagem: " . $e->getMessage());
+        retornarErro('Erro na contagem de registros', 500, $e->getMessage());
     }
-    $stmtCount->execute();
-    $totalEdicoes = $stmtCount->fetch(PDO::FETCH_ASSOC)['total'];
     
     $totalPaginas = ceil($totalEdicoes / $limit);
     
     // === PROCESSAR EDIÇÕES ===
-    
     $edicoesProcessadas = [];
+    
     foreach ($edicoes as $edicao) {
+        // Validação extra para filtro departamental
+        if (!empty($_GET['departamento_usuario'])) {
+            $deptUsuario = (int)$_GET['departamento_usuario'];
+            
+            if ($edicao['funcionario_departamento_id'] && 
+                $edicao['funcionario_departamento_id'] != $deptUsuario) {
+                debugLog("Edição {$edicao['id']} filtrada - dept {$edicao['funcionario_departamento_id']} != $deptUsuario");
+                continue;
+            }
+        }
+        
         $processada = [
             'id' => (int)$edicao['id'],
             'tabela' => $edicao['tabela'],
@@ -189,6 +280,7 @@ try {
             'browser_info' => $edicao['browser_info'],
             'sessao_id' => $edicao['sessao_id'],
             'alteracoes' => $edicao['alteracoes'],
+            'funcionario_id' => $edicao['funcionario_id'],
             'funcionario_nome' => $edicao['funcionario_nome'] ?: 'Sistema',
             'funcionario_email' => $edicao['funcionario_email'],
             'funcionario_cargo' => $edicao['funcionario_cargo'],
@@ -207,131 +299,62 @@ try {
             $processada['hora_formatada'] = date('H:i', strtotime($processada['data_hora']));
         }
         
-        // Decodificar alterações se existir
+        // Processar alterações
         $processada['alteracoes_decoded'] = null;
         $processada['campos_alterados'] = 0;
         $processada['resumo_edicao'] = 'Dados alterados';
         
         if (!empty($processada['alteracoes'])) {
-            try {
-                $alteracoesDecoded = json_decode($processada['alteracoes'], true);
-                if (json_last_error() === JSON_ERROR_NONE && is_array($alteracoesDecoded)) {
-                    $processada['alteracoes_decoded'] = $alteracoesDecoded;
-                    $processada['campos_alterados'] = count($alteracoesDecoded);
-                    
-                    // Gerar resumo mais detalhado
-                    if ($processada['campos_alterados'] === 1) {
-                        $processada['resumo_edicao'] = '1 campo alterado';
-                    } elseif ($processada['campos_alterados'] <= 3) {
-                        $processada['resumo_edicao'] = $processada['campos_alterados'] . ' campos alterados';
-                    } else {
-                        $processada['resumo_edicao'] = $processada['campos_alterados'] . ' campos alterados (edição extensa)';
-                    }
-                    
-                    // Se há poucos campos, listar os nomes
-                    if ($processada['campos_alterados'] <= 2 && isset($alteracoesDecoded[0]['campo'])) {
-                        $nomesCampos = array_column($alteracoesDecoded, 'campo');
-                        $processada['resumo_edicao'] = 'Alterado: ' . implode(', ', $nomesCampos);
-                    }
+            $alteracoesDecoded = json_decode($processada['alteracoes'], true);
+            if (json_last_error() === JSON_ERROR_NONE && is_array($alteracoesDecoded)) {
+                $processada['alteracoes_decoded'] = $alteracoesDecoded;
+                $processada['campos_alterados'] = count($alteracoesDecoded);
+                
+                if ($processada['campos_alterados'] === 1) {
+                    $processada['resumo_edicao'] = '1 campo alterado';
+                } elseif ($processada['campos_alterados'] <= 3) {
+                    $processada['resumo_edicao'] = $processada['campos_alterados'] . ' campos alterados';
+                } else {
+                    $processada['resumo_edicao'] = $processada['campos_alterados'] . ' campos alterados (extensa)';
                 }
-            } catch (Exception $e) {
-                error_log("Erro ao decodificar alterações da edição {$processada['id']}: " . $e->getMessage());
             }
         }
         
-        // Informações específicas baseadas na tabela
+        // Informações do registro
         if ($processada['tabela'] === 'Associados') {
             $processada['tipo_registro'] = 'Associado';
             $processada['nome_registro'] = $processada['associado_nome'] ?: 'Associado ID ' . $processada['registro_id'];
-            $processada['identificador_registro'] = $processada['associado_cpf'] ?: $processada['registro_id'];
         } elseif ($processada['tabela'] === 'Funcionarios') {
             $processada['tipo_registro'] = 'Funcionário';
-            // Para funcionários, precisaríamos buscar o nome, mas por performance vamos usar o ID
             $processada['nome_registro'] = 'Funcionário ID ' . $processada['registro_id'];
-            $processada['identificador_registro'] = $processada['registro_id'];
-        } else {
-            $processada['tipo_registro'] = $processada['tabela'];
-            $processada['nome_registro'] = 'Registro ID ' . $processada['registro_id'];
-            $processada['identificador_registro'] = $processada['registro_id'];
-        }
-        
-        // Calcular tempo desde a edição
-        $tempoEdicao = time() - strtotime($processada['data_hora']);
-        if ($tempoEdicao < 3600) { // Menos de 1 hora
-            $processada['tempo_relativo'] = 'Há ' . round($tempoEdicao / 60) . ' minutos';
-        } elseif ($tempoEdicao < 86400) { // Menos de 1 dia
-            $processada['tempo_relativo'] = 'Há ' . round($tempoEdicao / 3600) . ' horas';
-        } else {
-            $processada['tempo_relativo'] = 'Há ' . round($tempoEdicao / 86400) . ' dias';
         }
         
         $edicoesProcessadas[] = $processada;
     }
     
-    // === ESTATÍSTICAS DAS EDIÇÕES ===
+    debugLog("Edições processadas: " . count($edicoesProcessadas));
     
-    // Edições por tabela
-    $sqlStats = "
-        SELECT 
-            a.tabela,
-            COUNT(*) as total_edicoes,
-            COUNT(DISTINCT a.funcionario_id) as editores_unicos,
-            MAX(a.data_hora) as ultima_edicao
-        FROM Auditoria a
-        LEFT JOIN Funcionarios f ON a.funcionario_id = f.id
-        $whereClause
-        GROUP BY a.tabela
-        ORDER BY total_edicoes DESC
-    ";
-    
-    $stmtStats = $db->prepare($sqlStats);
-    foreach ($params as $key => $value) {
-        if ($key !== ':limit' && $key !== ':offset') {
-            $stmtStats->bindValue($key, $value);
-        }
+    // Log do resultado final para debug departamental
+    if (!empty($_GET['departamento_usuario'])) {
+        $deptUsuario = (int)$_GET['departamento_usuario'];
+        $departamentosEncontrados = array_unique(array_filter(array_column($edicoesProcessadas, 'funcionario_departamento_id')));
+        debugLog("📊 Departamento $deptUsuario: " . count($edicoesProcessadas) . " edições");
+        debugLog("🏢 Departamentos encontrados: " . implode(', ', $departamentosEncontrados ?: ['nenhum']));
     }
-    $stmtStats->execute();
-    $estatisticasPorTabela = $stmtStats->fetchAll(PDO::FETCH_ASSOC);
     
-    // Edições por período (últimos 7 dias)
-    $sqlPeriodo = "
-        SELECT 
-            DATE(a.data_hora) as data,
-            COUNT(*) as total_edicoes
-        FROM Auditoria a
-        LEFT JOIN Funcionarios f ON a.funcionario_id = f.id
-        $whereClause
-        AND a.data_hora >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
-        GROUP BY DATE(a.data_hora)
-        ORDER BY data DESC
-    ";
-    
-    $stmtPeriodo = $db->prepare($sqlPeriodo);
-    foreach ($params as $key => $value) {
-        if ($key !== ':limit' && $key !== ':offset') {
-            $stmtPeriodo->bindValue($key, $value);
-        }
-    }
-    $stmtPeriodo->execute();
-    $edicoesPorPeriodo = $stmtPeriodo->fetchAll(PDO::FETCH_ASSOC);
-    
-    // === PREPARAR DADOS DE PAGINAÇÃO ===
-    
+    // === PREPARAR PAGINAÇÃO ===
     $paginacao = [
         'pagina_atual' => $page,
-        'total_paginas' => $totalPaginas,
+        'total_paginas' => max(1, $totalPaginas),
         'total_registros' => (int)$totalEdicoes,
         'registros_por_pagina' => $limit,
         'tem_proxima' => $page < $totalPaginas,
         'tem_anterior' => $page > 1,
-        'primeira_pagina' => 1,
-        'ultima_pagina' => $totalPaginas,
         'inicio_registro' => $offset + 1,
         'fim_registro' => min($offset + $limit, $totalEdicoes)
     ];
     
     // === FILTROS APLICADOS ===
-    
     $filtrosAplicados = [];
     foreach (['tabela', 'funcionario_id', 'associado_id', 'data_inicio', 'data_fim', 'search', 'departamento_usuario'] as $filtro) {
         if (!empty($_GET[$filtro])) {
@@ -339,8 +362,7 @@ try {
         }
     }
     
-    // === RESPOSTA DE SUCESSO ===
-    
+    // === RESPOSTA FINAL ===
     $response = [
         'status' => 'success',
         'message' => 'Edições obtidas com sucesso',
@@ -348,84 +370,119 @@ try {
             'edicoes' => $edicoesProcessadas,
             'paginacao' => $paginacao,
             'filtros_aplicados' => $filtrosAplicados,
-            'estatisticas' => [
-                'total_edicoes' => (int)$totalEdicoes,
-                'edicoes_por_tabela' => $estatisticasPorTabela,
-                'edicoes_por_periodo' => $edicoesPorPeriodo,
-                'tabelas_permitidas' => $tabelasPermitidas
-            ],
             'resumo' => [
                 'total_encontradas' => count($edicoesProcessadas),
                 'pagina_atual' => $page,
                 'total_geral' => (int)$totalEdicoes,
-                'periodo_consulta' => [
-                    'inicio' => $filtrosAplicados['data_inicio'] ?? 'Todas as datas',
-                    'fim' => $filtrosAplicados['data_fim'] ?? 'Todas as datas'
-                ]
+                'filtro_departamental' => !empty($_GET['departamento_usuario']) ? 
+                    "Departamento " . $_GET['departamento_usuario'] : 'Sem filtro'
             ]
         ],
         'meta' => [
             'tempo_execucao' => microtime(true) - $_SERVER['REQUEST_TIME_FLOAT'],
             'timestamp' => time(),
-            'versao_api' => '1.1',
-            'endpoint' => 'edicoes',
-            'metodo' => $_SERVER['REQUEST_METHOD']
+            'versao_api' => '1.3',
+            'endpoint' => 'edicoes'
         ]
     ];
     
+    debugLog("=== RESPOSTA ENVIADA COM SUCESSO ===");
+    debugLog("Edições retornadas: " . count($edicoesProcessadas));
+    
     echo json_encode($response, JSON_UNESCAPED_UNICODE | JSON_NUMERIC_CHECK);
 
-} catch (PDOException $e) {
-    // Erro específico do banco de dados
-    error_log("Erro PDO na API de edições: " . $e->getMessage());
-    
-    http_response_code(500);
-    echo json_encode([
-        'status' => 'error',
-        'message' => 'Erro de banco de dados',
-        'error_code' => 'DB_ERROR_EDICOES_001',
-        'debug' => [
-            'error_message' => $e->getMessage(),
-            'error_code' => $e->getCode(),
-            'timestamp' => date('Y-m-d H:i:s')
-        ],
-        'data' => null
-    ], JSON_UNESCAPED_UNICODE);
-    
 } catch (Exception $e) {
-    // Outros erros
-    error_log("Erro na API de edições: " . $e->getMessage());
-    
-    http_response_code(500);
-    echo json_encode([
-        'status' => 'error',
-        'message' => 'Erro interno do servidor: ' . $e->getMessage(),
-        'error_code' => 'GENERAL_ERROR_EDICOES_001',
-        'debug' => [
-            'error_message' => $e->getMessage(),
-            'error_file' => basename($e->getFile()),
-            'error_line' => $e->getLine(),
-            'timestamp' => date('Y-m-d H:i:s')
-        ],
-        'data' => null
-    ], JSON_UNESCAPED_UNICODE);
-    
+    debugLog("ERRO GERAL: " . $e->getMessage());
+    debugLog("Stack trace: " . $e->getTraceAsString());
+    retornarErro('Erro interno do servidor: ' . $e->getMessage(), 500);
 } catch (Error $e) {
-    // Erros fatais do PHP
-    error_log("Erro fatal na API de edições: " . $e->getMessage());
-    
-    http_response_code(500);
-    echo json_encode([
-        'status' => 'error',
-        'message' => 'Erro fatal do sistema',
-        'error_code' => 'FATAL_ERROR_EDICOES_001',
-        'debug' => [
-            'error_message' => $e->getMessage(),
-            'error_file' => basename($e->getFile()),
-            'error_line' => $e->getLine(),
-            'timestamp' => date('Y-m-d H:i:s')
-        ],
-        'data' => null
-    ], JSON_UNESCAPED_UNICODE);
+    debugLog("ERRO FATAL: " . $e->getMessage());
+    debugLog("Stack trace: " . $e->getTraceAsString());  
+    retornarErro('Erro fatal do sistema: ' . $e->getMessage(), 500);
+}
+
+// === FUNÇÃO DE EXPORTAÇÃO ===
+function exportarEdicoes($db) {
+    try {
+        debugLog("📤 Iniciando exportação");
+        
+        $whereConditions = ["a.acao = 'UPDATE'"];
+        $params = [];
+        
+        $whereConditions[] = "a.tabela IN ('Associados', 'Funcionarios')";
+        
+        if (!empty($_GET['departamento_usuario'])) {
+            $deptUsuario = (int)$_GET['departamento_usuario'];
+            $whereConditions[] = "f.departamento_id = :departamento_usuario";
+            $params[':departamento_usuario'] = $deptUsuario;
+            debugLog("📤 Exportando departamento: $deptUsuario");
+        }
+        
+        $whereClause = 'WHERE ' . implode(' AND ', $whereConditions);
+        
+        $sql = "
+            SELECT 
+                a.id,
+                a.tabela,
+                a.data_hora,
+                a.registro_id,
+                f.nome as funcionario_nome,
+                f.departamento_id as funcionario_departamento_id,
+                d.nome as funcionario_departamento,
+                ass.nome as associado_nome,
+                ass.cpf as associado_cpf,
+                a.alteracoes
+            FROM Auditoria a
+            LEFT JOIN Funcionarios f ON a.funcionario_id = f.id
+            LEFT JOIN Departamentos d ON f.departamento_id = d.id
+            LEFT JOIN Associados ass ON a.associado_id = ass.id
+            $whereClause
+            ORDER BY a.data_hora DESC
+        ";
+        
+        $stmt = $db->prepare($sql);
+        foreach ($params as $key => $value) {
+            $stmt->bindValue($key, $value);
+        }
+        $stmt->execute();
+        $edicoes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        $sufixo = !empty($_GET['departamento_usuario']) ? 
+            '_dept_' . $_GET['departamento_usuario'] : '_completo';
+        
+        $filename = 'edicoes' . $sufixo . '_' . date('Y-m-d') . '.csv';
+        
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Pragma: no-cache');
+        header('Expires: 0');
+        
+        $output = fopen('php://output', 'w');
+        
+        fputcsv($output, [
+            'ID', 'Data/Hora', 'Tabela', 'Registro ID', 
+            'Funcionário', 'Departamento', 'Associado', 'CPF'
+        ]);
+        
+        foreach ($edicoes as $edicao) {
+            fputcsv($output, [
+                $edicao['id'],
+                $edicao['data_hora'],
+                $edicao['tabela'],
+                $edicao['registro_id'],
+                $edicao['funcionario_nome'] ?: 'Sistema',
+                $edicao['funcionario_departamento'] ?: 'N/A',
+                $edicao['associado_nome'] ?: 'N/A',
+                $edicao['associado_cpf'] ?: 'N/A'
+            ]);
+        }
+        
+        fclose($output);
+        debugLog("✅ Exportação concluída: " . count($edicoes) . " registros");
+        
+    } catch (Exception $e) {
+        debugLog("❌ Erro na exportação: " . $e->getMessage());
+        retornarErro('Erro ao exportar: ' . $e->getMessage(), 500);
+    }
 }
 ?>
