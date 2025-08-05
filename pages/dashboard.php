@@ -26,6 +26,22 @@ if (!$auth->isLoggedIn()) {
 // Pega dados do usuário logado
 $usuarioLogado = $auth->getUser();
 
+// DEBUG USUÁRIO LOGADO - CONSOLE (REMOVER APÓS TESTE)
+echo "<script>";
+echo "console.log('=== DEBUG USUÁRIO LOGADO ===');";
+echo "console.log('Array completo:', " . json_encode($usuarioLogado) . ");";
+echo "console.log('Tem departamento_id?', " . (isset($usuarioLogado['departamento_id']) ? 'true' : 'false') . ");";
+if (isset($usuarioLogado['departamento_id'])) {
+    echo "console.log('Departamento ID valor:', " . json_encode($usuarioLogado['departamento_id']) . ");";
+    echo "console.log('Departamento ID tipo:', '" . gettype($usuarioLogado['departamento_id']) . "');";
+    echo "console.log('É igual a 1?', " . ($usuarioLogado['departamento_id'] == 1 ? 'true' : 'false') . ");";
+    echo "console.log('É idêntico a 1?', " . ($usuarioLogado['departamento_id'] === 1 ? 'true' : 'false') . ");";
+    echo "console.log('É idêntico a \"1\"?', " . ($usuarioLogado['departamento_id'] === '1' ? 'true' : 'false') . ");";
+}
+echo "console.log('isDiretor:', " . ($auth->isDiretor() ? 'true' : 'false') . ");";
+echo "console.log('=============================');";
+echo "</script>";
+
 // Define o título da página
 $page_title = 'Associados - ASSEGO';
 
@@ -67,13 +83,9 @@ try {
     $totalAssociados = $associadosFiliados = $associadosDesfiliados = $novosAssociados = 0;
 }
 
-// Cria instância do Header Component
+// CORREÇÃO: Cria instância do Header Component - Passa TODO o array do usuário
 $headerComponent = HeaderComponent::create([
-    'usuario' => [
-        'nome' => $usuarioLogado['nome'],
-        'cargo' => $usuarioLogado['cargo'] ?? 'Funcionário',
-        'avatar' => $usuarioLogado['avatar'] ?? null
-    ],
+    'usuario' => $usuarioLogado, // ← CORRIGIDO: Agora passa TODO o array (incluindo departamento_id)
     'isDiretor' => $auth->isDiretor(),
     'activeTab' => 'associados',
     'notificationCount' => 0,
@@ -112,6 +124,7 @@ $headerComponent = HeaderComponent::create([
 
     <!-- Custom CSS -->
     <link rel="stylesheet" href="./estilizacao/style.css">
+
 </head>
 
 <body>
@@ -1729,24 +1742,509 @@ $headerComponent = HeaderComponent::create([
             dependentesTab.innerHTML = dependentesHtml;
         }
 
-        // Preenche tab Documentos
+        // FUNÇÃO CORRIGIDA: Preenche tab Documentos com filtro por associado
         function preencherTabDocumentos(associado) {
             const documentosTab = document.getElementById('documentos-tab');
 
+            // Mostra loading enquanto carrega
             documentosTab.innerHTML = `
-        <div class="detail-section">
-            <div class="section-header">
-                <div class="section-icon">
-                    <i class="fas fa-folder-open"></i>
+                <div class="detail-section">
+                    <div class="text-center py-5">
+                        <div class="loading-spinner mb-3"></div>
+                        <p class="text-muted">Carregando documentos...</p>
+                    </div>
                 </div>
-                <h3 class="section-title">Documentos</h3>
-            </div>
-            <div class="empty-state">
-                <i class="fas fa-file-alt"></i>
-                <p>Funcionalidade de documentos em desenvolvimento</p>
-            </div>
-        </div>
-    `;
+            `;
+
+            // Primeiro busca no array de dados carregados para contar total de documentos
+            const totalDocumentos = todosAssociados.find(a => a.id == associado.id)?.total_documentos || 0;
+
+            // Busca documentos do associado em fluxo - CORRIGIDO: busca TODOS os documentos
+            $.ajax({
+                url: '../api/documentos/documentos_fluxo_listar.php',
+                method: 'GET',
+                dataType: 'json',
+                success: function(response) {
+                    console.log('Resposta completa da API:', response);
+                    console.log('Buscando documentos para associado ID:', associado.id);
+                    
+                    if (response.status === 'success' && response.data && Array.isArray(response.data)) {
+                        // IMPORTANTE: Filtra apenas documentos do associado específico
+                        const documentosDoAssociado = response.data.filter(doc => {
+                            // Converte para string para comparação segura
+                            return String(doc.associado_id) === String(associado.id);
+                        });
+                        
+                        console.log(`Documentos encontrados para o associado: ${documentosDoAssociado.length} de ${response.data.length} total`);
+                        
+                        if (documentosDoAssociado.length > 0) {
+                            renderizarDocumentosNoModal(documentosDoAssociado, documentosTab);
+                        } else {
+                            // Nenhum documento deste associado em fluxo
+                            documentosTab.innerHTML = `
+                                <div class="empty-documents-state">
+                                    <i class="fas fa-folder-open"></i>
+                                    <h5>Nenhum documento em fluxo de assinatura</h5>
+                                    <p>${associado.nome} ${totalDocumentos > 0 ? `possui ${totalDocumentos} documento(s) no sistema, mas nenhum está em processo de assinatura` : 'não possui documentos anexados'}</p>
+                                    ${associado.pre_cadastro == 1 ? 
+                                        '<small class="text-muted">Este é um pré-cadastro. Os documentos serão anexados durante o processo</small>' : 
+                                        '<small class="text-muted">Entre em contato com o setor comercial para mais informações</small>'
+                                    }
+                                </div>
+                            `;
+                        }
+                    } else {
+                        // Sem documentos ou erro na estrutura
+                        documentosTab.innerHTML = `
+                            <div class="empty-documents-state">
+                                <i class="fas fa-folder-open"></i>
+                                <h5>Nenhum documento encontrado</h5>
+                                <p>${associado.nome} ainda não possui documentos em fluxo de assinatura</p>
+                                ${associado.pre_cadastro == 1 ? 
+                                    '<small class="text-muted">Este é um pré-cadastro aguardando documentação</small>' : 
+                                    '<small class="text-muted">Os documentos podem estar sendo processados</small>'
+                                }
+                            </div>
+                        `;
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Erro ao buscar documentos:', error);
+                    console.error('Status:', status);
+                    console.error('Response:', xhr.responseText);
+                    
+                    documentosTab.innerHTML = `
+                        <div class="empty-documents-state">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <h5>Erro ao carregar documentos</h5>
+                            <p>Não foi possível carregar os documentos de ${associado.nome}</p>
+                            <small class="text-muted">Por favor, tente novamente mais tarde</small>
+                        </div>
+                    `;
+                }
+            });
+        }
+
+        // FUNÇÃO ATUALIZADA: Renderizar documentos no modal com validação extra
+        function renderizarDocumentosNoModal(documentos, container) {
+            let html = '<div class="document-flow-container">';
+
+            // Adiciona contador de documentos
+            html += `
+                <div class="document-count-info" style="margin-bottom: 1rem; padding: 1rem; background: var(--gray-100); border-radius: 8px;">
+                    <i class="fas fa-info-circle" style="color: var(--primary); margin-right: 0.5rem;"></i>
+                    <span style="font-size: 0.875rem; color: var(--gray-600);">
+                        ${documentos.length} documento${documentos.length > 1 ? 's' : ''} em fluxo de assinatura
+                    </span>
+                </div>
+            `;
+
+            documentos.forEach(doc => {
+                const statusClass = doc.status_fluxo.toLowerCase().replace('_', '-');
+                
+                html += `
+                    <div class="document-flow-card">
+                        <span class="status-badge-modal ${statusClass}">
+                            <i class="fas fa-${getStatusIcon(doc.status_fluxo)} me-1"></i>
+                            ${doc.status_descricao}
+                        </span>
+                        
+                        <div class="document-flow-header">
+                            <div class="document-flow-icon">
+                                <i class="fas fa-file-pdf"></i>
+                            </div>
+                            <div class="document-flow-info">
+                                <h6>Ficha de Filiação</h6>
+                                <p>${doc.tipo_origem === 'VIRTUAL' ? 'Gerada no Sistema' : 'Digitalizada'}</p>
+                            </div>
+                        </div>
+                        
+                        <div class="document-meta-modal">
+                            <div class="meta-item-modal">
+                                <i class="fas fa-calendar"></i>
+                                <span>Cadastrado em ${formatarDataDocumento(doc.data_upload)}</span>
+                            </div>
+                            ${doc.departamento_atual_nome ? `
+                                <div class="meta-item-modal">
+                                    <i class="fas fa-building"></i>
+                                    <span>${doc.departamento_atual_nome}</span>
+                                </div>
+                            ` : ''}
+                            ${doc.dias_em_processo > 0 ? `
+                                <div class="meta-item-modal">
+                                    <i class="fas fa-hourglass-half"></i>
+                                    <span>${doc.dias_em_processo} dia${doc.dias_em_processo > 1 ? 's' : ''} em processo</span>
+                                </div>
+                            ` : ''}
+                            ${doc.funcionario_upload ? `
+                                <div class="meta-item-modal">
+                                    <i class="fas fa-user"></i>
+                                    <span>Por: ${doc.funcionario_upload}</span>
+                                </div>
+                            ` : ''}
+                        </div>
+                        
+                        <!-- Progress do Fluxo -->
+                        <div class="fluxo-progress-modal">
+                            <div class="fluxo-steps-modal">
+                                <div class="fluxo-step-modal ${doc.status_fluxo !== 'DIGITALIZADO' ? 'completed' : 'active'}">
+                                    <div class="fluxo-step-icon-modal">
+                                        <i class="fas fa-upload"></i>
+                                    </div>
+                                    <div class="fluxo-step-label-modal">Digitalizado</div>
+                                    <div class="fluxo-line-modal"></div>
+                                </div>
+                                <div class="fluxo-step-modal ${doc.status_fluxo === 'AGUARDANDO_ASSINATURA' ? 'active' : (doc.status_fluxo === 'ASSINADO' || doc.status_fluxo === 'FINALIZADO' ? 'completed' : '')}">
+                                    <div class="fluxo-step-icon-modal">
+                                        <i class="fas fa-signature"></i>
+                                    </div>
+                                    <div class="fluxo-step-label-modal">Assinatura</div>
+                                    <div class="fluxo-line-modal"></div>
+                                </div>
+                                <div class="fluxo-step-modal ${doc.status_fluxo === 'ASSINADO' ? 'active' : (doc.status_fluxo === 'FINALIZADO' ? 'completed' : '')}">
+                                    <div class="fluxo-step-icon-modal">
+                                        <i class="fas fa-check"></i>
+                                    </div>
+                                    <div class="fluxo-step-label-modal">Assinado</div>
+                                    <div class="fluxo-line-modal"></div>
+                                </div>
+                                <div class="fluxo-step-modal ${doc.status_fluxo === 'FINALIZADO' ? 'completed' : ''}">
+                                    <div class="fluxo-step-icon-modal">
+                                        <i class="fas fa-flag-checkered"></i>
+                                    </div>
+                                    <div class="fluxo-step-label-modal">Finalizado</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Informações adicionais baseadas no status -->
+                        ${renderizarInfoAdicional(doc)}
+                        
+                        <div class="document-actions-modal">
+                            <button class="btn-modern btn-primary btn-sm" onclick="downloadDocumentoModal(${doc.id})">
+                                <i class="fas fa-download"></i>
+                                Baixar
+                            </button>
+                            
+                            ${getAcoesFluxoModal(doc)}
+                            
+                            <button class="btn-modern btn-secondary btn-sm" onclick="verHistoricoModal(${doc.id})">
+                                <i class="fas fa-history"></i>
+                                Histórico
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        // NOVA FUNÇÃO: Renderizar informações adicionais baseadas no status
+        function renderizarInfoAdicional(doc) {
+            let html = '';
+            
+            switch(doc.status_fluxo) {
+                case 'DIGITALIZADO':
+                    html = `
+                        <div class="alert-info-custom" style="margin: 1rem 0; padding: 0.75rem; background: rgba(0, 123, 255, 0.1); border-radius: 8px;">
+                            <i class="fas fa-info-circle" style="color: var(--info);"></i>
+                            <span style="font-size: 0.8125rem;">Documento aguardando envio para assinatura</span>
+                        </div>
+                    `;
+                    break;
+                    
+                case 'AGUARDANDO_ASSINATURA':
+                    html = `
+                        <div class="alert-warning-custom" style="margin: 1rem 0; padding: 0.75rem; background: rgba(255, 193, 7, 0.1); border-radius: 8px;">
+                            <i class="fas fa-clock" style="color: var(--warning);"></i>
+                            <span style="font-size: 0.8125rem;">Documento na presidência aguardando assinatura</span>
+                        </div>
+                    `;
+                    break;
+                    
+                case 'ASSINADO':
+                    html = `
+                        <div class="alert-success-custom" style="margin: 1rem 0; padding: 0.75rem; background: rgba(40, 167, 69, 0.1); border-radius: 8px;">
+                            <i class="fas fa-check-circle" style="color: var(--success);"></i>
+                            <span style="font-size: 0.8125rem;">Documento assinado e retornado ao comercial</span>
+                        </div>
+                    `;
+                    break;
+                    
+                case 'FINALIZADO':
+                    html = `
+                        <div class="alert-primary-custom" style="margin: 1rem 0; padding: 0.75rem; background: rgba(0, 86, 210, 0.1); border-radius: 8px;">
+                            <i class="fas fa-flag-checkered" style="color: var(--primary);"></i>
+                            <span style="font-size: 0.8125rem;">Processo concluído com sucesso</span>
+                        </div>
+                    `;
+                    break;
+            }
+            
+            return html;
+        }
+
+        // NOVA FUNÇÃO: Obter ícone do status
+        function getStatusIcon(status) {
+            const icons = {
+                'DIGITALIZADO': 'upload',
+                'AGUARDANDO_ASSINATURA': 'clock',
+                'ASSINADO': 'check',
+                'FINALIZADO': 'flag-checkered'
+            };
+            return icons[status] || 'file';
+        }
+
+        // NOVA FUNÇÃO: Obter ações do fluxo para o modal
+        function getAcoesFluxoModal(doc) {
+            let acoes = '';
+
+            switch (doc.status_fluxo) {
+                case 'DIGITALIZADO':
+                    acoes = `
+                        <button class="btn-modern btn-warning btn-sm" onclick="enviarParaAssinaturaModal(${doc.id})" title="Enviar para Assinatura">
+                            <i class="fas fa-paper-plane"></i>
+                            Enviar
+                        </button>
+                    `;
+                    break;
+
+                case 'AGUARDANDO_ASSINATURA':
+                    // Verificar se usuário tem permissão para assinar (apenas presidência)
+                    <?php if ($auth->isDiretor() || $usuarioLogado['departamento_id'] == 2): ?>
+                        acoes = `
+                        <button class="btn-modern btn-success btn-sm" onclick="abrirModalAssinaturaModal(${doc.id})" title="Assinar">
+                            <i class="fas fa-signature"></i>
+                            Assinar
+                        </button>
+                    `;
+                    <?php endif; ?>
+                    break;
+
+                case 'ASSINADO':
+                    acoes = `
+                        <button class="btn-modern btn-info btn-sm" onclick="finalizarProcessoModal(${doc.id})" title="Finalizar">
+                            <i class="fas fa-flag-checkered"></i>
+                            Finalizar
+                        </button>
+                    `;
+                    break;
+            }
+
+            return acoes;
+        }
+
+        // NOVA FUNÇÃO: Formatar data para documentos
+        function formatarDataDocumento(dataStr) {
+            if (!dataStr) return '-';
+            const data = new Date(dataStr);
+            return data.toLocaleDateString('pt-BR', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        // NOVA FUNÇÃO: Download documento no modal
+        function downloadDocumentoModal(id) {
+            window.open('../api/documentos/documentos_download.php?id=' + id, '_blank');
+        }
+
+        // FUNÇÃO ATUALIZADA: Ver histórico no modal com mais detalhes
+        function verHistoricoModal(documentoId) {
+            // Criar um modal secundário para o histórico
+            const historicoHtml = `
+                <div class="modal fade" id="historicoDocumentoModal" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">
+                                    <i class="fas fa-history me-2" style="color: var(--primary);"></i>
+                                    Histórico do Documento
+                                </h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div id="historicoDocumentoContent">
+                                    <div class="text-center py-5">
+                                        <div class="loading-spinner mb-3"></div>
+                                        <p class="text-muted">Carregando histórico...</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn-modern btn-secondary" data-bs-dismiss="modal">
+                                    Fechar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Remove modal anterior se existir
+            $('#historicoDocumentoModal').remove();
+            
+            // Adiciona o novo modal ao body
+            $('body').append(historicoHtml);
+            
+            // Abre o modal
+            const modalHistorico = new bootstrap.Modal(document.getElementById('historicoDocumentoModal'));
+            modalHistorico.show();
+            
+            // Busca o histórico
+            $.get('../api/documentos/documentos_historico_fluxo.php', { documento_id: documentoId }, function(response) {
+                if (response.status === 'success' && response.data) {
+                    renderizarHistoricoNoModal(response.data);
+                } else {
+                    $('#historicoDocumentoContent').html(`
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Não foi possível carregar o histórico do documento
+                        </div>
+                    `);
+                }
+            }).fail(function() {
+                $('#historicoDocumentoContent').html(`
+                    <div class="alert alert-danger">
+                        <i class="fas fa-times-circle me-2"></i>
+                        Erro ao carregar histórico
+                    </div>
+                `);
+            });
+        }
+
+        // NOVA FUNÇÃO: Renderizar histórico no modal
+        function renderizarHistoricoNoModal(historico) {
+            if (!historico || historico.length === 0) {
+                $('#historicoDocumentoContent').html(`
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Nenhum histórico disponível para este documento
+                    </div>
+                `);
+                return;
+            }
+            
+            let html = '<div class="timeline">';
+            
+            historico.forEach((item, index) => {
+                const isLast = index === historico.length - 1;
+                html += `
+                    <div class="timeline-item ${isLast ? 'last' : ''}">
+                        <div class="timeline-marker">
+                            <i class="fas fa-${getIconForStatus(item.status_novo)}"></i>
+                        </div>
+                        <div class="timeline-content">
+                            <div class="timeline-header">
+                                <h6 class="timeline-title">${getStatusLabel(item.status_novo)}</h6>
+                                <span class="timeline-date">${formatarDataDocumento(item.data_acao)}</span>
+                            </div>
+                            <p class="timeline-description">${item.observacao || 'Sem observações'}</p>
+                            <div class="timeline-meta">
+                                <small class="text-muted">
+                                    <i class="fas fa-user me-1"></i> ${item.funcionario_nome || 'Sistema'}
+                                    ${item.dept_origem_nome ? `<br><i class="fas fa-building me-1"></i> De: ${item.dept_origem_nome}` : ''}
+                                    ${item.dept_destino_nome ? ` → Para: ${item.dept_destino_nome}` : ''}
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            $('#historicoDocumentoContent').html(html);
+        }
+
+        // FUNÇÃO AUXILIAR: Obter ícone para status
+        function getIconForStatus(status) {
+            const icons = {
+                'DIGITALIZADO': 'fa-upload',
+                'AGUARDANDO_ASSINATURA': 'fa-clock',
+                'ENVIADO_PRESIDENCIA': 'fa-paper-plane',
+                'ASSINADO': 'fa-signature',
+                'FINALIZADO': 'fa-flag-checkered'
+            };
+            return icons[status] || 'fa-circle';
+        }
+
+        // FUNÇÃO AUXILIAR: Obter label para status
+        function getStatusLabel(status) {
+            const labels = {
+                'DIGITALIZADO': 'Documento Digitalizado',
+                'AGUARDANDO_ASSINATURA': 'Enviado para Assinatura',
+                'ENVIADO_PRESIDENCIA': 'Na Presidência',
+                'ASSINADO': 'Documento Assinado',
+                'FINALIZADO': 'Processo Finalizado'
+            };
+            return labels[status] || status;
+        }
+
+        // NOVA FUNÇÃO: Enviar para assinatura no modal
+        function enviarParaAssinaturaModal(documentoId) {
+            if (confirm('Deseja enviar este documento para assinatura na presidência?')) {
+                $.ajax({
+                    url: '../api/documentos/documentos_enviar_assinatura.php',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({
+                        documento_id: documentoId,
+                        observacao: 'Documento enviado para assinatura via modal'
+                    }),
+                    success: function (response) {
+                        if (response.status === 'success') {
+                            alert('Documento enviado para assinatura com sucesso!');
+                            // Recarrega a tab de documentos
+                            const associadoId = document.getElementById('modalId').textContent.replace('ID: ', '');
+                            const associado = todosAssociados.find(a => a.id == associadoId);
+                            if (associado) {
+                                preencherTabDocumentos(associado);
+                            }
+                        } else {
+                            alert('Erro: ' + response.message);
+                        }
+                    },
+                    error: function () {
+                        alert('Erro ao enviar documento para assinatura');
+                    }
+                });
+            }
+        }
+
+        // NOVA FUNÇÃO: Finalizar processo no modal
+        function finalizarProcessoModal(documentoId) {
+            if (confirm('Deseja finalizar o processo deste documento?')) {
+                $.ajax({
+                    url: '../api/documentos/documentos_finalizar.php',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({
+                        documento_id: documentoId,
+                        observacao: 'Processo finalizado via modal'
+                    }),
+                    success: function (response) {
+                        if (response.status === 'success') {
+                            alert('Processo finalizado com sucesso!');
+                            // Recarrega a tab de documentos
+                            const associadoId = document.getElementById('modalId').textContent.replace('ID: ', '');
+                            const associado = todosAssociados.find(a => a.id == associadoId);
+                            if (associado) {
+                                preencherTabDocumentos(associado);
+                            }
+                        } else {
+                            alert('Erro: ' + response.message);
+                        }
+                    },
+                    error: function () {
+                        alert('Erro ao finalizar processo');
+                    }
+                });
+            }
         }
 
         // Função para fechar modal
@@ -1895,7 +2393,7 @@ $headerComponent = HeaderComponent::create([
             }, 500);
         });
 
-        console.log('Sistema inicializado com Header Component!');
+        console.log('Sistema inicializado com Header Component e Fluxo de Documentos!');
     </script>
 
 </body>
