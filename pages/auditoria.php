@@ -46,10 +46,10 @@ error_log("Departamento ID (valor): " . ($usuarioLogado['departamento_id'] ?? 'N
 error_log("Departamento ID (tipo): " . gettype($usuarioLogado['departamento_id'] ?? null));
 error_log("É Diretor (método): " . ($auth->isDiretor() ? 'SIM' : 'NÃO'));
 
-// NOVA VALIDAÇÃO: usuários do departamento da presidência (ID: 1) OU diretores
+// CORREÇÃO: NOVA LÓGICA DE PERMISSÕES (igual à correção de funcionários)
 if (isset($usuarioLogado['departamento_id'])) {
     $deptId = $usuarioLogado['departamento_id'];
-    $isDiretor = $auth->isDiretor();
+    $cargoUsuario = $usuarioLogado['cargo'] ?? '';
     $departamentoUsuario = $deptId;
     
     // Debug dos testes de comparação
@@ -57,22 +57,30 @@ if (isset($usuarioLogado['departamento_id'])) {
     error_log("  deptId === '1': " . ($deptId === '1' ? 'true' : 'false'));
     error_log("  deptId === 1: " . ($deptId === 1 ? 'true' : 'false'));
     error_log("  deptId == 1: " . ($deptId == 1 ? 'true' : 'false'));
-    error_log("  isDiretor: " . ($isDiretor ? 'true' : 'false'));
+    error_log("  Cargo: " . $cargoUsuario);
     
-    if ($deptId == 1) { // Presidência - vê tudo
+    // NOVA LÓGICA: Sistema flexível de permissões
+    if ($deptId == 1) {
+        // PRESIDÊNCIA - vê tudo
         $temPermissaoAuditoria = true;
         $isPresidencia = true;
         error_log("✅ Permissão concedida: Usuário pertence ao Departamento da Presidência (ID = 1) - VÊ TUDO");
-    } elseif ($isDiretor) { // Diretor - vê apenas seu departamento
+    } elseif (in_array($cargoUsuario, ['Presidente', 'Vice-Presidente'])) {
+        // Apenas Presidente e Vice-Presidente veem todos (mesmo fora da presidência)
+        $temPermissaoAuditoria = true;
+        $isPresidencia = true;
+        error_log("✅ Permissão concedida: {$cargoUsuario} - VÊ TUDO");
+    } elseif (in_array($cargoUsuario, ['Diretor', 'Gerente', 'Supervisor', 'Coordenador'])) {
+        // CORREÇÃO: Diretores agora também veem apenas seu departamento
         $temPermissaoAuditoria = true;
         $isDiretor = true;
-        error_log("✅ Permissão concedida: Usuário é Diretor - VÊ APENAS DEPARTAMENTO " . $deptId);
+        error_log("✅ Permissão concedida: {$cargoUsuario} - VÊ APENAS DEPARTAMENTO " . $deptId);
     } else {
-        $motivoNegacao = 'Acesso restrito ao departamento da Presidência ou diretores.';
-        error_log("❌ Acesso negado. Departamento: '$deptId' (tipo: " . gettype($deptId) . "), É diretor: " . ($isDiretor ? 'SIM' : 'NÃO') . ". Necessário: Presidência (ID = 1) OU ser diretor");
+        $motivoNegacao = 'Acesso restrito ao departamento da Presidência, Presidente/Vice-Presidente ou cargos de gestão.';
+        error_log("❌ Acesso negado. Departamento: '$deptId', Cargo: '$cargoUsuario'. Necessário: Presidência (ID = 1) OU Presidente/Vice-Presidente OU Diretor/Gerente/Supervisor/Coordenador");
     }
 } else {
-    $motivoNegacao = 'Departamento não identificado. Acesso restrito ao departamento da Presidência ou diretores.';
+    $motivoNegacao = 'Departamento não identificado. Acesso restrito ao departamento da Presidência ou cargos de gestão.';
     error_log("❌ departamento_id não existe no array do usuário");
 }
 
@@ -81,10 +89,10 @@ if (!$temPermissaoAuditoria) {
     error_log("❌ ACESSO NEGADO: " . $motivoNegacao);
 } else {
     if ($isPresidencia) {
-        $motivo = "Usuário da Presidência - Acesso Total";
+        $motivo = "Usuário com Acesso Total - " . ($usuarioLogado['departamento_id'] == 1 ? 'Presidência' : $usuarioLogado['cargo']);
         error_log("✅ ACESSO PERMITIDO - " . $motivo);
     } else {
-        $motivo = "Usuário é Diretor - Acesso Departamental (Dept: " . $departamentoUsuario . ")";
+        $motivo = "Usuário é {$cargoUsuario} - Acesso Departamental (Dept: " . $departamentoUsuario . ")";
         error_log("✅ ACESSO PERMITIDO - " . $motivo);
     }
 }

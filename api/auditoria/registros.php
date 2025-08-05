@@ -1,24 +1,34 @@
 <?php
 /**
- * API para listagem de registros de auditoria
+ * API para listagem de registros de auditoria - VERSÃO FINAL
  * /api/auditoria/registros.php
+ * 
+ * REGRAS DE ACESSO:
+ * - Presidência (dept_id = 1): VÊ TUDO
+ * - Diretores (outros depts): VÊ APENAS SEU DEPARTAMENTO
+ * - Outros perfis: VÊ APENAS PRÓPRIOS REGISTROS
  */
+
+error_reporting(E_ALL);
+ini_set('display_errors', 0);
+ini_set('log_errors', 1);
 
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET');
 header('Access-Control-Allow-Headers: Content-Type');
 
-// Configurar tratamento de erros
-error_reporting(E_ALL);
-ini_set('display_errors', 0);
-
 try {
     // Verificar método
     if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
         throw new Exception('Método não permitido');
     }
-
+    
+    // Iniciar sessão
+    if (session_status() !== PHP_SESSION_ACTIVE) {
+        session_start();
+    }
+    
     // Incluir arquivos necessários
     require_once '../../config/config.php';
     require_once '../../config/database.php';
@@ -27,14 +37,78 @@ try {
     // Conectar ao banco
     $db = Database::getInstance(DB_NAME_CADASTRO)->getConnection();
     
+    // ===========================================
+    // OBTER DADOS DO USUÁRIO LOGADO
+    // ===========================================
+    
+    $userName = $_SESSION['nome'] ?? null;
+    $userId = null;
+    $userProfile = null;
+    $userDepartmentId = null;
+    
+    // Buscar dados no banco pelo nome da sessão
+    if ($userName) {
+        $stmt = $db->prepare("SELECT id, cargo, departamento_id FROM Funcionarios WHERE nome = ? LIMIT 1");
+        $stmt->execute([$userName]);
+        $userData = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if ($userData) {
+            $userId = $userData['id'];
+            $userProfile = strtolower(trim($userData['cargo']));
+            $userDepartmentId = (int)$userData['departamento_id'];
+        }
+    }
+    
+    // Fallback para dados de sessão se não encontrou no banco
+    if (!$userId) {
+        $userId = $_SESSION['user_id'] ?? $_SESSION['id'] ?? $_SESSION['funcionario_id'] ?? null;
+        $userProfile = strtolower($_SESSION['cargo'] ?? $_SESSION['user_profile'] ?? 'funcionario');
+        $userDepartmentId = (int)($_SESSION['departamento_id'] ?? $_SESSION['user_department_id'] ?? 0);
+    }
+    
+    // Verificar se tem dados mínimos
+    if (!$userId) {
+        throw new Exception('Usuário não identificado');
+    }
+    
+    error_log("AUDITORIA API - Usuário: $userName (ID: $userId), Perfil: $userProfile, Dept: $userDepartmentId");
+    
+    // ===========================================
+    // DEFINIR CONTROLE DE ACESSO
+    // ===========================================
+    
+    $whereConditions = [];
+    $params = [];
+    
+    // Identificar se é da presidência
+    $isPresidencia = ($userDepartmentId === 1);
+    
+    // Identificar se é diretor
+    $isDiretor = (strpos($userProfile, 'diretor') !== false);
+    
+    if ($isPresidencia) {
+        // PRESIDÊNCIA VÊ TUDO - sem filtros (incluindo registros do Sistema)
+        error_log("ACESSO: Presidência - SEM FILTROS (vê tudo, incluindo Sistema)");
+    } elseif ($isDiretor && $userDepartmentId > 0) {
+        // DIRETOR VÊ APENAS SEU DEPARTAMENTO (SEM registros do Sistema)
+        $whereConditions[] = "f.departamento_id = :user_department_id";
+        $params[':user_department_id'] = $userDepartmentId;
+        error_log("ACESSO: Diretor - FILTRO ESTRITO POR DEPARTAMENTO: $userDepartmentId (sem Sistema)");
+    } else {
+        // OUTROS PERFIS - APENAS PRÓPRIOS REGISTROS
+        $whereConditions[] = "a.funcionario_id = :user_id";
+        $params[':user_id'] = $userId;
+        error_log("ACESSO: Funcionário - APENAS PRÓPRIOS REGISTROS");
+    }
+    
+    // ===========================================
+    // FILTROS ADICIONAIS DA REQUEST
+    // ===========================================
+    
     // Parâmetros de paginação
     $page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
     $limit = isset($_GET['limit']) ? min(100, max(10, (int)$_GET['limit'])) : 20;
     $offset = ($page - 1) * $limit;
-    
-    // Preparar filtros
-    $whereConditions = [];
-    $params = [];
     
     // Filtro por tabela
     if (!empty($_GET['tabela'])) {
@@ -46,18 +120,6 @@ try {
     if (!empty($_GET['acao'])) {
         $whereConditions[] = "a.acao = :acao";
         $params[':acao'] = $_GET['acao'];
-    }
-    
-    // Filtro por funcionário
-    if (!empty($_GET['funcionario_id'])) {
-        $whereConditions[] = "a.funcionario_id = :funcionario_id";
-        $params[':funcionario_id'] = (int)$_GET['funcionario_id'];
-    }
-    
-    // Filtro por associado
-    if (!empty($_GET['associado_id'])) {
-        $whereConditions[] = "a.associado_id = :associado_id";
-        $params[':associado_id'] = (int)$_GET['associado_id'];
     }
     
     // Filtro por data início
@@ -72,7 +134,7 @@ try {
         $params[':data_fim'] = $_GET['data_fim'];
     }
     
-    // Filtro por busca (funcionário ou tabela)
+    // Filtro por busca
     if (!empty($_GET['search'])) {
         $search = '%' . $_GET['search'] . '%';
         $whereConditions[] = "(f.nome LIKE :search OR a.tabela LIKE :search2)";
@@ -80,13 +142,15 @@ try {
         $params[':search2'] = $search;
     }
     
-    // Construir cláusula WHERE
+    // Construir WHERE clause
     $whereClause = '';
     if (!empty($whereConditions)) {
         $whereClause = 'WHERE ' . implode(' AND ', $whereConditions);
     }
     
-    // === BUSCAR REGISTROS ===
+    // ===========================================
+    // BUSCAR REGISTROS
+    // ===========================================
     
     $sql = "
         SELECT 
@@ -103,10 +167,13 @@ try {
             f.nome as funcionario_nome,
             f.email as funcionario_email,
             f.cargo as funcionario_cargo,
+            f.departamento_id,
+            d.nome as departamento_nome,
             ass.nome as associado_nome,
             ass.cpf as associado_cpf
         FROM Auditoria a
         LEFT JOIN Funcionarios f ON a.funcionario_id = f.id
+        LEFT JOIN Departamentos d ON f.departamento_id = d.id
         LEFT JOIN Associados ass ON a.associado_id = ass.id
         $whereClause
         ORDER BY a.data_hora DESC
@@ -125,12 +192,15 @@ try {
     $stmt->execute();
     $registros = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
-    // === CONTAR TOTAL DE REGISTROS ===
+    // ===========================================
+    // CONTAR TOTAL DE REGISTROS
+    // ===========================================
     
     $sqlCount = "
         SELECT COUNT(*) as total
         FROM Auditoria a
         LEFT JOIN Funcionarios f ON a.funcionario_id = f.id
+        LEFT JOIN Departamentos d ON f.departamento_id = d.id
         LEFT JOIN Associados ass ON a.associado_id = ass.id
         $whereClause
     ";
@@ -146,7 +216,9 @@ try {
     
     $totalPaginas = ceil($totalRegistros / $limit);
     
-    // === PROCESSAR REGISTROS ===
+    // ===========================================
+    // PROCESSAR REGISTROS
+    // ===========================================
     
     $registrosProcessados = [];
     foreach ($registros as $registro) {
@@ -163,6 +235,7 @@ try {
             'funcionario_nome' => $registro['funcionario_nome'] ?: 'Sistema',
             'funcionario_email' => $registro['funcionario_email'],
             'funcionario_cargo' => $registro['funcionario_cargo'],
+            'departamento_nome' => $registro['departamento_nome'],
             'associado_id' => $registro['associado_id'],
             'associado_nome' => $registro['associado_nome'],
             'associado_cpf' => $registro['associado_cpf']
@@ -173,7 +246,7 @@ try {
             $processado['data_hora_formatada'] = date('d/m/Y H:i:s', strtotime($processado['data_hora']));
         }
         
-        // Decodificar alterações se existir
+        // Decodificar alterações
         if (!empty($processado['alteracoes'])) {
             try {
                 $processado['alteracoes_decoded'] = json_decode($processado['alteracoes'], true);
@@ -187,7 +260,9 @@ try {
         $registrosProcessados[] = $processado;
     }
     
-    // === PREPARAR DADOS DE PAGINAÇÃO ===
+    // ===========================================
+    // PREPARAR RESPOSTA
+    // ===========================================
     
     $paginacao = [
         'pagina_atual' => $page,
@@ -200,8 +275,6 @@ try {
         'ultima_pagina' => $totalPaginas
     ];
     
-    // === FILTROS APLICADOS ===
-    
     $filtrosAplicados = [];
     foreach (['tabela', 'acao', 'funcionario_id', 'associado_id', 'data_inicio', 'data_fim', 'search'] as $filtro) {
         if (!empty($_GET[$filtro])) {
@@ -209,7 +282,16 @@ try {
         }
     }
     
-    // === RESPOSTA DE SUCESSO ===
+    $infoUsuario = [
+        'user_id' => (int)$userId,
+        'user_profile' => $userProfile,
+        'user_department_id' => $userDepartmentId,
+        'is_presidencia' => $isPresidencia,
+        'is_diretor' => $isDiretor,
+        'pode_ver_todos_funcionarios' => ($isPresidencia || $isDiretor),
+        'nome_usuario' => $userName,
+        'escopo_acesso' => $isPresidencia ? 'GLOBAL' : ($isDiretor ? "DEPARTAMENTO_$userDepartmentId" : 'PRÓPRIOS_REGISTROS')
+    ];
     
     $response = [
         'status' => 'success',
@@ -222,20 +304,20 @@ try {
                 'total_encontrados' => count($registrosProcessados),
                 'pagina_atual' => $page,
                 'total_geral' => (int)$totalRegistros
-            ]
+            ],
+            'usuario' => $infoUsuario
         ],
         'meta' => [
             'tempo_execucao' => microtime(true) - $_SERVER['REQUEST_TIME_FLOAT'],
             'timestamp' => time(),
-            'versao_api' => '1.0'
+            'versao_api' => '3.0-final'
         ]
     ];
     
     echo json_encode($response, JSON_UNESCAPED_UNICODE | JSON_NUMERIC_CHECK);
 
 } catch (PDOException $e) {
-    // Erro específico do banco de dados
-    error_log("Erro PDO na API de registros de auditoria: " . $e->getMessage());
+    error_log("ERRO PDO na API de auditoria: " . $e->getMessage());
     
     http_response_code(500);
     echo json_encode([
@@ -244,15 +326,13 @@ try {
         'error_code' => 'DB_ERROR_001',
         'debug' => [
             'error_message' => $e->getMessage(),
-            'error_code' => $e->getCode(),
             'timestamp' => date('Y-m-d H:i:s')
         ],
         'data' => null
     ], JSON_UNESCAPED_UNICODE);
     
 } catch (Exception $e) {
-    // Outros erros
-    error_log("Erro na API de registros de auditoria: " . $e->getMessage());
+    error_log("ERRO na API de auditoria: " . $e->getMessage());
     
     http_response_code(500);
     echo json_encode([
@@ -261,26 +341,6 @@ try {
         'error_code' => 'GENERAL_ERROR_001',
         'debug' => [
             'error_message' => $e->getMessage(),
-            'error_file' => basename($e->getFile()),
-            'error_line' => $e->getLine(),
-            'timestamp' => date('Y-m-d H:i:s')
-        ],
-        'data' => null
-    ], JSON_UNESCAPED_UNICODE);
-    
-} catch (Error $e) {
-    // Erros fatais do PHP
-    error_log("Erro fatal na API de registros: " . $e->getMessage());
-    
-    http_response_code(500);
-    echo json_encode([
-        'status' => 'error',
-        'message' => 'Erro fatal do sistema',
-        'error_code' => 'FATAL_ERROR_001',
-        'debug' => [
-            'error_message' => $e->getMessage(),
-            'error_file' => basename($e->getFile()),
-            'error_line' => $e->getLine(),
             'timestamp' => date('Y-m-d H:i:s')
         ],
         'data' => null
