@@ -1,6 +1,6 @@
 <?php
 /**
- * Formulário de Cadastro de Associados - VERSÃO FICHA DE FILIAÇÃO
+ * Formulário de Cadastro de Associados - VERSÃO FICHA DE FILIAÇÃO CORRIGIDA
  * pages/cadastroForm.php
  */
 
@@ -42,7 +42,6 @@ if ($isEdit) {
 
     $page_title = 'Editar Associado - ASSEGO';
 }
-
 
 try {
     $db = Database::getInstance(DB_NAME_CADASTRO)->getConnection();
@@ -124,6 +123,352 @@ try {
     $tiposAssociado = [];
     $regrasContribuicao = [];
 }
+
+// Array com as lotações
+$lotacoes = [
+    "1. BATALHAO BOMBEIRO MILITAR",
+    "1. BATALHAO DE POLICIA MILITAR AMBIENTAL DO ESTADO",
+    "1. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
+    "1. BATALHAO DE POLICIA MILITAR RODOVIARIO DO ESTAD",
+    "1. CIA INDEPENDENTE DE BOMBEIROS MILITAR",
+    "1. COMANDO REGIONAL DE POLICIA MILITAR DO ESTADO D",
+    "1. COMPANHIA INDEPENDENTE DE POLICIA MILITAR AMBIE",
+    "1. COMPANHIA INDEPENDENTE DE POLICIA MILITAR RODOV",
+    "1. COMPANHIA INDEPENDENTE POLICIA MILITAR DO ESTAD",
+    "1. DIRETORIA REGIONAL PRISIONAL - METROPOLITANA",
+    "1. PELOTAO / 15. COMPANHIA DO CORPO DE BOMBEIROS M",
+    "1. PELOTAO BOMBEIRO MILITAR",
+    "1. REGIONAL DO CORPO DE BOMBEIROS MILITAR DE GOIAN",
+    "1. SECAO DO ESTADO MAIOR",
+    "10. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
+    "10. CIA INDEPENDENTE DE BOMBEIROS MILITAR",
+    "10. COMANDO REGIONAL DE POLICIA MILITAR DO ESTADO",
+    "10. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO E",
+    "10. PELOTAO DE BOMBEIROS MILITAR",
+    "10a COMPANHIA INDEPENDENTE POLICIA MILITAR",
+    "11. BATALHAO BOMBEIRO MILITAR",
+    "11. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
+    "11. CIA INDEPENDENTE DE BOMBEIROS MILITAR",
+    "11. COMANDO REGIONAL DE POLICIA MILITAR DO ESTADO",
+    "11. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO E",
+    "12. BATALHAO BOMBEIRO MILITAR",
+    "12. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
+    "12. CIA INDEPENDENTE DE BOMBEIROS MILITAR",
+    "12. COMANDO REGIONAL DE POLICIA MILITAR DO ESTADO",
+    "12. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO E",
+    "13. BATALHAO BOMBEIRO MILITAR",
+    "13. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
+    "13. CIA INDEPENDENTE DE BOMBEIROS MILITAR",
+    "13. COMANDO REGIONAL DE POLICIA MILITAR DO ESTADO",
+    "13. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DE G",
+    "14. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
+    "14. CIA INDEPENDENTE DE BOMBEIROS MILITAR",
+    "14. COMANDO REGIONAL DE POLICIA MILITAR DO ESTADO",
+    "14. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO E",
+    "15. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
+    "15. CIA INDEPENDENTE DE BOMBEIROS",
+    "15. COMANDO REGIONAL DE POLICIA MILITAR DO ESTADO",
+    "15. COMPANHIA INDEPENDENTE POLICIA MILITAR DO ESTA",
+    "16. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
+    "16. COMANDO REGIONAL DE PM DO ESTADO DE GOIAS",
+    "16. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO E",
+    "16a COMPANHIA INDEPENDENTE DE POLICIA MILITAR/COMPANHIA DE POLICIAMENTO ESPECIALIZADO",
+    "17. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
+    "17. CIA INDEPENDENTE DE BOMBEIROS",
+    "17. COMANDO REGIONAL DE POLICIA MILITAR DO ESTADO",
+    "17. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO E",
+    "18. BATALHAO DE POLICIA MILTIAR DO ESTADO DE GOIAS",
+    "18. CIPM - COMPANHIA DE POLICIAMENTO ESPECIALIZADO",
+    "18. COMANDO REGIONAL DE POLICIA MILITAR DO ESTADO",
+    "19. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
+    "19.. COMPANHIA INDEPENDENTE DEPOLICIA MILITAR DO E",
+    "19o COMANDO REGIONAL DE POLICIA MILITAR",
+    "2. BATALHAO BOMBEIRO MILITAR",
+    "2. BATALHAO DE POLICIA MILITAR DE GOIAS",
+    "2. BATALHAO DE POLICIA MILITAR RODOVIARIO DO ESTAD",
+    "2. CIA INDEPENDENTE DE BOMBEIROS MILITAR",
+    "2. COMANDO REGIONAL DE POLICIA MILITAR DO ESTADO D",
+    "2. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO ES",
+    "2. PELOTAO DE BOMBEIROS MILITAR",
+    "20. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
+    "20. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO E",
+    "21. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
+    "21. COMPANHIA INDENDENTE DE POLICIA MILITAR DO EST",
+    "22. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
+    "22. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO E",
+    "23. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
+    "23. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO E",
+    "24. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
+    "24. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO E",
+    "25. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
+    "25a COMPANHIA INDEPENDENTE BOMBEIRO MILITAR",
+    "25a COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO ESTADO DE GOIAS",
+    "26. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
+    "26a COMPANHIA INDEPENDENTE BOMBEIRO MILITAR",
+    "27. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
+    "27. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO E",
+    "28. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
+    "28. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO E",
+    "29. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
+    "29. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO E",
+    "2a COMPANHIA DE POLICIA MILITAR RURAL",
+    "3. BATALHAO DE BOMBEIROS MILITAR",
+    "3. BATALHAO DE POLICIA MILITAR RODOVIARIO DO ESTAD",
+    "3. BATANHAO DE POLICIA MILITAR DE GOIAS",
+    "3. CIA INDEPENDENTE DE BOMBEIROS MILITAR",
+    "3. COMANDO REGIONAL DE POLICIA MILITAR DO ESTADO D",
+    "3. PELOTAO DE BOMBEIROS MILITAR",
+    "3. REGIONAL DO CORPO DE BOMBEIROS MILITAR DE ANAPO",
+    "30. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
+    "31. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
+    "31. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO E",
+    "32. BATALHAO DE POLICIA MILTIAR DO ESTADO DE GOIAS",
+    "32. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO E",
+    "33. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
+    "33. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO E",
+    "34. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
+    "34. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO E",
+    "35. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO E",
+    "36. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
+    "36. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO E",
+    "37. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
+    "38. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
+    "39. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
+    "39. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO E",
+    "3ª COMPANHIA INDEPENDENTE DE POLICIA MILITAR DE GO",
+    "3ª SEÇÃO DE RECRUTAMENTO E SELEÇÃO DE PESSOAL",
+    "3o PELOTAO BOMBEIRO MILITAR",
+    "4. BATALHAO DE BOMBEIROS MILITAR",
+    "4. BATALHAO DE POLICIA MILITAR DE GOIAS",
+    "4. COMANDO REGIONAL DE POLICIA MILITAR DO ESTADO D",
+    "4. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO ES",
+    "4. PELOTAO BOMBEIRO MILITAR",
+    "4. SECAO DO ESTADO MAIOR",
+    "40. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
+    "41 BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
+    "41.  COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO",
+    "42.  COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO",
+    "42o BATALHAO DE POLICIA MILITAR/01o CRPM",
+    "43.  COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO",
+    "44. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO E",
+    "45. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO E",
+    "46. COMPANHIA INDEPENDENTE POLICIA MILITAR DO ESTA",
+    "47. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO E",
+    "48. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO E",
+    "4a COMPANHIA DE POLICIA MILITAR RURAL",
+    "4a COMPANHIA DE POLICIAMENTO RURAL",
+    "4a COMPANHIA DO COMANDO DE DIVISAS - BASE CABECEIRAS",
+    "4ª COMPANHIA DE ROTAM",
+    "4ª SECAO DE ADMINISTRACAO DE PESSOAL",
+    "4o PELOTAO BOMBEIRO MILITAR",
+    "5. BATALHAO DE BOMBEIROS MILITAR",
+    "5. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
+    "5. COMANDO REGIONAL DE POLICIA MILITAR DO ESTADO D",
+    "5. COMPANHIA BOMBEIRO MILITAR",
+    "5. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO ES",
+    "5. PELOTAO BOMBEIRO MILITAR",
+    "5. SECAO DO ESTADO MAIOR",
+    "5a COMPANHIA DE POLICIAMENTO RURAL",
+    "5a COMPANHIA INDEPENDENTE DE POLICIA MILITAR AMBIENTAL",
+    "6. BATALHAO DE BOMBEIROS MILITAR",
+    "6. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
+    "6. CIA INDEPENDENTE DE BOMBEIROS MILITAR",
+    "6. COMANDO REGIONAL DE POLICIA MILITAR DO ESTADO D",
+    "6. PELOTAO BOMBEIRO MILITAR",
+    "6. SECAO DO ESTADO MAIOR",
+    "6a COMPANHIA DO COMANDO DE DIVISAS - CIDADE OCIDENTAL",
+    "6a COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO ESTADO DE GOIAS",
+    "6o COMANDO REGIONAL BOMBEIRO MILITAR",
+    "7. BATALHAO DE BOMBEIROS MILITAR",
+    "7. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
+    "7. CIA INDEPENDENTE DE BOMBEIROS MILITAR",
+    "7. COMANDO REGIONAL DE POLICIA MILITAR DO ESTADO D",
+    "7. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO ES",
+    "7. PELOTAO BOMBEIRO MILITAR",
+    "7. SECAO DO ESTADO MAIOR",
+    "7a COMPANHIA INDEPENDENTE DE POLICIA MILITAR - CPE",
+    "7o COMANDO REGIONAL BOMBEIRO MILITAR",
+    "8. BATALHAO DE BOMBEIROS MILITAR",
+    "8. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
+    "8. CIA INDEPENDENTE DE BOMBEIROS MILITAR",
+    "8. COMANDO REGIONAL DE POLICIA MILITAR DO ESTADO D",
+    "8a SECAO DO ESTADO-MAIOR GERAL",
+    "9. BATALHAO BOMBEIRO MILITAR",
+    "9. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
+    "9. COMANDO REGIONAL DE POLICIA MILITAR DO ESTADO D",
+    "9. COMPANHIA BOMBEIRO MILITAR",
+    "9. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO ES",
+    "9. PELOTAO BOMBEIRO MILITAR",
+    "AGENFA LUZIANIA",
+    "ASSESSORIA FUNDACIONAL - DOM PEDRO II",
+    "ASSISTENCIA POLICIA MILITAR DO ESTADO DE GOIAS - M",
+    "ASSISTENCIA POLICIAL MILITAR - ASSEMBLEIA LEGISLAT",
+    "ASSISTENCIA POLICIAL MILITAR - SECRETARIA DE SEGUR",
+    "ASSISTENCIA POLICIAL MILITAR - TRIBUNAL DE CONTAS",
+    "ASSISTENCIA POLICIAL MILITAR - TRIBUNAL DE JUSTICA",
+    "ASSISTENCIA POLICIAL MILITAR DA GOIAS PREVIDENCIA",
+    "ASSISTENCIA POLICIAL MILITAR NO MPGO - GOI",
+    "BASE ADMINISTRATIVA DA POLICIA MILITAR",
+    "BATALHAO DE GIRO (GRUPAMENTO DE INTERVENCAO DE RON",
+    "BATALHAO DE POLICIA MILITAR DE CHOQUE DO ESTADO DE",
+    "BATALHAO DE POLICIA MILITAR DE EVENTOS",
+    "BATALHAO DE POLICIA MILITAR DE TERMINAL",
+    "BATALHAO DE POLICIA MILITAR DE TRANSITO DO ESTADO",
+    "BATALHAO DE POLICIA MILITAR ESCOLAR DO ESTADO DE G",
+    "BATALHAO DE POLICIA MILITAR FAZENDARIA",
+    "BATALHAO DE POLICIA MILITAR MARIA DA PENHA - CPC",
+    "BATALHAO DE POLICIA MILITAR RURAL/COC",
+    "BATALHAO DE PROTECAO SOCIOAMBIENTA",
+    "BATALHAO DE ROTAM",
+    "BATALHAO DE SALVAMENTO EM EMERGENCIA",
+    "CENTRO  DE MANUTENCAO",
+    "CENTRO DE INSTRUCAO DA POLICIA MILITAR DE GOIAS",
+    "CENTRO DE OPERACOES AEREAS",
+    "CENTRO DE OPERACOES DA POLICIA MILITAR DO ESTADO D",
+    "CENTRO DE POLICIA COMUNITARIA",
+    "CENTRO EST. DE ATEND. OP. DE BOMBEIROS",
+    "CENTRO INTEGRADO DE OPERACOES ESTRATEGICAS POLICIA",
+    "CHEFIA DA 2a SECAO DO ESTADO-MAIOR ESTRATEGICO PM/2",
+    "CHEFIA DO ESTADO-MAIOR ESTRATEGICO",
+    "COL DA PM DO EST DE GO - BENEDITA B DE ANDRADE– GO",
+    "COL DA PM DO EST DE GO - PROF IVAN F PIRES DO RIO",
+    "COL DA PM DO ESTADO DE GOIAS - JOAO AUGUSTO PERILO",
+    "COLÉGIO DA PM DO ESTADO DE GOIÁS - XAVIER DE ALMEI",
+    "COLÉGIO DA POLÍCIA MILITAR DO ESTADO DE GOIÁS - AM",
+    "COLÉGIO DA POLÍCIA MILITAR DO ESTADO DE GOIÁS - DE",
+    "COLÉGIO ESTADUAL DA POLÍCIA MILITAR DE GOIÁS JOSÉ",
+    "COLEGIO DA PM DO EST DE GO -  JUSSARA",
+    "COLEGIO DA PM DO EST DE GO -  PALMEIRAS",
+    "COLEGIO DA PM DO EST DE GO - APARECIDA DE GOIANIA",
+    "COLEGIO DA PM DO EST DE GO - ARLINDO COSTA",
+    "COLEGIO DA PM DO EST DE GO - CALDAS NOVAS",
+    "COLEGIO DA PM DO EST DE GO - DOM PRUDENCIO - POSSE",
+    "COLEGIO DA PM DO EST DE GO - FORMOSA",
+    "COLEGIO DA PM DO EST DE GO - HELIO VELOSO - CERES",
+    "COLEGIO DA PM DO EST DE GO - JATAI",
+    "COLEGIO DA PM DO EST DE GO - MAJOR OSCAR ALVELOS",
+    "COLEGIO DA PM DO EST DE GO - MARIA HELENY PERILLO",
+    "COLEGIO DA PM DO EST DE GO - MIRIAM B. FERREIRA",
+    "COLEGIO DA PM DO EST DE GO - SENADOR CANEDO",
+    "COLEGIO DA PM DO EST DE GO ARISTON GOMES DA SILVA",
+    "COLEGIO DA PM DO EST DE GO – APARECIDA DE GOIANIA",
+    "COLEGIO DA PM DO EST DE GO – GOIANESIA",
+    "COLEGIO DA PM DO EST DE GO – INHUMAS",
+    "COLEGIO DA PM DO EST DE GO – JARAGUA",
+    "COLEGIO DA PM DO EST DE GO – NOVO GAMA",
+    "COLEGIO DA PM DO EST DE GO – VALPARAISO",
+    "COLEGIO DA PM DO EST DE GO GERALDA ANDRADE MARTINS",
+    "COLEGIO DA PM DO EST DE GO JOSE S O GOIANIRA",
+    "COLEGIO DA PM DO EST DE GOIAS - JARDIM GUANABARA",
+    "COLEGIO DA PM DO ESTADO DE GOIAS - COLINA AZUL",
+    "COLEGIO DA PM DO ESTADO DE GOIAS - GOIATUBA",
+    "COLEGIO DA PM DO ESTADO DE GOIAS - ITAUCU",
+    "COLEGIO DA PM DO ESTADO DE GOIAS - MANSOES PARAISO",
+    "COLEGIO DA PM DO ESTADO DE GOIAS - WALDEMAR MUNDIM",
+    "COLEGIO DA PM DO ESTADO DE GOIAS DR NEGREIRO",
+    "COLEGIO DA POLICIA MILITAR DE GOIAS - PADRE PELAGIO/GOIANIRA",
+    "COLEGIO DA POLICIA MILITAR DO ESTADO DE GOIAS - PEDRO LUDOVICO TEIXEIRA - TRINDADE",
+    "COLEGIO DA POLICIA MILITAR DO ESTADO DE GOIAS - PO",
+    "COLEGIO DA POLICIA MILITAR DO ESTADO DE GOIAS - QU",
+    "COLEGIO DA POLICIA MILITAR DO ESTADO DE GOIAS - VA",
+    "COLEGIO DA POLICIA MILITAR DO ESTADO DE GOIAS -ANA",
+    "COLEGIO DA POLICIA MILITAR DO ESTADO DE GOIAS -AYR",
+    "COLEGIO DA POLICIA MILITAR DO ESTADO DE GOIAS -HUG",
+    "COLEGIO DA POLICIA MILITAR DO ESTADO DE GOIAS -RIO",
+    "COLEGIO EST. DA PM - CASTELO BRANCO - TRINDADE",
+    "COLEGIO EST. PM - 13 DE MAIO",
+    "COLEGIO EST. PM - AUGUSTA MACHADO - HIDROLÂNDIA",
+    "COLEGIO EST. PM - DOUTOR JOSE FELICIANO FERREIRA",
+    "COLEGIO EST. PM - PASTOR JOSE ANTERO RIBEIRO",
+    "COLEGIO EST. PM - PROFESSOR JOSE DOS REIS MENDES",
+    "COLEGIO EST. PM - ROSA TURISCO DE ARAUJO - ANICUNS",
+    "COMANDO DA ACADEMIA DE POLICIA MILITAR",
+    "COMANDO DA ACADEMIA E ENSINO BOMBEIRO MILITAR",
+    "COMANDO DE APOIO LOGISTICO",
+    "COMANDO DE APOIO LOGISTICO E TECNOLOGIA DA INFORMA",
+    "COMANDO DE ATIVIDADES TECNICAS",
+    "COMANDO DE CORREICOES E DISCIPLINA",
+    "COMANDO DE CORREICOES E DISCIPLINA DA POLICIA MILI",
+    "COMANDO DE ENSINO POLICIAL MILITAR",
+    "COMANDO DE GESTAO E FINANCAS",
+    "COMANDO DE OPERACOES DE DEFESA CIVIL",
+    "COMANDO DE OPERACOES DE DIVISA",
+    "COMANDO DE OPERACOES DE RECOBRIMENTO",
+    "COMANDO DE POLICIAMENTO AMBIENTAL",
+    "COMANDO DE POLICIAMENTO ESPECIALIZADO",
+    "COMANDO DE SAUDE",
+    "COMANDO DE SAUDE BOMBEIRO MILITAR",
+    "COMANDO GERAL DA POLICIA MILITAR",
+    "COMISSAO DE PROMOCAO DE PRACAS",
+    "COMISSAO PERMANENTE DE MEDALHAS",
+    "COMPANHIA AMBIENTAL DE OPERACOES COM PRODUTOS PERIGOSOS",
+    "COMPANHIA DE POLICIAMENTO COM COES",
+    "COMPANHIA DE POLICIAMENTO ESPECIALIZADO - 20aCIPM - CPE(11oCRPM)",
+    "COMPANHIA INDEPENDENTE BOMBEIRO MILITAR DE GOIANIR",
+    "COMPANHIA INDEPENDENTE BOMBEIRO MILITAR DE NERÓPOL",
+    "COMPANHIA INDEPENDENTE DE OPERACOES ESPECIAIS",
+    "COORDENACAO DE GESTAO DE PESSOAS",
+    "COORDENACAO TCO/PM",
+    "CORPO MUSICAL DA POLICIA MILITAR DO ESTADO DE GOIAS",
+    "CPMG 5 DE JANEIRO/CEPM",
+    "DIRETORIA DE MILITARES",
+    "E.E. VICENCA MARIA DE JESUS",
+    "GAB DA SEC  DE EST DE AGRICULTURA",
+    "GABINETE DO COMANDANTE GERAL DO CBMGO",
+    "GABINETE DO ESTADO-MAIOR GERAL",
+    "GABINETE DO SECRETARIO",
+    "GABINETE DO SECRETARIO-CHEFE",
+    "GERENCIA DA SECRETARIA GERAL",
+    "GERENCIA DE AJUDANCIA DE ORDENS 3",
+    "GERENCIA DE CONTABILIDADE",
+    "GERENCIA DE EXECUCAO ORCAMENTARIA E FINANCEIRA",
+    "GERENCIA DE FOLHA DE PAGAMENTO DE BENEFICIOS",
+    "GERENCIA DE GESTAO DE ATIVOS",
+    "GERENCIA DE GESTAO DE PESSOAS E APOIO LOGISTICO",
+    "GERENCIA DE INFORMATICA E TELECOMUNICACOES",
+    "GERENCIA DE LICITACOES",
+    "GERENCIA DE OPERACOES DE INTELIGENCIA",
+    "GERENCIA DE PENSAO E DIREITOS DE MILITARES",
+    "GERENCIA DE PLANEJAMENTO E GESTAO ESTRATEGICA",
+    "GERENCIA DE SEGURANCA",
+    "GERENCIA DE SEGURANCA DE VOO E CONTROLE DE DADOS A",
+    "GERENCIA DE SEGURANCA E MONITORAMENTO",
+    "GERENCIA DE SEGURANCA PESSOAL, FISICA E DE INSTALA",
+    "GERENCIA DE TRANSPORTE , OPERACIONAL E ADMINISTRAT",
+    "GERENCIA DO OBSERVATORIO DE SEGURANCA PUBLICA",
+    "GRUPAMENTO DE POLICIA MILITAR AEREO ESTADO DE GOIA",
+    "GRUPAMENTO DE RADIO PATRULHA AEREA",
+    "NAO IDENTIFICADO",
+    "OITAVA SECAO DO ESTADO MAIOR",
+    "PELOTAO BOMBEIRO MILITAR DE SILVANIA",
+    "POSTO DE POLICIAMENTO RODOVIARIO DA GO 010 KM 162 - LUZIANIA",
+    "POSTO DE POLICIAMENTO RODOVIARIO DA GO 080 KM 139 - GOIANESIA",
+    "POSTO DE POLICIAMENTO RODOVIARIO DA GO 080 KM 203 - BARRO ALTO",
+    "POSTO DE POLICIAMENTO RODOVIARIO DA GO 118 KM 095 - SAO JOAO D ALIANCA",
+    "POSTO DE POLICIAMENTO RODOVIARIO DA GO 338 KM 043 - PIRENOPOLIS",
+    "PRIMEIRA SECAO DO ESTADO MAIOR",
+    "PRIMEIRO BATALHAO DE POLICIA MILITAR DE OPERACOES",
+    "QUARTA SECAO DO ESTADO MAIOR",
+    "QUARTEL DA AJUDANCIA GERAL POLICIA MILITAR ESTADO",
+    "QUARTEL DO COMANDO GERAL",
+    "QUINTA SECAO DO ESTADO MAIOR",
+    "REGIMENTO DE POLICIA MONTADA DO ESTADO DE GOIAS",
+    "SECAO PARLAMENTAR NO CONGRESSO NACIONAL",
+    "SECRETARIA DE ESTADO DA CASA MILITAR",
+    "SEGUNDA SECAO DO ESTADO MAIOR",
+    "SENADOR ONOFRE QUINAN",
+    "SETIMA SECAO DO ESTADO MAIOR",
+    "SEXTA SECAO DO ESTADO MAIOR",
+    "SUBCOMANDANTE-GERAL DA POLICIA MILITAR",
+    "SUBCOMANDO-GERAL DO CORPO DE BOMBEIROS MILITAR",
+    "SUBCONTROLADORIA DE GOVERNO ABERTO E OUVIDORIA GERAL",
+    "SUPERINTENDENCIA DE ACOES E OPERACOES INTEGRADAS",
+    "SUPERINTENDENCIA DE ADMINISTRACAO DO PALACIO PEDRO",
+    "SUPERINTENDENCIA DE GESTAO, PLANEJAMENTO E FINANCA",
+    "SUPERINTENDENCIA DE INTELIGENCIA",
+    "SUPERINTENDENCIA DE SEGURANCA PENITENCIARIA",
+    "TERCEIRA SECAO DO ESTADO MAIOR"
+];
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -563,16 +908,13 @@ try {
                             </label>
                             <select class="form-input form-select" name="corporacao" id="corporacao">
                                 <option value="">Selecione...</option>
-                                <option value="Polícia Militar" <?php echo (isset($associadoData['corporacao']) && $associadoData['corporacao'] == 'Polícia Militar') ? 'selected' : ''; ?>>Polícia
-                                    Militar</option>
-                                <option value="Corpo de Bombeiros" <?php echo (isset($associadoData['corporacao']) && $associadoData['corporacao'] == 'Corpo de Bombeiros') ? 'selected' : ''; ?>>Corpo de
-                                    Bombeiros</option>
-                                <option value="Polícia Civil" <?php echo (isset($associadoData['corporacao']) && $associadoData['corporacao'] == 'Polícia Civil') ? 'selected' : ''; ?>>Polícia Civil
-                                </option>
-                                <option value="Polícia Federal" <?php echo (isset($associadoData['corporacao']) && $associadoData['corporacao'] == 'Polícia Federal') ? 'selected' : ''; ?>>Polícia
-                                    Federal</option>
-                                <option value="Forças Armadas" <?php echo (isset($associadoData['corporacao']) && $associadoData['corporacao'] == 'Forças Armadas') ? 'selected' : ''; ?>>Forças Armadas
-                                </option>
+                                <option value="Polícia Militar" <?php echo (isset($associadoData['corporacao']) && $associadoData['corporacao'] == 'Polícia Militar') ? 'selected' : ''; ?>>Polícia Militar</option>
+                                <option value="Bombeiro Militar" <?php echo (isset($associadoData['corporacao']) && $associadoData['corporacao'] == 'Bombeiro Militar') ? 'selected' : ''; ?>>Bombeiro Militar</option>
+                                <option value="Pensionista" <?php echo (isset($associadoData['corporacao']) && $associadoData['corporacao'] == 'Pensionista') ? 'selected' : ''; ?>>Pensionista</option>
+                                <option value="Civil" <?php echo (isset($associadoData['corporacao']) && $associadoData['corporacao'] == 'Civil') ? 'selected' : ''; ?>>Civil</option>
+                                <option value="Agregados" <?php echo (isset($associadoData['corporacao']) && $associadoData['corporacao'] == 'Agregados') ? 'selected' : ''; ?>>Agregados</option>
+                                <option value="Exército" <?php echo (isset($associadoData['corporacao']) && $associadoData['corporacao'] == 'Exército') ? 'selected' : ''; ?>>Exército</option>
+                                <option value="Outros" <?php echo (isset($associadoData['corporacao']) && $associadoData['corporacao'] == 'Outros') ? 'selected' : ''; ?>>Outros</option>
                             </select>
                         </div>
 
@@ -583,42 +925,43 @@ try {
                             <select class="form-input form-select" name="patente" id="patente">
                                 <option value="">Selecione...</option>
                                 <optgroup label="Praças">
-                                    <option value="Soldado" <?php echo (isset($associadoData['patente']) && $associadoData['patente'] == 'Soldado') ? 'selected' : ''; ?>>Soldado</option>
+                                    <option value="Aluno Soldado" <?php echo (isset($associadoData['patente']) && $associadoData['patente'] == 'Aluno Soldado') ? 'selected' : ''; ?>>Aluno Soldado</option>
+                                    <option value="Soldado 2ª Classe" <?php echo (isset($associadoData['patente']) && $associadoData['patente'] == 'Soldado 2ª Classe') ? 'selected' : ''; ?>>Soldado 2ª Classe</option>
+                                    <option value="Soldado 1ª Classe" <?php echo (isset($associadoData['patente']) && $associadoData['patente'] == 'Soldado 1ª Classe') ? 'selected' : ''; ?>>Soldado 1ª Classe</option>
                                     <option value="Cabo" <?php echo (isset($associadoData['patente']) && $associadoData['patente'] == 'Cabo') ? 'selected' : ''; ?>>Cabo</option>
-                                    <option value="3º Sargento" <?php echo (isset($associadoData['patente']) && $associadoData['patente'] == '3º Sargento') ? 'selected' : ''; ?>>3º Sargento
-                                    </option>
-                                    <option value="2º Sargento" <?php echo (isset($associadoData['patente']) && $associadoData['patente'] == '2º Sargento') ? 'selected' : ''; ?>>2º Sargento
-                                    </option>
-                                    <option value="1º Sargento" <?php echo (isset($associadoData['patente']) && $associadoData['patente'] == '1º Sargento') ? 'selected' : ''; ?>>1º Sargento
-                                    </option>
-                                    <option value="Subtenente" <?php echo (isset($associadoData['patente']) && $associadoData['patente'] == 'Subtenente') ? 'selected' : ''; ?>>Subtenente
-                                    </option>
+                                    <option value="Terceiro Sargento" <?php echo (isset($associadoData['patente']) && $associadoData['patente'] == 'Terceiro Sargento') ? 'selected' : ''; ?>>Terceiro Sargento</option>
+                                    <option value="Segundo Sargento" <?php echo (isset($associadoData['patente']) && $associadoData['patente'] == 'Segundo Sargento') ? 'selected' : ''; ?>>Segundo Sargento</option>
+                                    <option value="Primeiro Sargento" <?php echo (isset($associadoData['patente']) && $associadoData['patente'] == 'Primeiro Sargento') ? 'selected' : ''; ?>>Primeiro Sargento</option>
+                                    <option value="Subtenente" <?php echo (isset($associadoData['patente']) && $associadoData['patente'] == 'Subtenente') ? 'selected' : ''; ?>>Subtenente</option>
+                                    <option value="Suboficial" <?php echo (isset($associadoData['patente']) && $associadoData['patente'] == 'Suboficial') ? 'selected' : ''; ?>>Suboficial</option>
                                 </optgroup>
                                 <optgroup label="Oficiais">
-                                    <option value="2º Tenente" <?php echo (isset($associadoData['patente']) && $associadoData['patente'] == '2º Tenente') ? 'selected' : ''; ?>>2º Tenente
-                                    </option>
-                                    <option value="1º Tenente" <?php echo (isset($associadoData['patente']) && $associadoData['patente'] == '1º Tenente') ? 'selected' : ''; ?>>1º Tenente
-                                    </option>
+                                    <option value="Cadete" <?php echo (isset($associadoData['patente']) && $associadoData['patente'] == 'Cadete') ? 'selected' : ''; ?>>Cadete</option>
+                                    <option value="Aluno Oficial" <?php echo (isset($associadoData['patente']) && $associadoData['patente'] == 'Aluno Oficial') ? 'selected' : ''; ?>>Aluno Oficial</option>
+                                    <option value="Aspirante-a-Oficial" <?php echo (isset($associadoData['patente']) && $associadoData['patente'] == 'Aspirante-a-Oficial') ? 'selected' : ''; ?>>Aspirante-a-Oficial</option>
+                                    <option value="Segundo-Tenente" <?php echo (isset($associadoData['patente']) && $associadoData['patente'] == 'Segundo-Tenente') ? 'selected' : ''; ?>>Segundo-Tenente</option>
+                                    <option value="Primeiro-Tenente" <?php echo (isset($associadoData['patente']) && $associadoData['patente'] == 'Primeiro-Tenente') ? 'selected' : ''; ?>>Primeiro-Tenente</option>
                                     <option value="Capitão" <?php echo (isset($associadoData['patente']) && $associadoData['patente'] == 'Capitão') ? 'selected' : ''; ?>>Capitão</option>
                                     <option value="Major" <?php echo (isset($associadoData['patente']) && $associadoData['patente'] == 'Major') ? 'selected' : ''; ?>>Major</option>
-                                    <option value="Tenente-Coronel" <?php echo (isset($associadoData['patente']) && $associadoData['patente'] == 'Tenente-Coronel') ? 'selected' : ''; ?>>
-                                        Tenente-Coronel</option>
+                                    <option value="Tenente-Coronel" <?php echo (isset($associadoData['patente']) && $associadoData['patente'] == 'Tenente-Coronel') ? 'selected' : ''; ?>>Tenente-Coronel</option>
                                     <option value="Coronel" <?php echo (isset($associadoData['patente']) && $associadoData['patente'] == 'Coronel') ? 'selected' : ''; ?>>Coronel</option>
+                                </optgroup>
+                                <optgroup label="Outros">
+                                    <option value="Civil" <?php echo (isset($associadoData['patente']) && $associadoData['patente'] == 'Civil') ? 'selected' : ''; ?>>Civil</option>
                                 </optgroup>
                             </select>
                         </div>
 
                         <div class="form-group">
                             <label class="form-label">
-                                Categoria
+                                Situação Funcional
                             </label>
                             <select class="form-input form-select" name="categoria" id="categoria">
                                 <option value="">Selecione...</option>
-                                <option value="Ativo" <?php echo (isset($associadoData['categoria']) && $associadoData['categoria'] == 'Ativo') ? 'selected' : ''; ?>>Ativo</option>
+                                <option value="Ativa" <?php echo (isset($associadoData['categoria']) && $associadoData['categoria'] == 'Ativa') ? 'selected' : ''; ?>>Ativa</option>
                                 <option value="Reserva" <?php echo (isset($associadoData['categoria']) && $associadoData['categoria'] == 'Reserva') ? 'selected' : ''; ?>>Reserva</option>
-                                <option value="Reformado" <?php echo (isset($associadoData['categoria']) && $associadoData['categoria'] == 'Reformado') ? 'selected' : ''; ?>>Reformado</option>
-                                <option value="Pensionista" <?php echo (isset($associadoData['categoria']) && $associadoData['categoria'] == 'Pensionista') ? 'selected' : ''; ?>>Pensionista
-                                </option>
+                                <option value="Pensionista" <?php echo (isset($associadoData['categoria']) && $associadoData['categoria'] == 'Pensionista') ? 'selected' : ''; ?>>Pensionista</option>
+                                <option value="Afastado" <?php echo (isset($associadoData['categoria']) && $associadoData['categoria'] == 'Afastado') ? 'selected' : ''; ?>>Afastado</option>
                             </select>
                         </div>
 
@@ -626,8 +969,15 @@ try {
                             <label class="form-label">
                                 Lotação
                             </label>
-                            <input type="text" class="form-input" name="lotacao" id="lotacao"
-                                value="<?php echo $associadoData['lotacao'] ?? ''; ?>" placeholder="Local de lotação">
+                            <select class="form-input form-select" name="lotacao" id="lotacao">
+                                <option value="">Selecione...</option>
+                                <?php foreach($lotacoes as $lotacao): ?>
+                                    <option value="<?php echo htmlspecialchars($lotacao); ?>" 
+                                        <?php echo (isset($associadoData['lotacao']) && $associadoData['lotacao'] == $lotacao) ? 'selected' : ''; ?>>
+                                        <?php echo htmlspecialchars($lotacao); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
                         </div>
 
                         <div class="form-group full-width">
@@ -714,6 +1064,7 @@ try {
                     </div>
                 </div>
 
+                <!-- Step 4: Financeiro CORRIGIDO -->
                 <div class="section-card" data-step="4">
                     <div class="section-header">
                         <div class="section-icon">
@@ -726,7 +1077,7 @@ try {
                     </div>
 
                     <div class="form-grid">
-                        <!-- NOVOS CAMPOS DE SERVIÇOS -->
+                        <!-- Tipo de Associado (controla percentuais) -->
                         <div class="form-group full-width">
                             <label class="form-label">
                                 Tipo de Associado <span class="required">*</span>
@@ -736,11 +1087,11 @@ try {
                             <select class="form-input form-select" name="tipoAssociadoServico" id="tipoAssociadoServico"
                                 required onchange="calcularServicos()">
                                 <option value="">Selecione o tipo de associado...</option>
-                                <?php foreach ($tiposAssociado as $tipo): ?>
-                                    <option value="<?php echo htmlspecialchars($tipo); ?>" <?php echo (isset($associadoData['tipoAssociadoServico']) && $associadoData['tipoAssociadoServico'] == $tipo) ? 'selected' : ''; ?>>
-                                        <?php echo htmlspecialchars($tipo); ?>
-                                    </option>
-                                <?php endforeach; ?>
+                                <option value="Contribuinte" <?php echo (isset($associadoData['tipoAssociadoServico']) && $associadoData['tipoAssociadoServico'] == 'Contribuinte') ? 'selected' : ''; ?>>Contribuinte</option>
+                                <option value="Agregado" <?php echo (isset($associadoData['tipoAssociadoServico']) && $associadoData['tipoAssociadoServico'] == 'Agregado') ? 'selected' : ''; ?>>Agregado</option>
+                                <option value="Benemérito" <?php echo (isset($associadoData['tipoAssociadoServico']) && $associadoData['tipoAssociadoServico'] == 'Benemérito') ? 'selected' : ''; ?>>Benemérito</option>
+                                <option value="Remido 50%" <?php echo (isset($associadoData['tipoAssociadoServico']) && $associadoData['tipoAssociadoServico'] == 'Remido 50%') ? 'selected' : ''; ?>>Remido 50%</option>
+                                <option value="Remido" <?php echo (isset($associadoData['tipoAssociadoServico']) && $associadoData['tipoAssociadoServico'] == 'Remido') ? 'selected' : ''; ?>>Remido</option>
                             </select>
                             <span class="form-error">Por favor, selecione o tipo de associado</span>
                         </div>
@@ -832,60 +1183,40 @@ try {
                             </div>
                         </div>
 
-                        <!-- CAMPOS FINANCEIROS EXISTENTES -->
-                        <div class="form-group">
-                            <label class="form-label">
-                                Tipo de Associado (Categoria)
-                            </label>
-                            <select class="form-input form-select" name="tipoAssociado" id="tipoAssociado">
-                                <option value="">Selecione...</option>
-                                <option value="Titular" <?php echo (isset($associadoData['tipoAssociado']) && $associadoData['tipoAssociado'] == 'Titular') ? 'selected' : ''; ?>>Titular</option>
-                                <option value="Pensionista" <?php echo (isset($associadoData['tipoAssociado']) && $associadoData['tipoAssociado'] == 'Pensionista') ? 'selected' : ''; ?>>Pensionista
-                                </option>
-                                <option value="Dependente" <?php echo (isset($associadoData['tipoAssociado']) && $associadoData['tipoAssociado'] == 'Dependente') ? 'selected' : ''; ?>>Dependente
-                                </option>
-                            </select>
-                        </div>
-
+                        <!-- Situação Financeira -->
                         <div class="form-group">
                             <label class="form-label">
                                 Situação Financeira
                             </label>
                             <select class="form-input form-select" name="situacaoFinanceira" id="situacaoFinanceira">
                                 <option value="">Selecione...</option>
-                                <option value="Adimplente" <?php echo (isset($associadoData['situacaoFinanceira']) && $associadoData['situacaoFinanceira'] == 'Adimplente') ? 'selected' : ''; ?>>Adimplente
-                                </option>
-                                <option value="Inadimplente" <?php echo (isset($associadoData['situacaoFinanceira']) && $associadoData['situacaoFinanceira'] == 'Inadimplente') ? 'selected' : ''; ?>>
-                                    Inadimplente</option>
-                                <option value="Isento" <?php echo (isset($associadoData['situacaoFinanceira']) && $associadoData['situacaoFinanceira'] == 'Isento') ? 'selected' : ''; ?>>Isento
-                                </option>
+                                <option value="Adimplente" <?php echo (isset($associadoData['situacaoFinanceira']) && $associadoData['situacaoFinanceira'] == 'Adimplente') ? 'selected' : ''; ?>>Adimplente</option>
+                                <option value="Inadimplente" <?php echo (isset($associadoData['situacaoFinanceira']) && $associadoData['situacaoFinanceira'] == 'Inadimplente') ? 'selected' : ''; ?>>Inadimplente</option>
                             </select>
                         </div>
 
+                        <!-- Vínculo Servidor - CAMPO NUMÉRICO -->
                         <div class="form-group">
                             <label class="form-label">
-                                Vínculo Servidor
+                                Vínculo do Servidor
+                                <i class="fas fa-info-circle info-tooltip" title="Digite o número do vínculo"></i>
                             </label>
-                            <select class="form-input form-select" name="vinculoServidor" id="vinculoServidor">
-                                <option value="">Selecione...</option>
-                                <option value="Estado" <?php echo (isset($associadoData['vinculoServidor']) && $associadoData['vinculoServidor'] == 'Estado') ? 'selected' : ''; ?>>Estado</option>
-                                <option value="Federal" <?php echo (isset($associadoData['vinculoServidor']) && $associadoData['vinculoServidor'] == 'Federal') ? 'selected' : ''; ?>>Federal</option>
-                                <option value="Municipal" <?php echo (isset($associadoData['vinculoServidor']) && $associadoData['vinculoServidor'] == 'Municipal') ? 'selected' : ''; ?>>Municipal
-                                </option>
-                            </select>
+                            <input type="text" class="form-input" name="vinculoServidor" id="vinculoServidor"
+                                value="<?php echo $associadoData['vinculoServidor'] ?? ''; ?>" 
+                                placeholder="Digite o número do vínculo">
                         </div>
 
+                        <!-- Local de Débito -->
                         <div class="form-group">
                             <label class="form-label">
                                 Local de Débito
                             </label>
                             <select class="form-input form-select" name="localDebito" id="localDebito">
                                 <option value="">Selecione...</option>
-                                <option value="Folha de Pagamento" <?php echo (isset($associadoData['localDebito']) && $associadoData['localDebito'] == 'Folha de Pagamento') ? 'selected' : ''; ?>>Folha de
-                                    Pagamento</option>
-                                <option value="Débito em Conta" <?php echo (isset($associadoData['localDebito']) && $associadoData['localDebito'] == 'Débito em Conta') ? 'selected' : ''; ?>>Débito em
-                                    Conta</option>
-                                <option value="Boleto" <?php echo (isset($associadoData['localDebito']) && $associadoData['localDebito'] == 'Boleto') ? 'selected' : ''; ?>>Boleto</option>
+                                <option value="CEF" <?php echo (isset($associadoData['localDebito']) && $associadoData['localDebito'] == 'CEF') ? 'selected' : ''; ?>>CEF</option>
+                                <option value="SEGPLAN" <?php echo (!isset($associadoData['localDebito']) || $associadoData['localDebito'] == 'SEGPLAN') ? 'selected' : ''; ?>>SEGPLAN</option>
+                                <option value="ITAU" <?php echo (isset($associadoData['localDebito']) && $associadoData['localDebito'] == 'ITAU') ? 'selected' : ''; ?>>ITAU</option>
+                                <option value="Assego" <?php echo (isset($associadoData['localDebito']) && $associadoData['localDebito'] == 'Assego') ? 'selected' : ''; ?>>Assego</option>
                             </select>
                         </div>
 
@@ -1043,6 +1374,18 @@ try {
     <!-- Scripts separados para melhor organização -->
     <script src="js/cadastroForm.js"></script>
     <script src="js/cadastroFormAutocomplete.js"></script>
+    
+    <script>
+    // Inicializa Select2 para o campo de lotação
+    $(document).ready(function() {
+        $('#lotacao').select2({
+            placeholder: 'Selecione ou digite para buscar...',
+            language: 'pt-BR',
+            width: '100%',
+            allowClear: true
+        });
+    });
+    </script>
 </body>
 
 </html>
