@@ -262,10 +262,7 @@ $headerComponent = HeaderComponent::create([
                         <i class="fas fa-sync-alt"></i>
                         Atualizar
                     </button>
-                    <a href="../pages/cadastroForm.php" class="btn-modern btn-primary">
-                        <i class="fas fa-plus"></i>
-                        Novo Associado
-                    </a>
+
                 </div>
             </div>
 
