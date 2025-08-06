@@ -1,7 +1,9 @@
 <?php
 /**
- * API para Criar Sócio Agregado
+ * API para Criar Sócio Agregado - VERSÃO COM FLUXO COMPLETO
  * api/criar_agregado.php
+ * 
+ * Fluxo: Formulário → Banco → JSON → ZapSign
  */
 
 // Headers CORS e Content-Type
@@ -25,9 +27,13 @@ require_once '../config/config.php';
 require_once '../config/database.php';
 require_once '../classes/Database.php';
 
+// ✅ NOVOS INCLUDES - JsonManager e ZapSign para Agregados
+require_once '../classes/agregados/JsonManagerAgregado.php';
+require_once '../api/zapsign_agregado_api.php';
+
 // Função para logar erros
 function logError($message, $data = null) {
-    $logMessage = date('Y-m-d H:i:s') . " - CRIAR_AGREGADO - " . $message;
+    $logMessage = date('Y-m-d H:i:s') . " - CRIAR_AGREGADO_COMPLETO - " . $message;
     if ($data) {
         $logMessage .= " - Data: " . json_encode($data, JSON_UNESCAPED_UNICODE);
     }
@@ -54,7 +60,7 @@ function validarCPF($cpf) {
 
 // Função para validar email
 function validarEmail($email) {
-    if (empty($email)) return true; // Email é opcional
+    if (empty($email)) return true;
     return filter_var($email, FILTER_VALIDATE_EMAIL) !== false;
 }
 
@@ -74,7 +80,7 @@ function limparDados($dados) {
 }
 
 try {
-    logError("=== INÍCIO CRIAÇÃO SÓCIO AGREGADO ===");
+    logError("=== INÍCIO CRIAÇÃO SÓCIO AGREGADO - FLUXO COMPLETO ===");
     
     // Captura dados do POST
     $dadosRecebidos = $_POST;
@@ -273,56 +279,7 @@ try {
     logError("Parâmetros para inserção", $parametros);
     
     // Executa a inserção
-    if ($stmt->execute($parametros)) {
-        $agregadoId = $db->lastInsertId();
-        
-        logError("Sócio agregado criado com sucesso", [
-            'id' => $agregadoId,
-            'nome' => $dados['nome'],
-            'cpf' => $dados['cpf']
-        ]);
-        
-        // =====================================================
-        // RESPOSTA DE SUCESSO
-        // =====================================================
-        
-        // Busca os dados inseridos para confirmação
-        $stmtConsulta = $db->prepare("
-            SELECT id, nome, cpf, telefone, celular, socio_titular_nome, 
-                   valor_contribuicao, data_filiacao, situacao,
-                   JSON_LENGTH(COALESCE(dependentes, '[]')) as total_dependentes
-            FROM Socios_Agregados 
-            WHERE id = ?
-        ");
-        $stmtConsulta->execute([$agregadoId]);
-        $dadosCriados = $stmtConsulta->fetch(PDO::FETCH_ASSOC);
-        
-        http_response_code(201);
-        echo json_encode([
-            'status' => 'success',
-            'message' => 'Sócio agregado cadastrado com sucesso!',
-            'data' => [
-                'id' => $agregadoId,
-                'nome' => $dadosCriados['nome'],
-                'cpf' => $dadosCriados['cpf'],
-                'telefone' => $dadosCriados['telefone'],
-                'celular' => $dadosCriados['celular'],
-                'socio_titular' => $dadosCriados['socio_titular_nome'],
-                'valor_contribuicao' => $dadosCriados['valor_contribuicao'],
-                'data_filiacao' => $dadosCriados['data_filiacao'],
-                'situacao' => $dadosCriados['situacao'],
-                'total_dependentes' => (int)$dadosCriados['total_dependentes']
-            ],
-            'debug' => [
-                'dependentes_json' => $dependentesJson,
-                'banco_processado' => $dados['banco'],
-                'banco_outro' => ($dados['banco'] === 'outro') ? ($dados['bancoOutroNome'] ?? null) : null,
-                'timestamp' => date('Y-m-d H:i:s')
-            ]
-        ], JSON_UNESCAPED_UNICODE);
-        
-    } else {
-        // Erro na inserção
+    if (!$stmt->execute($parametros)) {
         $errorInfo = $stmt->errorInfo();
         logError("Erro na inserção SQL", $errorInfo);
         
@@ -336,8 +293,207 @@ try {
                 'error_code' => $errorInfo[1] ?? ''
             ]
         ]);
+        exit;
     }
     
+    $agregadoId = $db->lastInsertId();
+    
+    logError("Sócio agregado criado com sucesso no banco", [
+        'id' => $agregadoId,
+        'nome' => $dados['nome'],
+        'cpf' => $dados['cpf']
+    ]);
+
+    // =====================================
+    // ✅ PASSO 1: SALVA DADOS EM JSON
+    // =====================================
+    
+    $resultadoJson = ['sucesso' => false, 'erro' => 'Não processado'];
+    
+    try {
+        logError("=== INICIANDO SALVAMENTO EM JSON (AGREGADO) ===");
+        
+        $jsonManager = new JsonManagerAgregado();
+        $resultadoJson = $jsonManager->salvarAgregadoJson($dados, $agregadoId, 'CREATE');
+        
+        if ($resultadoJson['sucesso']) {
+            logError("✓ JSON do agregado salvo com sucesso: " . $resultadoJson['arquivo_individual']);
+            logError("✓ Tamanho do arquivo: " . $resultadoJson['tamanho_bytes'] . " bytes");
+        } else {
+            logError("⚠ Erro ao salvar JSON do agregado: " . $resultadoJson['erro']);
+        }
+        
+    } catch (Exception $e) {
+        $resultadoJson = [
+            'sucesso' => false,
+            'erro' => $e->getMessage()
+        ];
+        logError("✗ ERRO CRÍTICO ao salvar JSON do agregado: " . $e->getMessage());
+        // Não falha a operação por causa do JSON
+    }
+
+    // =====================================
+    // ✅ PASSO 2: ENVIA PARA ZAPSIGN
+    // =====================================
+    
+    $resultadoZapSign = ['sucesso' => false, 'erro' => 'Não processado'];
+    
+    try {
+        logError("=== INICIANDO ENVIO AGREGADO PARA ZAPSIGN ===");
+        
+        // ✅ VERIFICA SE O ARQUIVO DA API EXISTE
+        $arquivoZapSign = '../api/zapsign_agregado_api.php';
+        if (!file_exists($arquivoZapSign)) {
+            throw new Exception("Arquivo zapsign_agregado_api.php não encontrado: " . $arquivoZapSign);
+        }
+        
+        // ✅ VERIFICA SE A FUNÇÃO EXISTE
+        if (!function_exists('enviarAgregadoParaZapSign')) {
+            throw new Exception("Função enviarAgregadoParaZapSign() não encontrada. Verifique se o arquivo foi incluído corretamente.");
+        }
+        
+        // ✅ VERIFICA SE O MÉTODO DO JSONMANAGER EXISTE
+        if (!method_exists($jsonManager, 'obterDadosCompletos')) {
+            throw new Exception("Método obterDadosCompletos() não encontrado na classe JsonManagerAgregado.");
+        }
+        
+        // ✅ USA A FUNÇÃO DO JSONMANAGER PARA PREPARAR DADOS
+        $dadosCompletos = $jsonManager->obterDadosCompletos($dados, $agregadoId, 'CREATE');
+        
+        logError("Dados completos do agregado preparados. Seções: " . implode(', ', array_keys($dadosCompletos)));
+        
+        // ✅ ENVIA PARA ZAPSIGN
+        $resultadoZapSign = enviarAgregadoParaZapSign($dadosCompletos);
+        
+        if ($resultadoZapSign['sucesso']) {
+            logError("✓ ZapSign agregado enviado com sucesso!");
+            logError("✓ Documento ID: " . ($resultadoZapSign['documento_id'] ?? 'N/A'));
+            logError("✓ Link assinatura: " . ($resultadoZapSign['link_assinatura'] ?? 'N/A'));
+            
+            // ✅ ATUALIZA BANCO COM DADOS DO ZAPSIGN
+            try {
+                $stmt = $db->prepare("
+                    UPDATE Socios_Agregados 
+                    SET observacoes = CONCAT(COALESCE(observacoes, ''), '\n=== ZAPSIGN ===\n',
+                        'Documento ID: ', ?, '\n',
+                        'Link: ', ?, '\n',
+                        'Enviado: ', NOW())
+                    WHERE id = ?
+                ");
+                $stmt->execute([
+                    $resultadoZapSign['documento_id'],
+                    $resultadoZapSign['link_assinatura'],
+                    $agregadoId
+                ]);
+                logError("✓ Dados ZapSign salvos no banco do agregado");
+            } catch (Exception $e) {
+                logError("⚠ Erro ao salvar dados ZapSign no banco do agregado: " . $e->getMessage());
+            }
+            
+        } else {
+            logError("⚠ Erro ao enviar agregado para ZapSign: " . $resultadoZapSign['erro']);
+        }
+        
+    } catch (Exception $e) {
+        $resultadoZapSign = [
+            'sucesso' => false,
+            'erro' => $e->getMessage()
+        ];
+        logError("✗ ERRO CRÍTICO no ZapSign do agregado: " . $e->getMessage());
+        // Não falha a operação por causa do ZapSign
+    }
+
+    // =====================================
+    // BUSCA DADOS FINAIS PARA RESPOSTA
+    // =====================================
+    
+    $stmtConsulta = $db->prepare("
+        SELECT id, nome, cpf, telefone, celular, email,
+               socio_titular_nome, valor_contribuicao, 
+               data_filiacao, situacao, data_criacao,
+               JSON_LENGTH(COALESCE(dependentes, '[]')) as total_dependentes,
+               banco, agencia, conta_corrente
+        FROM Socios_Agregados 
+        WHERE id = ? AND ativo = 1
+    ");
+    $stmtConsulta->execute([$agregadoId]);
+    $dadosCriados = $stmtConsulta->fetch(PDO::FETCH_ASSOC);
+
+    // =====================================
+    // RESPOSTA FINAL
+    // =====================================
+
+    http_response_code(201);
+    echo json_encode([
+        'status' => 'success',
+        'message' => 'Sócio agregado cadastrado com sucesso!',
+        'data' => [
+            'id' => $agregadoId,
+            'nome' => $dadosCriados['nome'],
+            'cpf' => $dadosCriados['cpf'],
+            'telefone' => $dadosCriados['telefone'],
+            'celular' => $dadosCriados['celular'],
+            'email' => $dadosCriados['email'],
+            'socio_titular' => $dadosCriados['socio_titular_nome'],
+            'valor_contribuicao' => $dadosCriados['valor_contribuicao'],
+            'data_filiacao' => $dadosCriados['data_filiacao'],
+            'situacao' => $dadosCriados['situacao'],
+            'total_dependentes' => (int)$dadosCriados['total_dependentes'],
+            'banco' => $dadosCriados['banco'],
+            'agencia' => $dadosCriados['agencia'],
+            'conta_corrente' => $dadosCriados['conta_corrente']
+        ],
+        
+        // ✅ SEÇÃO JSON
+        'json_export' => [
+            'salvo' => $resultadoJson['sucesso'],
+            'arquivo' => $resultadoJson['arquivo_individual'] ?? null,
+            'tamanho_bytes' => $resultadoJson['tamanho_bytes'] ?? 0,
+            'timestamp' => $resultadoJson['timestamp'] ?? null,
+            'erro' => $resultadoJson['sucesso'] ? null : $resultadoJson['erro'],
+            'pronto_para_zapsign' => $resultadoJson['sucesso']
+        ],
+        
+        // ✅ SEÇÃO ZAPSIGN
+        'zapsign' => [
+            'enviado' => $resultadoZapSign['sucesso'],
+            'documento_id' => $resultadoZapSign['documento_id'] ?? null,
+            'link_assinatura' => $resultadoZapSign['link_assinatura'] ?? null,
+            'erro' => $resultadoZapSign['sucesso'] ? null : $resultadoZapSign['erro'],
+            'http_code' => $resultadoZapSign['http_code'] ?? null,
+            'status' => $resultadoZapSign['sucesso'] ? 'ENVIADO' : 'ERRO',
+            'template_tipo' => 'socio_agregado'
+        ],
+        
+        'debug' => [
+            'dependentes_json' => $dependentesJson,
+            'banco_processado' => $dados['banco'],
+            'banco_outro' => ($dados['banco'] === 'outro') ? ($dados['bancoOutroNome'] ?? null) : null,
+            'fluxo_completo' => [
+                'banco' => 'OK',
+                'json' => $resultadoJson['sucesso'] ? 'OK' : 'FALHOU',
+                'zapsign' => $resultadoZapSign['sucesso'] ? 'OK' : 'FALHOU'
+            ],
+            'timestamp' => date('Y-m-d H:i:s')
+        ]
+    ], JSON_UNESCAPED_UNICODE);
+    
+    // ✅ Atualiza mensagens de sucesso
+    $mensagemFinal = 'Sócio agregado cadastrado com sucesso!';
+    
+    if ($resultadoJson['sucesso']) {
+        $mensagemFinal .= ' Dados exportados para integração.';
+    }
+    
+    if ($resultadoZapSign['sucesso']) {
+        $mensagemFinal .= ' Documento enviado para assinatura eletrônica.';
+    }
+
+    logError("=== SÓCIO AGREGADO CRIADO COM SUCESSO (FLUXO COMPLETO) ===");
+    logError("ID: {$agregadoId} | Nome: " . $dados['nome']);
+    logError("JSON: " . ($resultadoJson['sucesso'] ? '✓ Salvo' : '✗ Falhou') . " | Arquivo: " . ($resultadoJson['arquivo_individual'] ?? 'N/A'));
+    logError("ZapSign: " . ($resultadoZapSign['sucesso'] ? '✓ Enviado' : '✗ Falhou') . " | Doc ID: " . ($resultadoZapSign['documento_id'] ?? 'N/A'));
+
 } catch (PDOException $e) {
     logError("Erro PDO", ['message' => $e->getMessage(), 'code' => $e->getCode()]);
     
@@ -366,95 +522,60 @@ try {
         ]
     ]);
 } finally {
-    logError("=== FIM CRIAÇÃO SÓCIO AGREGADO ===");
+    logError("=== FIM CRIAÇÃO SÓCIO AGREGADO (FLUXO COMPLETO) ===");
 }
 
 /**
  * ==============================================
- * DOCUMENTAÇÃO DA API
+ * DOCUMENTAÇÃO DA API COMPLETA
  * ==============================================
  * 
  * ENDPOINT: POST /api/criar_agregado.php
  * 
+ * FLUXO COMPLETO:
+ * 1. Validação dos dados
+ * 2. Inserção no banco (tabela Socios_Agregados)
+ * 3. Salvamento em JSON (classes/agregado/JsonManagerAgregado.php)
+ * 4. Envio para ZapSign (api/zapsign_agregado_api.php)
+ * 
  * CAMPOS OBRIGATÓRIOS:
- * - nome (string): Nome completo
- * - dataNascimento (date): Data nascimento (YYYY-MM-DD)
- * - telefone (string): Telefone fixo
- * - celular (string): Celular
- * - cpf (string): CPF (com ou sem formatação)
- * - estadoCivil (string): solteiro, casado, divorciado, separado_judicial, viuvo, outro
- * - dataFiliacao (date): Data filiação (YYYY-MM-DD)
- * - socioTitularNome (string): Nome do sócio titular
- * - socioTitularFone (string): Telefone do titular
- * - socioTitularCpf (string): CPF do titular
- * - endereco (string): Endereço
- * - numero (string): Número
- * - bairro (string): Bairro
- * - cidade (string): Cidade
- * - estado (string): Estado (sigla)
- * - banco (string): itau, caixa, outro
- * - agencia (string): Agência
- * - contaCorrente (string): Conta corrente
+ * [mesmos do anterior...]
  * 
- * CAMPOS OPCIONAIS:
- * - email (string): E-mail
- * - documento (string): RG, CNH, etc.
- * - cep (string): CEP
- * - socioTitularEmail (string): E-mail do titular
- * - bancoOutroNome (string): Nome do banco (quando banco=outro)
- * - dependentes (array): Array de dependentes
- * 
- * FORMATO DOS DEPENDENTES:
- * dependentes[0][tipo] = esposa_companheira
- * dependentes[0][data_nascimento] = 1985-03-15
- * dependentes[0][cpf] = 123.456.789-00 (opcional)
- * dependentes[0][telefone] = (62) 99999-0000 (opcional)
- * 
- * TIPOS DE DEPENDENTES:
- * - esposa_companheira
- * - marido_companheiro  
- * - filho_menor_18
- * - filha_menor_18
- * - filho_estudante
- * - filha_estudante
- * 
- * RESPONSES:
- * 
- * SUCESSO (201):
+ * RESPOSTA COMPLETA (201):
  * {
  *   "status": "success",
- *   "message": "Sócio agregado cadastrado com sucesso!",
+ *   "message": "Sócio agregado cadastrado com sucesso! Dados exportados. Documento enviado para assinatura.",
  *   "data": {
  *     "id": 123,
  *     "nome": "Nome Completo",
- *     "cpf": "123.456.789-01",
- *     "valor_contribuicao": "86.55",
- *     "situacao": "ativo",
- *     "total_dependentes": 2
+ *     "total_dependentes": 2,
+ *     "valor_contribuicao": "86.55"
+ *   },
+ *   "json_export": {
+ *     "salvo": true,
+ *     "arquivo": "agregado_000123_2025-01-15_14-30-00.json",
+ *     "tamanho_bytes": 2048,
+ *     "pronto_para_zapsign": true
+ *   },
+ *   "zapsign": {
+ *     "enviado": true,
+ *     "documento_id": "xxx-yyy-zzz",
+ *     "link_assinatura": "https://app.zapsign.com.br/...",
+ *     "status": "ENVIADO",
+ *     "template_tipo": "socio_agregado"
  *   }
  * }
  * 
- * ERRO VALIDAÇÃO (400):
- * {
- *   "status": "error", 
- *   "message": "Dados inválidos",
- *   "errors": ["Campo obrigatório: Nome completo"]
- * }
+ * ARQUIVOS NECESSÁRIOS:
+ * - classes/agregado/JsonManagerAgregado.php
+ * - api/zapsign_agregado_api.php
+ * - Tabela Socios_Agregados criada
  * 
- * CPF DUPLICADO (409):
- * {
- *   "status": "error",
- *   "message": "CPF já cadastrado como sócio agregado",
- *   "conflito": {
- *     "nome_existente": "João Silva",
- *     "id_existente": 45
- *   }
- * }
- * 
- * ERRO SERVIDOR (500):
- * {
- *   "status": "error",
- *   "message": "Erro interno do servidor"
- * }
+ * PASTAS CRIADAS AUTOMATICAMENTE:
+ * - data/json_agregados/individual/
+ * - data/json_agregados/consolidado/
+ * - data/json_agregados/processed/
+ * - data/json_agregados/errors/
+ * - logs/json_agregados.log
  */
 ?>
