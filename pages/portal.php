@@ -546,7 +546,7 @@
             </div>
 
             <!-- Card Desfiliação -->
-            <div class="service-card leave" onclick="window.location.href='desfiliacaoForm.php'">
+            <div class="service-card leave" onclick="window.location.href='desfiliacao.php'">
                 <div class="service-icon">
                     <i class="fas fa-file-contract"></i>
                 </div>

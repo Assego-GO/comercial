@@ -414,6 +414,13 @@ class HeaderComponent {
                 'icon' => 'fas fa-user-tie',
                 'href' => './funcionarios.php' // ← CORRIGIDO: Caminho relativo correto
             ];
+            $tabs[] = [
+                'id' => 'comercial',
+                'label' => 'Comercial',
+                'icon' => 'fas fa-briefcase',
+                'href' => 'comercial.php'
+            ];
+
             
             // Debug final
             echo "<script>console.log('✅ ABA FUNCIONÁRIOS ADICIONADA!');</script>";
