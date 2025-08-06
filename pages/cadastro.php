@@ -885,7 +885,7 @@ try {
                 </button>
                 
                 <div>
-                    <button type="button" class="btn-nav btn-back me-2" onclick="window.location.href='dashboard.php'">
+                    <button type="button" class="btn-nav btn-back me-2" onclick="window.location.href='portal.php'">
                         <i class="fas fa-times"></i>
                         Cancelar
                     </button>
