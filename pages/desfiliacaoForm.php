@@ -586,7 +586,7 @@ $headerComponent = HeaderComponent::create([
 <body>
     <!-- Main Content -->
     <div class="main-wrapper">
-        <!-- Header Component -->
+        <!-- teste -->
         
         <!-- Content Area -->
         <div class="content-area">
