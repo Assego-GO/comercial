@@ -45,10 +45,7 @@ error_log("Departamento ID: " . ($usuarioLogado['departamento_id'] ?? 'NULL'));
 $cargoUsuario = $usuarioLogado['cargo'] ?? '';
 $departamentoUsuario = $usuarioLogado['departamento_id'] ?? null;
 
-// Cargos com permissões especiais
-$cargosAcessoTotal = ['Diretor', 'Presidente', 'Vice-Presidente'];
-$cargosAcessoDepartamento = ['Gerente', 'Supervisor', 'Coordenador'];
-
+// CORREÇÃO: Nova lógica de permissões
 // Define escopo de visualização
 if ($departamentoUsuario == 1) {
     // PRESIDÊNCIA - vê todos
@@ -56,14 +53,14 @@ if ($departamentoUsuario == 1) {
     $podeEditar = true;
     $podeCriar = true;
     error_log("✅ PRESIDÊNCIA: Acesso total");
-} elseif (in_array($cargoUsuario, $cargosAcessoTotal)) {
-    // Cargos de alta gestão - veem todos
+} elseif (in_array($cargoUsuario, ['Presidente', 'Vice-Presidente'])) {
+    // Apenas Presidente e Vice-Presidente veem todos (mesmo fora da presidência)
     $escopoVisualizacao = 'TODOS';
     $podeEditar = true;
     $podeCriar = true;
     error_log("✅ {$cargoUsuario}: Acesso total");
-} elseif (in_array($cargoUsuario, $cargosAcessoDepartamento)) {
-    // Cargos de gestão intermediária - veem seu departamento
+} elseif (in_array($cargoUsuario, ['Diretor', 'Gerente', 'Supervisor', 'Coordenador'])) {
+    // CORREÇÃO: Diretores agora também veem apenas seu departamento
     $escopoVisualizacao = 'DEPARTAMENTO';
     $departamentoPermitido = $departamentoUsuario;
     $podeEditar = true;
@@ -916,7 +913,7 @@ $headerComponent = HeaderComponent::create([
 
         // ===== FUNÇÕES CORRIGIDAS PARA O DROPDOWN =====
         
-        // Função principal para toggle do dropdown
+        // Função principal para toggle do dropdown - VERSÃO CORRIGIDA
         function toggleUserDropdown(event) {
             if (event) {
                 event.stopPropagation();
@@ -927,43 +924,58 @@ $headerComponent = HeaderComponent::create([
             const dropdownOverlay = document.getElementById('dropdownOverlay');
             
             if (!userMenu || !userDropdown) {
-                console.error('❌ Elementos do dropdown não encontrados');
+                console.log('❌ Elementos do dropdown não encontrados');
                 return;
             }
 
-            dropdownOpen = !dropdownOpen;
+            // Verificar estado atual
+            const isOpen = userDropdown.classList.contains('show');
+            console.log('Estado atual do dropdown:', isOpen ? 'ABERTO' : 'FECHADO');
             
-            if (dropdownOpen) {
+            if (isOpen) {
+                // Fechar dropdown
+                userDropdown.classList.remove('show');
+                userMenu.classList.remove('active');
+                if (dropdownOverlay) {
+                    dropdownOverlay.classList.remove('show');
+                }
+                dropdownOpen = false;
+                console.log('✅ Dropdown fechado');
+            } else {
+                // Abrir dropdown
                 userDropdown.classList.add('show');
                 userMenu.classList.add('active');
                 if (dropdownOverlay) {
                     dropdownOverlay.classList.add('show');
                 }
-            } else {
-                closeUserDropdown();
+                dropdownOpen = true;
+                console.log('✅ Dropdown aberto');
             }
         }
 
-        // Função para fechar o dropdown
+        // Função para fechar o dropdown - VERSÃO CORRIGIDA
         function closeUserDropdown() {
             const userMenu = document.getElementById('userMenu');
             const userDropdown = document.getElementById('userDropdown');
             const dropdownOverlay = document.getElementById('dropdownOverlay');
             
-            if (userDropdown && userDropdown.classList.contains('show')) {
+            if (userDropdown) {
                 userDropdown.classList.remove('show');
-                if (userMenu) {
-                    userMenu.classList.remove('active');
-                }
-                if (dropdownOverlay) {
-                    dropdownOverlay.classList.remove('show');
-                }
-                dropdownOpen = false;
             }
+            if (userMenu) {
+                userMenu.classList.remove('active');
+            }
+            if (dropdownOverlay) {
+                dropdownOverlay.classList.remove('show');
+            }
+            dropdownOpen = false;
+            console.log('✅ Dropdown fechado via closeUserDropdown');
         }
 
-        // Função para lidar com cliques nos itens do menu
+        // Função para lidar com cliques nos itens do menu - SIMPLIFICADA
         function handleMenuClick(action, event) {
+            console.log('Ação:', action);
+            
             if (event) {
                 event.preventDefault();
                 event.stopPropagation();
@@ -980,6 +992,7 @@ $headerComponent = HeaderComponent::create([
                     break;
                 case 'logout':
                     if(confirm('Deseja realmente sair do sistema?')) {
+                        showLoading();
                         window.location.href = '../auth/logout.php';
                     }
                     break;
@@ -990,41 +1003,82 @@ $headerComponent = HeaderComponent::create([
         document.addEventListener('DOMContentLoaded', function() {
             console.log('=== INICIALIZANDO PÁGINA FUNCIONÁRIOS ===');
             
-            // Configurar dropdown
-            setTimeout(() => {
-                const userMenu = document.getElementById('userMenu');
-                const userDropdown = document.getElementById('userDropdown');
-                const dropdownOverlay = document.getElementById('dropdownOverlay');
-                
-                if (userMenu && userDropdown) {
-                    userMenu.addEventListener('click', function(event) {
-                        toggleUserDropdown(event);
-                    });
-                }
-                
-                if (dropdownOverlay) {
-                    dropdownOverlay.addEventListener('click', closeUserDropdown);
-                }
-            }, 200);
-            
-            // Fechar dropdown ao clicar fora
+            // EVENT DELEGATION - Abordagem mais robusta
             document.addEventListener('click', function(event) {
+                const target = event.target;
                 const userMenu = document.getElementById('userMenu');
                 const userDropdown = document.getElementById('userDropdown');
                 
-                if (userMenu && userDropdown && 
-                    !userMenu.contains(event.target) && 
-                    !userDropdown.contains(event.target)) {
+                // Clique no userMenu ou seus filhos
+                if (userMenu && (target === userMenu || userMenu.contains(target))) {
+                    console.log('👆 Clique detectado no userMenu');
+                    event.stopPropagation();
+                    toggleUserDropdown(event);
+                    return;
+                }
+                
+                // Clique em item do dropdown
+                if (userDropdown && userDropdown.contains(target)) {
+                    const dropdownItem = target.closest('.dropdown-item');
+                    if (dropdownItem) {
+                        console.log('👆 Clique em item do dropdown:', dropdownItem.textContent.trim());
+                        event.preventDefault();
+                        event.stopPropagation();
+                        
+                        const text = dropdownItem.textContent.trim();
+                        if (text.includes('Perfil') || text.includes('Meu Perfil')) {
+                            handleMenuClick('profile', event);
+                        } else if (text.includes('Configurações')) {
+                            handleMenuClick('settings', event);
+                        } else if (text.includes('Sair')) {
+                            handleMenuClick('logout', event);
+                        }
+                        return;
+                    }
+                }
+                
+                // Clique no overlay
+                if (target.id === 'dropdownOverlay') {
+                    console.log('👆 Clique no overlay');
                     closeUserDropdown();
+                    return;
+                }
+                
+                // Clique fora do dropdown
+                if (userMenu && userDropdown && 
+                    !userMenu.contains(target) && 
+                    !userDropdown.contains(target)) {
+                    if (dropdownOpen) {
+                        console.log('👆 Clique fora do dropdown');
+                        closeUserDropdown();
+                    }
                 }
             });
             
             // Fechar dropdown com tecla ESC
             document.addEventListener('keydown', function(event) {
-                if (event.key === 'Escape') {
+                if (event.key === 'Escape' && dropdownOpen) {
+                    console.log('⌨️ ESC pressionado');
                     closeUserDropdown();
                 }
             });
+            
+            // Debug: Verificar se elementos existem após carregamento
+            setTimeout(() => {
+                const userMenu = document.getElementById('userMenu');
+                const userDropdown = document.getElementById('userDropdown');
+                console.log('🔍 Status dos elementos:');
+                console.log('- userMenu:', userMenu ? '✅' : '❌');
+                console.log('- userDropdown:', userDropdown ? '✅' : '❌');
+                
+                if (userDropdown) {
+                    const items = userDropdown.querySelectorAll('.dropdown-item');
+                    console.log('- Itens do dropdown:', items.length);
+                    items.forEach((item, i) => {
+                        console.log(`  ${i+1}. "${item.textContent.trim()}"`);
+                    });
+                }
+            }, 1000);
 
             // Máscaras
             if (typeof $ !== 'undefined' && $('#cpf').length) {
@@ -1148,7 +1202,7 @@ $headerComponent = HeaderComponent::create([
                 selectForm.innerHTML = '<option value="">Selecione um departamento</option>';
                 
                 if (escopoVisualizacao === 'DEPARTAMENTO' && departamentoPermitido) {
-                    // Para gerentes/supervisores: pode escolher apenas seu departamento
+                    // Para diretores/gerentes/supervisores: pode escolher apenas seu departamento
                     const deptPermitido = departamentosDisponiveis.find(d => d.id == departamentoPermitido);
                     if (deptPermitido) {
                         const option = document.createElement('option');
@@ -1159,7 +1213,7 @@ $headerComponent = HeaderComponent::create([
                         selectForm.disabled = true;
                     }
                 } else if (escopoVisualizacao === 'TODOS') {
-                    // Presidência e diretores: todos os departamentos
+                    // Presidência e presidentes/vice-presidentes: todos os departamentos
                     departamentosDisponiveis.forEach(dep => {
                         const option = document.createElement('option');
                         option.value = dep.id;
@@ -1376,7 +1430,7 @@ $headerComponent = HeaderComponent::create([
             if (senhaInfo) senhaInfo.style.display = 'inline';
             if (senhaEditInfo) senhaEditInfo.style.display = 'none';
             
-            // Se for gerente/supervisor, pré-seleciona o departamento
+            // Se for diretor/gerente/supervisor, pré-seleciona o departamento
             if (escopoVisualizacao === 'DEPARTAMENTO' && departamentoPermitido) {
                 setTimeout(() => {
                     const departamentoSelect = document.getElementById('departamento_id');
@@ -1675,7 +1729,7 @@ $headerComponent = HeaderComponent::create([
             if (!dados.id) {
                 dados.senha = 'Assego@123';
                 
-                // Se for gerente/supervisor, força o departamento
+                // Se for diretor/gerente/supervisor, força o departamento
                 if (escopoVisualizacao === 'DEPARTAMENTO' && departamentoPermitido) {
                     dados.departamento_id = departamentoPermitido;
                 }
