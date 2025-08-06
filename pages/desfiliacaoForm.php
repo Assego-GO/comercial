@@ -4,6 +4,7 @@
  * pages/desfiliacao.php
  * 
  * NOVA FUNCIONALIDADE: Busca por RG e preenchimento automático de ficha de desfiliação
+ * CORREÇÃO: Verificação para associados de Goiânia (devem ir presencialmente)
  */
 
 // Tratamento de erros para debug
@@ -33,7 +34,7 @@ if (!$auth->isLoggedIn()) {
 $usuarioLogado = $auth->getUser();
 
 // Define o título da página
-$page_title = 'Fluxo de Assinatura - ASSEGO';
+$page_title = 'Processo de Desfiliação - ASSEGO';
 
 // Busca estatísticas de documentos em fluxo
 try {
@@ -221,6 +222,98 @@ $headerComponent = HeaderComponent::create([
             font-size: 1rem;
             font-weight: 500;
             word-break: break-word;
+        }
+
+        /* NOVA: Alerta para associados de Goiânia CAPITAL */
+        .aviso-goiania {
+            background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+            border: 2px solid #ffc107;
+            border-radius: 15px;
+            padding: 2rem;
+            margin: 2rem 0;
+            text-align: center;
+            animation: pulse 2s infinite;
+        }
+
+        /* NOVO: Estilo para Aparecida de Goiânia LIBERADA */
+        .aparecida-liberada {
+            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+            border: 2px solid #28a745;
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            text-align: center;
+        }
+
+        .aparecida-liberada h5 {
+            color: #155724;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .aparecida-liberada p {
+            color: #155724;
+            margin: 0;
+            font-size: 1rem;
+        }
+
+        .aviso-goiania-icon {
+            font-size: 3rem;
+            color: #f57c00;
+            margin-bottom: 1rem;
+            display: block;
+        }
+
+        .aviso-goiania h4 {
+            color: #e65100;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            font-size: 1.5rem;
+        }
+
+        .aviso-goiania p {
+            color: #bf5f00;
+            font-size: 1.1rem;
+            line-height: 1.6;
+            margin-bottom: 0.5rem;
+        }
+
+        .aviso-goiania .endereco-assego {
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin-top: 1.5rem;
+            border-left: 4px solid #f57c00;
+        }
+
+        .aviso-goiania .endereco-assego h5 {
+            color: #e65100;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        .aviso-goiania .endereco-assego p {
+            color: #6c4100;
+            font-size: 1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .aviso-goiania .horario-funcionamento {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+            border: 1px solid #f57c00;
+        }
+
+        .aviso-goiania .horario-funcionamento strong {
+            color: #e65100;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.4); }
+            50% { box-shadow: 0 0 20px 10px rgba(255, 193, 7, 0.2); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 193, 7, 0); }
         }
 
         /* Ficha de Desfiliação */
@@ -430,6 +523,22 @@ $headerComponent = HeaderComponent::create([
             .tipo-desfiliacao-section .col-md-6 {
                 margin-bottom: 1rem;
             }
+
+            .aviso-goiania {
+                padding: 1.5rem;
+            }
+
+            .aviso-goiania-icon {
+                font-size: 2.5rem;
+            }
+
+            .aviso-goiania h4 {
+                font-size: 1.3rem;
+            }
+
+            .aviso-goiania p {
+                font-size: 1rem;
+            }
         }
 
         /* Estilo para seleção do tipo de desfiliação */
@@ -477,16 +586,15 @@ $headerComponent = HeaderComponent::create([
 <body>
     <!-- Main Content -->
     <div class="main-wrapper">
-        <!-- Header Component -->
-       
-
+        <!-- teste -->
+        
         <!-- Content Area -->
         <div class="content-area">
             <!-- Page Title -->
             <div class="page-header mb-4" data-aos="fade-right">
                 <div>
                     <h1 class="page-title">Processo de Desfiliação</h1>
-                    <p class="page-subtitle">Página para soliticitar o processo de desfilição</p>
+                    <p class="page-subtitle">Página para solicitar o processo de desfiliação</p>
                 </div>
             </div>
 
@@ -498,7 +606,7 @@ $headerComponent = HeaderComponent::create([
                     </div>
                     <div>
                         <h3 class="busca-title">Consulta de Associado</h3>
-                        <p class="busca-subtitle">Digite o RG militar ou CPF para buscar dados e gerar ficha de desfiliação</p>
+                        <p class="busca-subtitle">Digite o RG militar ou CPF para buscar dados e gerar ficha de desfiliação (apenas Goiânia capital requer presencial)</p>
                     </div>
                 </div>
 
@@ -533,6 +641,39 @@ $headerComponent = HeaderComponent::create([
                     
                     <div class="dados-grid" id="dadosAssociadoGrid">
                         <!-- Dados serão inseridos aqui dinamicamente -->
+                    </div>
+                </div>
+
+                <!-- NOVA: Container para aviso de Goiânia -->
+                <div id="avisoGoiania" class="aviso-goiania" style="display: none;">
+                    <i class="fas fa-map-marker-alt aviso-goiania-icon"></i>
+                    <h4>🏢 Desfiliação Presencial Obrigatória</h4>
+                    <p>
+                        <strong>Associados residentes na CAPITAL Goiânia devem comparecer pessoalmente na sede da ASSEGO</strong> 
+                        para solicitar a desfiliação.
+                    </p>
+                    <p>
+                        <strong>⚠️ ATENÇÃO:</strong> Esta regra aplica-se APENAS à cidade de <strong>Goiânia capital</strong>. 
+                        Associados de <strong>Aparecida de Goiânia</strong>, Senador Canedo, Trindade e outras cidades da 
+                        região metropolitana <strong>PODEM fazer desfiliação online</strong>.
+                    </p>
+                    <p>
+                        A desfiliação online não está disponível apenas para associados da capital Goiânia, 
+                        conforme normas internas da associação.
+                    </p>
+                    
+                    <div class="endereco-assego">
+                        <h5>📍 Endereço da ASSEGO</h5>
+                        <p><strong>Rua T-28, nº 320, Setor Bueno</strong></p>
+                        <p><strong>Goiânia - GO, CEP: 74210-030</strong></p>
+                        <p><strong>📞 Telefone:</strong> (62) 3201-8500</p>
+                        <p><strong>✉️ E-mail:</strong> contato@assego.org.br</p>
+                        
+                        <div class="horario-funcionamento">
+                            <strong>🕒 Horário de Funcionamento:</strong><br>
+                            Segunda a Sexta: 08:00 às 17:00<br>
+                            <small>Sábados, Domingos e Feriados: Fechado</small>
+                        </div>
                     </div>
                 </div>
 
@@ -659,9 +800,6 @@ $headerComponent = HeaderComponent::create([
                     </div>
                 </div>
             </div>
-
-            
-            </div>
         </div>
     </div>
 
@@ -682,6 +820,7 @@ $headerComponent = HeaderComponent::create([
 
         // Variáveis globais
         let dadosAssociadoAtual = null;
+        let isAssociadoGoiania = false;
 
         // Inicialização
         $(document).ready(function () {
@@ -716,6 +855,84 @@ $headerComponent = HeaderComponent::create([
             document.getElementById('anoAtual').textContent = ano.toString();
         }
 
+        // Verificar se o associado é de Goiânia - CORREÇÃO FINAL PARA DETECTAR CIDADE "Goiânia"
+        function verificarSeEhDeGoiania(endereco) {
+            if (!endereco) return false;
+            
+            console.log('🔍 VERIFICAÇÃO INICIADA');
+            console.log('🏠 Dados de endereço recebidos:', endereco);
+            
+            // Verifica em todos os campos de endereço
+            const textoCompleto = [
+                endereco.cidade || '',
+                endereco.endereco || '',
+                endereco.bairro || ''
+            ].join(' ').toLowerCase().trim();
+            
+            console.log('🏠 Texto completo do endereço:', textoCompleto);
+            console.log('🏠 Campo cidade específico:', endereco.cidade);
+            
+            // Remove acentos para comparação mais robusta
+            function removerAcentos(str) {
+                return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+            }
+            
+            const textoSemAcentos = removerAcentos(textoCompleto);
+            const cidadeSemAcentos = removerAcentos(endereco.cidade || '');
+            
+            console.log('🏠 Texto sem acentos:', textoSemAcentos);
+            console.log('🏠 Cidade sem acentos:', cidadeSemAcentos);
+            
+            // CORREÇÃO: Verifica se NÃO é Aparecida de Goiânia primeiro
+            const ehAparecidaDeGoiania = /aparecida.*de.*goiania/i.test(textoCompleto);
+            
+            if (ehAparecidaDeGoiania) {
+                console.log('✅ APARECIDA DE GOIÂNIA detectada - LIBERADO para desfiliação online');
+                return false; // Aparecida de Goiânia pode fazer desfiliação online
+            }
+            
+            // CORREÇÃO PRINCIPAL: Padrões mais específicos para detectar Goiânia CAPITAL
+            const padroesGoianiaCapital = [
+                // Cidade exata = "Goiânia" ou "goiania"
+                /^goiania$/,                 
+                
+                // Padrões com sufixos de estado
+                /^goiania\s*-\s*go$/,        // "goiania-go" ou "goiania - go"
+                /^goiania\s*\/\s*go$/,       // "goiania/go" ou "goiania / go"
+                /^goiania\s*,\s*go$/,        // "goiania, go"
+                /^goiania\s+go$/,            // "goiania go"
+                
+                // Qualquer variação que contenha apenas goiania como cidade principal
+                /\bgoiania\b(?!.*aparecida)/  // "goiania" mas NÃO "aparecida"
+            ];
+            
+            // Verifica especificamente o campo CIDADE
+            const cidadeEhGoiania = cidadeSemAcentos === 'goiania';
+            
+            // Testa os padrões no texto completo
+            const textoContemGoiania = padroesGoianiaCapital.some(padrao => {
+                const match = padrao.test(textoSemAcentos);
+                if (match) {
+                    console.log(`🚨 PADRÃO GOIÂNIA encontrado: ${padrao} em "${textoSemAcentos}"`);
+                }
+                return match;
+            });
+            
+            const isGoianiaCapital = cidadeEhGoiania || textoContemGoiania;
+            
+            console.log('🔍 Cidade é exatamente "goiania"?', cidadeEhGoiania);
+            console.log('🔍 Texto contém padrões de Goiânia?', textoContemGoiania);
+            console.log('🏢 RESULTADO FINAL - É da CAPITAL Goiânia?', isGoianiaCapital);
+            
+            if (isGoianiaCapital) {
+                console.log('🚨 BLOQUEIO ATIVADO - Associado de Goiânia Capital detectado!');
+            } else {
+                console.log('✅ LIBERADO - Associado não é de Goiânia Capital');
+            }
+            
+            return isGoianiaCapital;
+        }
+
         // Buscar associado por RG com melhor tratamento de erros
         async function buscarAssociadoPorRG(event) {
             event.preventDefault();
@@ -726,6 +943,7 @@ $headerComponent = HeaderComponent::create([
             const loadingOverlay = document.getElementById('loadingBusca');
             const dadosContainer = document.getElementById('dadosAssociadoContainer');
             const fichaContainer = document.getElementById('fichaDesfiliacao');
+            const avisoGoianiaContainer = document.getElementById('avisoGoiania');
             
             console.log('🔍 Iniciando busca por RG:', rg);
             
@@ -739,6 +957,7 @@ $headerComponent = HeaderComponent::create([
             btnBuscar.disabled = true;
             dadosContainer.style.display = 'none';
             fichaContainer.style.display = 'none';
+            avisoGoianiaContainer.style.display = 'none';
             esconderAlertaBusca();
 
             try {
@@ -786,21 +1005,63 @@ $headerComponent = HeaderComponent::create([
 
                 if (result.status === 'success') {
                     dadosAssociadoAtual = result.data;
+                    
+                    // NOVA VERIFICAÇÃO: Checa se é de Goiânia com logs detalhados
+                    console.log('📋 Dados completos do associado:', dadosAssociadoAtual);
+                    console.log('📍 Dados de endereço recebidos:', dadosAssociadoAtual.endereco);
+                    
+                    isAssociadoGoiania = verificarSeEhDeGoiania(dadosAssociadoAtual.endereco);
+                    console.log('🏢 Resultado final - Associado de Goiânia?', isAssociadoGoiania);
+                    
+                    // Log adicional para debug
+                    if (dadosAssociadoAtual.endereco && dadosAssociadoAtual.endereco.cidade) {
+                        console.log('🌆 Cidade do banco de dados:', dadosAssociadoAtual.endereco.cidade);
+                        console.log('🌆 Cidade em minúsculas:', dadosAssociadoAtual.endereco.cidade.toLowerCase());
+                    }
+                    
                     exibirDadosAssociado(dadosAssociadoAtual);
-                    preencherFichaDesfiliacao(dadosAssociadoAtual);
-                    
                     dadosContainer.style.display = 'block';
-                    fichaContainer.style.display = 'block';
                     
-                    mostrarAlertaBusca('Associado encontrado! Dados carregados e ficha preenchida automaticamente.', 'success');
-                    
-                    // Scroll suave até os dados
-                    setTimeout(() => {
-                        dadosContainer.scrollIntoView({ 
-                            behavior: 'smooth',
-                            block: 'start' 
-                        });
-                    }, 300);
+                    if (isAssociadoGoiania) {
+                        // Mostra aviso para associados de Goiânia CAPITAL
+                        avisoGoianiaContainer.style.display = 'block';
+                        mostrarAlertaBusca('🚨 Associado da CAPITAL Goiânia encontrado! Desfiliação deve ser feita presencialmente na sede da ASSEGO.', 'info');
+                        
+                        console.log('🚨 BLOQUEADO: Associado de GOIÂNIA CAPITAL - mostrando aviso presencial');
+                        
+                        // Scroll até o aviso
+                        setTimeout(() => {
+                            avisoGoianiaContainer.scrollIntoView({ 
+                                behavior: 'smooth',
+                                block: 'start' 
+                            });
+                        }, 300);
+                    } else {
+                        // Para associados de outras cidades (incluindo Aparecida de Goiânia), mostra a ficha
+                        preencherFichaDesfiliacao(dadosAssociadoAtual);
+                        fichaContainer.style.display = 'block';
+                        
+                        // Mensagem especial se for Aparecida de Goiânia
+                        const ehAparecida = dadosAssociadoAtual.endereco && 
+                                          dadosAssociadoAtual.endereco.cidade && 
+                                          dadosAssociadoAtual.endereco.cidade.toLowerCase().includes('aparecida');
+                        
+                        if (ehAparecida) {
+                            mostrarAlertaBusca('✅ Associado de Aparecida de Goiânia encontrado! Desfiliação online LIBERADA (cidade independente).', 'success');
+                            console.log('✅ PERMITIDO: Associado de APARECIDA DE GOIÂNIA - mostrando ficha');
+                        } else {
+                            mostrarAlertaBusca('✅ Associado encontrado! Dados carregados e ficha preenchida automaticamente.', 'success');
+                            console.log('✅ PERMITIDO: Associado de outra cidade - mostrando ficha');
+                        }
+                        
+                        // Scroll suave até os dados
+                        setTimeout(() => {
+                            dadosContainer.scrollIntoView({ 
+                                behavior: 'smooth',
+                                block: 'start' 
+                            });
+                        }, 300);
+                    }
                 } else {
                     console.warn('⚠️ Erro da API:', result.message);
                     mostrarAlertaBusca(result.message || 'Erro desconhecido na busca', 'danger');
@@ -839,17 +1100,46 @@ $headerComponent = HeaderComponent::create([
             const grid = document.getElementById('dadosAssociadoGrid');
             grid.innerHTML = '';
 
-            // Função auxiliar para criar item de dados
+            // Função auxiliar para criar item de dados - CORRIGIDA PARA DISTINGUIR CIDADES
             function criarDadosItem(label, value, icone = 'fa-info') {
                 if (!value || value === 'null' || value === '') return '';
                 
+                // NOVA: Destaque especial APENAS para Goiânia capital
+                let valueFormatted = value;
+                let extraStyle = '';
+                
+                if (label === 'Endereço' || label === 'Cidade') {
+                    // Verifica se é Goiânia CAPITAL (não Aparecida de Goiânia)
+                    const ehGoianiaCapital = verificarSeEhDeGoiania({ 
+                        cidade: value, 
+                        endereco: value, 
+                        bairro: '' 
+                    });
+                    
+                    // Verifica se é Aparecida de Goiânia (para mostrar que é LIBERADA)
+                    const ehAparecidaDeGoiania = value.toLowerCase().includes('aparecida') && 
+                                                value.toLowerCase().includes('goiania');
+                    
+                    if (ehGoianiaCapital) {
+                        // Apenas Goiânia CAPITAL tem restrição
+                        extraStyle = 'background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%); border-left: 4px solid #f57c00; animation: pulse 2s infinite;';
+                        valueFormatted = `🏢 ${value} <span style="color: #e65100; font-weight: bold;">(DESFILIAÇÃO PRESENCIAL OBRIGATÓRIA)</span>`;
+                        console.log(`🚨 Campo ${label} identificado como GOIÂNIA CAPITAL:`, value);
+                    } else if (ehAparecidaDeGoiania) {
+                        // Aparecida de Goiânia é LIBERADA - destaque verde
+                        extraStyle = 'background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%); border-left: 4px solid #28a745;';
+                        valueFormatted = `✅ ${value} <span style="color: #155724; font-weight: bold;">(DESFILIAÇÃO ONLINE LIBERADA)</span>`;
+                        console.log(`✅ Campo ${label} identificado como APARECIDA DE GOIÂNIA - LIBERADA:`, value);
+                    }
+                }
+                
                 return `
-                    <div class="dados-item">
+                    <div class="dados-item" style="${extraStyle}">
                         <div class="dados-label">
                             <i class="fas ${icone} me-1"></i>
                             ${label}
                         </div>
-                        <div class="dados-value">${value}</div>
+                        <div class="dados-value">${valueFormatted}</div>
                     </div>
                 `;
             }
@@ -870,7 +1160,7 @@ $headerComponent = HeaderComponent::create([
             grid.innerHTML += criarDadosItem('Lotação', militares.lotacao, 'fa-building');
             grid.innerHTML += criarDadosItem('Unidade', militares.unidade, 'fa-map-marker-alt');
 
-            // Endereço
+            // Endereço - COM DESTAQUE PARA GOIÂNIA
             const endereco = dados.endereco || {};
             if (endereco.endereco) {
                 const enderecoCompleto = [
@@ -882,6 +1172,12 @@ $headerComponent = HeaderComponent::create([
                 
                 grid.innerHTML += criarDadosItem('Endereço', enderecoCompleto, 'fa-home');
             }
+            
+            // Cidade separada para melhor destaque
+            if (endereco.cidade) {
+                grid.innerHTML += criarDadosItem('Cidade', endereco.cidade, 'fa-map-marker-alt');
+            }
+            
             grid.innerHTML += criarDadosItem('CEP', formatarCEPBusca(endereco.cep), 'fa-map-pin');
 
             // Dados financeiros
@@ -908,7 +1204,7 @@ $headerComponent = HeaderComponent::create([
             `;
         }
 
-        // Preencher ficha de desfiliação
+        // Preencher ficha de desfiliação (só para não-Goiânia)
         function preencherFichaDesfiliacao(dados) {
             // Dados pessoais
             const pessoais = dados.dados_pessoais || {};
@@ -1014,8 +1310,10 @@ $headerComponent = HeaderComponent::create([
             document.getElementById('rgBusca').value = '';
             document.getElementById('dadosAssociadoContainer').style.display = 'none';
             document.getElementById('fichaDesfiliacao').style.display = 'none';
+            document.getElementById('avisoGoiania').style.display = 'none';
             document.getElementById('dadosAssociadoGrid').innerHTML = '';
             dadosAssociadoAtual = null;
+            isAssociadoGoiania = false;
             esconderAlertaBusca();
 
             // Limpa campos da ficha
@@ -1069,8 +1367,10 @@ $headerComponent = HeaderComponent::create([
             
             alertDiv.style.display = 'flex';
             
-            // Auto-hide após 5 segundos se for sucesso
-            if (tipo === 'success') {
+            // Auto-hide após 8 segundos se for info sobre Goiânia
+            if (tipo === 'info') {
+                setTimeout(esconderAlertaBusca, 8000);
+            } else if (tipo === 'success') {
                 setTimeout(esconderAlertaBusca, 5000);
             }
         }
@@ -1092,8 +1392,15 @@ $headerComponent = HeaderComponent::create([
             }
         }
 
-        // FUNÇÃO OTIMIZADA: Imprimir ficha de desfiliação em UMA PÁGINA APENAS
+        // FUNÇÃO OTIMIZADA: Imprimir ficha de desfiliação - COM VERIFICAÇÃO ESPECÍFICA
         function imprimirFicha() {
+            // NOVA VERIFICAÇÃO DUPLA: Verifica especificamente se é de Goiânia CAPITAL
+            if (isAssociadoGoiania || (dadosAssociadoAtual && verificarSeEhDeGoiania(dadosAssociadoAtual.endereco))) {
+                console.log('🚨 TENTATIVA DE IMPRESSÃO BLOQUEADA - Associado de GOIÂNIA CAPITAL');
+                mostrarAlertaBusca('❌ Associados da CAPITAL Goiânia não podem gerar ficha online. Aparecida de Goiânia pode! Vá presencialmente na sede da ASSEGO se for de Goiânia capital.', 'danger');
+                return;
+            }
+            
             // Verifica se os campos obrigatórios estão preenchidos
             const nome = document.getElementById('nomeCompleto').textContent.trim();
             const rg = document.getElementById('rgMilitar').textContent.trim();
@@ -1108,6 +1415,8 @@ $headerComponent = HeaderComponent::create([
                 mostrarAlertaBusca('Por favor, informe o motivo da desfiliação antes de imprimir.', 'danger');
                 return;
             }
+            
+            console.log('✅ Impressão autorizada - Associado NÃO é de Goiânia capital');
             
             // Coleta os dados da ficha
             const dadosFicha = {
@@ -1326,8 +1635,15 @@ $headerComponent = HeaderComponent::create([
             };
         }
 
-        // Gerar PDF
+        // Gerar PDF - COM VERIFICAÇÃO ESPECÍFICA
         function gerarPDFFicha() {
+            // NOVA VERIFICAÇÃO DUPLA: Verifica especificamente se é de Goiânia CAPITAL
+            if (isAssociadoGoiania || (dadosAssociadoAtual && verificarSeEhDeGoiania(dadosAssociadoAtual.endereco))) {
+                console.log('🚨 TENTATIVA DE GERAÇÃO DE PDF BLOQUEADA - Associado de GOIÂNIA CAPITAL');
+                mostrarAlertaBusca('❌ Associados da CAPITAL Goiânia não podem gerar ficha online. Aparecida de Goiânia pode! Vá presencialmente na sede da ASSEGO se for de Goiânia capital.', 'danger');
+                return;
+            }
+            
             mostrarAlertaBusca('Funcionalidade de geração de PDF será implementada em breve.', 'info');
         }
 
@@ -1371,7 +1687,11 @@ $headerComponent = HeaderComponent::create([
             }
         }
 
-        console.log('✓ Sistema de busca por RG e geração de ficha de desfiliação carregado!');
+        console.log('✅ Sistema de busca por RG com verificação ESPECÍFICA de Goiânia CAPITAL carregado!');
+        console.log('🏢 BLOQUEADO: Apenas Goiânia CAPITAL (não inclui Aparecida de Goiânia)');
+        console.log('✅ LIBERADO: Aparecida de Goiânia, Senador Canedo, Trindade, etc.');
+        console.log('🔍 Padrões de detecção para CAPITAL:', ['goiania-go', 'goiania - go', 'goiania/go', 'goiania go', 'apenas goiania']);
+        console.log('🔒 Bloqueios ativos APENAS para Goiânia CAPITAL em:', ['Ficha', 'Impressão', 'PDF']);
     </script>
 
 </body>
