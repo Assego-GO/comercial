@@ -935,8 +935,8 @@ $headerComponent = HeaderComponent::create([
                                 <div class="cadastro-option-icon">
                                     <i class="fas fa-user-plus"></i>
                                 </div>
-                                <h5>Novo Cadastro</h5>
-                                <p>Inicie um novo cadastro de associado com formulário completo</p>
+                                <h5>Nova Filiação</h5>
+                                <p>Inicie um nova filiação de associado com formulário completo</p>
                             </div>
 
                             <div class="cadastro-option" onclick="consultarAssociado()">

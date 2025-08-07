@@ -367,19 +367,20 @@ class HeaderComponent {
             echo "console.log('departamento_id === \"1\":', " . ($this->usuario['departamento_id'] === '1' ? 'true' : 'false') . ");";
         }
         
-        // Teste da lógica de permissão
-        $podeVerFuncionarios = false;
-        if ($this->isDiretor) {
-            $podeVerFuncionarios = true;
-            echo "console.log('✅ Permissão por DIRETOR');";
-        } elseif (isset($this->usuario['departamento_id']) && $this->usuario['departamento_id'] == 1) {
-            $podeVerFuncionarios = true;
-            echo "console.log('✅ Permissão por PRESIDÊNCIA');";
-        } else {
-            echo "console.log('❌ SEM PERMISSÃO');";
-        }
+        // Debug específico das permissões
+        echo "console.log('--- PERMISSÕES ---');";
+        echo "console.log('É Diretor?:', " . ($this->isDiretor ? 'true' : 'false') . ");";
+        $ehDaPresidencia = isset($this->usuario['departamento_id']) && $this->usuario['departamento_id'] == 1;
+        $ehDoFinanceiro = isset($this->usuario['departamento_id']) && $this->usuario['departamento_id'] == 2;
+        $ehDoRH = isset($this->usuario['departamento_id']) && $this->usuario['departamento_id'] == 9;
+        $ehDoComercial = isset($this->usuario['departamento_id']) && $this->usuario['departamento_id'] == 10;
+        echo "console.log('É da Presidência (dept_id=1)?:', " . ($ehDaPresidencia ? 'true' : 'false') . ");";
+        echo "console.log('É do Financeiro (dept_id=2)?:', " . ($ehDoFinanceiro ? 'true' : 'false') . ");";
+        echo "console.log('É do RH (dept_id=9)?:', " . ($ehDoRH ? 'true' : 'false') . ");";
+        echo "console.log('É do Comercial (dept_id=10)?:', " . ($ehDoComercial ? 'true' : 'false') . ");";
+        echo "console.log('Departamento atual:', " . json_encode($this->usuario['departamento_id'] ?? 'não definido') . ");";
+        echo "console.log('------------------');";
         
-        echo "console.log('podeVerFuncionarios:', " . ($podeVerFuncionarios ? 'true' : 'false') . ");";
         echo "console.log('========================');";
         echo "</script>";
         
@@ -387,6 +388,7 @@ class HeaderComponent {
             return $this->customTabs;
         }
 
+        // Tabs básicas que todos veem
         $tabs = [
             [
                 'id' => 'associados',
@@ -396,38 +398,155 @@ class HeaderComponent {
             ]
         ];
 
-        // CORREÇÃO: Permite acesso tanto para DIRETORES quanto para usuários da PRESIDÊNCIA
+        // CORREÇÃO: Verificações específicas de permissão por aba
         $podeVerFuncionarios = false;
+        $podeVerComercial = false;
+        $podeVerFinanceiro = false;
+        $podeVerAuditoria = false;
+        $ehDaPresidencia = isset($this->usuario['departamento_id']) && $this->usuario['departamento_id'] == 1;
+        $ehDoFinanceiro = isset($this->usuario['departamento_id']) && $this->usuario['departamento_id'] == 2;
+        $ehDoRH = isset($this->usuario['departamento_id']) && $this->usuario['departamento_id'] == 9;
+        $ehDoComercial = isset($this->usuario['departamento_id']) && $this->usuario['departamento_id'] == 10;
 
-        // Verifica se é diretor OU se é da presidência (departamento_id = 1)
+        // Funcionários: Diretores OU Presidência OU RH OU Comercial
         if ($this->isDiretor) {
             $podeVerFuncionarios = true;
-        } elseif (isset($this->usuario['departamento_id']) && $this->usuario['departamento_id'] == 1) {
+            echo "<script>console.log('✅ Permissão para Funcionários por DIRETOR');</script>";
+        } elseif ($ehDaPresidencia) {
             $podeVerFuncionarios = true;
+            echo "<script>console.log('✅ Permissão para Funcionários por PRESIDÊNCIA');</script>";
+        } elseif ($ehDoRH) {
+            $podeVerFuncionarios = true;
+            echo "<script>console.log('✅ Permissão para Funcionários por RH');</script>";
+        } elseif ($ehDoComercial) {
+            $podeVerFuncionarios = true;
+            echo "<script>console.log('✅ Permissão para Funcionários por COMERCIAL');</script>";
+        } else {
+            echo "<script>console.log('❌ SEM permissão para Funcionários');</script>";
         }
 
-        // Adiciona a aba se tiver permissão
+        // Comercial: APENAS Presidência OU Funcionários do Comercial (dept_id = 10)
+        if ($ehDaPresidencia) {
+            $podeVerComercial = true;
+            echo "<script>console.log('✅ Permissão para Comercial por PRESIDÊNCIA');</script>";
+        } elseif ($ehDoComercial) {
+            $podeVerComercial = true;
+            echo "<script>console.log('✅ Permissão para Comercial por FUNCIONÁRIO DO COMERCIAL');</script>";
+        } else {
+            echo "<script>console.log('❌ SEM permissão para Comercial');</script>";
+        }
+
+        // FINANCEIRO: APENAS Presidência (dept_id=1) OU Funcionários/Diretor do Financeiro (dept_id=2)
+        echo "<script>console.log('=== DEBUG DETALHADO FINANCEIRO ===');</script>";
+        echo "<script>console.log('Dados do usuário completos:', " . json_encode($this->usuario) . ");</script>";
+        echo "<script>console.log('isDiretor valor:', " . ($this->isDiretor ? 'true' : 'false') . ");</script>";
+        echo "<script>console.log('departamento_id existe?:', " . (isset($this->usuario['departamento_id']) ? 'true' : 'false') . ");</script>";
+        
+        if (isset($this->usuario['departamento_id'])) {
+            echo "<script>console.log('departamento_id valor:', " . json_encode($this->usuario['departamento_id']) . ");</script>";
+            echo "<script>console.log('departamento_id tipo:', '" . gettype($this->usuario['departamento_id']) . "');</script>";
+            echo "<script>console.log('departamento_id == 1:', " . ($this->usuario['departamento_id'] == 1 ? 'true' : 'false') . ");</script>";
+            echo "<script>console.log('departamento_id == 2:', " . ($this->usuario['departamento_id'] == 2 ? 'true' : 'false') . ");</script>";
+        } else {
+            echo "<script>console.log('departamento_id NÃO EXISTE no array do usuário!');</script>";
+        }
+        
+        // LÓGICA REFORMULADA - MAIS EXPLÍCITA
+        $podeVerFinanceiro = false;
+        $motivoPermissao = '';
+        
+        // Verifica Presidência primeiro
+        if (isset($this->usuario['departamento_id']) && $this->usuario['departamento_id'] == 1) {
+            $podeVerFinanceiro = true;
+            $motivoPermissao = 'PRESIDÊNCIA';
+            echo "<script>console.log('✅ APROVADO: Presidência (dept_id=1)');</script>";
+        }
+        // Verifica Financeiro (funcionários + diretor)
+        elseif (isset($this->usuario['departamento_id']) && $this->usuario['departamento_id'] == 2) {
+            $podeVerFinanceiro = true;
+            if ($this->isDiretor) {
+                $motivoPermissao = 'DIRETOR DO FINANCEIRO';
+                echo "<script>console.log('✅ APROVADO: Diretor do Financeiro (dept_id=2 + isDiretor=true)');</script>";
+            } else {
+                $motivoPermissao = 'FUNCIONÁRIO DO FINANCEIRO';
+                echo "<script>console.log('✅ APROVADO: Funcionário do Financeiro (dept_id=2)');</script>";
+            }
+        }
+        // Todos os outros casos são negados
+        else {
+            $podeVerFinanceiro = false;
+            $motivoPermissao = 'SEM PERMISSÃO';
+            $deptAtual = $this->usuario['departamento_id'] ?? 'não definido';
+            echo "<script>console.log('❌ NEGADO: Departamento ' + " . json_encode($deptAtual) . " + ' não tem permissão para Financeiro');</script>";
+        }
+        
+        echo "<script>console.log('RESULTADO FINAL podeVerFinanceiro:', " . ($podeVerFinanceiro ? 'true' : 'false') . ");</script>";
+        echo "<script>console.log('MOTIVO:', '" . $motivoPermissao . "');</script>";
+        echo "<script>console.log('=== FIM DEBUG FINANCEIRO ===');</script>";
+
+        // Auditoria: Diretores OU Presidência
+        if ($this->isDiretor) {
+            $podeVerAuditoria = true;
+            echo "<script>console.log('✅ Permissão para Auditoria por DIRETOR');</script>";
+        } elseif ($ehDaPresidencia) {
+            $podeVerAuditoria = true;
+            echo "<script>console.log('✅ Permissão para Auditoria por PRESIDÊNCIA');</script>";
+        } else {
+            echo "<script>console.log('❌ SEM permissão para Auditoria');</script>";
+        }
+
+        // Adiciona as abas com suas respectivas permissões
         if ($podeVerFuncionarios) {
             $tabs[] = [
                 'id' => 'funcionarios',
                 'label' => 'Funcionários',
                 'icon' => 'fas fa-user-tie',
-                'href' => './funcionarios.php' // ← CORRIGIDO: Caminho relativo correto
+                'href' => './funcionarios.php'
             ];
+        }
+        
+        if ($podeVerComercial) {
             $tabs[] = [
                 'id' => 'comercial',
                 'label' => 'Comercial',
                 'icon' => 'fas fa-briefcase',
                 'href' => 'comercial.php'
             ];
-
-            
-            // Debug final
-            echo "<script>console.log('✅ ABA FUNCIONÁRIOS ADICIONADA!');</script>";
-        } else {
-            echo "<script>console.log('❌ ABA FUNCIONÁRIOS NÃO ADICIONADA');</script>";
         }
 
+        if ($podeVerFinanceiro) {
+            $tabs[] = [
+                'id' => 'financeiro',
+                'label' => 'Financeiro',
+                'icon' => 'fas fa-dollar-sign',
+                'href' => 'financeiro.php'
+            ];
+        }
+
+        if ($podeVerAuditoria) {
+            $tabs[] = [
+                'id' => 'auditoria',
+                'label' => 'Auditoria',
+                'icon' => 'fas fa-user-shield',
+                'href' => 'auditoria.php'
+            ];
+        }
+
+        // Aba Presidência - APENAS para usuários DA presidência (não diretores)
+        if ($ehDaPresidencia) {
+            $tabs[] = [
+                'id' => 'presidencia',
+                'label' => 'Presidência',
+                'icon' => 'fas fa-landmark',
+                'href' => 'presidencia.php'
+            ];
+            
+            echo "<script>console.log('✅ ABA PRESIDÊNCIA ADICIONADA - Usuário é da presidência!');</script>";
+        } else {
+            echo "<script>console.log('❌ ABA PRESIDÊNCIA NÃO ADICIONADA - Usuário não é da presidência');</script>";
+        }
+
+        // Abas que todos podem ver
         $tabs[] = [
             'id' => 'relatorios',
             'label' => 'Relatórios',
@@ -436,25 +555,20 @@ class HeaderComponent {
         ];
 
         $tabs[] = [
-            'id' => 'presidencia',
-            'label' => 'Presidência',
-            'icon' => 'fas fa-landmark',
-            'href' => 'presidencia.php'
-        ];
-
-        $tabs[] = [
-            'id' => 'auditoria',
-            'label' => 'Auditoria',
-            'icon' => 'fas fa-user-shield',
-            'href' => 'auditoria.php'
-        ];
-
-        $tabs[] = [
             'id' => 'documentos',
             'label' => 'Documentos',
             'icon' => 'fas fa-folder-open',
             'href' => 'documentos.php'
         ];
+
+        // Debug final das abas adicionadas
+        echo "<script>";
+        echo "console.log('--- ABAS FINAIS ADICIONADAS ---');";
+        foreach ($tabs as $tab) {
+            echo "console.log('✓ " . $tab['label'] . "');";
+        }
+        echo "console.log('------------------------------');";
+        echo "</script>";
 
         return $tabs;
     }
