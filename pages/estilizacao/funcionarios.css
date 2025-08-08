@@ -1,4 +1,8 @@
- /* Main Content */
+
+
+*{
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+}
         .main-wrapper {
             min-height: 100vh;
             background: var(--gray-100);
