@@ -59,9 +59,6 @@ try {
     // Desabilita temporariamente o ONLY_FULL_GROUP_BY para esta sessão
     $pdo->exec("SET SESSION sql_mode = REPLACE(@@sql_mode, 'ONLY_FULL_GROUP_BY', '')");
     
-    // Para compatibilidade com o frontend atual, vamos carregar todos os dados
-    // mas de forma otimizada
-    
     // Primeiro, conta o total de registros
     $countStmt = $pdo->query("SELECT COUNT(*) as total FROM Associados");
     $totalRegistros = $countStmt->fetch()['total'];
@@ -70,7 +67,6 @@ try {
     $limite = $totalRegistros > 5000 ? 5000 : $totalRegistros;
     
     // Query otimizada - seleciona apenas campos essenciais
-    // Usando MAX() para campos agregados quando necessário
     $sql = "
         SELECT DISTINCT
             a.id,
@@ -86,6 +82,7 @@ try {
             a.escolaridade,
             a.estadoCivil,
             a.indicacao,
+            a.pre_cadastro,
             MAX(m.corporacao) as corporacao,
             MAX(m.patente) as patente,
             MAX(m.categoria) as categoria,
@@ -123,7 +120,9 @@ try {
             a.situacao,
             a.escolaridade,
             a.estadoCivil,
-            a.indicacao
+            a.indicacao,
+            a.pre_cadastro,
+            a.foto
         ORDER BY a.id DESC
         LIMIT " . $limite;
     
@@ -132,6 +131,7 @@ try {
     // Processa os dados e remove duplicatas no PHP também
     $dados = [];
     $idsProcessados = [];
+    $associadosIds = [];
     
     while ($row = $stmt->fetch()) {
         // Evita duplicatas verificando o ID
@@ -139,6 +139,7 @@ try {
             continue;
         }
         $idsProcessados[] = $row['id'];
+        $associadosIds[] = $row['id']; // Salva os IDs para buscar dependentes depois
         
         $dados[] = [
             'id' => intval($row['id']),
@@ -154,6 +155,7 @@ try {
             'estadoCivil' => $row['estadoCivil'] ?? '',
             'foto' => $row['foto'] ?? '',
             'indicacao' => $row['indicacao'] ?? '',
+            'pre_cadastro' => $row['pre_cadastro'] ?? 0,
             'corporacao' => $row['corporacao'] ?? '',
             'patente' => $row['patente'] ?? '',
             'categoria' => $row['categoria'] ?? '',
@@ -175,15 +177,122 @@ try {
             'data_filiacao' => $row['data_filiacao'] ?? '',
             'data_desfiliacao' => $row['data_desfiliacao'] ?? '',
             'dependentes' => [],
+            'total_dependentes' => 0,
+            'total_servicos' => 0,
+            'total_documentos' => 0,
             'redesSociais' => [],
             'servicos' => [],
             'documentos' => []
         ];
     }
     
+    // Busca dependentes para todos os associados de uma vez
+    if (!empty($associadosIds)) {
+        $placeholders = str_repeat('?,', count($associadosIds) - 1) . '?';
+        
+        // Busca os dependentes
+        $sqlDependentes = "
+            SELECT 
+                associado_id,
+                nome,
+                data_nascimento,
+                parentesco,
+                sexo
+            FROM Dependentes
+            WHERE associado_id IN ($placeholders)
+            ORDER BY associado_id, nome
+        ";
+        
+        $stmtDep = $pdo->prepare($sqlDependentes);
+        $stmtDep->execute($associadosIds);
+        
+        $dependentesPorAssociado = [];
+        while ($dep = $stmtDep->fetch()) {
+            if (!isset($dependentesPorAssociado[$dep['associado_id']])) {
+                $dependentesPorAssociado[$dep['associado_id']] = [];
+            }
+            $dependentesPorAssociado[$dep['associado_id']][] = [
+                'nome' => $dep['nome'] ?? '',
+                'data_nascimento' => $dep['data_nascimento'] ?? '',
+                'parentesco' => $dep['parentesco'] ?? '',
+                'sexo' => $dep['sexo'] ?? ''
+            ];
+        }
+        
+        // Busca a contagem de serviços ativos
+        $sqlServicos = "
+            SELECT 
+                associado_id,
+                COUNT(*) as total
+            FROM Servicos_Associado
+            WHERE associado_id IN ($placeholders)
+            AND ativo = 1
+            GROUP BY associado_id
+        ";
+        
+        $stmtServ = $pdo->prepare($sqlServicos);
+        $stmtServ->execute($associadosIds);
+        
+        $servicosPorAssociado = [];
+        while ($serv = $stmtServ->fetch()) {
+            $servicosPorAssociado[$serv['associado_id']] = $serv['total'];
+        }
+        
+        // Busca a contagem de documentos
+        $sqlDocumentos = "
+            SELECT 
+                associado_id,
+                COUNT(*) as total
+            FROM Documentos_Associado
+            WHERE associado_id IN ($placeholders)
+            GROUP BY associado_id
+        ";
+        
+        $stmtDoc = $pdo->prepare($sqlDocumentos);
+        $stmtDoc->execute($associadosIds);
+        
+        $documentosPorAssociado = [];
+        while ($doc = $stmtDoc->fetch()) {
+            $documentosPorAssociado[$doc['associado_id']] = $doc['total'];
+        }
+        
+        // Adiciona os dados aos associados
+        foreach ($dados as &$associado) {
+            $id = $associado['id'];
+            
+            // Adiciona dependentes
+            if (isset($dependentesPorAssociado[$id])) {
+                $associado['dependentes'] = $dependentesPorAssociado[$id];
+                $associado['total_dependentes'] = count($dependentesPorAssociado[$id]);
+            }
+            
+            // Adiciona total de serviços
+            if (isset($servicosPorAssociado[$id])) {
+                $associado['total_servicos'] = intval($servicosPorAssociado[$id]);
+            }
+            
+            // Adiciona total de documentos
+            if (isset($documentosPorAssociado[$id])) {
+                $associado['total_documentos'] = intval($documentosPorAssociado[$id]);
+            }
+        }
+    }
+    
     // Libera recursos
     $stmt->closeCursor();
     $stmt = null;
+    if (isset($stmtDep)) {
+        $stmtDep->closeCursor();
+        $stmtDep = null;
+    }
+    if (isset($stmtServ)) {
+        $stmtServ->closeCursor();
+        $stmtServ = null;
+    }
+    if (isset($stmtDoc)) {
+        $stmtDoc->closeCursor();
+        $stmtDoc = null;
+    }
     $pdo = null;
     
     // Resposta de sucesso
