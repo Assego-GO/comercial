@@ -35,6 +35,127 @@ if (!isset($_SESSION['funcionario_id'])) {
     ]);
 }
 
+// Função para normalizar nome da corporação
+function normalizarCorporacao($corporacao) {
+    if (empty($corporacao)) return '';
+    
+    // Remove espaços extras e converte para maiúsculas para comparação
+    $corporacao = trim($corporacao);
+    $corporacao = preg_replace('/\s+/', ' ', $corporacao); // Remove espaços múltiplos
+    
+    // Cria uma versão em maiúsculas sem acentos para comparação
+    $corporacaoUpper = strtoupper($corporacao);
+    $corporacaoUpper = str_replace(
+        ['Á','À','Ã','Â','É','È','Ê','Í','Ì','Î','Ó','Ò','Õ','Ô','Ú','Ù','Û','Ç'],
+        ['A','A','A','A','E','E','E','I','I','I','O','O','O','O','U','U','U','C'],
+        $corporacaoUpper
+    );
+    
+    // Mapeamento de TODAS as possíveis variações para nomes padronizados
+    $mapeamento = [
+        // Polícia Militar - todas as variações
+        'PM' => 'Polícia Militar',
+        'P.M.' => 'Polícia Militar',
+        'P.M' => 'Polícia Militar',
+        'PMGO' => 'Polícia Militar',
+        'PM-GO' => 'Polícia Militar',
+        'PM GO' => 'Polícia Militar',
+        'PM/GO' => 'Polícia Militar',
+        'POLICIA MILITAR' => 'Polícia Militar',
+        'POLÍCIA MILITAR' => 'Polícia Militar',
+        'POLICIA MILITAR DE GOIAS' => 'Polícia Militar',
+        'POLÍCIA MILITAR DE GOIÁS' => 'Polícia Militar',
+        'POLICIA MILITAR DO ESTADO DE GOIAS' => 'Polícia Militar',
+        
+        // Bombeiro Militar - todas as variações
+        'BM' => 'Bombeiro Militar',
+        'B.M.' => 'Bombeiro Militar',
+        'B.M' => 'Bombeiro Militar',
+        'BMGO' => 'Bombeiro Militar',
+        'BM-GO' => 'Bombeiro Militar',
+        'BM GO' => 'Bombeiro Militar',
+        'BM/GO' => 'Bombeiro Militar',
+        'BOMBEIRO' => 'Bombeiro Militar',
+        'BOMBEIROS' => 'Bombeiro Militar',
+        'BOMBEIRO MILITAR' => 'Bombeiro Militar',
+        'BOMBEIROS MILITAR' => 'Bombeiro Militar',
+        'BOMBEIROS MILITARES' => 'Bombeiro Militar',
+        'CBM' => 'Bombeiro Militar',
+        'CBMGO' => 'Bombeiro Militar',
+        'CBM-GO' => 'Bombeiro Militar',
+        'CBM GO' => 'Bombeiro Militar',
+        'CORPO DE BOMBEIROS' => 'Bombeiro Militar',
+        'CORPO DE BOMBEIROS MILITAR' => 'Bombeiro Militar',
+        'CORPO DE BOMBEIROS MILITAR DE GOIAS' => 'Bombeiro Militar',
+        'CORPO DE BOMBEIROS MILITAR DO ESTADO DE GOIAS' => 'Bombeiro Militar',
+        
+        // Polícia Civil - todas as variações  
+        'PC' => 'Polícia Civil',
+        'P.C.' => 'Polícia Civil',
+        'P.C' => 'Polícia Civil',
+        'PCGO' => 'Polícia Civil',
+        'PC-GO' => 'Polícia Civil',
+        'PC GO' => 'Polícia Civil',
+        'PC/GO' => 'Polícia Civil',
+        'POLICIA CIVIL' => 'Polícia Civil',
+        'POLÍCIA CIVIL' => 'Polícia Civil',
+        'POLICIA CIVIL DE GOIAS' => 'Polícia Civil',
+        'POLÍCIA CIVIL DE GOIÁS' => 'Polícia Civil',
+        'POLICIA CIVIL DO ESTADO DE GOIAS' => 'Polícia Civil',
+        
+        // Polícia Penal - todas as variações
+        'PP' => 'Polícia Penal',
+        'P.P.' => 'Polícia Penal',
+        'P.P' => 'Polícia Penal',
+        'PPGO' => 'Polícia Penal',
+        'PP-GO' => 'Polícia Penal',
+        'PP GO' => 'Polícia Penal',
+        'PP/GO' => 'Polícia Penal',
+        'POLICIA PENAL' => 'Polícia Penal',
+        'POLÍCIA PENAL' => 'Polícia Penal',
+        'POLICIA PENAL DE GOIAS' => 'Polícia Penal',
+        'POLÍCIA PENAL DE GOIÁS' => 'Polícia Penal',
+        'AGEPEN' => 'Polícia Penal',
+        'DGAP' => 'Polícia Penal',
+        'DIRETORIA GERAL DE ADMINISTRACAO PENITENCIARIA' => 'Polícia Penal',
+        'DIRETORIA-GERAL DE ADMINISTRAÇÃO PENITENCIÁRIA' => 'Polícia Penal'
+    ];
+    
+    // Verifica se existe no mapeamento (usando a versão em maiúsculas sem acentos)
+    if (isset($mapeamento[$corporacaoUpper])) {
+        return $mapeamento[$corporacaoUpper];
+    }
+    
+    // Se não encontrar exatamente, tenta variações parciais
+    foreach ($mapeamento as $chave => $valor) {
+        if (stripos($corporacaoUpper, $chave) !== false) {
+            return $valor;
+        }
+    }
+    
+    // Se ainda não encontrar, retorna com capitalização correta
+    $palavras = explode(' ', mb_strtolower($corporacao, 'UTF-8'));
+    $palavrasPadronizadas = array_map(function($palavra) {
+        // Palavras que devem ficar em minúsculas
+        $minusculas = ['de', 'da', 'do', 'dos', 'das', 'e', 'em'];
+        if (in_array($palavra, $minusculas)) {
+            return $palavra;
+        }
+        return mb_convert_case($palavra, MB_CASE_TITLE, 'UTF-8');
+    }, $palavras);
+    
+    $resultado = implode(' ', $palavrasPadronizadas);
+    
+    // Correções finais para acentuação
+    $resultado = str_replace(
+        ['Policia', 'Policia', 'Goias'],
+        ['Polícia', 'Polícia', 'Goiás'],
+        $resultado
+    );
+    
+    return $resultado;
+}
+
 try {
     // Carrega configurações
     @include_once '../config/database.php';
@@ -59,9 +180,6 @@ try {
     // Desabilita temporariamente o ONLY_FULL_GROUP_BY para esta sessão
     $pdo->exec("SET SESSION sql_mode = REPLACE(@@sql_mode, 'ONLY_FULL_GROUP_BY', '')");
     
-    // Para compatibilidade com o frontend atual, vamos carregar todos os dados
-    // mas de forma otimizada
-    
     // Primeiro, conta o total de registros
     $countStmt = $pdo->query("SELECT COUNT(*) as total FROM Associados");
     $totalRegistros = $countStmt->fetch()['total'];
@@ -69,7 +187,6 @@ try {
     // Se houver muitos registros, limita a consulta
     $limite = $totalRegistros > 5000 ? 5000 : $totalRegistros;
     
-    // CORRIGIDO: Query otimizada - INCLUINDO OS NOVOS CAMPOS
     $sql = "
         SELECT DISTINCT
             a.id,
@@ -85,6 +202,7 @@ try {
             a.escolaridade,
             a.estadoCivil,
             a.indicacao,
+            a.pre_cadastro,
             MAX(m.corporacao) as corporacao,
             MAX(m.patente) as patente,
             MAX(m.categoria) as categoria,
@@ -124,7 +242,9 @@ try {
             a.situacao,
             a.escolaridade,
             a.estadoCivil,
-            a.indicacao
+            a.indicacao,
+            a.pre_cadastro,
+            a.foto
         ORDER BY a.id DESC
         LIMIT " . $limite;
     
@@ -133,6 +253,7 @@ try {
     // Processa os dados e remove duplicatas no PHP também
     $dados = [];
     $idsProcessados = [];
+    $associadosIds = [];
     
     while ($row = $stmt->fetch()) {
         // Evita duplicatas verificando o ID
@@ -140,6 +261,10 @@ try {
             continue;
         }
         $idsProcessados[] = $row['id'];
+        $associadosIds[] = $row['id']; // Salva os IDs para buscar dependentes depois
+        
+        // Trata a corporação para exibir nome completo
+        $corporacao = normalizarCorporacao($row['corporacao']);
         
         // CORRIGIDO: Incluindo os novos campos na resposta
         $dados[] = [
@@ -156,7 +281,8 @@ try {
             'estadoCivil' => $row['estadoCivil'] ?? '',
             'foto' => $row['foto'] ?? '',
             'indicacao' => $row['indicacao'] ?? '',
-            'corporacao' => $row['corporacao'] ?? '',
+            'pre_cadastro' => $row['pre_cadastro'] ?? 0,
+            'corporacao' => $corporacao,
             'patente' => $row['patente'] ?? '',
             'categoria' => $row['categoria'] ?? '',
             'lotacao' => $row['lotacao'] ?? '',
@@ -179,22 +305,133 @@ try {
             'data_filiacao' => $row['data_filiacao'] ?? '',
             'data_desfiliacao' => $row['data_desfiliacao'] ?? '',
             'dependentes' => [],
+            'total_dependentes' => 0,
+            'total_servicos' => 0,
+            'total_documentos' => 0,
             'redesSociais' => [],
             'servicos' => [],
             'documentos' => []
         ];
     }
     
+    // Busca dependentes para todos os associados de uma vez
+    if (!empty($associadosIds)) {
+        $placeholders = str_repeat('?,', count($associadosIds) - 1) . '?';
+        
+        // Busca os dependentes
+        $sqlDependentes = "
+            SELECT 
+                associado_id,
+                nome,
+                data_nascimento,
+                parentesco,
+                sexo
+            FROM Dependentes
+            WHERE associado_id IN ($placeholders)
+            ORDER BY associado_id, nome
+        ";
+        
+        $stmtDep = $pdo->prepare($sqlDependentes);
+        $stmtDep->execute($associadosIds);
+        
+        $dependentesPorAssociado = [];
+        while ($dep = $stmtDep->fetch()) {
+            if (!isset($dependentesPorAssociado[$dep['associado_id']])) {
+                $dependentesPorAssociado[$dep['associado_id']] = [];
+            }
+            $dependentesPorAssociado[$dep['associado_id']][] = [
+                'nome' => $dep['nome'] ?? '',
+                'data_nascimento' => $dep['data_nascimento'] ?? '',
+                'parentesco' => $dep['parentesco'] ?? '',
+                'sexo' => $dep['sexo'] ?? ''
+            ];
+        }
+        
+        // Busca a contagem de serviços ativos
+        $sqlServicos = "
+            SELECT 
+                associado_id,
+                COUNT(*) as total
+            FROM Servicos_Associado
+            WHERE associado_id IN ($placeholders)
+            AND ativo = 1
+            GROUP BY associado_id
+        ";
+        
+        $stmtServ = $pdo->prepare($sqlServicos);
+        $stmtServ->execute($associadosIds);
+        
+        $servicosPorAssociado = [];
+        while ($serv = $stmtServ->fetch()) {
+            $servicosPorAssociado[$serv['associado_id']] = $serv['total'];
+        }
+        
+        // Busca a contagem de documentos
+        $sqlDocumentos = "
+            SELECT 
+                associado_id,
+                COUNT(*) as total
+            FROM Documentos_Associado
+            WHERE associado_id IN ($placeholders)
+            GROUP BY associado_id
+        ";
+        
+        $stmtDoc = $pdo->prepare($sqlDocumentos);
+        $stmtDoc->execute($associadosIds);
+        
+        $documentosPorAssociado = [];
+        while ($doc = $stmtDoc->fetch()) {
+            $documentosPorAssociado[$doc['associado_id']] = $doc['total'];
+        }
+        
+        // Adiciona os dados aos associados
+        foreach ($dados as &$associado) {
+            $id = $associado['id'];
+            
+            // Adiciona dependentes
+            if (isset($dependentesPorAssociado[$id])) {
+                $associado['dependentes'] = $dependentesPorAssociado[$id];
+                $associado['total_dependentes'] = count($dependentesPorAssociado[$id]);
+            }
+            
+            // Adiciona total de serviços
+            if (isset($servicosPorAssociado[$id])) {
+                $associado['total_servicos'] = intval($servicosPorAssociado[$id]);
+            }
+            
+            // Adiciona total de documentos
+            if (isset($documentosPorAssociado[$id])) {
+                $associado['total_documentos'] = intval($documentosPorAssociado[$id]);
+            }
+        }
+    }
+    
     // Libera recursos
     $stmt->closeCursor();
     $stmt = null;
+    if (isset($stmtDep)) {
+        $stmtDep->closeCursor();
+        $stmtDep = null;
+    }
+    if (isset($stmtServ)) {
+        $stmtServ->closeCursor();
+        $stmtServ = null;
+    }
+    if (isset($stmtDoc)) {
+        $stmtDoc->closeCursor();
+        $stmtDoc = null;
+    }
     $pdo = null;
+    
+    // Adiciona um array para armazenar corporações únicas normalizadas
+    $corporacoesUnicas = [];
     
     // Resposta de sucesso
     $response = [
         'status' => 'success',
         'total' => count($dados),
         'dados' => $dados,
+        'corporacoes_unicas' => array_values(array_unique(array_filter(array_column($dados, 'corporacao')))),
         'timestamp' => date('Y-m-d H:i:s')
     ];
     
