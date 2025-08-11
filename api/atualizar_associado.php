@@ -3,38 +3,30 @@
  * API para atualizar associado - VERSÃO COM SALVAMENTO EM JSON
  * api/atualizar_associado.php
  */
-
 ob_start();
-
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: POST, PUT');
 header('Access-Control-Allow-Headers: Content-Type');
-
 error_reporting(E_ALL);
 ini_set('display_errors', 0);
 ini_set('log_errors', 1);
-
 ob_clean();
-
 $response = [
     'status' => 'error',
     'message' => 'Erro ao processar requisição',
     'data' => null
 ];
-
 try {
     // Verifica método
     if (!in_array($_SERVER['REQUEST_METHOD'], ['POST', 'PUT'])) {
         throw new Exception('Método não permitido. Use POST ou PUT.');
     }
-
     // Verifica se ID foi fornecido
     $associadoId = isset($_GET['id']) ? intval($_GET['id']) : null;
     if (!$associadoId) {
         throw new Exception('ID do associado não fornecido');
     }
-
     // Carrega configurações e classes
     require_once '../config/config.php';
     require_once '../config/database.php';
@@ -44,12 +36,10 @@ try {
     
     // ✅ NOVA LINHA - JsonManager para salvar em JSON
     require_once '../classes/JsonManager.php';
-
     // Inicia sessão
     if (session_status() === PHP_SESSION_NONE) {
         session_start();
     }
-
     // Simula login para debug (REMOVER EM PRODUÇÃO)
     if (!isset($_SESSION['user_id'])) {
         $_SESSION['user_id'] = 1;
@@ -57,7 +47,6 @@ try {
         $_SESSION['user_email'] = 'debug@test.com';
         $_SESSION['funcionario_id'] = 1;
     }
-
     $usuarioLogado = [
         'id' => $_SESSION['user_id'],
         'nome' => $_SESSION['user_name'] ?? 'Usuário',
@@ -67,7 +56,6 @@ try {
     error_log("=== ATUALIZAR ASSOCIADO COM JSON - VERSÃO CORRIGIDA ===");
     error_log("ID: $associadoId | Usuário: " . $usuarioLogado['nome']);
     error_log("POST dados: " . json_encode($_POST, JSON_PARTIAL_OUTPUT_ON_ERROR));
-
     // Validação básica
     $camposObrigatorios = ['nome', 'cpf', 'rg', 'telefone', 'situacao'];
     foreach ($camposObrigatorios as $campo) {
@@ -75,23 +63,18 @@ try {
             throw new Exception("Campo '$campo' é obrigatório");
         }
     }
-
     // Conecta ao banco
     $db = Database::getInstance(DB_NAME_CADASTRO)->getConnection();
-
     // Busca dados atuais do associado
     $associados = new Associados();
     $associadoAtual = $associados->getById($associadoId);
     if (!$associadoAtual) {
         throw new Exception('Associado não encontrado');
     }
-
     error_log("✓ Associado encontrado: " . $associadoAtual['nome']);
-
     // INICIA TRANSAÇÃO ÚNICA PARA TUDO
     $db->beginTransaction();
     $transacaoAtiva = true;
-
     try {
         // 1. PRIMEIRO ATUALIZA OS DADOS BÁSICOS DO ASSOCIADO
         $dados = [
@@ -127,7 +110,11 @@ try {
             'operacao' => trim($_POST['operacao'] ?? '') ?: null,
             'contaCorrente' => trim($_POST['contaCorrente'] ?? '') ?: null,
             
-            // ✅ NOVOS CAMPOS - Dados dos serviços para JSON
+            // ✅ NOVOS CAMPOS FINANCEIROS ADICIONADOS
+            'observacoes' => trim($_POST['observacoes'] ?? '') ?: null,
+            'doador' => isset($_POST['doador']) ? intval($_POST['doador']) : 0,
+            
+            // ✅ CAMPOS EXISTENTES - Dados dos serviços para JSON
             'tipoAssociadoServico' => $_POST['tipoAssociadoServico'] ?? null,
             'valorSocial' => $_POST['valorSocial'] ?? '0',
             'percentualAplicadoSocial' => $_POST['percentualAplicadoSocial'] ?? '0',
@@ -135,7 +122,12 @@ try {
             'percentualAplicadoJuridico' => $_POST['percentualAplicadoJuridico'] ?? '0',
             'servicoJuridico' => $_POST['servicoJuridico'] ?? null
         ];
-
+        
+        // Log dos novos campos para debug
+        error_log("✓ Novos campos capturados:");
+        error_log("  - Observações: " . ($dados['observacoes'] ?: 'vazio'));
+        error_log("  - Doador: " . $dados['doador']);
+        
         // Processa dependentes
         $dados['dependentes'] = [];
         if (isset($_POST['dependentes']) && is_array($_POST['dependentes'])) {
@@ -150,7 +142,6 @@ try {
                 }
             }
         }
-
         // Processa foto se houver
         if (isset($_FILES['foto']) && $_FILES['foto']['error'] === UPLOAD_ERR_OK) {
             try {
@@ -166,7 +157,6 @@ try {
                 error_log("⚠ Erro na foto: " . $e->getMessage());
             }
         }
-
         // FAZER ROLLBACK DA TRANSAÇÃO AUTOMÁTICA DA CLASSE E USAR A NOSSA
         $db->rollback();
         $transacaoAtiva = false;
@@ -178,12 +168,10 @@ try {
             throw new Exception('Erro ao atualizar dados básicos do associado');
         }
         
-        error_log("✓ Dados básicos atualizados");
-
+        error_log("✓ Dados básicos atualizados (incluindo novos campos financeiros)");
         // INICIA NOVA TRANSAÇÃO PARA OS SERVIÇOS
         $db->beginTransaction();
         $transacaoAtiva = true;
-
         // 2. AGORA PROCESSA OS SERVIÇOS DE FORMA CORRETA
         $servicosAlterados = false;
         $detalhesServicos = [];
@@ -222,7 +210,6 @@ try {
         }
         
         error_log("✓ Serviços atuais encontrados: " . count($servicosAtivos) . " ativos de " . count($todosServicosAtuais) . " total");
-
         // DEFINE OS NOVOS SERVIÇOS COM BASE NO FORMULÁRIO
         $novosServicos = [];
         
@@ -260,7 +247,6 @@ try {
             
             error_log("✓ Total de novos serviços definidos: " . count($novosServicos));
         }
-
         // 3. PROCESSA CADA SERVIÇO
         foreach ([1, 2] as $servicoId) { // 1 = Social, 2 = Jurídico
             $servicoNome = ($servicoId == 1) ? 'Social' : 'Jurídico';
@@ -433,7 +419,6 @@ try {
                 }
             }
         }
-
         // CORREÇÃO: Salva o tipo de associado para serviços em uma tabela separada
         // ou como metadata do associado
         if (!empty($tipoAssociadoServico) && $servicosAlterados) {
@@ -450,7 +435,11 @@ try {
             
             $alteracoes = json_encode([
                 'tipo_associado_servico' => $tipoAssociadoServico,
-                'detalhes_servicos' => $detalhesServicos
+                'detalhes_servicos' => $detalhesServicos,
+                'novos_campos_financeiros' => [
+                    'observacoes' => $dados['observacoes'],
+                    'doador' => $dados['doador']
+                ]
             ]);
             
             $stmt->execute([
@@ -461,13 +450,12 @@ try {
             ]);
             
             error_log("✓ Tipo de associado salvo na auditoria: $tipoAssociadoServico");
+            error_log("✓ Novos campos financeiros salvos na auditoria");
         }
-
         // Confirma transação dos serviços
         $db->commit();
         $transacaoAtiva = false;
         error_log("✓ Transação dos serviços confirmada");
-
         // =====================================
         // ✅ PASSO 3: SALVA DADOS EM JSON
         // =====================================
@@ -495,7 +483,6 @@ try {
             error_log("✗ ERRO CRÍTICO ao salvar JSON: " . $e->getMessage());
             // Não falha a operação por causa do JSON
         }
-
         // Busca dados atualizados
         $associadoAtualizado = $associados->getById($associadoId);
         
@@ -504,6 +491,11 @@ try {
         if ($servicosAlterados) {
             error_log("✓ Alterações nos serviços: " . implode(', ', $detalhesServicos));
         }
+        
+        // ✅ Log dos novos campos atualizados
+        error_log("✓ Novos campos financeiros processados:");
+        error_log("  - Observações: " . ($dados['observacoes'] ?: 'vazio'));
+        error_log("  - Doador: " . ($dados['doador'] ? 'Sim' : 'Não'));
         
         // Resposta de sucesso
         $response = [
@@ -518,7 +510,14 @@ try {
                 'total_alteracoes_servicos' => count($detalhesServicos),
                 'tipo_associado_servico' => $tipoAssociadoServico,
                 
-                // ✅ NOVA SEÇÃO - Informações sobre o JSON
+                // ✅ NOVOS CAMPOS na resposta
+                'novos_campos_financeiros' => [
+                    'observacoes' => $dados['observacoes'],
+                    'doador' => $dados['doador'],
+                    'doador_texto' => $dados['doador'] ? 'Sim' : 'Não'
+                ],
+                
+                // ✅ SEÇÃO EXISTENTE - Informações sobre o JSON
                 'json_export' => [
                     'atualizado' => $resultadoJson['sucesso'],
                     'arquivo' => $resultadoJson['arquivo_individual'] ?? null,
@@ -535,7 +534,19 @@ try {
         if ($resultadoJson['sucesso']) {
             $response['message'] .= ' Dados atualizados na integração.';
         }
-
+        
+        // ✅ Adiciona informação sobre novos campos na mensagem
+        if (!empty($dados['observacoes']) || $dados['doador']) {
+            $infoNovos = [];
+            if (!empty($dados['observacoes'])) {
+                $infoNovos[] = 'observações financeiras';
+            }
+            if ($dados['doador']) {
+                $infoNovos[] = 'status de doador';
+            }
+            $response['message'] .= ' Incluindo ' . implode(' e ', $infoNovos) . '.';
+        }
+        
     } catch (Exception $e) {
         if ($transacaoAtiva) {
             $db->rollback();
@@ -543,7 +554,6 @@ try {
         error_log("✗ Erro na transação: " . $e->getMessage());
         throw $e;
     }
-
 } catch (Exception $e) {
     error_log("✗ ERRO GERAL: " . $e->getMessage());
     error_log("Stack trace: " . $e->getTraceAsString());
@@ -557,17 +567,19 @@ try {
             'line' => $e->getLine(),
             'associado_id' => $associadoId ?? 'não fornecido',
             'post_count' => count($_POST),
-            'tipo_associado_recebido' => $_POST['tipoAssociadoServico'] ?? 'não informado'
+            'tipo_associado_recebido' => $_POST['tipoAssociadoServico'] ?? 'não informado',
+            'novos_campos' => [
+                'observacoes' => $_POST['observacoes'] ?? 'não informado',
+                'doador' => $_POST['doador'] ?? 'não informado'
+            ]
         ]
     ];
     
     http_response_code(400);
 }
-
 ob_end_clean();
 echo json_encode($response, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
 exit;
-
 /**
  * Função para processar upload de foto
  */
@@ -582,7 +594,6 @@ function processarUploadFoto($arquivo, $cpf) {
         if (!isset($arquivo['tmp_name']) || !is_uploaded_file($arquivo['tmp_name'])) {
             throw new Exception('Arquivo não foi enviado corretamente');
         }
-
         $tamanhoMaximo = 5 * 1024 * 1024; // 5MB
         $tiposPermitidos = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
         

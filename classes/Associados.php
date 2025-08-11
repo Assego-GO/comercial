@@ -1,6 +1,6 @@
 <?php
 /**
- * Classe para gerenciamento de associados - VERSÃO COM PRÉ-CADASTRO
+ * Classe para gerenciamento de associados - VERSÃO COM PRÉ-CADASTRO E NOVOS CAMPOS
  * classes/Associados.php
  */
 
@@ -19,7 +19,7 @@ class Associados
     public function getById($id)
     {
         try {
-            // Busca dados principais incluindo pré-cadastro
+            // Busca dados principais incluindo pré-cadastro E NOVOS CAMPOS
             $stmt = $this->db->prepare("
                 SELECT 
                     a.*,
@@ -37,6 +37,8 @@ class Associados
                     f.agencia,
                     f.operacao,
                     f.contaCorrente,
+                    f.observacoes,
+                    f.doador,
                     e.cep,
                     e.endereco,
                     e.bairro,
@@ -114,6 +116,8 @@ class Associados
                     f.situacaoFinanceira,
                     f.vinculoServidor,
                     f.localDebito,
+                    f.observacoes,
+                    f.doador,
                     e.cidade,
                     e.bairro,
                     fpc.status as status_pre_cadastro,
@@ -311,13 +315,14 @@ class Associados
                 ]);
             }
 
-            // Inserir dados financeiros
-            if (!empty($dados['tipoAssociado'])) {
+            // CORRIGIDO: Inserir dados financeiros COM OS NOVOS CAMPOS
+            if (!empty($dados['tipoAssociado']) || isset($dados['observacoes']) || isset($dados['doador'])) {
                 $stmt = $this->db->prepare("
                 INSERT INTO Financeiro (
                     associado_id, tipoAssociado, situacaoFinanceira, 
-                    vinculoServidor, localDebito, agencia, operacao, contaCorrente
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    vinculoServidor, localDebito, agencia, operacao, contaCorrente,
+                    observacoes, doador
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ");
                 $stmt->execute([
                     $associadoId,
@@ -327,7 +332,9 @@ class Associados
                     $dados['localDebito'] ?? null,
                     $dados['agencia'] ?? null,
                     $dados['operacao'] ?? null,
-                    $dados['contaCorrente'] ?? null
+                    $dados['contaCorrente'] ?? null,
+                    $dados['observacoes'] ?? null,
+                    isset($dados['doador']) ? intval($dados['doador']) : 0
                 ]);
             }
 
@@ -790,8 +797,6 @@ class Associados
         }
     }
 
-    // ... (manter todos os outros métodos existentes) ...
-
     /**
      * Atualizar associado (mantém as funcionalidades existentes)
      */
@@ -1161,7 +1166,7 @@ class Associados
     }
 
     /**
-     * Atualizar dados financeiros
+     * CORRIGIDO: Atualizar dados financeiros COM NOVOS CAMPOS
      */
     private function atualizarDadosFinanceiros($associadoId, $dados)
     {
@@ -1170,6 +1175,7 @@ class Associados
         $stmt->execute([$associadoId]);
         $existe = $stmt->fetch();
 
+        // INCLUIR NOVOS CAMPOS NA LISTA
         $campos = [
             'tipoAssociado',
             'situacaoFinanceira',
@@ -1177,7 +1183,9 @@ class Associados
             'localDebito',
             'agencia',
             'operacao',
-            'contaCorrente'
+            'contaCorrente',
+            'observacoes',
+            'doador'
         ];
 
         if ($existe) {
@@ -1188,7 +1196,12 @@ class Associados
             foreach ($campos as $campo) {
                 if (isset($dados[$campo])) {
                     $updates[] = "$campo = ?";
-                    $valores[] = $dados[$campo];
+                    // Tratamento especial para doador (converte para int)
+                    if ($campo === 'doador') {
+                        $valores[] = intval($dados[$campo]);
+                    } else {
+                        $valores[] = $dados[$campo];
+                    }
                 }
             }
 
@@ -1203,13 +1216,17 @@ class Associados
             $stmt = $this->db->prepare("
                 INSERT INTO Financeiro (
                     associado_id, tipoAssociado, situacaoFinanceira, vinculoServidor,
-                    localDebito, agencia, operacao, contaCorrente
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    localDebito, agencia, operacao, contaCorrente, observacoes, doador
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ");
 
             $valores = [$associadoId];
             foreach ($campos as $campo) {
-                $valores[] = $dados[$campo] ?? null;
+                if ($campo === 'doador') {
+                    $valores[] = isset($dados[$campo]) ? intval($dados[$campo]) : 0;
+                } else {
+                    $valores[] = $dados[$campo] ?? null;
+                }
             }
 
             $stmt->execute($valores);
@@ -1296,7 +1313,7 @@ class Associados
     }
 
     /**
-     * Verifica se tem dados financeiros
+     * CORRIGIDO: Verifica se tem dados financeiros (incluindo novos campos)
      */
     private function temDadosFinanceiros($dados)
     {
@@ -1307,7 +1324,9 @@ class Associados
             'localDebito',
             'agencia',
             'operacao',
-            'contaCorrente'
+            'contaCorrente',
+            'observacoes',
+            'doador'
         ];
         foreach ($campos as $campo) {
             if (isset($dados[$campo])) {

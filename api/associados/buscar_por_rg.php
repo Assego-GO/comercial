@@ -180,6 +180,13 @@ try {
                 
                 f.tipoAssociado as tipo_associado,
                 f.situacaoFinanceira as situacao_financeira,
+                f.vinculoServidor as vinculo_servidor,
+                f.localDebito as local_debito,
+                f.agencia,
+                f.operacao,
+                f.contaCorrente as conta_corrente,
+                f.observacoes,
+                f.doador,
                 
                 c.dataFiliacao as data_filiacao,
                 c.dataDesfiliacao as data_desfiliacao
@@ -228,6 +235,13 @@ try {
                 
                 f.tipoAssociado as tipo_associado,
                 f.situacaoFinanceira as situacao_financeira,
+                f.vinculoServidor as vinculo_servidor,
+                f.localDebito as local_debito,
+                f.agencia,
+                f.operacao,
+                f.contaCorrente as conta_corrente,
+                f.observacoes,
+                f.doador,
                 
                 c.dataFiliacao as data_filiacao,
                 c.dataDesfiliacao as data_desfiliacao
@@ -254,7 +268,7 @@ try {
         retornarResposta('error', "Associado não encontrado com o $tipoDocumento: $documento");
     }
     
-    // Formatar dados para retorno
+    // Formatar dados para retorno - INCLUINDO NOVOS CAMPOS
     $dadosFormatados = [
         'dados_pessoais' => [
             'id' => $associado['associado_id'],
@@ -286,7 +300,15 @@ try {
         ],
         'dados_financeiros' => [
             'tipo_associado' => $associado['tipo_associado'] ?? '',
-            'situacao_financeira' => $associado['situacao_financeira'] ?? ''
+            'situacao_financeira' => $associado['situacao_financeira'] ?? '',
+            'vinculo_servidor' => $associado['vinculo_servidor'] ?? '',
+            'local_debito' => $associado['local_debito'] ?? '',
+            'agencia' => $associado['agencia'] ?? '',
+            'operacao' => $associado['operacao'] ?? '',
+            'conta_corrente' => $associado['conta_corrente'] ?? '',
+            'observacoes' => $associado['observacoes'] ?? '',
+            'doador' => intval($associado['doador'] ?? 0),
+            'eh_doador' => ($associado['doador'] ?? 0) == 1 ? 'Sim' : 'Não'
         ],
         'contrato' => [
             'data_filiacao' => $associado['data_filiacao'] ?? '',

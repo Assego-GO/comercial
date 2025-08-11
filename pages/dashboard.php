@@ -353,7 +353,7 @@ $headerComponent = HeaderComponent::create([
                             <div class="modal-header-meta">
                                 <div class="meta-item">
                                     <i class="fas fa-id-badge"></i>
-                                    <span id="modalId">ID: -</span>
+                                    <span id="modalId">Matrícula: -</span>
                                 </div>
                                 <div class="meta-item">
                                     <i class="fas fa-calendar"></i>
@@ -566,6 +566,14 @@ $headerComponent = HeaderComponent::create([
                 return telefone.replace(/(\d{4})(\d{4})/, "$1-$2");
             }
             return telefone;
+        }
+
+        // NOVA FUNÇÃO: Formatar status de doador
+        function formatarDoador(doador) {
+            if (doador === null || doador === undefined || doador === '') return '-';
+            // Converte para booleano e exibe como texto
+            const isDoador = Boolean(parseInt(doador));
+            return isDoador ? 'Sim' : 'Não';
         }
 
         // Função principal - Carrega dados da tabela
@@ -839,7 +847,7 @@ $headerComponent = HeaderComponent::create([
             <td>
                 <span class="fw-semibold">${associado.nome || 'Sem nome'}</span>
                 <br>
-                <small class="text-muted">ID: ${associado.id}</small>
+                <small class="text-muted">Matrícula: ${associado.id}</small>
             </td>
             <td>${formatarCPF(associado.cpf)}</td>
             <td>${associado.rg || '-'}</td>
@@ -940,7 +948,7 @@ $headerComponent = HeaderComponent::create([
         function atualizarHeaderModal(associado) {
             // Nome e ID
             document.getElementById('modalNome').textContent = associado.nome || 'Sem nome';
-            document.getElementById('modalId').textContent = `ID: ${associado.id}`;
+            document.getElementById('modalId').textContent = `Matrícula: ${associado.id}`;
 
             // Data de filiação
             document.getElementById('modalDataFiliacao').textContent =
@@ -1158,7 +1166,7 @@ $headerComponent = HeaderComponent::create([
     `;
         }
 
-        // Preenche tab Financeiro
+        // FUNÇÃO ATUALIZADA: Preenche tab Financeiro com novos campos
         function preencherTabFinanceiro(associado) {
             const financeiroTab = document.getElementById('financeiro-tab');
 
@@ -1275,7 +1283,7 @@ $headerComponent = HeaderComponent::create([
                     ${servicosHtml}
                 </div>
 
-                <!-- Dados Bancários -->
+                <!-- Dados Bancários e Cobrança - ATUALIZADO COM NOVOS CAMPOS -->
                 <div class="detail-section">
                     <div class="section-header">
                         <div class="section-icon">
@@ -1317,7 +1325,61 @@ $headerComponent = HeaderComponent::create([
                             <span class="detail-label">Conta Corrente</span>
                             <span class="detail-value">${associado.contaCorrente || '-'}</span>
                         </div>
+                        <div class="detail-item">
+                            <span class="detail-label">É Doador</span>
+                            <span class="detail-value">
+                                <span style="color: ${formatarDoador(associado.doador) === 'Sim' ? 'var(--success)' : 'var(--gray-500)'}; font-weight: 600;">
+                                    ${formatarDoador(associado.doador)}
+                                </span>
+                            </span>
+                        </div>
                     </div>
+                </div>
+
+                <!-- NOVA SEÇÃO: Observações Financeiras -->
+                <div class="detail-section">
+                    <div class="section-header">
+                        <div class="section-icon">
+                            <i class="fas fa-sticky-note"></i>
+                        </div>
+                        <h3 class="section-title">Observações</h3>
+                    </div>
+                    
+                    ${associado.observacoes ? `
+                        <div style="background: var(--gray-100); padding: 1.5rem; border-radius: 12px; border-left: 4px solid var(--info);">
+                            <div style="display: flex; align-items: flex-start; gap: 1rem;">
+                                <div style="
+                                    width: 40px;
+                                    height: 40px;
+                                    background: var(--info);
+                                    color: white;
+                                    border-radius: 50%;
+                                    display: flex;
+                                    align-items: center;
+                                    justify-content: center;
+                                    flex-shrink: 0;
+                                ">
+                                    <i class="fas fa-info-circle"></i>
+                                </div>
+                                <div style="flex: 1;">
+                                    <h6 style="margin: 0 0 0.5rem 0; color: var(--dark); font-weight: 600;">
+                                        Observações do Registro Financeiro
+                                    </h6>
+                                    <p style="margin: 0; color: var(--gray-700); line-height: 1.5; white-space: pre-wrap;">
+                                        ${associado.observacoes}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    ` : `
+                        <div style="background: var(--gray-50); padding: 1.5rem; border-radius: 12px; border: 2px dashed var(--gray-300); text-align: center;">
+                            <div style="color: var(--gray-500);">
+                                <i class="fas fa-file-alt" style="font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.3;"></i>
+                                <p style="margin: 0; font-size: 0.875rem;">Nenhuma observação cadastrada</p>
+                                <small style="color: var(--gray-400);">Campo disponível para anotações sobre a situação financeira</small>
+                            </div>
+                        </div>
+                    `}
                 </div>
             `;
                 })
@@ -1364,7 +1426,44 @@ $headerComponent = HeaderComponent::create([
                             <span class="detail-label">Conta Corrente</span>
                             <span class="detail-value">${associado.contaCorrente || '-'}</span>
                         </div>
+                        <div class="detail-item">
+                            <span class="detail-label">É Doador</span>
+                            <span class="detail-value">
+                                <span style="color: ${formatarDoador(associado.doador) === 'Sim' ? 'var(--success)' : 'var(--gray-500)'}; font-weight: 600;">
+                                    ${formatarDoador(associado.doador)}
+                                </span>
+                            </span>
+                        </div>
                     </div>
+                    
+                    <!-- Observações no fallback também -->
+                    ${associado.observacoes ? `
+                    <div style="margin-top: 2rem; background: var(--gray-100); padding: 1.5rem; border-radius: 12px; border-left: 4px solid var(--info);">
+                        <div style="display: flex; align-items: flex-start; gap: 1rem;">
+                            <div style="
+                                width: 40px;
+                                height: 40px;
+                                background: var(--info);
+                                color: white;
+                                border-radius: 50%;
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                                flex-shrink: 0;
+                            ">
+                                <i class="fas fa-info-circle"></i>
+                            </div>
+                            <div style="flex: 1;">
+                                <h6 style="margin: 0 0 0.5rem 0; color: var(--dark); font-weight: 600;">
+                                    Observações do Registro Financeiro
+                                </h6>
+                                <p style="margin: 0; color: var(--gray-700); line-height: 1.5; white-space: pre-wrap;">
+                                    ${associado.observacoes}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    ` : ''}
                 </div>
             `;
                 });

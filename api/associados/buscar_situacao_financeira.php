@@ -55,7 +55,7 @@ try {
     // Conecta ao banco de dados
     $db = Database::getInstance(DB_NAME_CADASTRO)->getConnection();
 
-    // Constrói a query base com JOIN
+    // CORRIGIDO: Constrói a query base com JOIN incluindo NOVOS CAMPOS
     $sql = "
         SELECT 
             a.id,
@@ -74,7 +74,9 @@ try {
             f.localDebito,
             f.agencia,
             f.operacao,
-            f.contaCorrente
+            f.contaCorrente,
+            f.observacoes,
+            f.doador
         FROM Associados a
         LEFT JOIN Financeiro f ON a.id = f.associado_id
         WHERE 1=1
@@ -179,7 +181,7 @@ try {
         $dadosFinanceirosExtras['valor_mensalidade'] = $valorMensalidade;
     }
 
-    // Estrutura os dados para resposta
+    // CORRIGIDO: Estrutura os dados para resposta INCLUINDO NOVOS CAMPOS
     $dadosEstruturados = [
         'dados_pessoais' => [
             'id' => $associado['id'],
@@ -200,6 +202,9 @@ try {
             'agencia' => $associado['agencia'],
             'operacao' => $associado['operacao'],
             'conta_corrente' => $associado['contaCorrente'],
+            'observacoes' => $associado['observacoes'] ?? '',
+            'doador' => intval($associado['doador'] ?? 0),
+            'eh_doador' => ($associado['doador'] ?? 0) == 1 ? 'Sim' : 'Não',
             'valor_mensalidade' => $dadosFinanceirosExtras['valor_mensalidade'] ?? null,
             'ultimo_pagamento' => $dadosFinanceirosExtras['pagamentos']['ultimo_pagamento'] ?? null,
             'total_pago' => $dadosFinanceirosExtras['pagamentos']['total_pago'] ?? 0,
@@ -216,7 +221,7 @@ try {
         $dadosEstruturados['dados_pessoais']['idade'] = $nascimento->diff($hoje)->y;
     }
 
-    // Adiciona alertas baseado na situação
+    // NOVO: Adiciona alertas baseado na situação (incluindo novos campos)
     $alertas = [];
     if ($associado['situacaoFinanceira'] === 'INADIMPLENTE') {
         $alertas[] = [
@@ -236,6 +241,23 @@ try {
         $alertas[] = [
             'tipo' => 'info',
             'mensagem' => 'Telefone não cadastrado'
+        ];
+    }
+
+    // NOVO: Alerta especial para doadores
+    if (($associado['doador'] ?? 0) == 1) {
+        $alertas[] = [
+            'tipo' => 'success',
+            'mensagem' => 'Este associado é um doador da ASSEGO'
+        ];
+    }
+
+    // NOVO: Alerta se há observações importantes
+    if (!empty($associado['observacoes']) && strlen(trim($associado['observacoes'])) > 0) {
+        $alertas[] = [
+            'tipo' => 'info',
+            'mensagem' => 'Possui observações no registro financeiro',
+            'observacoes' => $associado['observacoes']
         ];
     }
 
