@@ -69,8 +69,7 @@ try {
     // Se houver muitos registros, limita a consulta
     $limite = $totalRegistros > 5000 ? 5000 : $totalRegistros;
     
-    // Query otimizada - seleciona apenas campos essenciais
-    // Usando MAX() para campos agregados quando necessário
+    // CORRIGIDO: Query otimizada - INCLUINDO OS NOVOS CAMPOS
     $sql = "
         SELECT DISTINCT
             a.id,
@@ -98,6 +97,8 @@ try {
             MAX(f.agencia) as agencia,
             MAX(f.operacao) as operacao,
             MAX(f.contaCorrente) as contaCorrente,
+            MAX(f.observacoes) as observacoes,
+            MAX(f.doador) as doador,
             MAX(e.cep) as cep,
             MAX(e.endereco) as endereco,
             MAX(e.bairro) as bairro,
@@ -140,6 +141,7 @@ try {
         }
         $idsProcessados[] = $row['id'];
         
+        // CORRIGIDO: Incluindo os novos campos na resposta
         $dados[] = [
             'id' => intval($row['id']),
             'nome' => $row['nome'] ?? '',
@@ -166,6 +168,8 @@ try {
             'agencia' => $row['agencia'] ?? '',
             'operacao' => $row['operacao'] ?? '',
             'contaCorrente' => $row['contaCorrente'] ?? '',
+            'observacoes' => $row['observacoes'] ?? '',
+            'doador' => intval($row['doador'] ?? 0),
             'cep' => $row['cep'] ?? '',
             'endereco' => $row['endereco'] ?? '',
             'bairro' => $row['bairro'] ?? '',

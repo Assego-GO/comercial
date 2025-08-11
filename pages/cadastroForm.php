@@ -509,7 +509,9 @@ $lotacoes = [
         // Dados essenciais para o JavaScript
         window.pageData = {
             isEdit: <?php echo $isEdit ? 'true' : 'false'; ?>,
-            associadoId: <?php echo $associadoId ? $associadoId : 'null'; ?>
+            associadoId: <?php echo $associadoId ? $associadoId : 'null'; ?>,
+            regrasContribuicao: <?php echo json_encode($regrasContribuicao); ?>,
+            servicos: <?php echo json_encode($servicos); ?>
         };
     </script>
 </head>
@@ -779,6 +781,20 @@ $lotacoes = [
                             <input type="date" class="form-input" name="dataFiliacao" id="dataFiliacao" required
                                 value="<?php echo $associadoData['data_filiacao'] ?? date('Y-m-d'); ?>">
                             <span class="form-error">Por favor, insira a data de filiação</span>
+                        </div>
+
+                        <!-- CAMPO DE OBSERVAÇÕES ADICIONADO -->
+                        <div class="form-group full-width">
+                            <label class="form-label">
+                                Observações
+                                <i class="fas fa-info-circle info-tooltip"
+                                    title="Informações adicionais sobre o associado"></i>
+                            </label>
+                            <textarea class="form-input" name="observacoes" id="observacoes" rows="4"
+                                placeholder="Digite observações gerais sobre o associado, informações especiais, restrições médicas, etc."><?php echo $associadoData['observacoes'] ?? ''; ?></textarea>
+                            <small class="form-help" style="color: var(--gray-500); font-size: 0.75rem; margin-top: 0.5rem; display: block;">
+                                Use este campo para registrar informações importantes que não se encaixam nos outros campos
+                            </small>
                         </div>
 
                         <div class="form-group full-width">
@@ -1064,7 +1080,7 @@ $lotacoes = [
                     </div>
                 </div>
 
-                <!-- Step 4: Financeiro CORRIGIDO -->
+                <!-- Step 4: Financeiro CORRIGIDO E EXPANDIDO -->
                 <div class="section-card" data-step="4">
                     <div class="section-header">
                         <div class="section-icon">
@@ -1087,11 +1103,12 @@ $lotacoes = [
                             <select class="form-input form-select" name="tipoAssociadoServico" id="tipoAssociadoServico"
                                 required onchange="calcularServicos()">
                                 <option value="">Selecione o tipo de associado...</option>
-                                <option value="Contribuinte" <?php echo (isset($associadoData['tipoAssociadoServico']) && $associadoData['tipoAssociadoServico'] == 'Contribuinte') ? 'selected' : ''; ?>>Contribuinte</option>
-                                <option value="Agregado" <?php echo (isset($associadoData['tipoAssociadoServico']) && $associadoData['tipoAssociadoServico'] == 'Agregado') ? 'selected' : ''; ?>>Agregado</option>
-                                <option value="Benemérito" <?php echo (isset($associadoData['tipoAssociadoServico']) && $associadoData['tipoAssociadoServico'] == 'Benemérito') ? 'selected' : ''; ?>>Benemérito</option>
-                                <option value="Remido 50%" <?php echo (isset($associadoData['tipoAssociadoServico']) && $associadoData['tipoAssociadoServico'] == 'Remido 50%') ? 'selected' : ''; ?>>Remido 50%</option>
-                                <option value="Remido" <?php echo (isset($associadoData['tipoAssociadoServico']) && $associadoData['tipoAssociadoServico'] == 'Remido') ? 'selected' : ''; ?>>Remido</option>
+                                <?php foreach($tiposAssociado as $tipo): ?>
+                                    <option value="<?php echo $tipo; ?>" 
+                                        <?php echo (isset($associadoData['tipoAssociadoServico']) && $associadoData['tipoAssociadoServico'] == $tipo) ? 'selected' : ''; ?>>
+                                        <?php echo $tipo; ?>
+                                    </option>
+                                <?php endforeach; ?>
                             </select>
                             <span class="form-error">Por favor, selecione o tipo de associado</span>
                         </div>
@@ -1142,7 +1159,8 @@ $lotacoes = [
                                         style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
                                         <div style="display: flex; align-items: center; gap: 0.5rem;">
                                             <input type="checkbox" name="servicoJuridico" id="servicoJuridico" value="2"
-                                                onchange="calcularServicos()" style="width: 20px; height: 20px;">
+                                                onchange="calcularServicos()" style="width: 20px; height: 20px;"
+                                                <?php echo (isset($associadoData['servicoJuridico']) && $associadoData['servicoJuridico']) ? 'checked' : ''; ?>>
                                             <label for="servicoJuridico"
                                                 style="font-weight: 600; color: var(--info); cursor: pointer;">
                                                 <i class="fas fa-balance-scale"></i> Serviço Jurídico
@@ -1181,6 +1199,24 @@ $lotacoes = [
                                     </div>
                                 </div>
                             </div>
+                        </div>
+
+                        <!-- Categoria do Associado -->
+                        <div class="form-group">
+                            <label class="form-label">
+                                Categoria do Associado <span class="required">*</span>
+                                <i class="fas fa-info-circle info-tooltip"
+                                    title="Categoria oficial do associado na associação"></i>
+                            </label>
+                            <select class="form-input form-select" name="tipoAssociado" id="tipoAssociado" required>
+                                <option value="">Selecione...</option>
+                                <option value="Contribuinte" <?php echo (isset($associadoData['tipoAssociado']) && $associadoData['tipoAssociado'] == 'Contribuinte') ? 'selected' : ''; ?>>Contribuinte</option>
+                                <option value="Benemérito" <?php echo (isset($associadoData['tipoAssociado']) && $associadoData['tipoAssociado'] == 'Benemérito') ? 'selected' : ''; ?>>Benemérito</option>
+                                <option value="Remido" <?php echo (isset($associadoData['tipoAssociado']) && $associadoData['tipoAssociado'] == 'Remido') ? 'selected' : ''; ?>>Remido</option>
+                                <option value="Agregado" <?php echo (isset($associadoData['tipoAssociado']) && $associadoData['tipoAssociado'] == 'Agregado') ? 'selected' : ''; ?>>Agregado</option>
+                                <option value="Especial" <?php echo (isset($associadoData['tipoAssociado']) && $associadoData['tipoAssociado'] == 'Especial') ? 'selected' : ''; ?>>Especial</option>
+                            </select>
+                            <span class="form-error">Por favor, selecione a categoria do associado</span>
                         </div>
 
                         <!-- Situação Financeira -->
@@ -1244,6 +1280,19 @@ $lotacoes = [
                             <input type="text" class="form-input" name="contaCorrente" id="contaCorrente"
                                 value="<?php echo $associadoData['contaCorrente'] ?? ''; ?>"
                                 placeholder="Número da conta">
+                        </div>
+
+                        <!-- Doador - NOVO CAMPO -->
+                        <div class="form-group">
+                            <label class="form-label">
+                                Doador
+                                <i class="fas fa-info-circle info-tooltip" title="Se o associado é doador da ASSEGO"></i>
+                            </label>
+                            <select class="form-input form-select" name="doador" id="doador">
+                                <option value="">Selecione...</option>
+                                <option value="Sim" <?php echo (isset($associadoData['doador']) && $associadoData['doador'] == 'Sim') ? 'selected' : ''; ?>>Sim</option>
+                                <option value="Não" <?php echo (isset($associadoData['doador']) && $associadoData['doador'] == 'Não') ? 'selected' : ''; ?>>Não</option>
+                            </select>
                         </div>
                     </div>
                 </div>
@@ -1384,7 +1433,54 @@ $lotacoes = [
             width: '100%',
             allowClear: true
         });
+
+        // Se estiver editando, carrega os dados dos serviços
+        <?php if ($isEdit && isset($associadoData)): ?>
+            // Busca dados dos serviços ao carregar página de edição
+            buscarDadosServicosAssociado(<?php echo $associadoId; ?>);
+        <?php endif; ?>
     });
+
+    // Função para buscar dados dos serviços do associado em edição
+    function buscarDadosServicosAssociado(associadoId) {
+        fetch(`../api/buscar_servicos_associado.php?associado_id=${associadoId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success' && data.data) {
+                    // Preenche os campos de serviço baseado nos dados retornados
+                    if (data.data.servicos.social) {
+                        const social = data.data.servicos.social;
+                        document.getElementById('valorSocial').value = social.valor_aplicado;
+                        document.getElementById('percentualAplicadoSocial').value = social.percentual_aplicado;
+                        document.getElementById('valorFinalSocial').textContent = parseFloat(social.valor_aplicado).toFixed(2).replace('.', ',');
+                        document.getElementById('percentualSocial').textContent = parseFloat(social.percentual_aplicado).toFixed(0);
+                    }
+                    
+                    if (data.data.servicos.juridico) {
+                        const juridico = data.data.servicos.juridico;
+                        document.getElementById('servicoJuridico').checked = true;
+                        document.getElementById('valorJuridico').value = juridico.valor_aplicado;
+                        document.getElementById('percentualAplicadoJuridico').value = juridico.percentual_aplicado;
+                        document.getElementById('valorFinalJuridico').textContent = parseFloat(juridico.valor_aplicado).toFixed(2).replace('.', ',');
+                        document.getElementById('percentualJuridico').textContent = parseFloat(juridico.percentual_aplicado).toFixed(0);
+                    }
+                    
+                    // Atualiza o total
+                    document.getElementById('valorTotalGeral').textContent = parseFloat(data.data.valor_total_mensal || 0).toFixed(2).replace('.', ',');
+                    
+                    // Define o tipo de associado dos serviços se disponível
+                    if (data.data.tipo_associado_servico) {
+                        const selectTipo = document.getElementById('tipoAssociadoServico');
+                        if (selectTipo) {
+                            selectTipo.value = data.data.tipo_associado_servico;
+                        }
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Erro ao buscar dados dos serviços:', error);
+            });
+    }
     </script>
 </body>
 
