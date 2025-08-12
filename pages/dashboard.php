@@ -124,6 +124,7 @@ $headerComponent = HeaderComponent::create([
 
     <!-- Custom CSS -->
     <link rel="stylesheet" href="./estilizacao/style.css">
+    
 
 </head>
 
@@ -1739,88 +1740,335 @@ $headerComponent = HeaderComponent::create([
             dependentesTab.innerHTML = dependentesHtml;
         }
 
-        // FUNÇÃO CORRIGIDA: Preenche tab Documentos com filtro por associado
-        function preencherTabDocumentos(associado) {
-            const documentosTab = document.getElementById('documentos-tab');
+function preencherTabDocumentos(associado) {
+    const documentosTab = document.getElementById('documentos-tab');
 
-            // Mostra loading enquanto carrega
-            documentosTab.innerHTML = `
-                <div class="detail-section">
-                    <div class="text-center py-5">
-                        <div class="loading-spinner mb-3"></div>
-                        <p class="text-muted">Carregando documentos...</p>
+    // Show loading
+    documentosTab.innerHTML = `
+        <div class="text-center py-5">
+            <div class="loading-spinner mb-3"></div>
+            <p class="text-muted">Carregando documentos...</p>
+        </div>
+    `;
+
+    // Call NEW API to list documents
+    $.ajax({
+        url: '../api/documentos/upload_documentos_listar.php',
+        method: 'GET',
+        data: { associado_id: associado.id },
+        dataType: 'json',
+        success: function(response) {
+            if (response.status === 'success') {
+                renderizarDocumentosUpload(response.data, documentosTab, associado);
+            } else {
+                renderizarDocumentosUpload([], documentosTab, associado);
+            }
+        },
+        error: function() {
+            renderizarDocumentosUpload([], documentosTab, associado);
+        }
+    });
+}
+
+function renderizarDocumentosUpload(documentos, container, associado) {
+    let html = `
+        <!-- Header with Upload Button -->
+        <div style="
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            margin-bottom: 2rem; 
+            padding: 1.5rem; 
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); 
+            border-radius: 16px; 
+            color: white;
+        ">
+            <div>
+                <h4 style="margin: 0; font-weight: 700;">
+                    <i class="fas fa-folder-open me-2"></i>
+                    Documentos de ${associado.nome}
+                </h4>
+                <p style="margin: 0.5rem 0 0 0; opacity: 0.9; font-size: 0.875rem;">
+                    ${documentos.length} documento${documentos.length !== 1 ? 's' : ''} anexado${documentos.length !== 1 ? 's' : ''}
+                </p>
+            </div>
+            <div>
+                <button onclick="abrirModalUploadDocumento(${associado.id}, '${associado.nome}')" style="
+                    background: rgba(255, 255, 255, 0.2);
+                    border: 2px solid rgba(255, 255, 255, 0.3);
+                    color: white;
+                    padding: 0.75rem 1.5rem;
+                    border-radius: 12px;
+                    font-weight: 600;
+                    cursor: pointer;
+                ">
+                    <i class="fas fa-plus me-2"></i>
+                    Anexar Documento
+                </button>
+            </div>
+        </div>
+    `;
+
+    if (documentos.length > 0) {
+        // List documents
+        documentos.forEach(doc => {
+            html += `
+                <div style="
+                    background: white;
+                    border: 1px solid var(--gray-200);
+                    border-radius: 16px;
+                    padding: 1.5rem;
+                    margin-bottom: 1rem;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                ">
+                    <!-- Document Header -->
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+                        <span style="
+                            background: var(--info);
+                            color: white;
+                            padding: 0.375rem 0.75rem;
+                            border-radius: 20px;
+                            font-size: 0.75rem;
+                            font-weight: 600;
+                        ">
+                            <i class="fas fa-file me-1"></i>
+                            ${doc.status_descricao}
+                        </span>
+                        
+                        ${!doc.arquivo_existe ? 
+                            '<span style="background: var(--danger); color: white; padding: 0.25rem 0.5rem; border-radius: 12px; font-size: 0.7rem;"><i class="fas fa-exclamation-triangle me-1"></i>Arquivo não encontrado</span>' 
+                            : ''
+                        }
+                    </div>
+                    
+                    <!-- Document Info -->
+                    <div style="display: flex; align-items: flex-start; gap: 1rem; margin-bottom: 1rem;">
+                        <div style="
+                            width: 50px;
+                            height: 50px;
+                            background: var(--primary);
+                            color: white;
+                            border-radius: 12px;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            flex-shrink: 0;
+                        ">
+                            <i class="fas fa-${doc.tipo_mime.includes('pdf') ? 'file-pdf' : 'file-image'}"></i>
+                        </div>
+                        <div style="flex: 1;">
+                            <h6 style="margin: 0; font-weight: 700; color: var(--dark); margin-bottom: 0.5rem;">
+                                ${doc.tipo_descricao}
+                            </h6>
+                            <p style="margin: 0; color: var(--gray-600); font-size: 0.875rem;">
+                                ${doc.nome_arquivo}
+                            </p>
+                            <div style="display: flex; gap: 1rem; margin-top: 0.5rem; font-size: 0.75rem; color: var(--gray-500);">
+                                <span><i class="fas fa-weight-hanging me-1"></i>${doc.tamanho_formatado}</span>
+                                <span><i class="fas fa-calendar me-1"></i>${doc.data_upload_formatada}</span>
+                                ${doc.funcionario_upload ? `<span><i class="fas fa-user me-1"></i>${doc.funcionario_upload}</span>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    ${doc.observacao ? `
+                        <div style="margin-bottom: 1rem; padding: 0.75rem; background: var(--gray-100); border-radius: 8px; font-size: 0.875rem;">
+                            <strong>Observação:</strong> ${doc.observacao}
+                        </div>
+                    ` : ''}
+                    
+                    <!-- Actions -->
+                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                        ${doc.arquivo_existe ? `
+                            <button onclick="downloadDocumentoUpload(${doc.id})" style="
+                                background: var(--primary);
+                                color: white;
+                                border: none;
+                                padding: 0.5rem 1rem;
+                                border-radius: 8px;
+                                font-size: 0.8125rem;
+                                cursor: pointer;
+                            ">
+                                <i class="fas fa-download me-1"></i>
+                                Baixar
+                            </button>
+                        ` : `
+                            <button disabled style="
+                                background: var(--gray-400);
+                                color: white;
+                                border: none;
+                                padding: 0.5rem 1rem;
+                                border-radius: 8px;
+                                font-size: 0.8125rem;
+                                cursor: not-allowed;
+                            ">
+                                <i class="fas fa-exclamation-triangle me-1"></i>
+                                Indisponível
+                            </button>
+                        `}
                     </div>
                 </div>
             `;
+        });
+    } else {
+        // No documents
+        html += `
+            <div style="
+                text-align: center; 
+                padding: 3rem 2rem; 
+                background: var(--gray-50); 
+                border-radius: 16px;
+                border: 2px dashed var(--gray-300);
+            ">
+                <div style="font-size: 4rem; color: var(--gray-300); margin-bottom: 1rem;">
+                    <i class="fas fa-folder-open"></i>
+                </div>
+                <h5 style="color: var(--gray-600); margin-bottom: 1rem;">Nenhum documento anexado</h5>
+                <p style="color: var(--gray-500); margin-bottom: 2rem;">
+                    ${associado.nome} ainda não possui documentos anexados
+                </p>
+                <button onclick="abrirModalUploadDocumento(${associado.id}, '${associado.nome}')" style="
+                    background: var(--primary);
+                    color: white;
+                    border: none;
+                    padding: 0.75rem 1.5rem;
+                    border-radius: 12px;
+                    font-weight: 600;
+                    cursor: pointer;
+                ">
+                    <i class="fas fa-plus me-2"></i>
+                    Anexar Primeiro Documento
+                </button>
+            </div>
+        `;
+    }
 
-            // Primeiro busca no array de dados carregados para contar total de documentos
-            const totalDocumentos = todosAssociados.find(a => a.id == associado.id)?.total_documentos || 0;
+    container.innerHTML = html;
+}
 
-            // Busca documentos do associado em fluxo - CORRIGIDO: busca TODOS os documentos
-            $.ajax({
-                url: '../api/documentos/documentos_fluxo_listar.php',
-                method: 'GET',
-                dataType: 'json',
-                success: function(response) {
-                    console.log('Resposta completa da API:', response);
-                    console.log('Buscando documentos para associado ID:', associado.id);
-                    
-                    if (response.status === 'success' && response.data && Array.isArray(response.data)) {
-                        // IMPORTANTE: Filtra apenas documentos do associado específico
-                        const documentosDoAssociado = response.data.filter(doc => {
-                            // Converte para string para comparação segura
-                            return String(doc.associado_id) === String(associado.id);
-                        });
-                        
-                        console.log(`Documentos encontrados para o associado: ${documentosDoAssociado.length} de ${response.data.length} total`);
-                        
-                        if (documentosDoAssociado.length > 0) {
-                            renderizarDocumentosNoModal(documentosDoAssociado, documentosTab);
-                        } else {
-                            // Nenhum documento deste associado em fluxo
-                            documentosTab.innerHTML = `
-                                <div class="empty-documents-state">
-                                    <i class="fas fa-folder-open"></i>
-                                    <h5>Nenhum documento em fluxo de assinatura</h5>
-                                    <p>${associado.nome} ${totalDocumentos > 0 ? `possui ${totalDocumentos} documento(s) no sistema, mas nenhum está em processo de assinatura` : 'não possui documentos anexados'}</p>
-                                    ${associado.pre_cadastro == 1 ? 
-                                        '<small class="text-muted">Este é um pré-cadastro. Os documentos serão anexados durante o processo</small>' : 
-                                        '<small class="text-muted">Entre em contato com o setor comercial para mais informações</small>'
-                                    }
-                                </div>
-                            `;
-                        }
-                    } else {
-                        // Sem documentos ou erro na estrutura
-                        documentosTab.innerHTML = `
-                            <div class="empty-documents-state">
-                                <i class="fas fa-folder-open"></i>
-                                <h5>Nenhum documento encontrado</h5>
-                                <p>${associado.nome} ainda não possui documentos em fluxo de assinatura</p>
-                                ${associado.pre_cadastro == 1 ? 
-                                    '<small class="text-muted">Este é um pré-cadastro aguardando documentação</small>' : 
-                                    '<small class="text-muted">Os documentos podem estar sendo processados</small>'
-                                }
-                            </div>
-                        `;
-                    }
-                },
-                error: function(xhr, status, error) {
-                    console.error('Erro ao buscar documentos:', error);
-                    console.error('Status:', status);
-                    console.error('Response:', xhr.responseText);
-                    
-                    documentosTab.innerHTML = `
-                        <div class="empty-documents-state">
-                            <i class="fas fa-exclamation-triangle"></i>
-                            <h5>Erro ao carregar documentos</h5>
-                            <p>Não foi possível carregar os documentos de ${associado.nome}</p>
-                            <small class="text-muted">Por favor, tente novamente mais tarde</small>
-                        </div>
-                    `;
-                }
-            });
+// ADD this new function to dashboard.php
+function downloadDocumentoUpload(id) {
+    window.open('../api/documentos/upload_documentos_download.php?id=' + id, '_blank');
+}
+
+// NEW FUNCTION: Handle file drop
+function handleFileDrop(event) {
+    event.preventDefault();
+    const files = event.dataTransfer.files;
+    if (files.length > 0) {
+        document.getElementById('arquivoDocumento').files = files;
+        updateFileInfo(document.getElementById('arquivoDocumento'));
+    }
+    // Reset visual state
+    event.target.style.borderColor = 'var(--gray-300)';
+    event.target.style.background = 'var(--gray-50)';
+}
+
+function updateFileInfo(input) {
+    const fileInfo = document.getElementById('fileInfo');
+    if (input.files.length > 0) {
+        const file = input.files[0];
+        const fileSize = (file.size / 1024 / 1024).toFixed(2);
+        
+        fileInfo.innerHTML = `
+            <div class="alert alert-info d-flex align-items-center" style="margin: 0;">
+                <i class="fas fa-file me-2"></i>
+                <div>
+                    <strong>${file.name}</strong><br>
+                    <small>${fileSize} MB</small>
+                </div>
+            </div>
+        `;
+        fileInfo.style.display = 'block';
+    } else {
+        fileInfo.style.display = 'none';
+    }
+}
+
+// NEW FUNCTION: Send document
+function enviarDocumento() {
+    const form = document.getElementById('uploadDocumentoForm');
+    const formData = new FormData(form);
+    const uploadProgress = document.getElementById('uploadProgress');
+    const progressBar = uploadProgress.querySelector('.progress-bar');
+
+    // Validate form
+    if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+    }
+
+    // Validate file
+    const arquivo = document.getElementById('arquivoDocumento').files[0];
+    if (!arquivo) {
+        alert('Por favor, selecione um arquivo.');
+        return;
+    }
+
+    // Check file size (5MB max)
+    if (arquivo.size > 5 * 1024 * 1024) {
+        alert('Arquivo muito grande. Máximo: 5MB');
+        return;
+    }
+
+    // Show progress
+    uploadProgress.style.display = 'block';
+    
+    // Disable buttons
+    const buttons = document.querySelectorAll('#uploadDocumentoModal button');
+    buttons.forEach(btn => btn.disabled = true);
+
+    // Upload with progress
+    const xhr = new XMLHttpRequest();
+
+    xhr.upload.addEventListener('progress', function(e) {
+        if (e.lengthComputable) {
+            const percent = (e.loaded / e.total) * 100;
+            progressBar.style.width = percent + '%';
         }
+    });
+
+    xhr.addEventListener('load', function() {
+        if (xhr.status === 200) {
+            try {
+                const response = JSON.parse(xhr.responseText);
+                if (response.status === 'success') {
+                    alert('Documento enviado com sucesso!');
+                    
+                    // Close modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('uploadDocumentoModal'));
+                    modal.hide();
+                    
+                    // Reload documents tab
+                    const associadoId = document.getElementById('modalId').textContent.replace('ID: ', '');
+                    const associado = todosAssociados.find(a => a.id == associadoId);
+                    if (associado) {
+                        preencherTabDocumentos(associado);
+                    }
+                } else {
+                    alert('Erro: ' + response.message);
+                }
+            } catch (e) {
+                alert('Erro ao processar resposta');
+            }
+        } else {
+            alert('Erro ao enviar arquivo');
+        }
+        
+        // Re-enable buttons
+        buttons.forEach(btn => btn.disabled = false);
+        uploadProgress.style.display = 'none';
+    });
+
+    xhr.addEventListener('error', function() {
+        alert('Erro de conexão');
+        buttons.forEach(btn => btn.disabled = false);
+        uploadProgress.style.display = 'none';
+    });
+
+    xhr.open('POST', '../api/documentos/documentos_upload.php');
+    xhr.send(formData);
+}
 
         // FUNÇÃO ATUALIZADA: Renderizar documentos no modal com validação extra
         function renderizarDocumentosNoModal(documentos, container) {
@@ -1937,6 +2185,117 @@ $headerComponent = HeaderComponent::create([
             html += '</div>';
             container.innerHTML = html;
         }
+
+
+        function abrirModalUploadDocumento(associadoId, associadoNome) {
+    const uploadModalHtml = `
+        <div class="modal fade" id="uploadDocumentoModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header" style="background: var(--primary); color: white;">
+                        <h5 class="modal-title">
+                            <i class="fas fa-cloud-upload-alt me-2"></i>
+                            Anexar Documento
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-4" style="background: var(--gray-100); padding: 1rem; border-radius: 8px;">
+                            <h6 style="margin: 0;">
+                                <i class="fas fa-user me-2"></i>
+                                ${associadoNome}
+                            </h6>
+                            <small class="text-muted">ID: ${associadoId}</small>
+                        </div>
+
+                        <form id="uploadDocumentoForm" enctype="multipart/form-data">
+                            <input type="hidden" name="associado_id" value="${associadoId}">
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Tipo de Documento</label>
+                                <select class="form-select" id="tipoDocumento" name="tipo_documento" required>
+                                    <option value="">Selecione o tipo</option>
+                                    <option value="FICHA_FILIACAO">Ficha de Filiação</option>
+                                    <option value="RG">RG (Cópia)</option>
+                                    <option value="CPF">CPF (Cópia)</option>
+                                    <option value="COMPROVANTE_RESIDENCIA">Comprovante de Residência</option>
+                                    <option value="FOTO_3X4">Foto 3x4</option>
+                                    <option value="CERTIDAO_NASCIMENTO">Certidão de Nascimento</option>
+                                    <option value="CERTIDAO_CASAMENTO">Certidão de Casamento</option>
+                                    <option value="OUTROS">Outros</option>
+                                </select>
+                            </div>
+
+                            <div class="mb-3" id="outroTipoDiv" style="display: none;">
+                                <label class="form-label">Especifique o tipo</label>
+                                <input type="text" class="form-control" id="outroTipo" name="outro_tipo">
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Arquivo</label>
+                                <div onclick="document.getElementById('arquivoDocumento').click()" style="
+                                    border: 2px dashed var(--gray-300);
+                                    border-radius: 12px;
+                                    padding: 2rem;
+                                    text-align: center;
+                                    background: var(--gray-50);
+                                    cursor: pointer;
+                                ">
+                                    <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
+                                    <p class="mb-2"><strong>Clique para selecionar</strong> o arquivo</p>
+                                    <small class="text-muted">PDF, JPG, PNG até 5MB</small>
+                                    <input type="file" id="arquivoDocumento" name="arquivo" accept=".pdf,.jpg,.jpeg,.png" required style="display: none;" onchange="updateFileInfo(this)">
+                                </div>
+                                <div id="fileInfo" class="mt-2" style="display: none;"></div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Observações (opcional)</label>
+                                <textarea class="form-control" name="observacao" rows="3"></textarea>
+                            </div>
+
+                            <div id="uploadProgress" style="display: none;">
+                                <div class="progress" style="height: 20px;">
+                                    <div class="progress-bar progress-bar-striped progress-bar-animated" style="width: 0%"></div>
+                                </div>
+                                <small class="text-muted mt-1 d-block">Enviando arquivo...</small>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="button" class="btn btn-primary" onclick="enviarDocumento()">
+                            <i class="fas fa-upload me-2"></i>
+                            Enviar Documento
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Remove existing modal
+    $('#uploadDocumentoModal').remove();
+    
+    // Add new modal
+    $('body').append(uploadModalHtml);
+    
+    // Show modal
+    const modal = new bootstrap.Modal(document.getElementById('uploadDocumentoModal'));
+    modal.show();
+
+    // Handle document type change
+    document.getElementById('tipoDocumento').addEventListener('change', function() {
+        const outroTipoDiv = document.getElementById('outroTipoDiv');
+        if (this.value === 'OUTROS') {
+            outroTipoDiv.style.display = 'block';
+            document.getElementById('outroTipo').required = true;
+        } else {
+            outroTipoDiv.style.display = 'none';
+            document.getElementById('outroTipo').required = false;
+        }
+    });
+}
 
         // NOVA FUNÇÃO: Renderizar informações adicionais baseadas no status
         function renderizarInfoAdicional(doc) {
