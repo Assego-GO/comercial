@@ -1871,176 +1871,342 @@ function preencherTabDocumentos(associado) {
 
 function renderizarDocumentosUpload(documentos, container, associado) {
     let html = `
-        <!-- Header with Upload Button -->
+        <!-- Header Principal estilo Financeiro -->
         <div style="
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-            margin-bottom: 2rem; 
-            padding: 1.5rem; 
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); 
-            border-radius: 16px; 
+            margin: 1.5rem 2rem;
+            background: linear-gradient(135deg, #4169E1 0%, #1E3A8A 100%);
+            border-radius: 16px;
+            padding: 2rem;
             color: white;
+            position: relative;
+            overflow: hidden;
         ">
-            <div>
-                <h4 style="margin: 0; font-weight: 700;">
-                    <i class="fas fa-folder-open me-2"></i>
-                    Documentos de ${associado.nome}
-                </h4>
-                <p style="margin: 0.5rem 0 0 0; opacity: 0.9; font-size: 0.875rem;">
-                    ${documentos.length} documento${documentos.length !== 1 ? 's' : ''} anexado${documentos.length !== 1 ? 's' : ''}
-                </p>
+            <div style="
+                position: absolute;
+                top: -30px;
+                right: -30px;
+                font-size: 6rem;
+                opacity: 0.1;
+            ">
+                <i class="fas fa-folder-open"></i>
             </div>
-            <div>
-                <button onclick="abrirModalUploadDocumento(${associado.id}, '${associado.nome}')" style="
-                    background: rgba(255, 255, 255, 0.2);
-                    border: 2px solid rgba(255, 255, 255, 0.3);
-                    color: white;
-                    padding: 0.75rem 1.5rem;
-                    border-radius: 12px;
-                    font-weight: 600;
-                    cursor: pointer;
-                ">
-                    <i class="fas fa-plus me-2"></i>
-                    Anexar Documento
-                </button>
+            <div style="
+                position: relative;
+                z-index: 1;
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                gap: 2rem;
+                align-items: center;
+            ">
+                <div style="text-align: center;">
+                    <div style="
+                        font-size: 0.875rem;
+                        opacity: 0.9;
+                        margin-bottom: 0.5rem;
+                        text-transform: uppercase;
+                        letter-spacing: 1px;
+                    ">
+                        DOCUMENTOS ANEXADOS
+                    </div>
+                    <div style="
+                        font-size: 2.5rem;
+                        font-weight: 800;
+                        margin-bottom: 0.25rem;
+                    ">
+                        ${documentos.length}
+                    </div>
+                    <div style="font-size: 0.75rem; opacity: 0.8;">
+                        documento${documentos.length !== 1 ? 's' : ''} no sistema
+                    </div>
+                </div>
+                <div style="text-align: center;">
+                    <div style="
+                        font-size: 0.875rem;
+                        opacity: 0.9;
+                        margin-bottom: 0.5rem;
+                        text-transform: uppercase;
+                        letter-spacing: 1px;
+                    ">
+                        ASSOCIADO
+                    </div>
+                    <div style="
+                        font-size: 1.3rem;
+                        font-weight: 700;
+                        margin-bottom: 0.25rem;
+                    ">
+                        ${associado.nome}
+                    </div>
+                    <div style="font-size: 0.75rem; opacity: 0.8;">
+                        Matrícula: ${associado.id}
+                    </div>
+                </div>
+                <div style="text-align: center;">
+                    <button onclick="abrirModalUploadDocumento(${associado.id}, '${associado.nome.replace(/'/g, "\\'")}')" style="
+                        background: rgba(255, 255, 255, 0.2);
+                        border: 2px solid rgba(255, 255, 255, 0.3);
+                        color: white;
+                        padding: 0.75rem 1.5rem;
+                        border-radius: 12px;
+                        font-weight: 600;
+                        cursor: pointer;
+                        transition: all 0.3s ease;
+                        font-size: 0.875rem;
+                    " onmouseover="this.style.background='rgba(255, 255, 255, 0.3)'" onmouseout="this.style.background='rgba(255, 255, 255, 0.2)'">
+                        <i class="fas fa-plus me-2"></i>
+                        Anexar Documento
+                    </button>
+                </div>
             </div>
         </div>
+
+        <!-- Seção de Documentos -->
+        <div class="detail-section">
+            <div class="section-header">
+                <div class="section-icon">
+                    <i class="fas fa-folder-open"></i>
+                </div>
+                <h3 class="section-title">Documentos Anexados</h3>
+            </div>
     `;
 
     if (documentos.length > 0) {
-        // List documents
+        // Container para os documentos
+        html += '<div style="padding: 0 1rem;">';
+        
         documentos.forEach(doc => {
+            // Define cor baseada no status
+            let statusColor = '#28a745';
+            let statusBg = 'rgba(40, 167, 69, 0.1)';
+            let statusIcon = 'check-circle';
+            let statusText = doc.status_descricao || 'Digitalizado';
+            
+            if (!doc.arquivo_existe) {
+                statusColor = '#dc3545';
+                statusBg = 'rgba(220, 53, 69, 0.1)';
+                statusIcon = 'exclamation-triangle';
+                statusText = 'Arquivo não encontrado';
+            }
+            
+            // Define ícone do arquivo
+            let fileIcon = 'file-pdf';
+            let iconColor = '#dc3545';
+            
+            if (doc.tipo_mime && doc.tipo_mime.includes('image')) {
+                fileIcon = 'file-image';
+                iconColor = '#28a745';
+            }
+            
             html += `
                 <div style="
                     background: white;
-                    border: 1px solid var(--gray-200);
-                    border-radius: 16px;
+                    border: 1px solid #e9ecef;
+                    border-radius: 12px;
                     padding: 1.5rem;
                     margin-bottom: 1rem;
-                    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                    transition: all 0.3s ease;
                 ">
-                    <!-- Document Header -->
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
-                        <span style="
-                            background: var(--info);
-                            color: white;
-                            padding: 0.375rem 0.75rem;
-                            border-radius: 20px;
-                            font-size: 0.75rem;
-                            font-weight: 600;
-                        ">
-                            <i class="fas fa-file me-1"></i>
-                            ${doc.status_descricao}
-                        </span>
-                        
-                        ${!doc.arquivo_existe ? 
-                            '<span style="background: var(--danger); color: white; padding: 0.25rem 0.5rem; border-radius: 12px; font-size: 0.7rem;"><i class="fas fa-exclamation-triangle me-1"></i>Arquivo não encontrado</span>' 
-                            : ''
-                        }
+                    <!-- Badge de Status -->
+                    <div style="
+                        display: inline-block;
+                        background: ${statusBg};
+                        color: ${statusColor};
+                        padding: 0.375rem 0.75rem;
+                        border-radius: 20px;
+                        font-size: 0.75rem;
+                        font-weight: 600;
+                        margin-bottom: 1rem;
+                    ">
+                        <i class="fas fa-${statusIcon} me-1"></i>
+                        ${statusText}
                     </div>
                     
-                    <!-- Document Info -->
+                    <!-- Conteúdo do Documento -->
                     <div style="display: flex; align-items: flex-start; gap: 1rem; margin-bottom: 1rem;">
+                        <!-- Ícone -->
                         <div style="
                             width: 50px;
                             height: 50px;
-                            background: var(--primary);
-                            color: white;
+                            background: ${iconColor}15;
+                            color: ${iconColor};
                             border-radius: 12px;
                             display: flex;
                             align-items: center;
                             justify-content: center;
                             flex-shrink: 0;
+                            font-size: 1.5rem;
                         ">
-                            <i class="fas fa-${doc.tipo_mime.includes('pdf') ? 'file-pdf' : 'file-image'}"></i>
+                            <i class="fas fa-${fileIcon}"></i>
                         </div>
+                        
+                        <!-- Informações -->
                         <div style="flex: 1;">
-                            <h6 style="margin: 0; font-weight: 700; color: var(--dark); margin-bottom: 0.5rem;">
-                                ${doc.tipo_descricao}
+                            <h6 style="
+                                margin: 0 0 0.25rem 0;
+                                font-weight: 600;
+                                color: #2c3e50;
+                                font-size: 1rem;
+                            ">
+                                ${doc.tipo_descricao || 'Documento'}
                             </h6>
-                            <p style="margin: 0; color: var(--gray-600); font-size: 0.875rem;">
-                                ${doc.nome_arquivo}
+                            <p style="
+                                margin: 0 0 0.5rem 0;
+                                color: #6c757d;
+                                font-size: 0.875rem;
+                                word-break: break-all;
+                            ">
+                                ${doc.nome_arquivo || 'arquivo.pdf'}
                             </p>
-                            <div style="display: flex; gap: 1rem; margin-top: 0.5rem; font-size: 0.75rem; color: var(--gray-500);">
-                                <span><i class="fas fa-weight-hanging me-1"></i>${doc.tamanho_formatado}</span>
-                                <span><i class="fas fa-calendar me-1"></i>${doc.data_upload_formatada}</span>
-                                ${doc.funcionario_upload ? `<span><i class="fas fa-user me-1"></i>${doc.funcionario_upload}</span>` : ''}
+                            <div style="
+                                display: flex;
+                                gap: 1.5rem;
+                                font-size: 0.75rem;
+                                color: #6c757d;
+                            ">
+                                ${doc.tamanho_formatado ? `
+                                    <span>
+                                        <i class="fas fa-weight-hanging me-1"></i>
+                                        ${doc.tamanho_formatado}
+                                    </span>
+                                ` : ''}
+                                ${doc.data_upload_formatada ? `
+                                    <span>
+                                        <i class="fas fa-calendar me-1"></i>
+                                        ${doc.data_upload_formatada}
+                                    </span>
+                                ` : ''}
+                                ${doc.funcionario_upload ? `
+                                    <span>
+                                        <i class="fas fa-user me-1"></i>
+                                        ${doc.funcionario_upload}
+                                    </span>
+                                ` : ''}
                             </div>
                         </div>
                     </div>
                     
                     ${doc.observacao ? `
-                        <div style="margin-bottom: 1rem; padding: 0.75rem; background: var(--gray-100); border-radius: 8px; font-size: 0.875rem;">
-                            <strong>Observação:</strong> ${doc.observacao}
+                        <div style="
+                            background: #f8f9fa;
+                            padding: 0.75rem;
+                            border-radius: 8px;
+                            margin-bottom: 1rem;
+                            font-size: 0.875rem;
+                            color: #495057;
+                        ">
+                            <i class="fas fa-sticky-note me-1" style="color: #6c757d;"></i>
+                            ${doc.observacao}
                         </div>
                     ` : ''}
                     
-                    <!-- Actions -->
-                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                        ${doc.arquivo_existe ? `
+                    <!-- Botões de Ação -->
+                    <div style="display: flex; gap: 0.75rem;">
+                        ${doc.arquivo_existe !== false ? `
                             <button onclick="downloadDocumentoUpload(${doc.id})" style="
-                                background: var(--primary);
-                                color: white;
-                                border: none;
+                                background: transparent;
+                                color: #6c757d;
+                                border: 1px solid #dee2e6;
                                 padding: 0.5rem 1rem;
                                 border-radius: 8px;
                                 font-size: 0.8125rem;
                                 cursor: pointer;
-                            ">
-                                <i class="fas fa-download me-1"></i>
+                                display: inline-flex;
+                                align-items: center;
+                                gap: 0.5rem;
+                                transition: all 0.3s ease;
+                            " onmouseover="this.style.background='#f8f9fa'" onmouseout="this.style.background='transparent'">
+                                <i class="fas fa-cloud-download-alt"></i>
                                 Baixar
                             </button>
                         ` : `
                             <button disabled style="
-                                background: var(--gray-400);
-                                color: white;
-                                border: none;
+                                background: transparent;
+                                color: #adb5bd;
+                                border: 1px solid #dee2e6;
                                 padding: 0.5rem 1rem;
                                 border-radius: 8px;
                                 font-size: 0.8125rem;
                                 cursor: not-allowed;
+                                display: inline-flex;
+                                align-items: center;
+                                gap: 0.5rem;
                             ">
-                                <i class="fas fa-exclamation-triangle me-1"></i>
+                                <i class="fas fa-exclamation-triangle"></i>
                                 Indisponível
                             </button>
                         `}
+                        
+                        <button onclick="if(confirm('Deseja remover este documento?')) { removerDocumento(${doc.id}); }" style="
+                            background: transparent;
+                            color: #dc3545;
+                            border: 1px solid #dc3545;
+                            padding: 0.5rem 1rem;
+                            border-radius: 8px;
+                            font-size: 0.8125rem;
+                            cursor: pointer;
+                            display: inline-flex;
+                            align-items: center;
+                            gap: 0.5rem;
+                            transition: all 0.3s ease;
+                        " onmouseover="this.style.background='#dc3545'; this.style.color='white';" onmouseout="this.style.background='transparent'; this.style.color='#dc3545';">
+                            <i class="fas fa-trash"></i>
+                            Remover
+                        </button>
                     </div>
                 </div>
             `;
         });
+        
+        html += '</div>';
     } else {
-        // No documents
+        // Nenhum documento - Estado vazio
         html += `
             <div style="
-                text-align: center; 
-                padding: 3rem 2rem; 
-                background: var(--gray-50); 
+                background: #f8f9fa;
+                padding: 3rem 2rem;
                 border-radius: 16px;
-                border: 2px dashed var(--gray-300);
+                border: 2px dashed #dee2e6;
+                text-align: center;
+                margin: 1rem;
             ">
-                <div style="font-size: 4rem; color: var(--gray-300); margin-bottom: 1rem;">
+                <div style="
+                    font-size: 4rem;
+                    color: #dee2e6;
+                    margin-bottom: 1rem;
+                ">
                     <i class="fas fa-folder-open"></i>
                 </div>
-                <h5 style="color: var(--gray-600); margin-bottom: 1rem;">Nenhum documento anexado</h5>
-                <p style="color: var(--gray-500); margin-bottom: 2rem;">
-                    ${associado.nome} ainda não possui documentos anexados
+                <h5 style="
+                    color: #495057;
+                    margin-bottom: 0.5rem;
+                    font-weight: 600;
+                ">
+                    Nenhum documento anexado
+                </h5>
+                <p style="
+                    color: #6c757d;
+                    margin-bottom: 2rem;
+                    font-size: 0.875rem;
+                ">
+                    ${associado.nome} ainda não possui documentos anexados ao cadastro
                 </p>
-                <button onclick="abrirModalUploadDocumento(${associado.id}, '${associado.nome}')" style="
-                    background: var(--primary);
+                <button onclick="abrirModalUploadDocumento(${associado.id}, '${associado.nome.replace(/'/g, "\\'")}')" style="
+                    background: #4169E1;
                     color: white;
                     border: none;
                     padding: 0.75rem 1.5rem;
                     border-radius: 12px;
                     font-weight: 600;
                     cursor: pointer;
-                ">
+                    transition: all 0.3s ease;
+                " onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
                     <i class="fas fa-plus me-2"></i>
                     Anexar Primeiro Documento
                 </button>
             </div>
         `;
     }
+
+    html += '</div>'; // Fecha detail-section
 
     container.innerHTML = html;
 }
