@@ -385,196 +385,316 @@ $headerComponent = HeaderComponent::create([
             });
         }
 
-        // Renderizar documentos em fluxo
         function renderizarDocumentosFluxo(documentos) {
-            const container = $('#documentosFluxoList');
-            container.empty();
+    const container = $('#documentosFluxoList');
+    container.empty();
 
-            if (documentos.length === 0) {
-                container.html(`
-                    <div class="col-12">
-                        <div class="empty-state">
-                            <i class="fas fa-exchange-alt"></i>
-                            <h5>Nenhum documento em fluxo</h5>
-                            <p>Os documentos anexados durante o pré-cadastro aparecerão aqui</p>
-                        </div>
+    if (documentos.length === 0) {
+        container.html(`
+            <div class="col-12">
+                <div class="empty-state">
+                    <i class="fas fa-exchange-alt"></i>
+                    <h5>Nenhum documento em fluxo</h5>
+                    <p>Os documentos anexados durante o pré-cadastro aparecerão aqui</p>
+                </div>
+            </div>
+        `);
+        return;
+    }
+
+    documentos.forEach(doc => {
+        const statusClass = doc.status_fluxo.toLowerCase().replace('_', '-');
+        const cardHtml = `
+            <div class="document-card" data-aos="fade-up">
+                <div class="document-header">
+                    <div class="document-icon pdf">
+                        <i class="fas fa-file-pdf"></i>
                     </div>
-                `);
-                return;
-            }
-
-            documentos.forEach(doc => {
-                const statusClass = doc.status_fluxo.toLowerCase().replace('_', '-');
-                const cardHtml = `
-                    <div class="document-card" data-aos="fade-up">
+                    <div class="document-info">
+                        <h6 class="document-title">Ficha de Filiação</h6>
+                        <p class="document-subtitle">${doc.tipo_origem === 'VIRTUAL' ? 'Gerada no Sistema' : 'Digitalizada'}</p>
+                    </div>
+                    <div class="ms-auto">
                         <span class="status-badge ${statusClass}">
                             <i class="fas fa-${getStatusIcon(doc.status_fluxo)} me-1"></i>
                             ${doc.status_descricao}
                         </span>
-                        
-                        <div class="document-header">
-                            <div class="document-icon pdf">
-                                <i class="fas fa-file-pdf"></i>
-                            </div>
-                            <div class="document-info">
-                                <h6 class="document-title">Ficha de Filiação</h6>
-                                <p class="document-subtitle">${doc.tipo_origem === 'VIRTUAL' ? 'Gerada no Sistema' : 'Digitalizada'}</p>
-                            </div>
+                    </div>
+                </div>
+                
+                <div class="document-meta">
+                    <div class="meta-item">
+                        <i class="fas fa-user"></i>
+                        <span><strong>${doc.associado_nome}</strong></span>
+                    </div>
+                    <div class="meta-item">
+                        <i class="fas fa-id-card"></i>
+                        <span>CPF: ${formatarCPF(doc.associado_cpf)}</span>
+                    </div>
+                    <div class="meta-item">
+                        <i class="fas fa-building"></i>
+                        <span>${doc.departamento_atual_nome || 'Comercial'}</span>
+                    </div>
+                    <div class="meta-item">
+                        <i class="fas fa-calendar"></i>
+                        <span>Cadastrado em ${formatarData(doc.data_upload)}</span>
+                    </div>
+                    ${doc.dias_em_processo > 0 ? `
+                        <div class="meta-item">
+                            <i class="fas fa-hourglass-half"></i>
+                            <span class="text-warning"><strong>${doc.dias_em_processo} dias em processo</strong></span>
                         </div>
-                        
-                        <div class="document-meta">
-                            <div class="meta-item">
-                                <i class="fas fa-user"></i>
-                                <span>${doc.associado_nome}</span>
+                    ` : ''}
+                </div>
+                
+                <!-- Progress do Fluxo -->
+                <div class="fluxo-progress">
+                    <div class="fluxo-steps">
+                        <div class="fluxo-step ${doc.status_fluxo !== 'DIGITALIZADO' ? 'completed' : 'active'}">
+                            <div class="fluxo-step-icon">
+                                <i class="fas fa-upload"></i>
                             </div>
-                            <div class="meta-item">
-                                <i class="fas fa-id-card"></i>
-                                <span>CPF: ${formatarCPF(doc.associado_cpf)}</span>
-                            </div>
-                            <div class="meta-item">
-                                <i class="fas fa-building"></i>
-                                <span>${doc.departamento_atual_nome || 'Comercial'}</span>
-                            </div>
-                            <div class="meta-item">
-                                <i class="fas fa-calendar"></i>
-                                <span>Cadastrado em ${formatarData(doc.data_upload)}</span>
-                            </div>
-                            ${doc.dias_em_processo > 0 ? `
-                                <div class="meta-item">
-                                    <i class="fas fa-hourglass-half"></i>
-                                    <span>${doc.dias_em_processo} dias em processo</span>
-                                </div>
-                            ` : ''}
+                            <div class="fluxo-step-label">Digitalizado</div>
+                            <div class="fluxo-line"></div>
                         </div>
-                        
-                        <!-- Progress do Fluxo -->
-                        <div class="fluxo-progress">
-                            <div class="fluxo-steps">
-                                <div class="fluxo-step ${doc.status_fluxo !== 'DIGITALIZADO' ? 'completed' : 'active'}">
-                                    <div class="fluxo-step-icon">
-                                        <i class="fas fa-upload"></i>
-                                    </div>
-                                    <div class="fluxo-step-label">Digitalizado</div>
-                                    <div class="fluxo-line"></div>
-                                </div>
-                                <div class="fluxo-step ${doc.status_fluxo === 'AGUARDANDO_ASSINATURA' ? 'active' : (doc.status_fluxo === 'ASSINADO' || doc.status_fluxo === 'FINALIZADO' ? 'completed' : '')}">
-                                    <div class="fluxo-step-icon">
-                                        <i class="fas fa-signature"></i>
-                                    </div>
-                                    <div class="fluxo-step-label">Assinatura</div>
-                                    <div class="fluxo-line"></div>
-                                </div>
-                                <div class="fluxo-step ${doc.status_fluxo === 'ASSINADO' ? 'active' : (doc.status_fluxo === 'FINALIZADO' ? 'completed' : '')}">
-                                    <div class="fluxo-step-icon">
-                                        <i class="fas fa-check"></i>
-                                    </div>
-                                    <div class="fluxo-step-label">Assinado</div>
-                                    <div class="fluxo-line"></div>
-                                </div>
-                                <div class="fluxo-step ${doc.status_fluxo === 'FINALIZADO' ? 'completed' : ''}">
-                                    <div class="fluxo-step-icon">
-                                        <i class="fas fa-flag-checkered"></i>
-                                    </div>
-                                    <div class="fluxo-step-label">Finalizado</div>
-                                </div>
+                        <div class="fluxo-step ${doc.status_fluxo === 'AGUARDANDO_ASSINATURA' ? 'active' : (doc.status_fluxo === 'ASSINADO' || doc.status_fluxo === 'FINALIZADO' ? 'completed' : '')}">
+                            <div class="fluxo-step-icon">
+                                <i class="fas fa-signature"></i>
                             </div>
+                            <div class="fluxo-step-label">Assinatura</div>
+                            <div class="fluxo-line"></div>
                         </div>
-                        
-                        <div class="document-actions">
-                            <button class="btn-modern btn-primary btn-sm" onclick="downloadDocumento(${doc.id})" title="Download">
-                                <i class="fas fa-download"></i>
-                                Baixar
-                            </button>
-                            
-                            ${getAcoesFluxo(doc)}
-                            
-                            <button class="btn-modern btn-secondary btn-sm" onclick="verHistorico(${doc.id})" title="Histórico">
-                                <i class="fas fa-history"></i>
-                                Histórico
-                            </button>
+                        <div class="fluxo-step ${doc.status_fluxo === 'ASSINADO' ? 'active' : (doc.status_fluxo === 'FINALIZADO' ? 'completed' : '')}">
+                            <div class="fluxo-step-icon">
+                                <i class="fas fa-check"></i>
+                            </div>
+                            <div class="fluxo-step-label">Assinado</div>
+                            <div class="fluxo-line"></div>
+                        </div>
+                        <div class="fluxo-step ${doc.status_fluxo === 'FINALIZADO' ? 'completed' : ''}">
+                            <div class="fluxo-step-icon">
+                                <i class="fas fa-flag-checkered"></i>
+                            </div>
+                            <div class="fluxo-step-label">Finalizado</div>
                         </div>
                     </div>
-                `;
+                </div>
+                
+                <div class="document-actions">
+                    <button class="btn-modern btn-primary btn-sm" onclick="downloadDocumento(${doc.id})" title="Download">
+                        <i class="fas fa-download"></i>
+                        Baixar
+                    </button>
+                    
+                    ${getAcoesFluxo(doc)}
+                    
+                    <button class="btn-modern btn-secondary btn-sm" onclick="verHistorico(${doc.id})" title="Histórico">
+                        <i class="fas fa-history"></i>
+                        Histórico
+                    </button>
+                </div>
+            </div>
+        `;
 
-                container.append(cardHtml);
-            });
-        }
+        container.append(cardHtml);
+    });
+}
 
-        // Obter ações do fluxo baseado no status
         function getAcoesFluxo(doc) {
-            let acoes = '';
+    let acoes = '';
 
-            switch (doc.status_fluxo) {
-                case 'DIGITALIZADO':
-                    acoes = `
-                        <button class="btn-modern btn-warning btn-sm" onclick="enviarParaAssinatura(${doc.id})" title="Enviar para Assinatura">
-                            <i class="fas fa-paper-plane"></i>
-                            Enviar
-                        </button>
-                    `;
-                    break;
+    switch (doc.status_fluxo) {
+        case 'DIGITALIZADO':
+            acoes = `
+                <button class="btn-modern btn-warning btn-sm" onclick="enviarParaAssinatura(${doc.id})" title="Enviar para Assinatura">
+                    <i class="fas fa-paper-plane"></i>
+                    Enviar
+                </button>
+            `;
+            break;
 
-                case 'AGUARDANDO_ASSINATURA':
-                    // Verificar se usuário tem permissão para assinar (apenas presidência)
-                    <?php if ($auth->isDiretor() || $usuarioLogado['departamento_id'] == 2): ?>
-                        acoes = `
-                        <button class="btn-modern btn-success btn-sm" onclick="abrirModalAssinatura(${doc.id})" title="Assinar">
-                            <i class="fas fa-signature"></i>
-                            Assinar
-                        </button>
-                    `;
-                    <?php endif; ?>
-                    break;
+        case 'AGUARDANDO_ASSINATURA':
+            // Verificar se usuário tem permissão para assinar (apenas presidência)
+            <?php if ($auth->isDiretor() || $usuarioLogado['departamento_id'] == 2): ?>
+            acoes = `
+                <button class="btn-modern btn-success btn-sm" onclick="abrirModalAssinatura(${doc.id})" title="Assinar">
+                    <i class="fas fa-signature"></i>
+                    Assinar
+                </button>
+            `;
+            <?php endif; ?>
+            break;
 
-                case 'ASSINADO':
-                    acoes = `
-                        <button class="btn-modern btn-info btn-sm" onclick="finalizarProcesso(${doc.id})" title="Finalizar">
-                            <i class="fas fa-flag-checkered"></i>
-                            Finalizar
-                        </button>
-                    `;
-                    break;
-            }
+        case 'ASSINADO':
+            acoes = `
+                <button class="btn-modern btn-info btn-sm" onclick="finalizarProcesso(${doc.id})" title="Finalizar">
+                    <i class="fas fa-flag-checkered"></i>
+                    Finalizar
+                </button>
+            `;
+            break;
 
-            return acoes;
-        }
+        case 'FINALIZADO':
+            acoes = `
+                <button class="btn-modern btn-success btn-sm" disabled title="Processo Concluído">
+                    <i class="fas fa-check-circle"></i>
+                    Concluído
+                </button>
+            `;
+            break;
+    }
 
-        // Obter ícone do status
-        function getStatusIcon(status) {
-            const icons = {
-                'DIGITALIZADO': 'upload',
-                'AGUARDANDO_ASSINATURA': 'clock',
-                'ASSINADO': 'check',
-                'FINALIZADO': 'flag-checkered'
-            };
-            return icons[status] || 'file';
-        }
+    return acoes;
+}
 
-        // Enviar para assinatura
+// Obter ícone do status
+function getStatusIcon(status) {
+    const icons = {
+        'DIGITALIZADO': 'upload',
+        'AGUARDANDO_ASSINATURA': 'clock',
+        'ASSINADO': 'check',
+        'FINALIZADO': 'flag-checkered'
+    };
+    return icons[status] || 'file';
+}
+
         function enviarParaAssinatura(documentoId) {
-            if (confirm('Deseja enviar este documento para assinatura na presidência?')) {
-                $.ajax({
-                    url: '../api/documentos/documentos_enviar_assinatura.php',
-                    type: 'POST',
-                    contentType: 'application/json',
-                    data: JSON.stringify({
-                        documento_id: documentoId,
-                        observacao: 'Documento enviado para assinatura'
-                    }),
-                    success: function (response) {
-                        if (response.status === 'success') {
-                            alert('Documento enviado para assinatura com sucesso!');
-                            carregarDocumentosFluxo(filtrosAtuais);
-                        } else {
-                            alert('Erro: ' + response.message);
-                        }
-                    },
-                    error: function () {
-                        alert('Erro ao enviar documento para assinatura');
-                    }
-                });
+    mostrarConfirmacaoEnvio(documentoId);
+}
+
+        function mostrarConfirmacaoEnvio(documentoId) {
+    // Cria o modal HTML
+    const modalHtml = `
+        <div class="modal fade confirmation-modal" id="confirmationModal" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <div class="modal-title">
+                            <div class="modal-icon">
+                                <i class="fas fa-paper-plane"></i>
+                            </div>
+                            <span>Enviar para Assinatura</span>
+                        </div>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    
+                    <div class="modal-body">
+                        <div class="confirmation-icon">
+                            <i class="fas fa-signature"></i>
+                        </div>
+                        
+                        <h5 class="confirmation-message">
+                            Deseja enviar este documento para assinatura na presidência?
+                        </h5>
+                        
+                        <p class="confirmation-submessage">
+                            O documento será encaminhado para o departamento de presidência
+                        </p>
+                        
+                        <div class="info-box">
+                            <div class="info-box-title">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Próximos passos
+                            </div>
+                            <div class="info-box-content">
+                                Após o envio, o documento ficará disponível para assinatura. 
+                                Você será notificado quando o processo for concluído.
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="modal-footer">
+                        <button type="button" class="btn-confirm btn-confirm-secondary" data-bs-dismiss="modal">
+                            <i class="fas fa-times"></i>
+                            Cancelar
+                        </button>
+                        <button type="button" class="btn-confirm btn-confirm-primary" onclick="confirmarEnvioAssinatura(${documentoId})">
+                            <i class="fas fa-check"></i>
+                            Confirmar Envio
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Remove modal anterior se existir
+    $('#confirmationModal').remove();
+    
+    // Adiciona o novo modal ao body
+    $('body').append(modalHtml);
+    
+    // Mostra o modal
+    const modal = new bootstrap.Modal(document.getElementById('confirmationModal'));
+    modal.show();
+}
+
+// Função para confirmar o envio
+function confirmarEnvioAssinatura(documentoId) {
+    // Adiciona loading ao botão
+    const btn = event.target;
+    btn.classList.add('loading');
+    btn.innerHTML = '<i class="fas fa-spinner"></i> Enviando...';
+    
+    // Faz a requisição
+    $.ajax({
+        url: '../api/documentos/documentos_enviar_assinatura.php',
+        type: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({
+            documento_id: documentoId,
+            observacao: 'Documento enviado para assinatura'
+        }),
+        success: function(response) {
+            if (response.status === 'success') {
+                // Fecha o modal
+                bootstrap.Modal.getInstance(document.getElementById('confirmationModal')).hide();
+                
+                // Mostra notificação de sucesso
+                mostrarNotificacaoSucesso('Documento enviado com sucesso!');
+                
+                // Recarrega a lista
+                carregarDocumentosFluxo(filtrosAtuais);
+            } else {
+                // Restaura o botão
+                btn.classList.remove('loading');
+                btn.innerHTML = '<i class="fas fa-check"></i> Confirmar Envio';
+                alert('Erro: ' + response.message);
             }
+        },
+        error: function() {
+            btn.classList.remove('loading');
+            btn.innerHTML = '<i class="fas fa-check"></i> Confirmar Envio';
+            alert('Erro ao enviar documento');
         }
+    });
+}
+
+function mostrarNotificacaoSucesso(mensagem) {
+    const toastHtml = `
+        <div class="position-fixed top-0 end-0 p-3" style="z-index: 9999">
+            <div class="toast align-items-center text-white bg-success border-0" role="alert">
+                <div class="d-flex">
+                    <div class="toast-body">
+                        <i class="fas fa-check-circle me-2"></i>
+                        ${mensagem}
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    $('body').append(toastHtml);
+    const toast = new bootstrap.Toast($('.toast')[0]);
+    toast.show();
+    
+    // Remove após 5 segundos
+    setTimeout(() => {
+        $('.toast').remove();
+    }, 5000);
+}
+
 
         // Abrir modal de assinatura
         function abrirModalAssinatura(documentoId) {
