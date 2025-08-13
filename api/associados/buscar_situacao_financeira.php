@@ -2,6 +2,7 @@
 /**
  * API para buscar situação financeira individual de associado - Sistema ASSEGO
  * api/associados/buscar_situacao_financeira.php
+ * VERSÃO CORRIGIDA COM VALORES REAIS DOS SERVIÇOS
  */
 
 // Headers para CORS e JSON
@@ -55,7 +56,7 @@ try {
     // Conecta ao banco de dados
     $db = Database::getInstance(DB_NAME_CADASTRO)->getConnection();
 
-    // CORRIGIDO: Constrói a query base com JOIN incluindo NOVOS CAMPOS
+    // Constrói a query base
     $sql = "
         SELECT 
             a.id,
@@ -97,7 +98,7 @@ try {
     }
     
     // Ordena por nome
-    $sql .= " ORDER BY a.nome ASC LIMIT 10"; // Limita a 10 resultados para busca por nome
+    $sql .= " ORDER BY a.nome ASC LIMIT 10";
 
     // Log da query para debug
     error_log("Query SQL situação financeira: " . $sql);
@@ -140,48 +141,138 @@ try {
         $associado = $resultados[0];
     }
 
-    // Busca dados financeiros adicionais se existir registro financeiro
-    $dadosFinanceirosExtras = [];
-    if ($associado['tipoAssociado']) {
-        // Busca histórico de pagamentos (se existir tabela de pagamentos)
-        try {
-            $sqlPagamentos = "
-                SELECT 
-                    COUNT(*) as total_pagamentos,
-                    MAX(data_pagamento) as ultimo_pagamento,
-                    SUM(CASE WHEN status_pagamento = 'PAGO' THEN valor_pagamento ELSE 0 END) as total_pago,
-                    SUM(CASE WHEN status_pagamento = 'PENDENTE' THEN valor_pagamento ELSE 0 END) as total_pendente
-                FROM Pagamentos 
-                WHERE associado_id = :associado_id
-            ";
-            
-            $stmtPag = $db->prepare($sqlPagamentos);
-            $stmtPag->bindValue(':associado_id', $associado['id'], PDO::PARAM_INT);
-            $stmtPag->execute();
-            $pagamentos = $stmtPag->fetch(PDO::FETCH_ASSOC);
-            
-            if ($pagamentos) {
-                $dadosFinanceirosExtras['pagamentos'] = $pagamentos;
-            }
-        } catch (PDOException $e) {
-            // Tabela de pagamentos pode não existir ainda
-            error_log("Tabela de pagamentos não encontrada: " . $e->getMessage());
+    // ========================================
+    // NOVA LÓGICA: BUSCAR SERVIÇOS REAIS
+    // ========================================
+    
+    $valorMensalidadeReal = 0;
+    $servicosDetalhes = [];
+    $tipoAssociadoServico = null;
+    
+    // Buscar serviços ativos do associado (igual ao dashboard)
+    $stmtServicos = $db->prepare("
+        SELECT 
+            sa.id,
+            sa.servico_id,
+            sa.ativo,
+            sa.data_adesao,
+            sa.valor_aplicado,
+            sa.percentual_aplicado,
+            sa.observacao,
+            s.nome as servico_nome,
+            s.descricao as servico_descricao,
+            s.valor_base
+        FROM Servicos_Associado sa
+        INNER JOIN Servicos s ON sa.servico_id = s.id
+        WHERE sa.associado_id = ? AND sa.ativo = 1
+        ORDER BY s.obrigatorio DESC, s.nome ASC
+    ");
+    
+    $stmtServicos->execute([$associado['id']]);
+    $servicosAtivos = $stmtServicos->fetchAll(PDO::FETCH_ASSOC);
+    
+    error_log("Serviços ativos encontrados para associado {$associado['id']}: " . count($servicosAtivos));
+    
+    // Calcula valor total mensal REAL
+    foreach ($servicosAtivos as $servico) {
+        $valorMensalidadeReal += floatval($servico['valor_aplicado']);
+        
+        // Adiciona detalhes dos serviços
+        if ($servico['servico_id'] == 1) {
+            $servicosDetalhes['social'] = [
+                'ativo' => true,
+                'valor' => floatval($servico['valor_aplicado']),
+                'percentual' => floatval($servico['percentual_aplicado']),
+                'data_adesao' => $servico['data_adesao']
+            ];
+        } elseif ($servico['servico_id'] == 2) {
+            $servicosDetalhes['juridico'] = [
+                'ativo' => true,
+                'valor' => floatval($servico['valor_aplicado']),
+                'percentual' => floatval($servico['percentual_aplicado']),
+                'data_adesao' => $servico['data_adesao']
+            ];
         }
+    }
+    
+    error_log("Valor mensal REAL calculado: R$ " . $valorMensalidadeReal);
+    
+    // Busca o tipo de associado baseado nos serviços (igual ao dashboard)
+    if (!empty($servicosAtivos)) {
+        // Tenta buscar pela auditoria primeiro
+        $stmtAudit = $db->prepare("
+            SELECT alteracoes 
+            FROM Auditoria 
+            WHERE tabela = 'Servicos_Associado' 
+            AND registro_id = ? 
+            AND alteracoes LIKE '%tipo_associado_servico%'
+            ORDER BY data_hora DESC 
+            LIMIT 1
+        ");
+        $stmtAudit->execute([$associado['id']]);
+        $auditoria = $stmtAudit->fetch();
+        
+        if ($auditoria && $auditoria['alteracoes']) {
+            $alteracoes = json_decode($auditoria['alteracoes'], true);
+            if (isset($alteracoes['tipo_associado_servico'])) {
+                $tipoAssociadoServico = $alteracoes['tipo_associado_servico'];
+            }
+        }
+        
+        // Se não encontrou, tenta inferir pelas regras
+        if (!$tipoAssociadoServico && !empty($servicosAtivos)) {
+            $primeiroServico = $servicosAtivos[0];
+            
+            $stmtRegras = $db->prepare("
+                SELECT DISTINCT rc.tipo_associado
+                FROM Regras_Contribuicao rc
+                WHERE rc.servico_id = ? 
+                AND ABS(rc.percentual_valor - ?) < 0.01
+                LIMIT 1
+            ");
+            
+            $stmtRegras->execute([
+                $primeiroServico['servico_id'], 
+                $primeiroServico['percentual_aplicado']
+            ]);
+            
+            $tipoAssociadoServico = $stmtRegras->fetchColumn() ?: 'Contribuinte';
+        }
+    }
+    
+    // ========================================
+    // FIM DA NOVA LÓGICA
+    // ========================================
 
-        // Calcula valor da mensalidade baseado no tipo
-        $valoresMensalidade = [
-            'ATIVO' => 50.00,
-            'APOSENTADO' => 30.00,
-            'PENSIONISTA' => 25.00
-        ];
+    // Busca dados financeiros adicionais
+    $dadosFinanceirosExtras = [];
+    
+    // Busca histórico de pagamentos (se existir tabela de pagamentos)
+    try {
+        $sqlPagamentos = "
+            SELECT 
+                COUNT(*) as total_pagamentos,
+                MAX(data_pagamento) as ultimo_pagamento,
+                SUM(CASE WHEN status_pagamento = 'PAGO' THEN valor_pagamento ELSE 0 END) as total_pago,
+                SUM(CASE WHEN status_pagamento = 'PENDENTE' THEN valor_pagamento ELSE 0 END) as total_pendente
+            FROM Pagamentos 
+            WHERE associado_id = :associado_id
+        ";
         
-        $tipoAssociado = strtoupper($associado['tipoAssociado']);
-        $valorMensalidade = $valoresMensalidade[$tipoAssociado] ?? 50.00;
+        $stmtPag = $db->prepare($sqlPagamentos);
+        $stmtPag->bindValue(':associado_id', $associado['id'], PDO::PARAM_INT);
+        $stmtPag->execute();
+        $pagamentos = $stmtPag->fetch(PDO::FETCH_ASSOC);
         
-        $dadosFinanceirosExtras['valor_mensalidade'] = $valorMensalidade;
+        if ($pagamentos) {
+            $dadosFinanceirosExtras['pagamentos'] = $pagamentos;
+        }
+    } catch (PDOException $e) {
+        // Tabela de pagamentos pode não existir ainda
+        error_log("Tabela de pagamentos não encontrada: " . $e->getMessage());
     }
 
-    // CORRIGIDO: Estrutura os dados para resposta INCLUINDO NOVOS CAMPOS
+    // Estrutura os dados para resposta
     $dadosEstruturados = [
         'dados_pessoais' => [
             'id' => $associado['id'],
@@ -195,8 +286,8 @@ try {
             'escolaridade' => $associado['escolaridade']
         ],
         'situacao_financeira' => [
-            'situacao' => $associado['situacaoFinanceira'] ?? 'NÃO DEFINIDA',
-            'tipo_associado' => $associado['tipoAssociado'],
+            'situacao' => $associado['situacaoFinanceira'] ?? 'Adimplente',
+            'tipo_associado' => $tipoAssociadoServico ?: $associado['tipoAssociado'],
             'vinculo_servidor' => $associado['vinculoServidor'],
             'local_debito' => $associado['localDebito'],
             'agencia' => $associado['agencia'],
@@ -205,13 +296,17 @@ try {
             'observacoes' => $associado['observacoes'] ?? '',
             'doador' => intval($associado['doador'] ?? 0),
             'eh_doador' => ($associado['doador'] ?? 0) == 1 ? 'Sim' : 'Não',
-            'valor_mensalidade' => $dadosFinanceirosExtras['valor_mensalidade'] ?? null,
+            'valor_mensalidade' => $valorMensalidadeReal, // USA O VALOR REAL!
+            'servicos_ativos' => $servicosDetalhes, // Adiciona detalhes dos serviços
             'ultimo_pagamento' => $dadosFinanceirosExtras['pagamentos']['ultimo_pagamento'] ?? null,
             'total_pago' => $dadosFinanceirosExtras['pagamentos']['total_pago'] ?? 0,
-            'total_pendente' => $dadosFinanceirosExtras['pagamentos']['total_pendente'] ?? 0
+            'total_pendente' => $dadosFinanceirosExtras['pagamentos']['total_pendente'] ?? 0,
+            'valor_debito' => 0, // Implementar cálculo se necessário
+            'meses_atraso' => 0, // Implementar cálculo se necessário
+            'vencimento_proxima' => null // Implementar se necessário
         ],
         'status_cadastro' => $associado['situacao_cadastro'],
-        'tem_dados_financeiros' => !empty($associado['tipoAssociado'])
+        'tem_dados_financeiros' => !empty($associado['tipoAssociado']) || count($servicosAtivos) > 0
     ];
 
     // Calcula dados adicionais
@@ -221,9 +316,9 @@ try {
         $dadosEstruturados['dados_pessoais']['idade'] = $nascimento->diff($hoje)->y;
     }
 
-    // NOVO: Adiciona alertas baseado na situação (incluindo novos campos)
+    // Adiciona alertas baseado na situação
     $alertas = [];
-    if ($associado['situacaoFinanceira'] === 'INADIMPLENTE') {
+    if ($associado['situacaoFinanceira'] === 'INADIMPLENTE' || $associado['situacaoFinanceira'] === 'Inadimplente') {
         $alertas[] = [
             'tipo' => 'warning',
             'mensagem' => 'Associado com pendências financeiras'
@@ -244,7 +339,6 @@ try {
         ];
     }
 
-    // NOVO: Alerta especial para doadores
     if (($associado['doador'] ?? 0) == 1) {
         $alertas[] = [
             'tipo' => 'success',
@@ -252,7 +346,6 @@ try {
         ];
     }
 
-    // NOVO: Alerta se há observações importantes
     if (!empty($associado['observacoes']) && strlen(trim($associado['observacoes'])) > 0) {
         $alertas[] = [
             'tipo' => 'info',
@@ -273,7 +366,7 @@ try {
     ];
 
     // Log de sucesso
-    error_log("Situação financeira carregada com sucesso para associado ID: " . $associado['id']);
+    error_log("Situação financeira carregada com sucesso para associado ID: " . $associado['id'] . " - Valor: R$ " . $valorMensalidadeReal);
 
 } catch (PDOException $e) {
     // Erro de banco de dados
