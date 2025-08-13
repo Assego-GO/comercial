@@ -220,6 +220,7 @@ $headerComponent = HeaderComponent::create([
 
             <!-- Actions Bar with Filters -->
             <div class="actions-bar" data-aos="fade-up" data-aos-delay="100">
+                
                 <div class="filters-row">
                     <div class="search-box">
                         <label class="filter-label">Buscar</label>
@@ -726,7 +727,149 @@ $headerComponent = HeaderComponent::create([
         }
     </script>
 
+
     <script src="js/dashboard.js"></script>
+
+
+
+<script>
+/**
+ * Função para recalcular valores dos serviços
+ */
+function recalcularServicos() {
+    // Confirmação
+    if (!confirm(
+        'ATENÇÃO!\n\n' +
+        'Esta ação irá recalcular TODOS os valores dos serviços dos associados ' +
+        'baseado nos valores base atuais do sistema.\n\n' +
+        'Isso pode alterar centenas de registros!\n\n' +
+        'Deseja continuar?'
+    )) {
+        return;
+    }
+
+    const btnRecalcular = document.getElementById('btnRecalcular');
+    const originalText = btnRecalcular.innerHTML;
+    
+    // Desabilita botão e mostra loading
+    btnRecalcular.disabled = true;
+    btnRecalcular.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Recalculando...';
+    
+    // Mostra loading geral
+    showLoading();
+    
+    console.log('Iniciando recálculo dos serviços...');
+    
+    fetch('../api/recalcular_servicos.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => {
+        console.log('Response status:', response.status);
+        return response.text();
+    })
+    .then(responseText => {
+        console.log('Response:', responseText);
+        
+        let data;
+        try {
+            data = JSON.parse(responseText);
+        } catch (e) {
+            console.error('Erro ao fazer parse JSON:', e);
+            throw new Error('Resposta inválida do servidor');
+        }
+        
+        if (data.status === 'success') {
+            console.log('✓ Recálculo concluído:', data.data);
+            
+            // Monta mensagem detalhada
+            let mensagem = data.message;
+            
+            if (data.data.total_valores_alterados > 0) {
+                mensagem += '\n\n📊 RESUMO:';
+                mensagem += '\n• Total processados: ' + data.data.total_servicos_processados;
+                mensagem += '\n• Valores alterados: ' + data.data.total_valores_alterados;
+                mensagem += '\n• Sem alteração: ' + data.data.total_sem_alteracao;
+                
+                if (data.data.economia_total !== 0) {
+                    const economia = data.data.economia_total;
+                    if (economia > 0) {
+                        mensagem += '\n• Aumento total: +R$ ' + economia.toFixed(2).replace('.', ',');
+                    } else {
+                        mensagem += '\n• Redução total: R$ ' + Math.abs(economia).toFixed(2).replace('.', ',');
+                    }
+                }
+                
+                mensagem += '\n\n🕒 Processado em: ' + data.data.data_recalculo;
+                
+                // Mostra alguns exemplos
+                if (data.data.alteracoes_detalhadas && data.data.alteracoes_detalhadas.length > 0) {
+                    mensagem += '\n\n📋 EXEMPLOS DE ALTERAÇÕES:';
+                    data.data.alteracoes_detalhadas.slice(0, 5).forEach(alt => {
+                        mensagem += `\n• ${alt.associado} (${alt.servico}): R$ ${alt.valor_anterior.toFixed(2)} → R$ ${alt.valor_novo.toFixed(2)}`;
+                    });
+                    
+                    if (data.data.alteracoes_detalhadas.length > 5) {
+                        mensagem += `\n... e mais ${data.data.alteracoes_detalhadas.length - 5} alterações`;
+                    }
+                }
+            }
+            
+            alert(mensagem);
+            
+            // Recarrega a página para atualizar os dados
+            setTimeout(() => {
+                window.location.reload();
+            }, 2000);
+            
+        } else {
+            console.error('Erro na API:', data);
+            alert('❌ ERRO: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Erro de rede:', error);
+        alert('❌ Erro de comunicação: ' + error.message);
+    })
+    .finally(() => {
+        // Restaura botão
+        btnRecalcular.disabled = false;
+        btnRecalcular.innerHTML = originalText;
+        hideLoading();
+    });
+}
+
+// Adiciona CSS para o botão (coloque no <head> ou arquivo CSS)
+const style = document.createElement('style');
+style.textContent = `
+.btn-modern.btn-warning {
+    background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 600;
+    box-shadow: 0 4px 12px rgba(243, 156, 18, 0.3);
+    transition: all 0.3s ease;
+}
+
+.btn-modern.btn-warning:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(243, 156, 18, 0.4);
+    background: linear-gradient(135deg, #e67e22 0%, #d35400 100%);
+}
+
+.btn-modern:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none !important;
+}
+`;
+document.head.appendChild(style);
+</script>
+
 
 </body>
 
