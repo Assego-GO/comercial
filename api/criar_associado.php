@@ -301,75 +301,82 @@ try {
         // Continua o processo...
     }
 
-    // PASSO 4: CRIA OS SERVIÇOS (transação separada)
-    $servicos_criados = [];
-    $valor_total_mensal = 0;
-    
-    try {
-        $db = Database::getInstance(DB_NAME_CADASTRO)->getConnection();
-        $db->beginTransaction();
-        
-        $tipoAssociadoServico = $_POST['tipoAssociadoServico'] ?? 'Contribuinte';
-        
-        // Serviço Social
-        if (isset($_POST['valorSocial']) && floatval($_POST['valorSocial']) >= 0) {
-            $stmt = $db->prepare("
-                INSERT INTO Servicos_Associado (
-                    associado_id, servico_id, ativo, data_adesao, 
-                    valor_aplicado, percentual_aplicado, observacao
-                ) VALUES (?, 1, 1, NOW(), ?, ?, ?)
-            ");
-            
-            $valorSocial = floatval($_POST['valorSocial']);
-            $percentualSocial = floatval($_POST['percentualAplicadoSocial'] ?? 100);
-            
-            $stmt->execute([
-                $associadoId,
-                $valorSocial,
-                $percentualSocial,
-                "Pré-cadastro - Tipo: {$tipoAssociadoServico}"
-            ]);
-            
-            $servicos_criados[] = 'Social';
-            $valor_total_mensal += $valorSocial;
-            error_log("✓ Serviço Social: R$ " . number_format($valorSocial, 2, ',', '.'));
-        }
+// PASSO 4: CRIA OS SERVIÇOS (transação separada)
+$servicos_criados = [];
+$valor_total_mensal = 0;
 
-        // Serviço Jurídico
-        if (isset($_POST['servicoJuridico']) && $_POST['servicoJuridico'] == '2' && 
-            isset($_POST['valorJuridico']) && floatval($_POST['valorJuridico']) > 0) {
-            
-            $stmt = $db->prepare("
-                INSERT INTO Servicos_Associado (
-                    associado_id, servico_id, ativo, data_adesao, 
-                    valor_aplicado, percentual_aplicado, observacao
-                ) VALUES (?, 2, 1, NOW(), ?, ?, ?)
-            ");
-            
-            $valorJuridico = floatval($_POST['valorJuridico']);
-            $percentualJuridico = floatval($_POST['percentualAplicadoJuridico'] ?? 100);
-            
-            $stmt->execute([
-                $associadoId,
-                $valorJuridico,
-                $percentualJuridico,
-                "Pré-cadastro - Tipo: {$tipoAssociadoServico}"
-            ]);
-            
-            $servicos_criados[] = 'Jurídico';
-            $valor_total_mensal += $valorJuridico;
-            error_log("✓ Serviço Jurídico: R$ " . number_format($valorJuridico, 2, ',', '.'));
-        }
+try {
+    $db = Database::getInstance(DB_NAME_CADASTRO)->getConnection();
+    $db->beginTransaction();
+    
+    // CORREÇÃO: Captura o tipo correto
+    $tipoAssociadoServico = $_POST['tipoAssociadoServico'] ?? 'Contribuinte';
+    
+    // DEBUG
+    error_log("=== SALVANDO SERVIÇOS ===");
+    error_log("tipoAssociadoServico recebido: " . $tipoAssociadoServico);
+    
+    // Serviço Social
+    if (isset($_POST['valorSocial']) && floatval($_POST['valorSocial']) >= 0) {
+        $stmt = $db->prepare("
+            INSERT INTO Servicos_Associado (
+                associado_id, servico_id, tipo_associado, ativo, data_adesao, 
+                valor_aplicado, percentual_aplicado, observacao
+            ) VALUES (?, 1, ?, 1, NOW(), ?, ?, ?)
+        ");
         
-        $db->commit();
+        $valorSocial = floatval($_POST['valorSocial']);
+        $percentualSocial = floatval($_POST['percentualAplicadoSocial'] ?? 100);
         
-    } catch (Exception $e) {
-        if (isset($db) && $db->inTransaction()) {
-            $db->rollBack();
-        }
-        error_log("⚠ Erro ao criar serviços: " . $e->getMessage());
-        // Continua - não é crítico
+        $stmt->execute([
+            $associadoId,
+            $tipoAssociadoServico,  // ← ESTE É O CAMPO CRÍTICO
+            $valorSocial,
+            $percentualSocial,
+            "Cadastro - Tipo: {$tipoAssociadoServico}"
+        ]);
+        
+        $servicos_criados[] = 'Social';
+        $valor_total_mensal += $valorSocial;
+        error_log("✓ Serviço Social salvo com tipo: $tipoAssociadoServico");
     }
+
+    // Serviço Jurídico
+    if (isset($_POST['servicoJuridico']) && $_POST['servicoJuridico'] && 
+        isset($_POST['valorJuridico']) && floatval($_POST['valorJuridico']) > 0) {
+        
+        $stmt = $db->prepare("
+            INSERT INTO Servicos_Associado (
+                associado_id, servico_id, tipo_associado, ativo, data_adesao, 
+                valor_aplicado, percentual_aplicado, observacao
+            ) VALUES (?, 2, ?, 1, NOW(), ?, ?, ?)
+        ");
+        
+        $valorJuridico = floatval($_POST['valorJuridico']);
+        $percentualJuridico = floatval($_POST['percentualAplicadoJuridico'] ?? 100);
+        
+        $stmt->execute([
+            $associadoId,
+            $tipoAssociadoServico,  // ← ESTE É O CAMPO CRÍTICO
+            $valorJuridico,
+            $percentualJuridico,
+            "Cadastro - Tipo: {$tipoAssociadoServico}"
+        ]);
+        
+        $servicos_criados[] = 'Jurídico';
+        $valor_total_mensal += $valorJuridico;
+        error_log("✓ Serviço Jurídico salvo com tipo: $tipoAssociadoServico");
+    }
+    
+    $db->commit();
+    error_log("✓ Serviços salvos com sucesso!");
+    
+} catch (Exception $e) {
+    if (isset($db) && $db->inTransaction()) {
+        $db->rollBack();
+    }
+    error_log("⚠ Erro ao criar serviços: " . $e->getMessage());
+}
 
     // =====================================
     // ✅ PASSO 5: SALVA DADOS EM JSON
