@@ -1415,4 +1415,424 @@ class Associados
         }
     }
 
+    /**
+     * ========================================
+     * MÉTODOS PARA GERENCIAMENTO DE OBSERVAÇÕES
+     * Adicionar na classe Associados
+     * ========================================
+     */
+
+    /**
+     * Buscar observações de um associado
+     */
+    public function getObservacoes($associadoId)
+    {
+        try {
+            $stmt = $this->db->prepare("
+            SELECT 
+                o.*,
+                f.nome as criado_por_nome,
+                f.cargo as criado_por_cargo,
+                f.foto as criado_por_foto,
+                DATE_FORMAT(o.data_criacao, '%d/%m/%Y às %H:%i') as data_formatada,
+                CASE 
+                    WHEN o.data_criacao >= DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 
+                    ELSE 0 
+                END as recente
+            FROM Observacoes_Associado o
+            LEFT JOIN Funcionarios f ON o.criado_por = f.id
+            WHERE o.associado_id = ? AND o.ativo = 1
+            ORDER BY o.data_criacao DESC
+        ");
+
+            $stmt->execute([$associadoId]);
+            $observacoes = $stmt->fetchAll();
+
+            // Adicionar tags baseadas na categoria
+            foreach ($observacoes as &$obs) {
+                $obs['tags'] = $this->getTagsObservacao($obs);
+            }
+
+            return $observacoes;
+
+        } catch (PDOException $e) {
+            error_log("Erro ao buscar observações: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
+     * Adicionar nova observação
+     */
+    public function adicionarObservacao($dados)
+    {
+        try {
+            $this->db->beginTransaction();
+
+            // Validar dados obrigatórios
+            if (empty($dados['associado_id']) || empty($dados['observacao'])) {
+                throw new Exception("Associado ID e observação são obrigatórios");
+            }
+
+            $stmt = $this->db->prepare("
+            INSERT INTO Observacoes_Associado (
+                associado_id,
+                observacao,
+                categoria,
+                prioridade,
+                importante,
+                criado_por,
+                data_criacao,
+                ativo
+            ) VALUES (?, ?, ?, ?, ?, ?, NOW(), 1)
+        ");
+
+            $stmt->execute([
+                $dados['associado_id'],
+                $dados['observacao'],
+                $dados['categoria'] ?? 'geral',
+                $dados['prioridade'] ?? 'media',
+                $dados['importante'] ?? 0,
+                $_SESSION['funcionario_id'] ?? null
+            ]);
+
+            $observacaoId = $this->db->lastInsertId();
+
+            // Registrar na auditoria
+            $this->registrarAuditoriaObservacao('INSERT', $observacaoId, $dados);
+
+            $this->db->commit();
+
+            // Retornar a observação criada
+            return $this->getObservacaoById($observacaoId);
+
+        } catch (Exception $e) {
+            $this->db->rollBack();
+            error_log("Erro ao adicionar observação: " . $e->getMessage());
+            throw $e;
+        }
+    }
+
+    /**
+     * Atualizar observação
+     */
+    public function atualizarObservacao($id, $dados)
+    {
+        try {
+            $this->db->beginTransaction();
+
+            // Buscar observação atual para auditoria
+            $obsAtual = $this->getObservacaoById($id);
+            if (!$obsAtual) {
+                throw new Exception("Observação não encontrada");
+            }
+
+            // Verificar permissão (só quem criou ou admin pode editar)
+            if ($obsAtual['criado_por'] != $_SESSION['funcionario_id'] && !$this->isAdmin()) {
+                throw new Exception("Sem permissão para editar esta observação");
+            }
+
+            $campos = [];
+            $valores = [];
+
+            if (isset($dados['observacao'])) {
+                $campos[] = "observacao = ?";
+                $valores[] = $dados['observacao'];
+            }
+
+            if (isset($dados['categoria'])) {
+                $campos[] = "categoria = ?";
+                $valores[] = $dados['categoria'];
+            }
+
+            if (isset($dados['prioridade'])) {
+                $campos[] = "prioridade = ?";
+                $valores[] = $dados['prioridade'];
+            }
+
+            if (isset($dados['importante'])) {
+                $campos[] = "importante = ?";
+                $valores[] = $dados['importante'];
+            }
+
+            if (!empty($campos)) {
+                $campos[] = "data_edicao = NOW()";
+                $campos[] = "editado = 1";
+
+                $valores[] = $id;
+
+                $sql = "UPDATE Observacoes_Associado SET " . implode(", ", $campos) . " WHERE id = ?";
+                $stmt = $this->db->prepare($sql);
+                $stmt->execute($valores);
+
+                // Registrar na auditoria
+                $this->registrarAuditoriaObservacao('UPDATE', $id, $dados, $obsAtual);
+            }
+
+            $this->db->commit();
+
+            return $this->getObservacaoById($id);
+
+        } catch (Exception $e) {
+            $this->db->rollBack();
+            error_log("Erro ao atualizar observação: " . $e->getMessage());
+            throw $e;
+        }
+    }
+
+    /**
+     * Excluir observação (soft delete)
+     */
+    public function excluirObservacao($id)
+    {
+        try {
+            $this->db->beginTransaction();
+
+            // Buscar observação
+            $obs = $this->getObservacaoById($id);
+            if (!$obs) {
+                throw new Exception("Observação não encontrada");
+            }
+
+            // Verificar permissão
+            if ($obs['criado_por'] != $_SESSION['funcionario_id'] && !$this->isAdmin()) {
+                throw new Exception("Sem permissão para excluir esta observação");
+            }
+
+            // Soft delete
+            $stmt = $this->db->prepare("
+            UPDATE Observacoes_Associado 
+            SET ativo = 0, 
+                data_exclusao = NOW(),
+                excluido_por = ?
+            WHERE id = ?
+        ");
+
+            $stmt->execute([
+                $_SESSION['funcionario_id'] ?? null,
+                $id
+            ]);
+
+            // Registrar na auditoria
+            $this->registrarAuditoriaObservacao('DELETE', $id, [], $obs);
+
+            $this->db->commit();
+            return true;
+
+        } catch (Exception $e) {
+            $this->db->rollBack();
+            error_log("Erro ao excluir observação: " . $e->getMessage());
+            throw $e;
+        }
+    }
+
+    /**
+     * Alternar importância da observação
+     */
+    public function toggleImportanteObservacao($id)
+    {
+        try {
+            $this->db->beginTransaction();
+
+            // Buscar estado atual
+            $stmt = $this->db->prepare("SELECT importante FROM Observacoes_Associado WHERE id = ? AND ativo = 1");
+            $stmt->execute([$id]);
+            $obs = $stmt->fetch();
+
+            if (!$obs) {
+                throw new Exception("Observação não encontrada");
+            }
+
+            // Alternar estado
+            $novoEstado = $obs['importante'] ? 0 : 1;
+
+            $stmt = $this->db->prepare("
+            UPDATE Observacoes_Associado 
+            SET importante = ?,
+                data_edicao = NOW()
+            WHERE id = ?
+        ");
+
+            $stmt->execute([$novoEstado, $id]);
+
+            $this->db->commit();
+
+            return ['importante' => $novoEstado];
+
+        } catch (Exception $e) {
+            $this->db->rollBack();
+            error_log("Erro ao alternar importância: " . $e->getMessage());
+            throw $e;
+        }
+    }
+
+    /**
+     * Buscar observação por ID
+     */
+    private function getObservacaoById($id)
+    {
+        try {
+            $stmt = $this->db->prepare("
+            SELECT 
+                o.*,
+                f.nome as criado_por_nome,
+                f.cargo as criado_por_cargo,
+                f.foto as criado_por_foto
+            FROM Observacoes_Associado o
+            LEFT JOIN Funcionarios f ON o.criado_por = f.id
+            WHERE o.id = ?
+        ");
+
+            $stmt->execute([$id]);
+            return $stmt->fetch();
+
+        } catch (PDOException $e) {
+            error_log("Erro ao buscar observação por ID: " . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Buscar estatísticas de observações
+     */
+    public function getEstatisticasObservacoes($associadoId)
+    {
+        try {
+            $stmt = $this->db->prepare("
+            SELECT 
+                COUNT(*) as total,
+                COUNT(CASE WHEN importante = 1 THEN 1 END) as importantes,
+                COUNT(CASE WHEN categoria = 'pendencia' THEN 1 END) as pendencias,
+                COUNT(CASE WHEN prioridade = 'urgente' THEN 1 END) as urgentes,
+                COUNT(CASE WHEN data_criacao >= DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 END) as recentes
+            FROM Observacoes_Associado
+            WHERE associado_id = ? AND ativo = 1
+        ");
+
+            $stmt->execute([$associadoId]);
+            return $stmt->fetch();
+
+        } catch (PDOException $e) {
+            error_log("Erro ao buscar estatísticas de observações: " . $e->getMessage());
+            return [
+                'total' => 0,
+                'importantes' => 0,
+                'pendencias' => 0,
+                'urgentes' => 0,
+                'recentes' => 0
+            ];
+        }
+    }
+
+    /**
+     * Gerar tags para observação
+     */
+    private function getTagsObservacao($observacao)
+    {
+        $tags = [];
+
+        // Tag de categoria
+        if (!empty($observacao['categoria'])) {
+            $tags[] = ucfirst($observacao['categoria']);
+        }
+
+        // Tag de prioridade se for alta ou urgente
+        if (in_array($observacao['prioridade'], ['alta', 'urgente'])) {
+            $tags[] = ucfirst($observacao['prioridade']);
+        }
+
+        // Tag de importante
+        if ($observacao['importante']) {
+            $tags[] = 'Importante';
+        }
+
+        // Tag de recente
+        if ($observacao['recente']) {
+            $tags[] = 'Recente';
+        }
+
+        return implode(',', $tags);
+    }
+
+    /**
+     * Registrar auditoria de observação
+     */
+    private function registrarAuditoriaObservacao($acao, $observacaoId, $dadosNovos = [], $dadosAntigos = [])
+    {
+        try {
+            $alteracoes = [];
+
+            if ($acao == 'UPDATE' && $dadosAntigos) {
+                foreach ($dadosNovos as $campo => $valorNovo) {
+                    if (isset($dadosAntigos[$campo]) && $dadosAntigos[$campo] != $valorNovo) {
+                        $alteracoes[] = [
+                            'campo' => $campo,
+                            'valor_anterior' => $dadosAntigos[$campo],
+                            'valor_novo' => $valorNovo
+                        ];
+                    }
+                }
+            }
+
+            $stmt = $this->db->prepare("
+            INSERT INTO Auditoria (
+                tabela, acao, registro_id, associado_id, funcionario_id,
+                alteracoes, ip_origem, browser_info, sessao_id, data_hora
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+        ");
+
+            $associadoId = $dadosNovos['associado_id'] ?? $dadosAntigos['associado_id'] ?? null;
+
+            $stmt->execute([
+                'Observacoes_Associado',
+                $acao,
+                $observacaoId,
+                $associadoId,
+                $_SESSION['funcionario_id'] ?? null,
+                json_encode($alteracoes),
+                $_SERVER['REMOTE_ADDR'] ?? null,
+                $_SERVER['HTTP_USER_AGENT'] ?? null,
+                session_id()
+            ]);
+
+        } catch (PDOException $e) {
+            error_log("Erro ao registrar auditoria de observação: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * Verificar se usuário é admin
+     */
+    private function isAdmin()
+    {
+        // Implementar lógica de verificação de admin
+        // Por exemplo, verificar cargo ou departamento
+        if (isset($_SESSION['funcionario_cargo'])) {
+            return in_array($_SESSION['funcionario_cargo'], ['Diretor', 'Administrador', 'Gerente']);
+        }
+        return false;
+    }
+
+    /**
+     * Contar observações por associado
+     */
+    public function contarObservacoes($associadoId)
+    {
+        try {
+            $stmt = $this->db->prepare("
+            SELECT COUNT(*) as total 
+            FROM Observacoes_Associado 
+            WHERE associado_id = ? AND ativo = 1
+        ");
+
+            $stmt->execute([$associadoId]);
+            $result = $stmt->fetch();
+
+            return $result['total'] ?? 0;
+
+        } catch (PDOException $e) {
+            error_log("Erro ao contar observações: " . $e->getMessage());
+            return 0;
+        }
+    }
 }
