@@ -236,6 +236,8 @@ $headerComponent = HeaderComponent::create([
                             <option value="">Todos</option>
                             <option value="Filiado">Filiado</option>
                             <option value="Desfiliado">Desfiliado</option>
+                            <option value="Remido">Remido</option>
+                            <option value="Agregado">Agregado</option>
                         </select>
                     </div>
 
@@ -811,9 +813,18 @@ $headerComponent = HeaderComponent::create([
             }
 
             dados.forEach(associado => {
-                const situacaoBadge = associado.situacao === 'Filiado'
-                    ? '<span class="status-badge active"><i class="fas fa-check-circle"></i> Filiado</span>'
-                    : '<span class="status-badge inactive"><i class="fas fa-times-circle"></i> Desfiliado</span>';
+                // EXIBICICAO DA SITUACAO
+                const getSituacaoBadge = (situacao) => {
+                    const badges = {
+                        'Filiado': '<span class="status-badge active"><i class="fas fa-check-circle"></i> Filiado</span>',
+                        'Desfiliado': '<span class="status-badge inactive"><i class="fas fa-times-circle"></i> Desfiliado</span>',
+                        'Remido': '<span class="status-badge remido"><i class="fas fa-star"></i> Remido</span>',
+                        'Agregado': '<span class="status-badge agregado"><i class="fas fa-user-plus"></i> Agregado</span>'
+                    };
+                    return badges[situacao] || `<span class="status-badge default"><i class="fas fa-question-circle"></i> ${situacao || 'Indefinido'}</span>`;
+                };
+
+                const situacaoBadge = getSituacaoBadge(associado.situacao);
 
                 const row = document.createElement('tr');
                 row.onclick = (e) => {
@@ -958,22 +969,53 @@ $headerComponent = HeaderComponent::create([
                     : 'Data não informada';
 
             // Status
-            const statusPill = document.getElementById('modalStatusPill');
-            if (associado.situacao === 'Filiado') {
-                statusPill.innerHTML = `
+            // CORREÇÃO: Status baseado na situação real
+const statusPill = document.getElementById('modalStatusPill');
+let statusHtml = '';
+
+switch(associado.situacao) {
+    case 'Filiado':
+        statusHtml = `
             <div class="status-pill active">
                 <i class="fas fa-check-circle"></i>
                 Ativo
             </div>
         `;
-            } else {
-                statusPill.innerHTML = `
+        break;
+    case 'Desfiliado':
+        statusHtml = `
             <div class="status-pill inactive">
                 <i class="fas fa-times-circle"></i>
                 Inativo
             </div>
         `;
-            }
+        break;
+    case 'Remido':
+        statusHtml = `
+            <div class="status-pill remido">
+                <i class="fas fa-star"></i>
+                Remido
+            </div>
+        `;
+        break;
+    case 'Agregado':
+        statusHtml = `
+            <div class="status-pill agregado">
+                <i class="fas fa-user-plus"></i>
+                Agregado
+            </div>
+        `;
+        break;
+    default:
+        statusHtml = `
+            <div class="status-pill default">
+                <i class="fas fa-question-circle"></i>
+                ${associado.situacao || 'Indefinido'}
+            </div>
+        `;
+}
+
+statusPill.innerHTML = statusHtml;
 
             // Avatar
             const modalAvatar = document.getElementById('modalAvatarHeader');

@@ -1,6 +1,6 @@
 <?php
 /**
- * Formulário de Cadastro de Associados - VERSÃO FICHA DE FILIAÇÃO CORRIGIDA
+ * Formulário de Cadastro de Associados - VERSÃO CORRIGIDA PATENTE
  * pages/cadastroForm.php
  */
 
@@ -32,10 +32,123 @@ $associadoId = $isEdit ? intval($_GET['id']) : null;
 $associadoData = null;
 
 if ($isEdit) {
-    $associados = new Associados();
-    $associadoData = $associados->getById($associadoId);
-
-    if (!$associadoData) {
+    try {
+        $db = Database::getInstance(DB_NAME_CADASTRO)->getConnection();
+        
+        error_log("=== INÍCIO BUSCA DADOS ASSOCIADO ===");
+        error_log("Associado ID: $associadoId");
+        
+        // 1. BUSCA DADOS PRINCIPAIS DO ASSOCIADO
+        $stmt = $db->prepare("SELECT * FROM Associados WHERE id = ?");
+        $stmt->execute([$associadoId]);
+        $associadoData = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$associadoData) {
+            error_log("ERRO: Associado não encontrado com ID: $associadoId");
+            header('Location: dashboard.php');
+            exit;
+        }
+        
+        error_log("✓ Dados básicos do associado carregados");
+        
+        // 2. BUSCA DADOS MILITARES - MÉTODO DIRETO
+        $stmtMilitar = $db->prepare("SELECT * FROM Militar WHERE associado_id = ?");
+        $stmtMilitar->execute([$associadoId]);
+        $dadosMilitar = $stmtMilitar->fetch(PDO::FETCH_ASSOC);
+        
+        if ($dadosMilitar) {
+            // Se encontrou dados militares, adiciona ao array principal
+            $associadoData['corporacao'] = $dadosMilitar['corporacao'];
+            $associadoData['patente'] = $dadosMilitar['patente'];
+            $associadoData['categoria'] = $dadosMilitar['categoria'];
+            $associadoData['lotacao'] = $dadosMilitar['lotacao'];
+            $associadoData['unidade'] = $dadosMilitar['unidade'];
+            
+            error_log("✓ Dados militares encontrados:");
+            error_log("  - Patente: '" . ($dadosMilitar['patente'] ?? 'VAZIO') . "'");
+            error_log("  - Corporação: '" . ($dadosMilitar['corporacao'] ?? 'VAZIO') . "'");
+            error_log("  - Categoria: '" . ($dadosMilitar['categoria'] ?? 'VAZIO') . "'");
+        } else {
+            // Se não encontrou, cria registro vazio e define valores padrão
+            error_log("⚠ Nenhum dado militar encontrado. Criando registro...");
+            
+            $stmtInsert = $db->prepare("
+                INSERT INTO Militar (associado_id, corporacao, patente, categoria, lotacao, unidade) 
+                VALUES (?, '', '', '', '', '')
+            ");
+            $stmtInsert->execute([$associadoId]);
+            
+            // Define valores vazios no array
+            $associadoData['corporacao'] = '';
+            $associadoData['patente'] = '';
+            $associadoData['categoria'] = '';
+            $associadoData['lotacao'] = '';
+            $associadoData['unidade'] = '';
+            
+            error_log("✓ Registro militar criado com valores vazios");
+        }
+        
+        // 3. BUSCA DADOS DE ENDEREÇO
+        $stmtEndereco = $db->prepare("SELECT * FROM Endereco WHERE associado_id = ?");
+        $stmtEndereco->execute([$associadoId]);
+        $dadosEndereco = $stmtEndereco->fetch(PDO::FETCH_ASSOC);
+        
+        if ($dadosEndereco) {
+            $associadoData['cep'] = $dadosEndereco['cep'];
+            $associadoData['endereco'] = $dadosEndereco['endereco'];
+            $associadoData['bairro'] = $dadosEndereco['bairro'];
+            $associadoData['cidade'] = $dadosEndereco['cidade'];
+            $associadoData['numero'] = $dadosEndereco['numero'];
+            $associadoData['complemento'] = $dadosEndereco['complemento'];
+            error_log("✓ Dados de endereço carregados");
+        }
+        
+        // 4. BUSCA DADOS FINANCEIROS
+        $stmtFinanceiro = $db->prepare("SELECT * FROM Financeiro WHERE associado_id = ?");
+        $stmtFinanceiro->execute([$associadoId]);
+        $dadosFinanceiro = $stmtFinanceiro->fetch(PDO::FETCH_ASSOC);
+        
+        if ($dadosFinanceiro) {
+            $associadoData['tipoAssociado'] = $dadosFinanceiro['tipoAssociado'];
+            $associadoData['situacaoFinanceira'] = $dadosFinanceiro['situacaoFinanceira'];
+            $associadoData['vinculoServidor'] = $dadosFinanceiro['vinculoServidor'];
+            $associadoData['localDebito'] = $dadosFinanceiro['localDebito'];
+            $associadoData['agencia'] = $dadosFinanceiro['agencia'];
+            $associadoData['operacao'] = $dadosFinanceiro['operacao'];
+            $associadoData['contaCorrente'] = $dadosFinanceiro['contaCorrente'];
+            $associadoData['observacoes'] = $dadosFinanceiro['observacoes'];
+            $associadoData['doador'] = $dadosFinanceiro['doador'];
+            error_log("✓ Dados financeiros carregados");
+        }
+        
+        // 5. BUSCA DADOS DE CONTRATO/FILIAÇÃO
+        $stmtContrato = $db->prepare("SELECT * FROM Contrato WHERE associado_id = ?");
+        $stmtContrato->execute([$associadoId]);
+        $dadosContrato = $stmtContrato->fetch(PDO::FETCH_ASSOC);
+        
+        if ($dadosContrato) {
+            $associadoData['data_filiacao'] = $dadosContrato['dataFiliacao'];
+            $associadoData['dataDesfiliacao'] = $dadosContrato['dataDesfiliacao'];
+            error_log("✓ Dados de contrato carregados");
+        }
+        
+        // 6. BUSCA DEPENDENTES
+        $stmtDep = $db->prepare("SELECT * FROM Dependentes WHERE associado_id = ? ORDER BY nome ASC");
+        $stmtDep->execute([$associadoId]);
+        $dependentes = $stmtDep->fetchAll(PDO::FETCH_ASSOC);
+        $associadoData['dependentes'] = $dependentes;
+        error_log("✓ Dependentes carregados: " . count($dependentes));
+        
+        // DEBUG FINAL
+        error_log("=== RESULTADO FINAL ===");
+        error_log("Patente final: '" . ($associadoData['patente'] ?? 'NULL') . "'");
+        error_log("Corporação final: '" . ($associadoData['corporacao'] ?? 'NULL') . "'");
+        error_log("Total de campos carregados: " . count($associadoData));
+        error_log("=== FIM BUSCA DADOS ===");
+        
+    } catch (Exception $e) {
+        error_log("ERRO na busca de dados: " . $e->getMessage());
+        error_log("Stack trace: " . $e->getTraceAsString());
         header('Location: dashboard.php');
         exit;
     }
@@ -469,6 +582,38 @@ $lotacoes = [
     "SUPERINTENDENCIA DE SEGURANCA PENITENCIARIA",
     "TERCEIRA SECAO DO ESTADO MAIOR"
 ];
+
+// CORREÇÃO: Definir array de patentes com encoding correto E hífens corretos
+$patentes = [
+    'Praças' => [
+        'Aluno Soldado',
+        'Soldado 2ª Classe',
+        'Soldado 1ª Classe', 
+        'Cabo',
+        'Terceiro Sargento',
+        'Terceiro-Sargento', // Versão com hífen
+        'Segundo Sargento', 
+        'Segundo-Sargento', // Versão com hífen
+        'Primeiro Sargento',
+        'Primeiro-Sargento', // Versão com hífen
+        'Subtenente',
+        'Suboficial'
+    ],
+    'Oficiais' => [
+        'Cadete',
+        'Aluno Oficial',
+        'Aspirante-a-Oficial',
+        'Segundo-Tenente',
+        'Primeiro-Tenente',
+        'Capitão',
+        'Major',
+        'Tenente-Coronel',
+        'Coronel'
+    ],
+    'Outros' => [
+        'Civil'
+    ]
+];
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -511,7 +656,9 @@ $lotacoes = [
             isEdit: <?php echo $isEdit ? 'true' : 'false'; ?>,
             associadoId: <?php echo $associadoId ? $associadoId : 'null'; ?>,
             regrasContribuicao: <?php echo json_encode($regrasContribuicao); ?>,
-            servicos: <?php echo json_encode($servicos); ?>
+            servicos: <?php echo json_encode($servicos); ?>,
+            // CORREÇÃO: Passa dados militares para o JavaScript
+            associadoData: <?php echo json_encode($associadoData); ?>
         };
     </script>
 </head>
@@ -685,6 +832,7 @@ $lotacoes = [
                                 <option value="Casado(a)" <?php echo (isset($associadoData['estadoCivil']) && $associadoData['estadoCivil'] == 'Casado(a)') ? 'selected' : ''; ?>>Casado(a)</option>
                                 <option value="Divorciado(a)" <?php echo (isset($associadoData['estadoCivil']) && $associadoData['estadoCivil'] == 'Divorciado(a)') ? 'selected' : ''; ?>>Divorciado(a)
                                 </option>
+                                <option value="Separado(a) Judicialmente" <?php echo (isset($associadoData['estadoCivil']) && $associadoData['estadoCivil'] == 'Separado(a) Judicialmente') ? 'selected' : ''; ?>>Separado(a) Judicialmente</option>
                                 <option value="Viúvo(a)" <?php echo (isset($associadoData['estadoCivil']) && $associadoData['estadoCivil'] == 'Viúvo(a)') ? 'selected' : ''; ?>>Viúvo(a)</option>
                                 <option value="União Estável" <?php echo (isset($associadoData['estadoCivil']) && $associadoData['estadoCivil'] == 'União Estável') ? 'selected' : ''; ?>>União Estável
                                 </option>
@@ -765,14 +913,16 @@ $lotacoes = [
                         </div>
 
                         <div class="form-group">
-                            <label class="form-label">
-                                Situação <span class="required">*</span>
-                            </label>
-                            <select class="form-input form-select" name="situacao" id="situacao" required>
-                                <option value="Filiado" <?php echo (!isset($associadoData['situacao']) || $associadoData['situacao'] == 'Filiado') ? 'selected' : ''; ?>>Filiado</option>
-                                <option value="Desfiliado" <?php echo (isset($associadoData['situacao']) && $associadoData['situacao'] == 'Desfiliado') ? 'selected' : ''; ?>>Desfiliado</option>
-                            </select>
-                        </div>
+                        <label class="form-label">
+                            Situação <span class="required">*</span>
+                        </label>
+                        <select class="form-input form-select" name="situacao" id="situacao" required>
+                            <option value="Filiado" <?php echo (!isset($associadoData['situacao']) || $associadoData['situacao'] == 'Filiado') ? 'selected' : ''; ?>>Filiado</option>
+                            <option value="Desfiliado" <?php echo (isset($associadoData['situacao']) && $associadoData['situacao'] == 'Desfiliado') ? 'selected' : ''; ?>>Desfiliado</option>
+                            <option value="Remido" <?php echo (isset($associadoData['situacao']) && $associadoData['situacao'] == 'Remido') ? 'selected' : ''; ?>>Remido</option>
+                            <option value="Agregado" <?php echo (isset($associadoData['situacao']) && $associadoData['situacao'] == 'Agregado') ? 'selected' : ''; ?>>Agregado</option>
+                        </select>
+                    </div>
 
                         <div class="form-group">
                             <label class="form-label">
@@ -935,36 +1085,22 @@ $lotacoes = [
                         </div>
 
                         <div class="form-group">
-                            <label class="form-label">
-                                Patente
-                            </label>
-                            <select class="form-input form-select" name="patente" id="patente">
+                            <label class="form-label">Patente</label>
+                            
+                            
+                            
+                            <select class="form-input form-select" name="patente" id="patente" data-current-value="<?php echo isset($associadoData['patente']) ? htmlspecialchars($associadoData['patente'], ENT_QUOTES, 'UTF-8') : ''; ?>">
                                 <option value="">Selecione...</option>
-                                <optgroup label="Praças">
-                                    <option value="Aluno Soldado" <?php echo (isset($associadoData['patente']) && $associadoData['patente'] == 'Aluno Soldado') ? 'selected' : ''; ?>>Aluno Soldado</option>
-                                    <option value="Soldado 2ª Classe" <?php echo (isset($associadoData['patente']) && $associadoData['patente'] == 'Soldado 2ª Classe') ? 'selected' : ''; ?>>Soldado 2ª Classe</option>
-                                    <option value="Soldado 1ª Classe" <?php echo (isset($associadoData['patente']) && $associadoData['patente'] == 'Soldado 1ª Classe') ? 'selected' : ''; ?>>Soldado 1ª Classe</option>
-                                    <option value="Cabo" <?php echo (isset($associadoData['patente']) && $associadoData['patente'] == 'Cabo') ? 'selected' : ''; ?>>Cabo</option>
-                                    <option value="Terceiro Sargento" <?php echo (isset($associadoData['patente']) && $associadoData['patente'] == 'Terceiro Sargento') ? 'selected' : ''; ?>>Terceiro Sargento</option>
-                                    <option value="Segundo Sargento" <?php echo (isset($associadoData['patente']) && $associadoData['patente'] == 'Segundo Sargento') ? 'selected' : ''; ?>>Segundo Sargento</option>
-                                    <option value="Primeiro Sargento" <?php echo (isset($associadoData['patente']) && $associadoData['patente'] == 'Primeiro Sargento') ? 'selected' : ''; ?>>Primeiro Sargento</option>
-                                    <option value="Subtenente" <?php echo (isset($associadoData['patente']) && $associadoData['patente'] == 'Subtenente') ? 'selected' : ''; ?>>Subtenente</option>
-                                    <option value="Suboficial" <?php echo (isset($associadoData['patente']) && $associadoData['patente'] == 'Suboficial') ? 'selected' : ''; ?>>Suboficial</option>
-                                </optgroup>
-                                <optgroup label="Oficiais">
-                                    <option value="Cadete" <?php echo (isset($associadoData['patente']) && $associadoData['patente'] == 'Cadete') ? 'selected' : ''; ?>>Cadete</option>
-                                    <option value="Aluno Oficial" <?php echo (isset($associadoData['patente']) && $associadoData['patente'] == 'Aluno Oficial') ? 'selected' : ''; ?>>Aluno Oficial</option>
-                                    <option value="Aspirante-a-Oficial" <?php echo (isset($associadoData['patente']) && $associadoData['patente'] == 'Aspirante-a-Oficial') ? 'selected' : ''; ?>>Aspirante-a-Oficial</option>
-                                    <option value="Segundo-Tenente" <?php echo (isset($associadoData['patente']) && $associadoData['patente'] == 'Segundo-Tenente') ? 'selected' : ''; ?>>Segundo-Tenente</option>
-                                    <option value="Primeiro-Tenente" <?php echo (isset($associadoData['patente']) && $associadoData['patente'] == 'Primeiro-Tenente') ? 'selected' : ''; ?>>Primeiro-Tenente</option>
-                                    <option value="Capitão" <?php echo (isset($associadoData['patente']) && $associadoData['patente'] == 'Capitão') ? 'selected' : ''; ?>>Capitão</option>
-                                    <option value="Major" <?php echo (isset($associadoData['patente']) && $associadoData['patente'] == 'Major') ? 'selected' : ''; ?>>Major</option>
-                                    <option value="Tenente-Coronel" <?php echo (isset($associadoData['patente']) && $associadoData['patente'] == 'Tenente-Coronel') ? 'selected' : ''; ?>>Tenente-Coronel</option>
-                                    <option value="Coronel" <?php echo (isset($associadoData['patente']) && $associadoData['patente'] == 'Coronel') ? 'selected' : ''; ?>>Coronel</option>
-                                </optgroup>
-                                <optgroup label="Outros">
-                                    <option value="Civil" <?php echo (isset($associadoData['patente']) && $associadoData['patente'] == 'Civil') ? 'selected' : ''; ?>>Civil</option>
-                                </optgroup>
+                                <?php foreach($patentes as $grupo => $listPatentes): ?>
+                                    <optgroup label="<?php echo $grupo; ?>">
+                                        <?php foreach($listPatentes as $patente): ?>
+                                            <option value="<?php echo htmlspecialchars($patente, ENT_QUOTES, 'UTF-8'); ?>" 
+                                                <?php echo (isset($associadoData['patente']) && $associadoData['patente'] == $patente) ? 'selected' : ''; ?>>
+                                                <?php echo htmlspecialchars($patente, ENT_QUOTES, 'UTF-8'); ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </optgroup>
+                                <?php endforeach; ?>
                             </select>
                         </div>
 
@@ -1425,21 +1561,254 @@ $lotacoes = [
     <script src="js/cadastroFormAutocomplete.js"></script>
     
     <script>
-    // Inicializa Select2 para o campo de lotação
+    // CORREÇÃO: Função para definir valor do select após carregar
+    function definirValorSelect(selectId, valor) {
+        console.log(`=== DEFININDO VALOR PARA ${selectId} ===`);
+        console.log(`Valor procurado: "${valor}"`);
+        
+        const select = document.getElementById(selectId);
+        if (!select) {
+            console.warn(`❌ Select ${selectId} não encontrado`);
+            return false;
+        }
+
+        // Lista todas as opções disponíveis para debug
+        const options = select.querySelectorAll('option');
+        console.log(`Opções disponíveis em ${selectId}:`);
+        options.forEach((option, index) => {
+            if (option.value) {
+                console.log(`  [${index}] "${option.value}"`);
+            }
+        });
+
+        // Procura a opção exata
+        let encontrou = false;
+        
+        options.forEach(option => {
+            if (option.value === valor) {
+                option.selected = true;
+                encontrou = true;
+                console.log(`✅ Opção encontrada e selecionada: "${valor}"`);
+            }
+        });
+
+        if (!encontrou) {
+            console.warn(`❌ Valor "${valor}" NÃO encontrado nas opções do select ${selectId}`);
+            console.warn(`Verifique se o valor está exatamente igual no banco e no array PHP`);
+        }
+
+        // Atualiza Select2 se estiver inicializado
+        if (typeof $ !== 'undefined' && $(`#${selectId}`).hasClass('select2-hidden-accessible')) {
+            $(`#${selectId}`).trigger('change');
+            console.log(`🔄 Select2 atualizado para ${selectId}`);
+        }
+
+        console.log(`=== FIM ${selectId} ===\n`);
+        return encontrou;
+    }
+
+    // Inicializa Select2 para os campos
     $(document).ready(function() {
+        console.log('=== INICIALIZANDO PÁGINA ===');
+        
+        // Inicializa Select2 para lotação
         $('#lotacao').select2({
             placeholder: 'Selecione ou digite para buscar...',
             language: 'pt-BR',
             width: '100%',
             allowClear: true
         });
+        
+        // Inicializa Select2 para patente - IMPORTANTE: garante que todas as opções apareçam
+        $('#patente').select2({
+            placeholder: 'Selecione a patente...',
+            language: 'pt-BR',
+            width: '100%',
+            allowClear: true,
+            dropdownParent: $('#patente').parent() // Garante que o dropdown apareça corretamente
+        });
+        
+        // Inicializa Select2 para corporação
+        $('#corporacao').select2({
+            placeholder: 'Selecione a corporação...',
+            language: 'pt-BR',
+            width: '100%',
+            allowClear: true
+        });
+        
+        // Inicializa Select2 para categoria
+        $('#categoria').select2({
+            placeholder: 'Selecione a situação funcional...',
+            language: 'pt-BR',  
+            width: '100%',
+            allowClear: true
+        });
 
-        // Se estiver editando, carrega os dados dos serviços
+        // CORREÇÃO: Se estiver editando, define valores após inicialização
         <?php if ($isEdit && isset($associadoData)): ?>
+            console.log('=== MODO EDIÇÃO DETECTADO ===');
+            
+            // Aguarda um pouco para garantir que tudo está carregado
+            setTimeout(function() {
+                console.log('Definindo valores dos campos militares...');
+                
+                // Define patente
+                <?php if (isset($associadoData['patente']) && !empty($associadoData['patente'])): ?>
+                    const patenteAtual = <?php echo json_encode($associadoData['patente']); ?>;
+                    console.log('Patente do banco:', patenteAtual);
+                    
+                    if (!definirValorSelect('patente', patenteAtual)) {
+                        console.error('Falha ao definir patente:', patenteAtual);
+                    }
+                <?php endif; ?>
+                
+                // Define corporação
+                <?php if (isset($associadoData['corporacao']) && !empty($associadoData['corporacao'])): ?>
+                    const corporacaoAtual = <?php echo json_encode($associadoData['corporacao']); ?>;
+                    console.log('Corporação do banco:', corporacaoAtual);
+                    
+                    if (!definirValorSelect('corporacao', corporacaoAtual)) {
+                        console.error('Falha ao definir corporação:', corporacaoAtual);
+                    }
+                <?php endif; ?>
+                
+                // Define categoria
+                <?php if (isset($associadoData['categoria']) && !empty($associadoData['categoria'])): ?>
+                    const categoriaAtual = <?php echo json_encode($associadoData['categoria']); ?>;
+                    console.log('Categoria do banco:', categoriaAtual);
+                    
+                    if (!definirValorSelect('categoria', categoriaAtual)) {
+                        console.error('Falha ao definir categoria:', categoriaAtual);
+                    }
+                <?php endif; ?>
+                
+                // Define lotação
+                <?php if (isset($associadoData['lotacao']) && !empty($associadoData['lotacao'])): ?>
+                    const lotacaoAtual = <?php echo json_encode($associadoData['lotacao']); ?>;
+                    console.log('Lotação do banco:', lotacaoAtual);
+                    
+                    // Para Select2, usa método específico
+                    $('#lotacao').val(lotacaoAtual).trigger('change');
+                    console.log('✅ Lotação definida via Select2');
+                <?php endif; ?>
+                
+                // Define unidade (campo input text)
+                <?php if (isset($associadoData['unidade']) && !empty($associadoData['unidade'])): ?>
+                    const unidadeAtual = <?php echo json_encode($associadoData['unidade']); ?>;
+                    console.log('Unidade do banco:', unidadeAtual);
+                    
+                    const unidadeInput = document.getElementById('unidade');
+                    if (unidadeInput) {
+                        unidadeInput.value = unidadeAtual;
+                        console.log('✅ Unidade definida');
+                    }
+                <?php endif; ?>
+                
+                console.log('✓ Valores militares definidos');
+            }, 500);
+            
             // Busca dados dos serviços ao carregar página de edição
             buscarDadosServicosAssociado(<?php echo $associadoId; ?>);
+            
+            // CORREÇÃO EXTRA: Garante que todas as patentes apareçam após carregar
+            setTimeout(function() {
+                console.log('🔄 Garantindo que todas as patentes apareçam no dropdown...');
+                
+                // Força o Select2 da patente a recarregar todas as opções
+                $('#patente').select2('destroy').select2({
+                    placeholder: 'Selecione a patente...',
+                    language: 'pt-BR',
+                    width: '100%',
+                    allowClear: true
+                });
+                
+                // Redefine o valor da patente se existir
+                <?php if (isset($associadoData['patente']) && !empty($associadoData['patente'])): ?>
+                    const patenteParaRedefinir = <?php echo json_encode($associadoData['patente']); ?>;
+                    $('#patente').val(patenteParaRedefinir).trigger('change');
+                    console.log('✅ Patente redefinida após recarregar Select2');
+                <?php endif; ?>
+                
+                console.log('✅ Select2 da patente recarregado com todas as opções');
+            }, 1200);
         <?php endif; ?>
+        
+        // Evento especial para garantir que patente mostre todas as opções
+        $('#patente').on('select2:open', function() {
+            console.log('🔽 Dropdown da patente aberto - verificando se todas as opções estão disponíveis');
+            
+            // Verifica se todas as opções estão sendo mostradas
+            const totalOptions = $('#patente option').length;
+            console.log(`📊 Total de opções de patente disponíveis: ${totalOptions}`);
+            
+            if (totalOptions < 15) { // Esperamos pelo menos 15 patentes
+                console.warn('⚠️ Poucas opções encontradas, pode haver problema no carregamento');
+            }
+        });
+        
+        // Evento para debug quando o valor é alterado
+        $('#patente').on('change', function() {
+            const valorSelecionado = $(this).val();
+            console.log(`✅ Patente selecionada: "${valorSelecionado}"`);
+        });
+        
+        console.log('✓ Página inicializada');
     });
+
+    // Função de debug para patente
+    function debugPatente() {
+        console.log('🔍 === DEBUG PATENTE ===');
+        
+        const selectPatente = document.getElementById('patente');
+        const valorAtual = selectPatente.value;
+        
+        console.log(`Valor atual selecionado: "${valorAtual}"`);
+        console.log('Lista de TODAS as opções disponíveis:');
+        
+        const opcoes = selectPatente.querySelectorAll('option');
+        opcoes.forEach((opcao, index) => {
+            if (opcao.value) {
+                const selected = opcao.selected ? ' ← SELECIONADA' : '';
+                console.log(`  [${index}] "${opcao.value}"${selected}`);
+            }
+        });
+        
+        console.log(`Total de opções (incluindo vazia): ${opcoes.length}`);
+        
+        // Testa abrir o dropdown
+        $('#patente').select2('open');
+        setTimeout(() => {
+            $('#patente').select2('close');
+            console.log('✅ Dropdown testado - se você viu todas as opções, está funcionando!');
+        }, 2000);
+        
+        console.log('🔍 === FIM DEBUG ===');
+    }
+    
+    // Função para forçar reset completo do Select2 da patente
+    function resetPatenteSelect2() {
+        console.log('🔄 Resetando Select2 da patente...');
+        
+        const valorAtual = $('#patente').val();
+        
+        // Destroi e recria o Select2
+        $('#patente').select2('destroy');
+        $('#patente').select2({
+            placeholder: 'Selecione a patente...',
+            language: 'pt-BR',
+            width: '100%',
+            allowClear: true,
+            closeOnSelect: true
+        });
+        
+        // Redefine o valor se existia
+        if (valorAtual) {
+            $('#patente').val(valorAtual).trigger('change');
+            console.log(`✅ Valor "${valorAtual}" redefinido após reset`);
+        }
+        
+        console.log('✅ Reset do Select2 concluído');
+    }
 
     // Função para buscar dados dos serviços do associado em edição
     function buscarDadosServicosAssociado(associadoId) {
