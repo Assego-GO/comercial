@@ -3,6 +3,7 @@
 /**
  * Página de Serviços Financeiros - Sistema ASSEGO
  * pages/financeiro.php
+ * VERSÃO ATUALIZADA - Suporte a múltiplos RGs de diferentes corporações
  */
 
 // Tratamento de erros para debug
@@ -44,36 +45,28 @@ error_log("Departamento ID: " . ($usuarioLogado['departamento_id'] ?? 'NULL'));
 error_log("É Diretor: " . ($auth->isDiretor() ? 'SIM' : 'NÃO'));
 
 // Verificação de permissões: APENAS financeiro (ID: 5) OU presidência (ID: 1)
-// NOTA: Ajuste o ID do departamento financeiro conforme sua base de dados
 if (isset($usuarioLogado['departamento_id'])) {
     $deptId = $usuarioLogado['departamento_id'];
     $departamentoUsuario = $deptId;
     
-    // Debug dos testes de comparação
-    error_log("Testes de comparação:");
-    error_log("  deptId === '5': " . ($deptId === '5' ? 'true' : 'false'));
-    error_log("  deptId === 5: " . ($deptId === 5 ? 'true' : 'false'));
-    error_log("  deptId == 5: " . ($deptId == 5 ? 'true' : 'false'));
-    error_log("  deptId === '1': " . ($deptId === '1' ? 'true' : 'false'));
-    error_log("  deptId === 1: " . ($deptId === 1 ? 'true' : 'false'));
-    error_log("  deptId == 1: " . ($deptId == 1 ? 'true' : 'false'));
-    
-    if ($deptId == 5) { // Financeiro - comparação flexível para pegar string ou int
+    if ($deptId == 5) { // Financeiro
         $temPermissaoFinanceiro = true;
         $isFinanceiro = true;
         error_log("✅ Permissão concedida: Usuário pertence ao Setor Financeiro (ID: 5)");
-    } elseif ($deptId == 1) { // Presidência - comparação flexível para pegar string ou int
+    } elseif ($deptId == 1) { // Presidência
         $temPermissaoFinanceiro = true;
         $isPresidencia = true;
         error_log("✅ Permissão concedida: Usuário pertence à Presidência (ID: 1)");
     } else {
         $motivoNegacao = 'Acesso restrito EXCLUSIVAMENTE ao Setor Financeiro e Presidência.';
-        error_log("❌ Acesso negado. Departamento: '$deptId' (tipo: " . gettype($deptId) . "). Permitido apenas: Financeiro (ID: 5) ou Presidência (ID: 1)");
+        error_log("❌ Acesso negado. Departamento: '$deptId'. Permitido apenas: Financeiro (ID: 5) ou Presidência (ID: 1)");
     }
 } else {
     $motivoNegacao = 'Departamento não identificado no perfil do usuário.';
     error_log("❌ departamento_id não existe no array do usuário");
 }
+
+
 
 // Log final do resultado
 if (!$temPermissaoFinanceiro) {
@@ -85,11 +78,13 @@ if (!$temPermissaoFinanceiro) {
 
 // No arquivo financeiro.php, substitua a seção de busca de estatísticas (linhas ~128-165) por:
 
+
 // Busca estatísticas do setor financeiro (apenas se tem permissão)
 if ($temPermissaoFinanceiro) {
     try {
         $db = Database::getInstance(DB_NAME_CADASTRO)->getConnection();
         
+
         // 1. Total de associados ativos (igual ao dashboard)
         $sql = "SELECT COUNT(DISTINCT a.id) as total 
                 FROM Associados a 
@@ -111,6 +106,7 @@ if ($temPermissaoFinanceiro) {
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
         $arrecadacaoMes = floatval($result['valor_mes'] ?? 0);
         
+
         error_log("Arrecadação mensal total: R$ " . $arrecadacaoMes);
         
         // 3. Pagamentos recebidos hoje (se existir tabela de pagamentos)
@@ -192,7 +188,7 @@ error_log("Inadimplentes: " . $associadosInadimplentes);
 
 // Cria instância do Header Component
 $headerComponent = HeaderComponent::create([
-    'usuario' => $usuarioLogado, // ← Passa TODO o array do usuário
+    'usuario' => $usuarioLogado,
     'isDiretor' => $auth->isDiretor(),
     'activeTab' => 'financeiro',
     'notificationCount' => $associadosInadimplentes,
@@ -330,7 +326,6 @@ $headerComponent = HeaderComponent::create([
         .stat-card.success { border-left-color: var(--success); }
         .stat-card.warning { border-left-color: var(--warning); }
         .stat-card.danger { border-left-color: var(--danger); }
-        .stat-card.info { border-left-color: var(--info); }
 
         .stat-header {
             display: flex;
@@ -381,7 +376,6 @@ $headerComponent = HeaderComponent::create([
         .stat-icon.success { background: var(--success); color: var(--success); }
         .stat-icon.warning { background: var(--warning); color: var(--warning); }
         .stat-icon.danger { background: var(--danger); color: var(--danger); }
-        .stat-icon.info { background: var(--info); color: var(--info); }
 
         /* Seções de Serviços */
         .services-container {
@@ -476,57 +470,6 @@ $headerComponent = HeaderComponent::create([
             transition: all 0.3s ease;
         }
 
-        .btn-secondary:hover {
-            background: #5a6268;
-            transform: translateY(-2px);
-        }
-
-        /* Seções Financeiras */
-        .financeiro-options {
-            display: grid;
-            gap: 1.5rem;
-        }
-
-        .financeiro-option {
-            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-            border-radius: 12px;
-            padding: 2rem;
-            border: 2px solid transparent;
-            transition: all 0.3s ease;
-            cursor: pointer;
-        }
-
-        .financeiro-option:hover {
-            border-color: var(--primary);
-            transform: translateY(-2px);
-            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-        }
-
-        .financeiro-option-icon {
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            background: var(--primary);
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-            margin-bottom: 1rem;
-        }
-
-        .financeiro-option h5 {
-            font-weight: 600;
-            color: var(--dark);
-            margin-bottom: 0.5rem;
-        }
-
-        .financeiro-option p {
-            color: var(--secondary);
-            margin: 0;
-            font-size: 0.9rem;
-        }
-
         /* Alert personalizado */
         .alert-custom {
             border-radius: 12px;
@@ -546,18 +489,6 @@ $headerComponent = HeaderComponent::create([
             background: linear-gradient(135deg, var(--primary-light) 0%, #d4edda 100%);
             color: var(--primary-dark);
             border-left: 4px solid var(--primary);
-        }
-
-        .alert-success-custom {
-            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
-            color: #155724;
-            border-left: 4px solid var(--success);
-        }
-
-        .alert-warning-custom {
-            background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
-            color: #856404;
-            border-left: 4px solid var(--warning);
         }
 
         /* Dados financeiros */
@@ -605,6 +536,133 @@ $headerComponent = HeaderComponent::create([
             word-break: break-word;
         }
 
+        /* Modal de Seleção de Associados */
+        .modal-selecao-associado {
+            z-index: 9999;
+        }
+
+        .associado-card {
+            border: 2px solid #e9ecef;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        .associado-card:hover {
+            border-color: var(--primary);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0, 86, 210, 0.15);
+        }
+
+        .associado-card.selecionado {
+            border-color: var(--success);
+            background: linear-gradient(135deg, #ffffff 0%, #f0fff4 100%);
+        }
+
+        .associado-foto {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid #e9ecef;
+        }
+
+        .associado-info {
+            flex: 1;
+            margin-left: 1.5rem;
+        }
+
+        .associado-nome {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--dark);
+            margin-bottom: 0.25rem;
+        }
+
+        .associado-rg {
+            color: var(--secondary);
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .associado-militar {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .badge-corporacao {
+            padding: 0.35rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .badge-pm {
+            background: #e3f2fd;
+            color: #1565c0;
+        }
+
+        .badge-bm {
+            background: #ffebee;
+            color: #c62828;
+        }
+
+        .badge-pc {
+            background: #f3e5f5;
+            color: #6a1b9a;
+        }
+
+        .badge-default {
+            background: #f5f5f5;
+            color: #616161;
+        }
+
+        /* Identificação Militar */
+        .identificacao-militar {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .identificacao-militar h6 {
+            color: var(--primary);
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        .militar-info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+
+        .militar-info-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .militar-info-label {
+            font-size: 0.8rem;
+            color: var(--secondary);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .militar-info-value {
+            font-size: 1rem;
+            color: var(--dark);
+            font-weight: 500;
+        }
+
         /* Loading spinner */
         .loading-spinner {
             width: 40px;
@@ -640,62 +698,41 @@ $headerComponent = HeaderComponent::create([
             z-index: 9999;
         }
 
-        .toast {
-            min-width: 300px;
+        /* Financeiro options */
+        .financeiro-options {
+            display: grid;
+            gap: 1.5rem;
         }
 
-        /* Tabelas financeiras */
-        .table-financeiro {
-            background: white;
+        .financeiro-option {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
             border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 4px 20px rgba(40, 167, 69, 0.1);
+            padding: 2rem;
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+            cursor: pointer;
         }
 
-        .table-financeiro .table {
-            margin: 0;
+        .financeiro-option:hover {
+            border-color: var(--primary);
+            transform: translateY(-2px);
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
         }
 
-        .table-financeiro .table thead th {
+        .financeiro-option-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
             background: var(--primary);
             color: white;
-            border: none;
-            padding: 1rem;
-            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
         }
 
-        .table-financeiro .table tbody td {
-            padding: 1rem;
-            vertical-align: middle;
-        }
-
-        /* Responsivo */
-        @media (max-width: 768px) {
-            .services-container {
-                grid-template-columns: 1fr;
-            }
-            
-            .busca-form {
-                flex-direction: column;
-                align-items: stretch;
-            }
-            
-            .dados-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        /* Animações */
-        .fade-in {
-            animation: fadeIn 0.5s ease-in;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        /* Elementos específicos financeiros */
+        /* Valores */
         .valor-monetario {
             font-weight: bold;
             color: var(--success);
@@ -713,7 +750,7 @@ $headerComponent = HeaderComponent::create([
             font-weight: 600;
         }
 
-        .situacao-em-dia {
+        .situacao-adimplente {
             background: var(--success);
             color: white;
         }
@@ -723,9 +760,20 @@ $headerComponent = HeaderComponent::create([
             color: white;
         }
 
-        .situacao-pendente {
-            background: var(--warning);
-            color: white;
+        /* Responsivo */
+        @media (max-width: 768px) {
+            .services-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .busca-form {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .dados-grid {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
@@ -747,57 +795,10 @@ $headerComponent = HeaderComponent::create([
                 <h4><i class="fas fa-ban me-2"></i>Acesso Negado aos Serviços Financeiros</h4>
                 <p class="mb-3"><?php echo htmlspecialchars($motivoNegacao); ?></p>
                 
-                <div class="alert alert-info">
-                    <h6><i class="fas fa-info-circle me-2"></i>Requisitos para acesso:</h6>
-                    <ul class="mb-0">
-                        <li>Estar no <strong>Setor Financeiro</strong> (Departamento ID: 5) OU</li>
-                        <li>Estar na <strong>Presidência</strong> (Departamento ID: 1)</li>
-                    </ul>
-                    <hr class="my-2">
-                    <small class="text-muted">
-                        <i class="fas fa-exclamation-triangle me-1"></i>
-                        <strong>Atenção:</strong> Apenas funcionários destes dois departamentos específicos têm acesso aos serviços financeiros.
-                    </small>
-                </div>
-                
-                <div class="row">
-                    <div class="col-md-6">
-                        <h6>Suas informações atuais:</h6>
-                        <ul class="mb-0">
-                            <li><strong>Nome:</strong> <?php echo htmlspecialchars($usuarioLogado['nome']); ?></li>
-                            <li><strong>Cargo:</strong> <?php echo htmlspecialchars($usuarioLogado['cargo'] ?? 'N/A'); ?></li>
-                            <li><strong>Departamento ID:</strong> 
-                                <span class="badge bg-<?php echo isset($usuarioLogado['departamento_id']) ? 'info' : 'danger'; ?>">
-                                    <?php echo $usuarioLogado['departamento_id'] ?? 'Não identificado'; ?>
-                                </span>
-                            </li>
-                            <li><strong>É Diretor:</strong> 
-                                <span class="badge bg-<?php echo $auth->isDiretor() ? 'success' : 'secondary'; ?>">
-                                    <?php echo $auth->isDiretor() ? 'Sim' : 'Não'; ?>
-                                </span>
-                            </li>
-                        </ul>
-                    </div>
-                    <div class="col-md-6">
-                        <h6>Para resolver:</h6>
-                        <ol class="mb-3">
-                            <li>Verifique se você está no departamento correto no sistema</li>
-                            <li>Entre em contato com o administrador se necessário</li>
-                            <li>Confirme se deveria ter acesso aos serviços financeiros</li>
-                        </ol>
-                        
-                        <div class="btn-group d-block">
-                            <button class="btn btn-primary btn-sm me-2" onclick="window.location.reload()">
-                                <i class="fas fa-sync me-1"></i>
-                                Recarregar Página
-                            </button>
-                            <a href="../pages/dashboard.php" class="btn btn-secondary btn-sm">
-                                <i class="fas fa-arrow-left me-1"></i>
-                                Voltar ao Dashboard
-                            </a>
-                        </div>
-                    </div>
-                </div>
+                <a href="../pages/dashboard.php" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>
+                    Voltar ao Dashboard
+                </a>
             </div>
             
             <?php else: ?>
@@ -888,7 +889,7 @@ $headerComponent = HeaderComponent::create([
                 </div>
             </div>
 
-            <!-- Alert informativo sobre o nível de acesso -->
+            <!-- Alert informativo -->
             <div class="alert-custom alert-info-custom" data-aos="fade-up">
                 <div>
                     <i class="fas fa-<?php echo $isFinanceiro ? 'dollar-sign' : 'crown'; ?>"></i>
@@ -902,11 +903,7 @@ $headerComponent = HeaderComponent::create([
                         <?php endif; ?>
                     </h6>
                     <small>
-                        <?php if ($isFinanceiro): ?>
-                            Você tem acesso completo aos serviços financeiros: mensalidades, inadimplência e relatórios.
-                        <?php elseif ($isPresidencia): ?>
-                            Você tem acesso administrativo aos serviços financeiros como membro da presidência.
-                        <?php endif; ?>
+                        Você tem acesso completo aos serviços financeiros. Sistema preparado para múltiplos RGs de diferentes corporações.
                     </small>
                 </div>
             </div>
@@ -924,14 +921,20 @@ $headerComponent = HeaderComponent::create([
                     </div>
                     <div class="service-content" style="position: relative;">
                         <p class="text-muted mb-3">
-                            Consulte associados em débito, gere cobranças e atualize situações financeiras.
+                            Consulte associados em débito. Sistema preparado para múltiplos RGs de diferentes corporações (PM, BM, PC, etc).
                         </p>
                         
                         <form class="busca-form" onsubmit="buscarAssociadoPorRG(event)">
                             <div class="busca-input-group">
-                                <label class="form-label" for="rgBuscaFinanceiro">RG Militar ou Nome</label>
+                                <label class="form-label" for="rgBuscaFinanceiro">
+                                    <i class="fas fa-id-card me-1"></i>
+                                    RG Militar ou Nome
+                                </label>
                                 <input type="text" class="form-control" id="rgBuscaFinanceiro" 
                                        placeholder="Digite o RG militar ou nome..." required>
+                                <small class="text-muted">
+                                    Se houver múltiplos registros com o mesmo RG, você poderá escolher a corporação correta
+                                </small>
                             </div>
                             <div>
                                 <button type="submit" class="btn btn-primary" id="btnBuscarFinanceiro">
@@ -959,6 +962,17 @@ $headerComponent = HeaderComponent::create([
                                 <i class="fas fa-dollar-sign me-2" style="color: var(--primary);"></i>
                                 Situação Financeira do Associado
                             </h6>
+                            
+                            <!-- Identificação Militar -->
+                            <div id="identificacaoMilitar" class="identificacao-militar" style="display: none;">
+                                <h6>
+                                    <i class="fas fa-shield-alt me-2"></i>
+                                    Identificação Militar
+                                </h6>
+                                <div class="militar-info-grid" id="militarInfoGrid">
+                                    <!-- Dados militares serão inseridos aqui -->
+                                </div>
+                            </div>
                             
                             <div class="dados-grid" id="dadosFinanceirosGrid">
                                 <!-- Dados serão inseridos aqui dinamicamente -->
@@ -1027,6 +1041,41 @@ $headerComponent = HeaderComponent::create([
         </div>
     </div>
 
+    <!-- Modal de Seleção de Associado (NOVO) -->
+    <div class="modal fade modal-selecao-associado" id="modalSelecaoAssociado" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">
+                        <i class="fas fa-users me-2"></i>
+                        Múltiplos Associados Encontrados
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Atenção:</strong> Foram encontrados múltiplos associados com o mesmo RG em diferentes corporações. 
+                        Selecione o associado correto para visualizar os dados financeiros.
+                    </div>
+                    <div id="listaAssociadosSelecao">
+                        <!-- Lista de associados será inserida aqui -->
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>
+                        Cancelar
+                    </button>
+                    <button type="button" class="btn btn-primary" id="btnConfirmarSelecao" disabled>
+                        <i class="fas fa-check me-2"></i>
+                        Confirmar Seleção
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
@@ -1079,27 +1128,18 @@ $headerComponent = HeaderComponent::create([
         // ===== VARIÁVEIS GLOBAIS =====
         const notifications = new NotificationSystem();
         let dadosFinanceirosAtual = null;
+        let associadoSelecionadoId = null;
+        let listaAssociadosMultiplos = [];
         const temPermissao = <?php echo json_encode($temPermissaoFinanceiro); ?>;
-        const isFinanceiro = <?php echo json_encode($isFinanceiro); ?>;
-        const isPresidencia = <?php echo json_encode($isPresidencia); ?>;
-        const departamentoUsuario = <?php echo json_encode($departamentoUsuario); ?>;
 
         // ===== INICIALIZAÇÃO =====
         document.addEventListener('DOMContentLoaded', function() {
             AOS.init({ duration: 800, once: true });
 
-            console.log('=== DEBUG SERVIÇOS FINANCEIROS - RESTRITO ===');
-            console.log('Tem permissão:', temPermissao);
-            console.log('É financeiro:', isFinanceiro);
-            console.log('É presidência:', isPresidencia);
-            console.log('Departamento usuário:', departamentoUsuario);
-
             if (!temPermissao) {
                 console.log('❌ Usuário sem permissão - não carregará funcionalidades');
                 return;
             }
-
-            configurarEventos();
 
             // Event listener para Enter no campo de busca
             $('#rgBuscaFinanceiro').on('keypress', function(e) {
@@ -1109,13 +1149,15 @@ $headerComponent = HeaderComponent::create([
                 }
             });
 
-            const departamentoNome = isFinanceiro ? 'Financeiro' : isPresidencia ? 'Presidência' : 'Autorizado';
-            notifications.show(`Serviços financeiros carregados - ${departamentoNome}!`, 'success', 3000);
+            // Event listener para o botão de confirmar seleção
+            document.getElementById('btnConfirmarSelecao').addEventListener('click', buscarAssociadoSelecionado);
+
+            notifications.show('Serviços financeiros carregados!', 'success', 3000);
         });
 
-        // ===== FUNÇÕES DE BUSCA FINANCEIRA =====
+        // ===== FUNÇÕES DE BUSCA FINANCEIRA (ATUALIZADAS) =====
 
-        // Buscar associado por RG para consulta financeira
+        // Buscar associado por RG - ATUALIZADA para suportar múltiplos resultados
         async function buscarAssociadoPorRG(event) {
             event.preventDefault();
             
@@ -1142,12 +1184,16 @@ $headerComponent = HeaderComponent::create([
                 const response = await fetch(`../api/associados/buscar_situacao_financeira.php?${parametro}=${encodeURIComponent(busca)}`);
                 const result = await response.json();
 
-                if (result.status === 'success') {
+                if (result.status === 'multiple_results') {
+                    // Múltiplos resultados encontrados
+                    listaAssociadosMultiplos = result.data;
+                    mostrarModalSelecao(result.data);
+                    mostrarAlertaBuscaFinanceiro('Múltiplos associados encontrados. Por favor, selecione o correto.', 'warning');
+                } else if (result.status === 'success') {
+                    // Um único resultado
                     dadosFinanceirosAtual = result.data;
                     exibirDadosFinanceiros(dadosFinanceirosAtual);
-                    
                     dadosContainer.style.display = 'block';
-                    
                     mostrarAlertaBuscaFinanceiro('Dados financeiros carregados com sucesso!', 'success');
                     
                     // Scroll suave até os dados
@@ -1158,7 +1204,7 @@ $headerComponent = HeaderComponent::create([
                         });
                     }, 300);
                 } else {
-                    mostrarAlertaBuscaFinanceiro(result.message, 'danger');
+                    mostrarAlertaBuscaFinanceiro(result.message || 'Erro ao buscar dados', 'danger');
                 }
 
             } catch (error) {
@@ -1170,10 +1216,181 @@ $headerComponent = HeaderComponent::create([
             }
         }
 
-        // Exibir dados financeiros do associado
+        // NOVA FUNÇÃO - Mostrar modal de seleção
+        function mostrarModalSelecao(associados) {
+            const listaContainer = document.getElementById('listaAssociadosSelecao');
+            listaContainer.innerHTML = '';
+            
+            associados.forEach(assoc => {
+                const card = document.createElement('div');
+                card.className = 'associado-card d-flex align-items-center';
+                card.dataset.id = assoc.id;
+                
+                // Determina a classe do badge baseado na corporação
+                let badgeClass = 'badge-default';
+                let corporacaoIcon = 'fa-shield-alt';
+                
+                if (assoc.corporacao) {
+                    const corp = assoc.corporacao.toUpperCase();
+                    if (corp.includes('PM') || corp.includes('POLÍCIA MILITAR')) {
+                        badgeClass = 'badge-pm';
+                        corporacaoIcon = 'fa-shield';
+                    } else if (corp.includes('BM') || corp.includes('BOMBEIRO')) {
+                        badgeClass = 'badge-bm';
+                        corporacaoIcon = 'fa-fire';
+                    } else if (corp.includes('PC') || corp.includes('POLÍCIA CIVIL')) {
+                        badgeClass = 'badge-pc';
+                        corporacaoIcon = 'fa-user-shield';
+                    }
+                }
+                
+                card.innerHTML = `
+                    <div class="form-check me-3">
+                        <input class="form-check-input" type="radio" name="associadoSelecionado" 
+                               value="${assoc.id}" id="assoc_${assoc.id}">
+                    </div>
+                    ${assoc.foto ? 
+                        `<img src="${assoc.foto}" class="associado-foto" alt="${assoc.nome}">` : 
+                        `<div class="associado-foto d-flex align-items-center justify-content-center bg-light">
+                            <i class="fas fa-user fa-2x text-muted"></i>
+                        </div>`
+                    }
+                    <div class="associado-info">
+                        <div class="associado-nome">${assoc.nome}</div>
+                        <div class="associado-rg">
+                            <i class="fas fa-id-card me-1"></i>
+                            RG: ${assoc.rg} | CPF: ${assoc.cpf || 'Não informado'}
+                        </div>
+                        <div class="associado-militar">
+                            <span class="badge-corporacao ${badgeClass}">
+                                <i class="fas ${corporacaoIcon}"></i>
+                                ${assoc.corporacao || 'Corporação não informada'}
+                            </span>
+                            ${assoc.patente ? 
+                                `<span class="badge bg-secondary">
+                                    <i class="fas fa-star me-1"></i>
+                                    ${assoc.patente}
+                                </span>` : ''
+                            }
+                            ${assoc.unidade ? 
+                                `<span class="badge bg-info text-dark">
+                                    <i class="fas fa-building me-1"></i>
+                                    ${assoc.unidade}
+                                </span>` : ''
+                            }
+                        </div>
+                        ${assoc.situacao_financeira ? 
+                            `<div class="mt-2">
+                                <small class="text-muted">Situação: </small>
+                                <span class="badge ${assoc.situacao_financeira === 'INADIMPLENTE' ? 'bg-danger' : 'bg-success'}">
+                                    ${assoc.situacao_financeira}
+                                </span>
+                            </div>` : ''
+                        }
+                    </div>
+                `;
+                
+                // Evento de clique no card
+                card.addEventListener('click', function() {
+                    const radio = this.querySelector('input[type="radio"]');
+                    radio.checked = true;
+                    
+                    // Remove seleção anterior
+                    document.querySelectorAll('.associado-card').forEach(c => c.classList.remove('selecionado'));
+                    this.classList.add('selecionado');
+                    
+                    // Habilita botão de confirmação
+                    document.getElementById('btnConfirmarSelecao').disabled = false;
+                    associadoSelecionadoId = assoc.id;
+                });
+                
+                listaContainer.appendChild(card);
+            });
+            
+            // Mostra o modal
+            const modal = new bootstrap.Modal(document.getElementById('modalSelecaoAssociado'));
+            modal.show();
+        }
+
+        // NOVA FUNÇÃO - Buscar associado selecionado
+        async function buscarAssociadoSelecionado() {
+            if (!associadoSelecionadoId) return;
+            
+            // Fecha o modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('modalSelecaoAssociado'));
+            modal.hide();
+            
+            // Busca os dados do associado selecionado
+            const loadingOverlay = document.getElementById('loadingBuscaFinanceiro');
+            const dadosContainer = document.getElementById('dadosFinanceirosContainer');
+            
+            loadingOverlay.style.display = 'flex';
+            
+            try {
+                const response = await fetch(`../api/associados/buscar_situacao_financeira.php?id=${associadoSelecionadoId}`);
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    dadosFinanceirosAtual = result.data;
+                    exibirDadosFinanceiros(result.data);
+                    dadosContainer.style.display = 'block';
+                    mostrarAlertaBuscaFinanceiro('Dados financeiros carregados com sucesso!', 'success');
+                    
+                    // Scroll suave até os dados
+                    setTimeout(() => {
+                        dadosContainer.scrollIntoView({ 
+                            behavior: 'smooth',
+                            block: 'start' 
+                        });
+                    }, 300);
+                } else {
+                    mostrarAlertaBuscaFinanceiro(result.message || 'Erro ao buscar dados', 'danger');
+                }
+            } catch (error) {
+                console.error('Erro:', error);
+                mostrarAlertaBuscaFinanceiro('Erro ao consultar dados financeiros.', 'danger');
+            } finally {
+                loadingOverlay.style.display = 'none';
+                // Reset seleção
+                associadoSelecionadoId = null;
+                document.getElementById('btnConfirmarSelecao').disabled = true;
+            }
+        }
+
+        // Exibir dados financeiros do associado - ATUALIZADA
         function exibirDadosFinanceiros(dados) {
             const grid = document.getElementById('dadosFinanceirosGrid');
+            const militarContainer = document.getElementById('identificacaoMilitar');
+            const militarGrid = document.getElementById('militarInfoGrid');
+            
             grid.innerHTML = '';
+            militarGrid.innerHTML = '';
+            
+            // Exibe dados militares se existirem
+            if (dados.dados_militares && dados.dados_militares.corporacao !== 'Não informada') {
+                militarContainer.style.display = 'block';
+                
+                militarGrid.innerHTML = `
+                    <div class="militar-info-item">
+                        <span class="militar-info-label">Corporação</span>
+                        <span class="militar-info-value">${dados.dados_militares.corporacao}</span>
+                    </div>
+                    <div class="militar-info-item">
+                        <span class="militar-info-label">Patente</span>
+                        <span class="militar-info-value">${dados.dados_militares.patente}</span>
+                    </div>
+                    <div class="militar-info-item">
+                        <span class="militar-info-label">Unidade</span>
+                        <span class="militar-info-value">${dados.dados_militares.unidade || 'Não informada'}</span>
+                    </div>
+                    <div class="militar-info-item">
+                        <span class="militar-info-label">Lotação</span>
+                        <span class="militar-info-value">${dados.dados_militares.lotacao || 'Não informada'}</span>
+                    </div>
+                `;
+            } else {
+                militarContainer.style.display = 'none';
+            }
 
             // Função auxiliar para criar item de dados
             function criarDadosItemFinanceiro(label, value, icone = 'fa-info', tipo = 'normal') {
@@ -1189,7 +1406,8 @@ $headerComponent = HeaderComponent::create([
                     valorFormatado = formatarMoeda(value);
                     classeValor += ' valor-debito';
                 } else if (tipo === 'situacao') {
-                    valorFormatado = `<span class="badge-situacao-financeira situacao-${value.toLowerCase().replace(' ', '-')}">${value}</span>`;
+                    const situacaoClass = value.toLowerCase() === 'inadimplente' ? 'situacao-inadimplente' : 'situacao-adimplente';
+                    valorFormatado = `<span class="badge-situacao-financeira ${situacaoClass}">${value}</span>`;
                 }
                 
                 return `
@@ -1207,6 +1425,7 @@ $headerComponent = HeaderComponent::create([
             const pessoais = dados.dados_pessoais || {};
             grid.innerHTML += criarDadosItemFinanceiro('Nome Completo', pessoais.nome, 'fa-user');
             grid.innerHTML += criarDadosItemFinanceiro('RG Militar', pessoais.rg, 'fa-id-card');
+            grid.innerHTML += criarDadosItemFinanceiro('CPF', pessoais.cpf, 'fa-id-badge');
             grid.innerHTML += criarDadosItemFinanceiro('Email', pessoais.email, 'fa-envelope');
             grid.innerHTML += criarDadosItemFinanceiro('Telefone', formatarTelefone(pessoais.telefone), 'fa-phone');
 
@@ -1215,6 +1434,14 @@ $headerComponent = HeaderComponent::create([
             grid.innerHTML += criarDadosItemFinanceiro('Situação Atual', financeiro.situacao, 'fa-flag', 'situacao');
             grid.innerHTML += criarDadosItemFinanceiro('Tipo de Associado', financeiro.tipo_associado, 'fa-user-tag');
             grid.innerHTML += criarDadosItemFinanceiro('Valor Mensalidade', financeiro.valor_mensalidade, 'fa-dollar-sign', 'monetario');
+            
+            // Dados bancários
+            if (financeiro.agencia) {
+                grid.innerHTML += criarDadosItemFinanceiro('Agência', financeiro.agencia, 'fa-university');
+            }
+            if (financeiro.conta_corrente) {
+                grid.innerHTML += criarDadosItemFinanceiro('Conta Corrente', financeiro.conta_corrente, 'fa-credit-card');
+            }
             
             // Dados de débito (se houver)
             if (financeiro.valor_debito && financeiro.valor_debito > 0) {
@@ -1227,9 +1454,19 @@ $headerComponent = HeaderComponent::create([
                 grid.innerHTML += criarDadosItemFinanceiro('Último Pagamento', formatarData(financeiro.ultimo_pagamento), 'fa-calendar-check');
             }
 
-            // Data de vencimento
-            if (financeiro.vencimento_proxima) {
-                grid.innerHTML += criarDadosItemFinanceiro('Próximo Vencimento', formatarData(financeiro.vencimento_proxima), 'fa-calendar');
+            // Serviços ativos
+            if (financeiro.servicos_ativos && financeiro.servicos_ativos.length > 0) {
+                let servicosHtml = '<ul class="mb-0">';
+                financeiro.servicos_ativos.forEach(servico => {
+                    servicosHtml += `<li>${servico.nome} - ${formatarMoeda(servico.valor)}</li>`;
+                });
+                servicosHtml += '</ul>';
+                grid.innerHTML += criarDadosItemFinanceiro('Serviços Ativos', servicosHtml, 'fa-list-check');
+            }
+
+            // Observações
+            if (financeiro.observacoes) {
+                grid.innerHTML += criarDadosItemFinanceiro('Observações', financeiro.observacoes, 'fa-comment');
             }
         }
 
@@ -1238,7 +1475,9 @@ $headerComponent = HeaderComponent::create([
             document.getElementById('rgBuscaFinanceiro').value = '';
             document.getElementById('dadosFinanceirosContainer').style.display = 'none';
             document.getElementById('dadosFinanceirosGrid').innerHTML = '';
+            document.getElementById('identificacaoMilitar').style.display = 'none';
             dadosFinanceirosAtual = null;
+            associadoSelecionadoId = null;
             esconderAlertaBuscaFinanceiro();
         }
 
@@ -1283,7 +1522,6 @@ $headerComponent = HeaderComponent::create([
 
         // ===== FUNÇÕES DE RELATÓRIOS =====
 
-        // Relatório de arrecadação
         function relatorioArrecadacao() {
             notifications.show('Carregando relatório de arrecadação...', 'info');
             setTimeout(() => {
@@ -1291,7 +1529,6 @@ $headerComponent = HeaderComponent::create([
             }, 1000);
         }
 
-        // Lista de inadimplentes
         function listarInadimplentes() {
             notifications.show('Carregando lista de inadimplentes...', 'info');
             setTimeout(() => {
@@ -1299,7 +1536,6 @@ $headerComponent = HeaderComponent::create([
             }, 1000);
         }
 
-        // Extrato financeiro
         function extratoFinanceiro() {
             notifications.show('Abrindo extrato financeiro...', 'info');
             setTimeout(() => {
@@ -1307,7 +1543,6 @@ $headerComponent = HeaderComponent::create([
             }, 1000);
         }
 
-        // Estatísticas financeiras
         function estatisticasFinanceiras() {
             notifications.show('Carregando estatísticas financeiras...', 'info');
             setTimeout(() => {
@@ -1317,12 +1552,6 @@ $headerComponent = HeaderComponent::create([
 
         // ===== FUNÇÕES AUXILIARES =====
 
-        // Configurar eventos
-        function configurarEventos() {
-            // Aqui podem ser adicionados outros event listeners se necessário
-        }
-
-        // Formatação de moeda
         function formatarMoeda(valor) {
             if (!valor || valor === 0) return 'R$ 0,00';
             return new Intl.NumberFormat('pt-BR', {
@@ -1331,7 +1560,6 @@ $headerComponent = HeaderComponent::create([
             }).format(valor);
         }
 
-        // Funções auxiliares de formatação
         function formatarTelefone(telefone) {
             if (!telefone) return '';
             telefone = telefone.toString().replace(/\D/g, '');
@@ -1355,10 +1583,7 @@ $headerComponent = HeaderComponent::create([
 
         // Log de inicialização
         console.log('✓ Sistema de Serviços Financeiros carregado com sucesso!');
-        console.log(`🏢 Departamento: ${isFinanceiro ? 'Financeiro (ID: 5)' : isPresidencia ? 'Presidência (ID: 1)' : 'Desconhecido'}`);
-        console.log(`🔐 Permissões: ${temPermissao ? 'Concedidas' : 'Negadas'}`);
-        console.log(`📋 Acesso restrito a: Financeiro (ID: 5) e Presidência (ID: 1)`);
-        console.log(`💰 Estatísticas carregadas: Arrecadação R$ ${<?php echo $arrecadacaoMes; ?>}, Inadimplentes: ${<?php echo $associadosInadimplentes; ?>}`);
+        console.log('📋 Suporte a múltiplos RGs de diferentes corporações ativado');
     </script>
 
 </body>
