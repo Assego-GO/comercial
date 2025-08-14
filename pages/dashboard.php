@@ -124,7 +124,7 @@ $headerComponent = HeaderComponent::create([
 
     <!-- Custom CSS -->
     <link rel="stylesheet" href="./estilizacao/style.css">
-    
+
 
 </head>
 
@@ -137,7 +137,7 @@ $headerComponent = HeaderComponent::create([
 
     <!-- Main Content -->
     <div class="main-wrapper">
-        
+
         <!-- NOVO: Header Component -->
         <?php $headerComponent->render(); ?>
 
@@ -220,6 +220,7 @@ $headerComponent = HeaderComponent::create([
 
             <!-- Actions Bar with Filters -->
             <div class="actions-bar" data-aos="fade-up" data-aos-delay="100">
+                
                 <div class="filters-row">
                     <div class="search-box">
                         <label class="filter-label">Buscar</label>
@@ -406,6 +407,13 @@ $headerComponent = HeaderComponent::create([
                     Documentos
                     <span class="tab-indicator"></span>
                 </button>
+                <!-- NOVA ABA DE OBSERVAÇÕES -->
+                <button class="tab-button" onclick="abrirTab('observacoes')">
+                    <i class="fas fa-sticky-note"></i>
+                    Observações
+                    <span class="tab-indicator"></span>
+                    <span class="observacoes-count-badge" id="observacoesCountBadge" style="display: none;">0</span>
+                </button>
             </div>
 
             <!-- Tab Contents -->
@@ -439,6 +447,209 @@ $headerComponent = HeaderComponent::create([
                 <div id="documentos-tab" class="tab-content">
                     <!-- Conteúdo será inserido dinamicamente -->
                 </div>
+
+                <!-- NOVA ABA: Observações Tab -->
+                <div id="observacoes-tab" class="tab-content">
+                    <!-- Header da Aba de Observações -->
+                    <div class="observacoes-header">
+                        <div class="observacoes-header-content">
+                            <div class="observacoes-header-info">
+                                <div class="observacoes-icon">
+                                    <i class="fas fa-sticky-note"></i>
+                                </div>
+                                <div>
+                                    <h4 class="observacoes-title">Observações do Associado</h4>
+                                    <p class="observacoes-subtitle">Histórico de anotações e observações importantes</p>
+                                </div>
+                            </div>
+                            <button class="btn-add-observacao" onclick="abrirModalNovaObservacao()">
+                                <i class="fas fa-plus-circle"></i>
+                                Nova Observação
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Filtros e Busca -->
+                    <div class="observacoes-filters">
+                        <div class="observacoes-search">
+                            <i class="fas fa-search"></i>
+                            <input type="text" id="searchObservacoes" placeholder="Buscar nas observações..." class="observacoes-search-input">
+                        </div>
+                        <div class="observacoes-filter-buttons">
+                            <button class="filter-btn active" data-filter="all">
+                                <i class="fas fa-list"></i>
+                                Todas
+                            </button>
+                            <button class="filter-btn" data-filter="recent">
+                                <i class="fas fa-clock"></i>
+                                Recentes
+                            </button>
+                            <button class="filter-btn" data-filter="important">
+                                <i class="fas fa-star"></i>
+                                Importantes
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Container de Observações -->
+                    <div class="observacoes-container" id="observacoesContainer">
+                        <!-- As observações serão carregadas dinamicamente aqui -->
+                        
+                        <!-- Template de uma observação (exemplo) -->
+                        <div class="observacao-card">
+                            <div class="observacao-header">
+                                <div class="observacao-meta">
+                                    <div class="observacao-author">
+                                        <div class="author-avatar">
+                                            <i class="fas fa-user"></i>
+                                        </div>
+                                        <div class="author-info">
+                                            <span class="author-name">João Silva</span>
+                                            <span class="author-role">Secretaria</span>
+                                        </div>
+                                    </div>
+                                    <div class="observacao-actions">
+                                        <button class="btn-observacao-action" title="Marcar como importante">
+                                            <i class="far fa-star"></i>
+                                        </button>
+                                        <button class="btn-observacao-action" title="Editar">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn-observacao-action delete" title="Excluir">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="observacao-date">
+                                    <i class="far fa-calendar"></i>
+                                    12/08/2025 às 14:30
+                                </div>
+                            </div>
+                            <div class="observacao-content">
+                                <p>Esta é uma observação de exemplo. O associado compareceu para atualização cadastral e apresentou todos os documentos necessários.</p>
+                            </div>
+                            <div class="observacao-tags">
+                                <span class="tag tag-info">Atualização</span>
+                                <span class="tag tag-success">Documentos OK</span>
+                            </div>
+                        </div>
+
+                        <!-- Estado vazio -->
+                        <div class="empty-observacoes-state" style="display: none;">
+                            <div class="empty-observacoes-icon">
+                                <i class="fas fa-clipboard-list"></i>
+                            </div>
+                            <h5>Nenhuma observação registrada</h5>
+                            <p>Ainda não há observações para este associado.</p>
+                            <button class="btn-modern btn-primary" onclick="abrirModalNovaObservacao()">
+                                <i class="fas fa-plus"></i>
+                                Adicionar Primeira Observação
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Paginação das Observações -->
+                    <div class="observacoes-pagination">
+                        <div class="pagination-info">
+                            Mostrando <span id="observacoesShowing">1-5</span> de <span id="observacoesTotal">12</span> observações
+                        </div>
+                        <div class="pagination-controls">
+                            <button class="pagination-btn" id="prevObservacoes">
+                                <i class="fas fa-chevron-left"></i>
+                            </button>
+                            <span class="page-number">1</span>
+                            <button class="pagination-btn" id="nextObservacoes">
+                                <i class="fas fa-chevron-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para Nova Observação -->
+    <div class="modal fade" id="modalNovaObservacao" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header observacao-modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-plus-circle me-2"></i>
+                        Nova Observação
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="formNovaObservacao">
+                        <div class="mb-4">
+                            <label for="observacaoTexto" class="form-label">
+                                <i class="fas fa-pen me-1"></i>
+                                Observação
+                            </label>
+                            <textarea class="form-control observacao-textarea" id="observacaoTexto" rows="6" 
+                                placeholder="Digite aqui a observação sobre o associado..." required></textarea>
+                            <div class="form-text">Seja claro e objetivo em suas anotações.</div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">
+                                        <i class="fas fa-tag me-1"></i>
+                                        Categoria
+                                    </label>
+                                    <select class="form-select" id="observacaoCategoria">
+                                        <option value="geral">Geral</option>
+                                        <option value="financeiro">Financeiro</option>
+                                        <option value="documentacao">Documentação</option>
+                                        <option value="atendimento">Atendimento</option>
+                                        <option value="pendencia">Pendência</option>
+                                        <option value="importante">Importante</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">
+                                        <i class="fas fa-exclamation-circle me-1"></i>
+                                        Prioridade
+                                    </label>
+                                    <select class="form-select" id="observacaoPrioridade">
+                                        <option value="baixa">Baixa</option>
+                                        <option value="media" selected>Média</option>
+                                        <option value="alta">Alta</option>
+                                        <option value="urgente">Urgente</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="observacaoImportante">
+                                <label class="form-check-label" for="observacaoImportante">
+                                    <i class="fas fa-star text-warning me-1"></i>
+                                    Marcar como observação importante
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-info alert-observacao">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>Nota:</strong> Esta observação será registrada com seu nome e data/hora atual.
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i>
+                        Cancelar
+                    </button>
+                    <button type="button" class="btn btn-primary" onclick="salvarObservacao()">
+                        <i class="fas fa-save me-1"></i>
+                        Salvar Observação
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -461,2206 +672,24 @@ $headerComponent = HeaderComponent::create([
                 searchInput.focus();
             }
         }
-        
+
         function toggleNotifications() {
             // Implementar painel de notificações
             console.log('Painel de notificações');
             alert('Painel de notificações em desenvolvimento');
         }
-    </script>
 
-    <script>
-        // Configuração inicial
-        console.log('=== INICIANDO SISTEMA ASSEGO ===');
-        console.log('jQuery versão:', jQuery.fn.jquery);
-
-        // Inicializa AOS com delay
-        setTimeout(() => {
-            AOS.init({
-                duration: 800,
-                once: true
-            });
-        }, 100);
-
-        // Variáveis globais
-        let todosAssociados = [];
-        let associadosFiltrados = [];
-        let carregamentoIniciado = false;
-        let carregamentoCompleto = false;
-        let imagensCarregadas = new Set();
-
-        // Variáveis de paginação
-        let paginaAtual = 1;
-        let registrosPorPagina = 25;
-        let totalPaginas = 1;
-
-        // Loading functions
-        function showLoading() {
-            const overlay = document.getElementById('loadingOverlay');
-            if (overlay) {
-                overlay.classList.add('active');
-                console.log('Loading ativado');
-            }
+        // Funções para a aba de observações
+        function abrirModalNovaObservacao() {
+            const modal = new bootstrap.Modal(document.getElementById('modalNovaObservacao'));
+            modal.show();
         }
 
-        function hideLoading() {
-            const overlay = document.getElementById('loadingOverlay');
-            if (overlay) {
-                overlay.classList.remove('active');
-                console.log('Loading desativado');
-            }
+        function salvarObservacao() {
+            // Esta função será implementada no JavaScript
+            console.log('Salvando observação...');
         }
 
-        // Função para obter URL da foto
-        function getFotoUrl(cpf) {
-            if (!cpf) return null;
-            const cpfNormalizado = normalizarCPF(cpf);
-            return `https://assegonaopara.com.br/QRV/images/fotos/${cpfNormalizado}.jpg`;
-        }
-
-        // Função para pré-carregar imagem
-        function preloadImage(url) {
-            return new Promise((resolve, reject) => {
-                const img = new Image();
-                img.onload = () => resolve(url);
-                img.onerror = () => reject(url);
-                img.src = url;
-            });
-        }
-
-        // Formata data
-        function formatarData(dataStr) {
-            if (!dataStr || dataStr === "0000-00-00" || dataStr === "") return "-";
-            try {
-                const [ano, mes, dia] = dataStr.split("-");
-                return `${dia}/${mes}/${ano}`;
-            } catch (e) {
-                return "-";
-            }
-        }
-
-        // Formata CPF
-        function formatarCPF(cpf) {
-            if (!cpf) return "-";
-            cpf = cpf.toString().replace(/\D/g, '');
-            cpf = cpf.padStart(11, '0');
-            if (cpf.length !== 11) return cpf;
-            return cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
-        }
-
-        // Função para garantir CPF com 11 dígitos
-        function normalizarCPF(cpf) {
-            if (!cpf) return '';
-            cpf = cpf.toString().replace(/\D/g, '');
-            return cpf.padStart(11, '0');
-        }
-
-        // Formata telefone
-        function formatarTelefone(telefone) {
-            if (!telefone) return "-";
-            telefone = telefone.toString().replace(/\D/g, '');
-            if (telefone.length === 11) {
-                return telefone.replace(/(\d{2})(\d{5})(\d{4})/, "($1) $2-$3");
-            } else if (telefone.length === 10) {
-                return telefone.replace(/(\d{2})(\d{4})(\d{4})/, "($1) $2-$3");
-            } else if (telefone.length === 9) {
-                return telefone.replace(/(\d{5})(\d{4})/, "$1-$2");
-            } else if (telefone.length === 8) {
-                return telefone.replace(/(\d{4})(\d{4})/, "$1-$2");
-            }
-            return telefone;
-        }
-
-        // NOVA FUNÇÃO: Formatar status de doador
-        function formatarDoador(doador) {
-            if (doador === null || doador === undefined || doador === '') return '-';
-            // Converte para booleano e exibe como texto
-            const isDoador = Boolean(parseInt(doador));
-            return isDoador ? 'Sim' : 'Não';
-        }
-
-        // Função principal - Carrega dados da tabela
-        function carregarAssociados() {
-            if (carregamentoIniciado || carregamentoCompleto) {
-                console.log('Carregamento já realizado ou em andamento, ignorando nova chamada');
-                return;
-            }
-
-            carregamentoIniciado = true;
-            console.log('Iniciando carregamento de associados...');
-            showLoading();
-
-            const startTime = Date.now();
-
-            const timeoutId = setTimeout(() => {
-                hideLoading();
-                carregamentoIniciado = false;
-                console.error('TIMEOUT: Requisição demorou mais de 30 segundos');
-                alert('Tempo esgotado ao carregar dados. Por favor, recarregue a página.');
-                renderizarTabela([]);
-            }, 30000);
-
-            // Requisição AJAX
-            $.ajax({
-                url: '../api/carregar_associados.php',
-                method: 'GET',
-                dataType: 'json',
-                cache: false,
-                timeout: 25000,
-                beforeSend: function () {
-                    console.log('Enviando requisição para:', this.url);
-                },
-                success: function (response) {
-                    clearTimeout(timeoutId);
-                    const elapsed = Date.now() - startTime;
-                    console.log(`Resposta recebida em ${elapsed}ms`);
-                    console.log('Total de registros:', response.total);
-
-                    if (response && response.status === 'success') {
-                        todosAssociados = Array.isArray(response.dados) ? response.dados : [];
-
-                        // Remove duplicatas baseado no ID
-                        const idsUnicos = new Set();
-                        todosAssociados = todosAssociados.filter(associado => {
-                            if (idsUnicos.has(associado.id)) {
-                                return false;
-                            }
-                            idsUnicos.add(associado.id);
-                            return true;
-                        });
-
-                        // Ordena por ID decrescente (mais recentes primeiro)
-                        todosAssociados.sort((a, b) => b.id - a.id);
-
-                        associadosFiltrados = [...todosAssociados];
-
-                        // Preenche os filtros
-                        preencherFiltros();
-
-                        // Calcula total de páginas
-                        calcularPaginacao();
-
-                        // Renderiza a primeira página
-                        renderizarPagina();
-
-                        // Marca como carregamento completo
-                        carregamentoCompleto = true;
-
-                        console.log('✓ Dados carregados com sucesso!');
-                        console.log(`Total de associados únicos: ${todosAssociados.length}`);
-
-                        if (response.aviso) {
-                            console.warn(response.aviso);
-                        }
-                    } else {
-                        console.error('Resposta com erro:', response);
-                        alert('Erro ao carregar dados: ' + (response.message || 'Erro desconhecido'));
-                        renderizarTabela([]);
-                    }
-                },
-                error: function (xhr, status, error) {
-                    clearTimeout(timeoutId);
-                    const elapsed = Date.now() - startTime;
-                    console.error(`Erro após ${elapsed}ms:`, {
-                        status: xhr.status,
-                        statusText: xhr.statusText,
-                        error: error
-                    });
-
-                    let mensagemErro = 'Erro ao carregar dados';
-
-                    if (xhr.status === 0) {
-                        mensagemErro = 'Sem conexão com o servidor';
-                    } else if (xhr.status === 404) {
-                        mensagemErro = 'Arquivo não encontrado';
-                    } else if (xhr.status === 500) {
-                        mensagemErro = 'Erro no servidor';
-                    } else if (status === 'timeout') {
-                        mensagemErro = 'Tempo esgotado';
-                    } else if (status === 'parsererror') {
-                        mensagemErro = 'Resposta inválida do servidor';
-                    }
-
-                    alert(mensagemErro + '\n\nPor favor, recarregue a página.');
-                    renderizarTabela([]);
-                },
-                complete: function () {
-                    clearTimeout(timeoutId);
-                    hideLoading();
-                    carregamentoIniciado = false;
-                    console.log('Carregamento finalizado');
-                }
-            });
-        }
-
-        // Preenche os filtros dinâmicos
-        function preencherFiltros() {
-            console.log('Preenchendo filtros...');
-
-            const selectCorporacao = document.getElementById('filterCorporacao');
-            const selectPatente = document.getElementById('filterPatente');
-
-            selectCorporacao.innerHTML = '<option value="">Todos</option>';
-            selectPatente.innerHTML = '<option value="">Todos</option>';
-
-            const corporacoes = [...new Set(todosAssociados
-                .map(a => a.corporacao)
-                .filter(c => c && c.trim() !== '')
-            )].sort();
-
-            corporacoes.forEach(corp => {
-                const option = document.createElement('option');
-                option.value = corp;
-                option.textContent = corp;
-                selectCorporacao.appendChild(option);
-            });
-
-            const patentes = [...new Set(todosAssociados
-                .map(a => a.patente)
-                .filter(p => p && p.trim() !== '')
-            )].sort();
-
-            patentes.forEach(pat => {
-                const option = document.createElement('option');
-                option.value = pat;
-                option.textContent = pat;
-                selectPatente.appendChild(option);
-            });
-
-            console.log(`Filtros preenchidos: ${corporacoes.length} corporações, ${patentes.length} patentes`);
-        }
-
-        // Calcula paginação
-        function calcularPaginacao() {
-            totalPaginas = Math.ceil(associadosFiltrados.length / registrosPorPagina);
-            if (paginaAtual > totalPaginas) {
-                paginaAtual = 1;
-            }
-            atualizarControlesPaginacao();
-        }
-
-        // Atualiza controles de paginação
-        function atualizarControlesPaginacao() {
-            document.getElementById('currentPage').textContent = paginaAtual;
-            document.getElementById('totalPages').textContent = totalPaginas;
-            document.getElementById('totalCount').textContent = associadosFiltrados.length;
-
-            document.getElementById('firstPage').disabled = paginaAtual === 1;
-            document.getElementById('prevPage').disabled = paginaAtual === 1;
-            document.getElementById('nextPage').disabled = paginaAtual === totalPaginas;
-            document.getElementById('lastPage').disabled = paginaAtual === totalPaginas;
-
-            const pageNumbers = document.getElementById('pageNumbers');
-            pageNumbers.innerHTML = '';
-
-            let startPage = Math.max(1, paginaAtual - 2);
-            let endPage = Math.min(totalPaginas, paginaAtual + 2);
-
-            for (let i = startPage; i <= endPage; i++) {
-                const btn = document.createElement('button');
-                btn.className = 'page-btn' + (i === paginaAtual ? ' active' : '');
-                btn.textContent = i;
-                btn.onclick = () => irParaPagina(i);
-                pageNumbers.appendChild(btn);
-            }
-        }
-
-        // Renderiza página atual
-        function renderizarPagina() {
-            const inicio = (paginaAtual - 1) * registrosPorPagina;
-            const fim = inicio + registrosPorPagina;
-            const dadosPagina = associadosFiltrados.slice(inicio, fim);
-
-            renderizarTabela(dadosPagina);
-
-            const mostrando = Math.min(registrosPorPagina, dadosPagina.length);
-            document.getElementById('showingCount').textContent =
-                `${inicio + 1}-${inicio + mostrando}`;
-        }
-
-        // Navegar entre páginas
-        function irParaPagina(pagina) {
-            paginaAtual = pagina;
-            renderizarPagina();
-            atualizarControlesPaginacao();
-        }
-
-        // Renderiza tabela
-        function renderizarTabela(dados) {
-            console.log(`Renderizando ${dados.length} registros...`);
-            const tbody = document.getElementById('tableBody');
-
-            if (!tbody) {
-                console.error('Elemento tableBody não encontrado!');
-                return;
-            }
-
-            tbody.innerHTML = '';
-
-            if (dados.length === 0) {
-                tbody.innerHTML = `
-            <tr>
-                <td colspan="10" class="text-center py-5">
-                    <div class="d-flex flex-column align-items-center">
-                        <i class="fas fa-inbox fa-3x text-muted mb-3" style="opacity: 0.3;"></i>
-                        <p class="text-muted mb-0">Nenhum associado encontrado</p>
-                        <small class="text-muted">Tente ajustar os filtros de busca</small>
-                    </div>
-                </td>
-            </tr>
-        `;
-                return;
-            }
-
-            dados.forEach(associado => {
-                // EXIBICICAO DA SITUACAO
-                const getSituacaoBadge = (situacao) => {
-                    const badges = {
-                        'Filiado': '<span class="status-badge active"><i class="fas fa-check-circle"></i> Filiado</span>',
-                        'Desfiliado': '<span class="status-badge inactive"><i class="fas fa-times-circle"></i> Desfiliado</span>',
-                        'Remido': '<span class="status-badge remido"><i class="fas fa-star"></i> Remido</span>',
-                        'Agregado': '<span class="status-badge agregado"><i class="fas fa-user-plus"></i> Agregado</span>'
-                    };
-                    return badges[situacao] || `<span class="status-badge default"><i class="fas fa-question-circle"></i> ${situacao || 'Indefinido'}</span>`;
-                };
-
-                const situacaoBadge = getSituacaoBadge(associado.situacao);
-
-                const row = document.createElement('tr');
-                row.onclick = (e) => {
-                    if (!e.target.closest('.btn-icon')) {
-                        visualizarAssociado(associado.id);
-                    }
-                };
-
-                let fotoHtml = `<span>${associado.nome ? associado.nome.charAt(0).toUpperCase() : '?'}</span>`;
-
-                if (associado.cpf) {
-                    const cpfNormalizado = normalizarCPF(associado.cpf);
-                    const fotoUrl = associado.foto
-                    ? `../${associado.foto}`
-                    : `https://assegonaopara.com.br/QRV/images/fotos/${cpfNormalizado}.jpg`;
-
-                    fotoHtml = `
-                <img src="${fotoUrl}" 
-                     alt="${associado.nome}"
-                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
-                     onload="this.style.display='block'; this.nextElementSibling.style.display='none';">
-                <span style="display:none;">${associado.nome ? associado.nome.charAt(0).toUpperCase() : '?'}</span>
-            `;
-                }
-
-                row.innerHTML = `
-            <td>
-                <div class="table-avatar">
-                    ${fotoHtml}
-                </div>
-            </td>
-            <td>
-                <span class="fw-semibold">${associado.nome || 'Sem nome'}</span>
-                <br>
-                <small class="text-muted">Matrícula: ${associado.id}</small>
-            </td>
-            <td>${formatarCPF(associado.cpf)}</td>
-            <td>${associado.rg || '-'}</td>
-            <td>${situacaoBadge}</td>
-            <td>${associado.corporacao || '-'}</td>
-            <td>${associado.patente || '-'}</td>
-            <td>${formatarData(associado.data_filiacao)}</td>
-            <td>${formatarTelefone(associado.telefone)}</td>
-            <td>
-                <div class="action-buttons-table">
-                    <button class="btn-icon view" onclick="visualizarAssociado(${associado.id})" title="Visualizar">
-                        <i class="fas fa-eye"></i>
-                    </button>
-                    <button class="btn-icon edit" onclick="editarAssociado(${associado.id})" title="Editar">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                    <button class="btn-icon delete" onclick="excluirAssociado(${associado.id})" title="Excluir">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </div>
-            </td>
-        `;
-                tbody.appendChild(row);
-            });
-        }
-
-        // Aplica filtros
-        function aplicarFiltros() {
-            console.log('Aplicando filtros...');
-            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-            const filterSituacao = document.getElementById('filterSituacao').value;
-            const filterCorporacao = document.getElementById('filterCorporacao').value;
-            const filterPatente = document.getElementById('filterPatente').value;
-
-            associadosFiltrados = todosAssociados.filter(associado => {
-                const matchSearch = !searchTerm ||
-                    (associado.nome && associado.nome.toLowerCase().includes(searchTerm)) ||
-                    (associado.cpf && associado.cpf.includes(searchTerm)) ||
-                    (associado.rg && associado.rg.includes(searchTerm)) ||
-                    (associado.telefone && associado.telefone.includes(searchTerm));
-
-                const matchSituacao = !filterSituacao || associado.situacao === filterSituacao;
-                const matchCorporacao = !filterCorporacao || associado.corporacao === filterCorporacao;
-                const matchPatente = !filterPatente || associado.patente === filterPatente;
-
-                return matchSearch && matchSituacao && matchCorporacao && matchPatente;
-            });
-
-            console.log(`Filtros aplicados: ${associadosFiltrados.length} de ${todosAssociados.length} registros`);
-
-            paginaAtual = 1;
-            calcularPaginacao();
-            renderizarPagina();
-        }
-
-        // Limpa filtros
-        function limparFiltros() {
-            console.log('Limpando filtros...');
-            document.getElementById('searchInput').value = '';
-            document.getElementById('filterSituacao').value = '';
-            document.getElementById('filterCorporacao').value = '';
-            document.getElementById('filterPatente').value = '';
-
-            associadosFiltrados = [...todosAssociados];
-            paginaAtual = 1;
-            calcularPaginacao();
-            renderizarPagina();
-        }
-
-        // Função para visualizar detalhes do associado
-        function visualizarAssociado(id) {
-            console.log('Visualizando associado ID:', id);
-            const associado = todosAssociados.find(a => a.id == id);
-
-            if (!associado) {
-                console.error('Associado não encontrado:', id);
-                alert('Associado não encontrado!');
-                return;
-            }
-
-            // Atualiza o header do modal
-            atualizarHeaderModal(associado);
-
-            // Preenche as tabs
-            preencherTabVisaoGeral(associado);
-            preencherTabMilitar(associado);
-            preencherTabFinanceiro(associado);
-            preencherTabContato(associado);
-            preencherTabDependentes(associado);
-            preencherTabDocumentos(associado);
-
-            // Abre o modal
-            document.getElementById('modalAssociado').classList.add('show');
-            document.body.style.overflow = 'hidden';
-        }
-
-        // Atualiza o header do modal
-        function atualizarHeaderModal(associado) {
-            // Nome e ID
-            document.getElementById('modalNome').textContent = associado.nome || 'Sem nome';
-            document.getElementById('modalId').textContent = `Matrícula: ${associado.id}`;
-
-            // Data de filiação
-            document.getElementById('modalDataFiliacao').textContent =
-                formatarData(associado.data_filiacao) !== '-'
-                    ? `Desde ${formatarData(associado.data_filiacao)}`
-                    : 'Data não informada';
-
-            // Status
-            // CORREÇÃO: Status baseado na situação real
-const statusPill = document.getElementById('modalStatusPill');
-let statusHtml = '';
-
-switch(associado.situacao) {
-    case 'Filiado':
-        statusHtml = `
-            <div class="status-pill active">
-                <i class="fas fa-check-circle"></i>
-                Ativo
-            </div>
-        `;
-        break;
-    case 'Desfiliado':
-        statusHtml = `
-            <div class="status-pill inactive">
-                <i class="fas fa-times-circle"></i>
-                Inativo
-            </div>
-        `;
-        break;
-    case 'Remido':
-        statusHtml = `
-            <div class="status-pill remido">
-                <i class="fas fa-star"></i>
-                Remido
-            </div>
-        `;
-        break;
-    case 'Agregado':
-        statusHtml = `
-            <div class="status-pill agregado">
-                <i class="fas fa-user-plus"></i>
-                Agregado
-            </div>
-        `;
-        break;
-    default:
-        statusHtml = `
-            <div class="status-pill default">
-                <i class="fas fa-question-circle"></i>
-                ${associado.situacao || 'Indefinido'}
-            </div>
-        `;
-}
-
-statusPill.innerHTML = statusHtml;
-
-            // Avatar
-            const modalAvatar = document.getElementById('modalAvatarHeader');
-            if (associado.cpf) {
-                const cpfNormalizado = normalizarCPF(associado.cpf);
-                const fotoUrl = associado.foto
-                    ? `../${associado.foto}`
-                    : `https://assegonaopara.com.br/QRV/images/fotos/${cpfNormalizado}.jpg`;
-
-                modalAvatar.innerHTML = `
-            <img src="${fotoUrl}" 
-                 alt="${associado.nome}"
-                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
-                 onload="this.style.display='block'; this.nextElementSibling.style.display='none';">
-            <div class="modal-avatar-header-placeholder" style="display:none;">
-                ${associado.nome ? associado.nome.charAt(0).toUpperCase() : '?'}
-            </div>
-        `;
-            } else {
-                modalAvatar.innerHTML = `
-            <div class="modal-avatar-header-placeholder">
-                ${associado.nome ? associado.nome.charAt(0).toUpperCase() : '?'}
-            </div>
-        `;
-            }
-        }
-
-        // Preenche tab Visão Geral
-        function preencherTabVisaoGeral(associado) {
-            const overviewTab = document.getElementById('overview-tab');
-
-            // Calcula idade
-            let idade = '-';
-            if (associado.nasc && associado.nasc !== '0000-00-00') {
-                const hoje = new Date();
-                const nascimento = new Date(associado.nasc);
-                idade = Math.floor((hoje - nascimento) / (365.25 * 24 * 60 * 60 * 1000));
-                idade = idade + ' anos';
-            }
-
-            overviewTab.innerHTML = `
-        <!-- Stats Section -->
-        <div class="stats-section">
-            <div class="stat-item">
-                <div class="stat-value">${associado.total_servicos || 0}</div>
-                <div class="stat-label">Serviços Ativos</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-value">${associado.total_dependentes || 0}</div>
-                <div class="stat-label">Dependentes</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-value">${associado.total_documentos || 0}</div>
-                <div class="stat-label">Documentos</div>
-            </div>
-        </div>
-        
-        <!-- Overview Grid -->
-        <div class="overview-grid">
-            <!-- Dados Pessoais -->
-            <div class="overview-card">
-                <div class="overview-card-header">
-                    <div class="overview-card-icon blue">
-                        <i class="fas fa-user"></i>
-                    </div>
-                    <h4 class="overview-card-title">Dados Pessoais</h4>
-                </div>
-                <div class="overview-card-content">
-                    <div class="overview-item">
-                        <span class="overview-label">Nome Completo</span>
-                        <span class="overview-value">${associado.nome || '-'}</span>
-                    </div>
-                    <div class="overview-item">
-                        <span class="overview-label">CPF</span>
-                        <span class="overview-value">${formatarCPF(associado.cpf)}</span>
-                    </div>
-                    <div class="overview-item">
-                        <span class="overview-label">RG</span>
-                        <span class="overview-value">${associado.rg || '-'}</span>
-                    </div>
-                    <div class="overview-item">
-                        <span class="overview-label">Data de Nascimento</span>
-                        <span class="overview-value">${formatarData(associado.nasc)}</span>
-                    </div>
-                    <div class="overview-item">
-                        <span class="overview-label">Idade</span>
-                        <span class="overview-value">${idade}</span>
-                    </div>
-                    <div class="overview-item">
-                        <span class="overview-label">Sexo</span>
-                        <span class="overview-value">${associado.sexo === 'M' ? 'Masculino' : associado.sexo === 'F' ? 'Feminino' : '-'}</span>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Informações de Filiação -->
-            <div class="overview-card">
-                <div class="overview-card-header">
-                    <div class="overview-card-icon green">
-                        <i class="fas fa-id-card"></i>
-                    </div>
-                    <h4 class="overview-card-title">Informações de Filiação</h4>
-                </div>
-                <div class="overview-card-content">
-                    <div class="overview-item">
-                        <span class="overview-label">Situação</span>
-                        <span class="overview-value">${associado.situacao || '-'}</span>
-                    </div>
-                    <div class="overview-item">
-                        <span class="overview-label">Data de Filiação</span>
-                        <span class="overview-value">${formatarData(associado.data_filiacao)}</span>
-                    </div>
-                    <div class="overview-item">
-                        <span class="overview-label">Data de Desfiliação</span>
-                        <span class="overview-value">${formatarData(associado.data_desfiliacao)}</span>
-                    </div>
-                    <div class="overview-item">
-                        <span class="overview-label">Escolaridade</span>
-                        <span class="overview-value">${associado.escolaridade || '-'}</span>
-                    </div>
-                    <div class="overview-item">
-                        <span class="overview-label">Estado Civil</span>
-                        <span class="overview-value">${associado.estadoCivil || '-'}</span>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Informações Extras -->
-            <div class="overview-card">
-                <div class="overview-card-header">
-                    <div class="overview-card-icon purple">
-                        <i class="fas fa-info-circle"></i>
-                    </div>
-                    <h4 class="overview-card-title">Informações Adicionais</h4>
-                </div>
-                <div class="overview-card-content">
-                    <div class="overview-item">
-                        <span class="overview-label">Indicação</span>
-                        <span class="overview-value">${associado.indicacao || '-'}</span>
-                    </div>
-                    <div class="overview-item">
-                        <span class="overview-label">Tipo de Associado</span>
-                        <span class="overview-value">${associado.tipoAssociado || '-'}</span>
-                    </div>
-                    <div class="overview-item">
-                        <span class="overview-label">Situação Financeira</span>
-                        <span class="overview-value">${associado.situacaoFinanceira || '-'}</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-        }
-
-        // Preenche tab Militar
-        function preencherTabMilitar(associado) {
-            const militarTab = document.getElementById('militar-tab');
-
-            militarTab.innerHTML = `
-        <div class="detail-section">
-            <div class="section-header">
-                <div class="section-icon">
-                    <i class="fas fa-shield-alt"></i>
-                </div>
-                <h3 class="section-title">Informações Militares</h3>
-            </div>
-            
-            <div class="detail-grid">
-                <div class="detail-item">
-                    <span class="detail-label">Corporação</span>
-                    <span class="detail-value">${associado.corporacao || '-'}</span>
-                </div>
-                <div class="detail-item">
-                    <span class="detail-label">Patente</span>
-                    <span class="detail-value">${associado.patente || '-'}</span>
-                </div>
-                <div class="detail-item">
-                    <span class="detail-label">Categoria</span>
-                    <span class="detail-value">${associado.categoria || '-'}</span>
-                </div>
-                <div class="detail-item">
-                    <span class="detail-label">Lotação</span>
-                    <span class="detail-value">${associado.lotacao || '-'}</span>
-                </div>
-                <div class="detail-item">
-                    <span class="detail-label">Unidade</span>
-                    <span class="detail-value">${associado.unidade || '-'}</span>
-                </div>
-            </div>
-        </div>
-    `;
-        }
-
-        // FUNÇÃO ATUALIZADA: Preenche tab Financeiro com novos campos
-        function preencherTabFinanceiro(associado) {
-            const financeiroTab = document.getElementById('financeiro-tab');
-
-            // Mostra loading enquanto carrega
-            financeiroTab.innerHTML = `
-        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 3rem; color: var(--gray-500);">
-            <div class="loading-spinner" style="margin-bottom: 1rem;"></div>
-            <p>Carregando informações financeiras...</p>
-        </div>
-    `;
-
-            // Busca dados dos serviços do associado
-            buscarServicosAssociado(associado.id)
-                .then(dadosServicos => {
-                    console.log('Dados dos serviços:', dadosServicos);
-
-                    let servicosHtml = '';
-                    let historicoHtml = '';
-                    let valorTotalMensal = 0;
-                    let tipoAssociadoServico = 'Não definido';
-                    let servicosAtivos = [];
-                    let resumoServicos = 'Nenhum serviço ativo';
-
-                    if (dadosServicos && dadosServicos.status === 'success' && dadosServicos.data) {
-                        const dados = dadosServicos.data;
-                        valorTotalMensal = dados.valor_total_mensal || 0;
-                        tipoAssociadoServico = dados.tipo_associado_servico || 'Não definido';
-
-                        // Analisa os serviços contratados
-                        if (dados.servicos.social) {
-                            servicosAtivos.push('Social');
-                        }
-                        if (dados.servicos.juridico) {
-                            servicosAtivos.push('Jurídico');
-                        }
-
-                        // Define resumo dos serviços
-                        if (servicosAtivos.length === 2) {
-                            resumoServicos = 'Social + Jurídico';
-                        } else if (servicosAtivos.includes('Social')) {
-                            resumoServicos = 'Apenas Social';
-                        } else if (servicosAtivos.includes('Jurídico')) {
-                            resumoServicos = 'Apenas Jurídico';
-                        }
-
-                        // Gera HTML dos serviços
-                        servicosHtml = gerarHtmlServicosCompleto(dados.servicos, valorTotalMensal);
-
-                        // Gera HTML do histórico
-                        if (dados.historico && dados.historico.length > 0) {
-                            historicoHtml = gerarHtmlHistorico(dados.historico);
-                        }
-                    } else {
-                        servicosHtml = `
-                    <div class="empty-state" style="padding: 2rem; text-align: center; color: var(--gray-500);">
-                        <i class="fas fa-info-circle" style="font-size: 2rem; margin-bottom: 1rem; opacity: 0.3;"></i>
-                        <p>Nenhum serviço contratado</p>
-                        <small>Este associado ainda não possui serviços ativos</small>
-                    </div>
-                `;
-                    }
-
-                    financeiroTab.innerHTML = `
-                <!-- Resumo Financeiro Principal -->
-                <div class="resumo-financeiro" style="margin: 1.5rem 2rem; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); border-radius: 16px; padding: 2rem; color: white; position: relative; overflow: hidden;">
-                    <div style="position: absolute; top: -30px; right: -30px; font-size: 6rem; opacity: 0.1;">
-                        <i class="fas fa-coins"></i>
-                    </div>
-                    <div style="position: relative; z-index: 1; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 2rem; align-items: center;">
-                        <div style="text-align: center;">
-                            <div style="font-size: 0.875rem; opacity: 0.9; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 1px;">
-                                Valor Mensal Total
-                            </div>
-                            <div style="font-size: 2.5rem; font-weight: 800; margin-bottom: 0.25rem;">
-                                R$ ${valorTotalMensal.toFixed(2).replace('.', ',')}
-                            </div>
-                            <div style="font-size: 0.75rem; opacity: 0.8;">
-                                ${servicosAtivos.length} serviço${servicosAtivos.length !== 1 ? 's' : ''} ativo${servicosAtivos.length !== 1 ? 's' : ''}
-                            </div>
-                        </div>
-                        <div style="text-align: center;">
-                            <div style="font-size: 0.875rem; opacity: 0.9; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 1px;">
-                                Tipo de Associado
-                            </div>
-                            <div style="font-size: 1.3rem; font-weight: 700; margin-bottom: 0.25rem;">
-                                ${tipoAssociadoServico}
-                            </div>
-                            <div style="font-size: 0.75rem; opacity: 0.8;">
-                                Define percentual de cobrança
-                            </div>
-                        </div>
-                        <div style="text-align: center;">
-                            <div style="font-size: 0.875rem; opacity: 0.9; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 1px;">
-                                Serviços Contratados
-                            </div>
-                            <div style="font-size: 1.3rem; font-weight: 700; margin-bottom: 0.25rem;">
-                                ${resumoServicos}
-                            </div>
-                            <div style="font-size: 0.75rem; opacity: 0.8;">
-                                ${servicosAtivos.includes('Jurídico') ? 'Inclui cobertura jurídica' : 'Cobertura básica'}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Seção de Serviços Contratados -->
-                <div class="detail-section">
-                    <div class="section-header">
-                        <div class="section-icon">
-                            <i class="fas fa-clipboard-list"></i>
-                        </div>
-                        <h3 class="section-title">Detalhes dos Serviços</h3>
-                    </div>
-                    ${servicosHtml}
-                </div>
-
-                <!-- Dados Bancários e Cobrança - ATUALIZADO COM NOVOS CAMPOS -->
-                <div class="detail-section">
-                    <div class="section-header">
-                        <div class="section-icon">
-                            <i class="fas fa-university"></i>
-                        </div>
-                        <h3 class="section-title">Dados Bancários e Cobrança</h3>
-                    </div>
-                    
-                    <div class="detail-grid">
-                        <div class="detail-item">
-                            <span class="detail-label">Categoria</span>
-                            <span class="detail-value">${associado.tipoAssociado || '-'}</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Situação Financeira</span>
-                            <span class="detail-value">
-                                ${associado.situacaoFinanceira ?
-                        `<span style="color: ${associado.situacaoFinanceira === 'Adimplente' ? 'var(--success)' : 'var(--danger)'}; font-weight: 600;">${associado.situacaoFinanceira}</span>`
-                        : '-'}
-                            </span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Vínculo Servidor</span>
-                            <span class="detail-value">${associado.vinculoServidor || '-'}</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Local de Débito</span>
-                            <span class="detail-value">${associado.localDebito || '-'}</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Agência</span>
-                            <span class="detail-value">${associado.agencia || '-'}</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Operação</span>
-                            <span class="detail-value">${associado.operacao || '-'}</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Conta Corrente</span>
-                            <span class="detail-value">${associado.contaCorrente || '-'}</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">É Doador</span>
-                            <span class="detail-value">
-                                <span style="color: ${formatarDoador(associado.doador) === 'Sim' ? 'var(--success)' : 'var(--gray-500)'}; font-weight: 600;">
-                                    ${formatarDoador(associado.doador)}
-                                </span>
-                            </span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- NOVA SEÇÃO: Observações Financeiras -->
-                <div class="detail-section">
-                    <div class="section-header">
-                        <div class="section-icon">
-                            <i class="fas fa-sticky-note"></i>
-                        </div>
-                        <h3 class="section-title">Observações</h3>
-                    </div>
-                    
-                    ${associado.observacoes ? `
-                        <div style="background: var(--gray-100); padding: 1.5rem; border-radius: 12px; border-left: 4px solid var(--info);">
-                            <div style="display: flex; align-items: flex-start; gap: 1rem;">
-                                <div style="
-                                    width: 40px;
-                                    height: 40px;
-                                    background: var(--info);
-                                    color: white;
-                                    border-radius: 50%;
-                                    display: flex;
-                                    align-items: center;
-                                    justify-content: center;
-                                    flex-shrink: 0;
-                                ">
-                                    <i class="fas fa-info-circle"></i>
-                                </div>
-                                <div style="flex: 1;">
-                                    <h6 style="margin: 0 0 0.5rem 0; color: var(--dark); font-weight: 600;">
-                                        Observações do Registro Financeiro
-                                    </h6>
-                                    <p style="margin: 0; color: var(--gray-700); line-height: 1.5; white-space: pre-wrap;">
-                                        ${associado.observacoes}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    ` : `
-                        <div style="background: var(--gray-50); padding: 1.5rem; border-radius: 12px; border: 2px dashed var(--gray-300); text-align: center;">
-                            <div style="color: var(--gray-500);">
-                                <i class="fas fa-file-alt" style="font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.3;"></i>
-                                <p style="margin: 0; font-size: 0.875rem;">Nenhuma observação cadastrada</p>
-                                <small style="color: var(--gray-400);">Campo disponível para anotações sobre a situação financeira</small>
-                            </div>
-                        </div>
-                    `}
-                </div>
-            `;
-                })
-                .catch(error => {
-                    console.error('Erro ao buscar serviços:', error);
-
-                    // Fallback: mostra apenas dados tradicionais
-                    financeiroTab.innerHTML = `
-                <div class="detail-section">
-                    <div class="section-header">
-                        <div class="section-icon">
-                            <i class="fas fa-exclamation-triangle" style="color: var(--warning);"></i>
-                        </div>
-                        <h3 class="section-title">Dados Financeiros</h3>
-                        <small style="color: var(--warning); font-size: 0.75rem;">⚠ Não foi possível carregar dados dos serviços</small>
-                    </div>
-                    
-                    <div class="detail-grid">
-                        <div class="detail-item">
-                            <span class="detail-label">Categoria</span>
-                            <span class="detail-value">${associado.tipoAssociado || '-'}</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Situação Financeira</span>
-                            <span class="detail-value">${associado.situacaoFinanceira || '-'}</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Vínculo Servidor</span>
-                            <span class="detail-value">${associado.vinculoServidor || '-'}</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Local de Débito</span>
-                            <span class="detail-value">${associado.localDebito || '-'}</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Agência</span>
-                            <span class="detail-value">${associado.agencia || '-'}</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Operação</span>
-                            <span class="detail-value">${associado.operacao || '-'}</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Conta Corrente</span>
-                            <span class="detail-value">${associado.contaCorrente || '-'}</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">É Doador</span>
-                            <span class="detail-value">
-                                <span style="color: ${formatarDoador(associado.doador) === 'Sim' ? 'var(--success)' : 'var(--gray-500)'}; font-weight: 600;">
-                                    ${formatarDoador(associado.doador)}
-                                </span>
-                            </span>
-                        </div>
-                    </div>
-                    
-                    <!-- Observações no fallback também -->
-                    ${associado.observacoes ? `
-                    <div style="margin-top: 2rem; background: var(--gray-100); padding: 1.5rem; border-radius: 12px; border-left: 4px solid var(--info);">
-                        <div style="display: flex; align-items: flex-start; gap: 1rem;">
-                            <div style="
-                                width: 40px;
-                                height: 40px;
-                                background: var(--info);
-                                color: white;
-                                border-radius: 50%;
-                                display: flex;
-                                align-items: center;
-                                justify-content: center;
-                                flex-shrink: 0;
-                            ">
-                                <i class="fas fa-info-circle"></i>
-                            </div>
-                            <div style="flex: 1;">
-                                <h6 style="margin: 0 0 0.5rem 0; color: var(--dark); font-weight: 600;">
-                                    Observações do Registro Financeiro
-                                </h6>
-                                <p style="margin: 0; color: var(--gray-700); line-height: 1.5; white-space: pre-wrap;">
-                                    ${associado.observacoes}
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                    ` : ''}
-                </div>
-            `;
-                });
-        }
-
-        // Função para gerar HTML dos serviços - VERSÃO COMPLETA
-        function gerarHtmlServicosCompleto(servicos, valorTotal) {
-            let servicosHtml = '';
-
-            // Verifica se tem serviços
-            if (!servicos.social && !servicos.juridico) {
-                return `
-            <div class="empty-state" style="padding: 2rem; text-align: center; color: var(--gray-500);">
-                <i class="fas fa-info-circle" style="font-size: 2rem; margin-bottom: 1rem; opacity: 0.3;"></i>
-                <p>Nenhum serviço ativo encontrado</p>
-                <small>Este associado não possui serviços contratados</small>
-            </div>
-        `;
-            }
-
-            servicosHtml += '<div class="servicos-container" style="display: flex; flex-direction: column; gap: 1.5rem;">';
-
-            // Serviço Social
-            if (servicos.social) {
-                const social = servicos.social;
-                const dataAdesao = new Date(social.data_adesao).toLocaleDateString('pt-BR');
-                const valorBase = parseFloat(social.valor_base || 173.10);
-                const desconto = ((valorBase - parseFloat(social.valor_aplicado)) / valorBase * 100).toFixed(0);
-
-                servicosHtml += `
-            <div class="servico-card" style="
-                background: linear-gradient(135deg, var(--success) 0%, #00a847 100%);
-                padding: 1.5rem;
-                border-radius: 16px;
-                color: white;
-                position: relative;
-                overflow: hidden;
-                box-shadow: 0 8px 24px rgba(0, 200, 83, 0.3);
-            ">
-                <div style="position: absolute; top: -20px; right: -20px; font-size: 5rem; opacity: 0.1;">
-                    <i class="fas fa-heart"></i>
-                </div>
-                <div style="position: relative; z-index: 1;">
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem;">
-                        <div style="flex: 1;">
-                            <h4 style="margin: 0; font-size: 1.3rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">
-                                <i class="fas fa-heart"></i>
-                                Serviço Social
-                            </h4>
-                            <div style="display: flex; align-items: center; gap: 1rem; margin-top: 0.75rem; flex-wrap: wrap;">
-                                <span style="background: rgba(255,255,255,0.25); padding: 0.375rem 0.875rem; border-radius: 20px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">
-                                    OBRIGATÓRIO
-                                </span>
-                                <span style="font-size: 0.875rem; opacity: 0.9;">
-                                    <i class="fas fa-calendar-alt" style="margin-right: 0.25rem;"></i>
-                                    Desde ${dataAdesao}
-                                </span>
-                                ${desconto > 0 ? `
-                                <span style="background: rgba(255,255,255,0.25); padding: 0.375rem 0.875rem; border-radius: 20px; font-size: 0.75rem; font-weight: 600;">
-                                    <i class="fas fa-percentage" style="margin-right: 0.25rem;"></i>
-                                    ${desconto}% desconto
-                                </span>
-                                ` : ''}
-                            </div>
-                        </div>
-                        <div style="text-align: right; min-width: 120px;">
-                            <div style="font-size: 1.8rem; font-weight: 800; margin-bottom: 0.25rem;">
-                                R$ ${parseFloat(social.valor_aplicado).toFixed(2).replace('.', ',')}
-                            </div>
-                            <div style="font-size: 0.75rem; opacity: 0.9; background: rgba(255,255,255,0.2); padding: 0.25rem 0.5rem; border-radius: 8px;">
-                                ${parseFloat(social.percentual_aplicado).toFixed(0)}% do valor base
-                            </div>
-                        </div>
-                    </div>
-                    <div style="background: rgba(255,255,255,0.15); padding: 1rem; border-radius: 8px; font-size: 0.875rem; line-height: 1.5;">
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                            <span>Valor base:</span>
-                            <span style="font-weight: 600;">R$ ${valorBase.toFixed(2).replace('.', ',')}</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-            }
-
-            // Serviço Jurídico
-            if (servicos.juridico) {
-                const juridico = servicos.juridico;
-                const dataAdesao = new Date(juridico.data_adesao).toLocaleDateString('pt-BR');
-                const valorBase = parseFloat(juridico.valor_base || 43.28);
-                const desconto = ((valorBase - parseFloat(juridico.valor_aplicado)) / valorBase * 100).toFixed(0);
-
-                servicosHtml += `
-            <div class="servico-card" style="
-                background: linear-gradient(135deg, var(--info) 0%, #0097a7 100%);
-                padding: 1.5rem;
-                border-radius: 16px;
-                color: white;
-                position: relative;
-                overflow: hidden;
-                box-shadow: 0 8px 24px rgba(0, 184, 212, 0.3);
-            ">
-                <div style="position: absolute; top: -20px; right: -20px; font-size: 5rem; opacity: 0.1;">
-                    <i class="fas fa-balance-scale"></i>
-                </div>
-                <div style="position: relative; z-index: 1;">
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem;">
-                        <div style="flex: 1;">
-                            <h4 style="margin: 0; font-size: 1.3rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">
-                                <i class="fas fa-balance-scale"></i>
-                                Serviço Jurídico
-                            </h4>
-                            <div style="display: flex; align-items: center; gap: 1rem; margin-top: 0.75rem; flex-wrap: wrap;">
-                                <span style="background: rgba(255,255,255,0.25); padding: 0.375rem 0.875rem; border-radius: 20px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">
-                                    OPCIONAL
-                                </span>
-                                <span style="font-size: 0.875rem; opacity: 0.9;">
-                                    <i class="fas fa-calendar-alt" style="margin-right: 0.25rem;"></i>
-                                    Desde ${dataAdesao}
-                                </span>
-                                ${desconto > 0 ? `
-                                <span style="background: rgba(255,255,255,0.25); padding: 0.375rem 0.875rem; border-radius: 20px; font-size: 0.75rem; font-weight: 600;">
-                                    <i class="fas fa-percentage" style="margin-right: 0.25rem;"></i>
-                                    ${desconto}% desconto
-                                </span>
-                                ` : ''}
-                            </div>
-                        </div>
-                        <div style="text-align: right; min-width: 120px;">
-                            <div style="font-size: 1.8rem; font-weight: 800; margin-bottom: 0.25rem;">
-                                R$ ${parseFloat(juridico.valor_aplicado).toFixed(2).replace('.', ',')}
-                            </div>
-                            <div style="font-size: 0.75rem; opacity: 0.9; background: rgba(255,255,255,0.2); padding: 0.25rem 0.5rem; border-radius: 8px;">
-                                ${parseFloat(juridico.percentual_aplicado).toFixed(0)}% do valor base
-                            </div>
-                        </div>
-                    </div>
-                    <div style="background: rgba(255,255,255,0.15); padding: 1rem; border-radius: 8px; font-size: 0.875rem; line-height: 1.5;">
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                            <span>Valor base:</span>
-                            <span style="font-weight: 600;">R$ ${valorBase.toFixed(2).replace('.', ',')}</span>
-                        </div>
-                        
-                    </div>
-                </div>
-            </div>
-        `;
-            }
-
-            servicosHtml += '</div>';
-            return servicosHtml;
-        }
-
-        // Função para gerar HTML do histórico
-        function gerarHtmlHistorico(historico) {
-            if (!historico || historico.length === 0) {
-                return '';
-            }
-
-            let historicoHtml = '<div class="historico-container" style="display: flex; flex-direction: column; gap: 1rem;">';
-
-            historico.slice(0, 5).forEach(item => { // Mostra apenas os últimos 5
-                const data = new Date(item.data_alteracao).toLocaleDateString('pt-BR');
-                const hora = new Date(item.data_alteracao).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-
-                let icone = 'fa-edit';
-                let cor = 'var(--info)';
-                let titulo = item.tipo_alteracao;
-
-                if (item.tipo_alteracao === 'ADESAO') {
-                    icone = 'fa-plus-circle';
-                    cor = 'var(--success)';
-                    titulo = 'Adesão';
-                } else if (item.tipo_alteracao === 'CANCELAMENTO') {
-                    icone = 'fa-times-circle';
-                    cor = 'var(--danger)';
-                    titulo = 'Cancelamento';
-                } else if (item.tipo_alteracao === 'ALTERACAO_VALOR') {
-                    icone = 'fa-exchange-alt';
-                    cor = 'var(--warning)';
-                    titulo = 'Alteração de Valor';
-                }
-
-                historicoHtml += `
-            <div style="
-                background: var(--gray-100);
-                padding: 1rem;
-                border-radius: 12px;
-                border-left: 4px solid ${cor};
-                display: flex;
-                align-items: flex-start;
-                gap: 1rem;
-            ">
-                <div style="
-                    width: 40px;
-                    height: 40px;
-                    background: ${cor};
-                    color: white;
-                    border-radius: 50%;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    flex-shrink: 0;
-                ">
-                    <i class="fas ${icone}"></i>
-                </div>
-                <div style="flex: 1;">
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
-                        <h5 style="margin: 0; font-weight: 600; color: var(--dark);">
-                            ${titulo} - ${item.servico_nome}
-                        </h5>
-                        <small style="color: var(--gray-500); font-size: 0.75rem;">
-                            ${data} às ${hora}
-                        </small>
-                    </div>
-                    <div style="font-size: 0.875rem; color: var(--gray-600); margin-bottom: 0.5rem;">
-                        ${item.motivo || 'Sem observações'}
-                    </div>
-                    ${item.valor_anterior && item.valor_novo ? `
-                        <div style="display: flex; gap: 1rem; font-size: 0.75rem;">
-                            <span style="color: var(--danger);">
-                                De: R$ ${parseFloat(item.valor_anterior).toFixed(2).replace('.', ',')}
-                            </span>
-                            <span style="color: var(--success);">
-                                Para: R$ ${parseFloat(item.valor_novo).toFixed(2).replace('.', ',')}
-                            </span>
-                        </div>
-                    ` : ''}
-                    ${item.funcionario_nome ? `
-                        <div style="font-size: 0.75rem; color: var(--gray-500); margin-top: 0.5rem;">
-                            <i class="fas fa-user" style="margin-right: 0.25rem;"></i>
-                            Por: ${item.funcionario_nome}
-                        </div>
-                    ` : ''}
-                </div>
-            </div>
-        `;
-            });
-
-            historicoHtml += '</div>';
-            return historicoHtml;
-        }
-
-        // Função para buscar serviços do associado (mantém a mesma)
-        function buscarServicosAssociado(associadoId) {
-            return fetch(`../api/buscar_servicos_associado.php?associado_id=${associadoId}`)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`HTTP ${response.status}`);
-                    }
-                    return response.json();
-                });
-        }
-
-        // Preenche tab Contato
-        function preencherTabContato(associado) {
-            const contatoTab = document.getElementById('contato-tab');
-
-            contatoTab.innerHTML = `
-        <div class="detail-section">
-            <div class="section-header">
-                <div class="section-icon">
-                    <i class="fas fa-phone"></i>
-                </div>
-                <h3 class="section-title">Informações de Contato</h3>
-            </div>
-            
-            <div class="detail-grid">
-                <div class="detail-item">
-                    <span class="detail-label">Telefone</span>
-                    <span class="detail-value">${formatarTelefone(associado.telefone)}</span>
-                </div>
-                <div class="detail-item">
-                    <span class="detail-label">E-mail</span>
-                    <span class="detail-value">${associado.email || '-'}</span>
-                </div>
-            </div>
-        </div>
-        
-        <div class="detail-section">
-            <div class="section-header">
-                <div class="section-icon">
-                    <i class="fas fa-map-marker-alt"></i>
-                </div>
-                <h3 class="section-title">Endereço</h3>
-            </div>
-            
-            <div class="detail-grid">
-                <div class="detail-item">
-                    <span class="detail-label">CEP</span>
-                    <span class="detail-value">${associado.cep || '-'}</span>
-                </div>
-                <div class="detail-item">
-                    <span class="detail-label">Endereço</span>
-                    <span class="detail-value">${associado.endereco || '-'}</span>
-                </div>
-                <div class="detail-item">
-                    <span class="detail-label">Número</span>
-                    <span class="detail-value">${associado.numero || '-'}</span>
-                </div>
-                <div class="detail-item">
-                    <span class="detail-label">Complemento</span>
-                    <span class="detail-value">${associado.complemento || '-'}</span>
-                </div>
-                <div class="detail-item">
-                    <span class="detail-label">Bairro</span>
-                    <span class="detail-value">${associado.bairro || '-'}</span>
-                </div>
-                <div class="detail-item">
-                    <span class="detail-label">Cidade</span>
-                    <span class="detail-value">${associado.cidade || '-'}</span>
-                </div>
-            </div>
-        </div>
-    `;
-        }
-
-        // Preenche tab Dependentes
-        function preencherTabDependentes(associado) {
-            const dependentesTab = document.getElementById('dependentes-tab');
-
-            if (!associado.dependentes || associado.dependentes.length === 0) {
-                dependentesTab.innerHTML = `
-            <div class="empty-state">
-                <i class="fas fa-users"></i>
-                <p>Nenhum dependente cadastrado</p>
-            </div>
-        `;
-                return;
-            }
-
-            let dependentesHtml = `
-        <div class="detail-section">
-            <div class="section-header">
-                <div class="section-icon">
-                    <i class="fas fa-users"></i>
-                </div>
-                <h3 class="section-title">Dependentes (${associado.dependentes.length})</h3>
-            </div>
-            <div class="list-container">
-    `;
-
-            associado.dependentes.forEach(dep => {
-                let idade = '-';
-                if (dep.data_nascimento && dep.data_nascimento !== '0000-00-00') {
-                    const hoje = new Date();
-                    const nascimento = new Date(dep.data_nascimento);
-                    idade = Math.floor((hoje - nascimento) / (365.25 * 24 * 60 * 60 * 1000));
-                    idade = idade + ' anos';
-                }
-
-                dependentesHtml += `
-            <div class="list-item">
-                <div class="list-item-content">
-                    <div class="list-item-title">${dep.nome || 'Sem nome'}</div>
-                    <div class="list-item-subtitle">
-                        ${dep.parentesco || 'Parentesco não informado'} • 
-                        ${formatarData(dep.data_nascimento)} • 
-                        ${idade}
-                    </div>
-                </div>
-                <span class="list-item-badge">${dep.sexo || '-'}</span>
-            </div>
-        `;
-            });
-
-            dependentesHtml += `
-            </div>
-        </div>
-    `;
-
-            dependentesTab.innerHTML = dependentesHtml;
-        }
-
-function preencherTabDocumentos(associado) {
-    const documentosTab = document.getElementById('documentos-tab');
-
-    // Show loading
-    documentosTab.innerHTML = `
-        <div class="text-center py-5">
-            <div class="loading-spinner mb-3"></div>
-            <p class="text-muted">Carregando documentos...</p>
-        </div>
-    `;
-
-    // Call NEW API to list documents
-    $.ajax({
-        url: '../api/documentos/upload_documentos_listar.php',
-        method: 'GET',
-        data: { associado_id: associado.id },
-        dataType: 'json',
-        success: function(response) {
-            if (response.status === 'success') {
-                renderizarDocumentosUpload(response.data, documentosTab, associado);
-            } else {
-                renderizarDocumentosUpload([], documentosTab, associado);
-            }
-        },
-        error: function() {
-            renderizarDocumentosUpload([], documentosTab, associado);
-        }
-    });
-}
-
-function renderizarDocumentosUpload(documentos, container, associado) {
-    let html = `
-        <!-- Header Principal estilo Financeiro -->
-        <div style="
-            margin: 1.5rem 2rem;
-            background: linear-gradient(135deg, #4169E1 0%, #1E3A8A 100%);
-            border-radius: 16px;
-            padding: 2rem;
-            color: white;
-            position: relative;
-            overflow: hidden;
-        ">
-            <div style="
-                position: absolute;
-                top: -30px;
-                right: -30px;
-                font-size: 6rem;
-                opacity: 0.1;
-            ">
-                <i class="fas fa-folder-open"></i>
-            </div>
-            <div style="
-                position: relative;
-                z-index: 1;
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-                gap: 2rem;
-                align-items: center;
-            ">
-                <div style="text-align: center;">
-                    <div style="
-                        font-size: 0.875rem;
-                        opacity: 0.9;
-                        margin-bottom: 0.5rem;
-                        text-transform: uppercase;
-                        letter-spacing: 1px;
-                    ">
-                        DOCUMENTOS ANEXADOS
-                    </div>
-                    <div style="
-                        font-size: 2.5rem;
-                        font-weight: 800;
-                        margin-bottom: 0.25rem;
-                    ">
-                        ${documentos.length}
-                    </div>
-                    <div style="font-size: 0.75rem; opacity: 0.8;">
-                        documento${documentos.length !== 1 ? 's' : ''} no sistema
-                    </div>
-                </div>
-                <div style="text-align: center;">
-                    <div style="
-                        font-size: 0.875rem;
-                        opacity: 0.9;
-                        margin-bottom: 0.5rem;
-                        text-transform: uppercase;
-                        letter-spacing: 1px;
-                    ">
-                        ASSOCIADO
-                    </div>
-                    <div style="
-                        font-size: 1.3rem;
-                        font-weight: 700;
-                        margin-bottom: 0.25rem;
-                    ">
-                        ${associado.nome}
-                    </div>
-                    <div style="font-size: 0.75rem; opacity: 0.8;">
-                        Matrícula: ${associado.id}
-                    </div>
-                </div>
-                <div style="text-align: center;">
-                    <button onclick="abrirModalUploadDocumento(${associado.id}, '${associado.nome.replace(/'/g, "\\'")}')" style="
-                        background: rgba(255, 255, 255, 0.2);
-                        border: 2px solid rgba(255, 255, 255, 0.3);
-                        color: white;
-                        padding: 0.75rem 1.5rem;
-                        border-radius: 12px;
-                        font-weight: 600;
-                        cursor: pointer;
-                        transition: all 0.3s ease;
-                        font-size: 0.875rem;
-                    " onmouseover="this.style.background='rgba(255, 255, 255, 0.3)'" onmouseout="this.style.background='rgba(255, 255, 255, 0.2)'">
-                        <i class="fas fa-plus me-2"></i>
-                        Anexar Documento
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Seção de Documentos -->
-        <div class="detail-section">
-            <div class="section-header">
-                <div class="section-icon">
-                    <i class="fas fa-folder-open"></i>
-                </div>
-                <h3 class="section-title">Documentos Anexados</h3>
-            </div>
-    `;
-
-    if (documentos.length > 0) {
-        // Container para os documentos
-        html += '<div style="padding: 0 1rem;">';
-        
-        documentos.forEach(doc => {
-            // Define cor baseada no status
-            let statusColor = '#28a745';
-            let statusBg = 'rgba(40, 167, 69, 0.1)';
-            let statusIcon = 'check-circle';
-            let statusText = doc.status_descricao || 'Digitalizado';
-            
-            if (!doc.arquivo_existe) {
-                statusColor = '#dc3545';
-                statusBg = 'rgba(220, 53, 69, 0.1)';
-                statusIcon = 'exclamation-triangle';
-                statusText = 'Arquivo não encontrado';
-            }
-            
-            // Define ícone do arquivo
-            let fileIcon = 'file-pdf';
-            let iconColor = '#dc3545';
-            
-            if (doc.tipo_mime && doc.tipo_mime.includes('image')) {
-                fileIcon = 'file-image';
-                iconColor = '#28a745';
-            }
-            
-            html += `
-                <div style="
-                    background: white;
-                    border: 1px solid #e9ecef;
-                    border-radius: 12px;
-                    padding: 1.5rem;
-                    margin-bottom: 1rem;
-                    transition: all 0.3s ease;
-                ">
-                    <!-- Badge de Status -->
-                    <div style="
-                        display: inline-block;
-                        background: ${statusBg};
-                        color: ${statusColor};
-                        padding: 0.375rem 0.75rem;
-                        border-radius: 20px;
-                        font-size: 0.75rem;
-                        font-weight: 600;
-                        margin-bottom: 1rem;
-                    ">
-                        <i class="fas fa-${statusIcon} me-1"></i>
-                        ${statusText}
-                    </div>
-                    
-                    <!-- Conteúdo do Documento -->
-                    <div style="display: flex; align-items: flex-start; gap: 1rem; margin-bottom: 1rem;">
-                        <!-- Ícone -->
-                        <div style="
-                            width: 50px;
-                            height: 50px;
-                            background: ${iconColor}15;
-                            color: ${iconColor};
-                            border-radius: 12px;
-                            display: flex;
-                            align-items: center;
-                            justify-content: center;
-                            flex-shrink: 0;
-                            font-size: 1.5rem;
-                        ">
-                            <i class="fas fa-${fileIcon}"></i>
-                        </div>
-                        
-                        <!-- Informações -->
-                        <div style="flex: 1;">
-                            <h6 style="
-                                margin: 0 0 0.25rem 0;
-                                font-weight: 600;
-                                color: #2c3e50;
-                                font-size: 1rem;
-                            ">
-                                ${doc.tipo_descricao || 'Documento'}
-                            </h6>
-                            <p style="
-                                margin: 0 0 0.5rem 0;
-                                color: #6c757d;
-                                font-size: 0.875rem;
-                                word-break: break-all;
-                            ">
-                                ${doc.nome_arquivo || 'arquivo.pdf'}
-                            </p>
-                            <div style="
-                                display: flex;
-                                gap: 1.5rem;
-                                font-size: 0.75rem;
-                                color: #6c757d;
-                            ">
-                                ${doc.tamanho_formatado ? `
-                                    <span>
-                                        <i class="fas fa-weight-hanging me-1"></i>
-                                        ${doc.tamanho_formatado}
-                                    </span>
-                                ` : ''}
-                                ${doc.data_upload_formatada ? `
-                                    <span>
-                                        <i class="fas fa-calendar me-1"></i>
-                                        ${doc.data_upload_formatada}
-                                    </span>
-                                ` : ''}
-                                ${doc.funcionario_upload ? `
-                                    <span>
-                                        <i class="fas fa-user me-1"></i>
-                                        ${doc.funcionario_upload}
-                                    </span>
-                                ` : ''}
-                            </div>
-                        </div>
-                    </div>
-                    
-                    ${doc.observacao ? `
-                        <div style="
-                            background: #f8f9fa;
-                            padding: 0.75rem;
-                            border-radius: 8px;
-                            margin-bottom: 1rem;
-                            font-size: 0.875rem;
-                            color: #495057;
-                        ">
-                            <i class="fas fa-sticky-note me-1" style="color: #6c757d;"></i>
-                            ${doc.observacao}
-                        </div>
-                    ` : ''}
-                    
-                    <!-- Botões de Ação -->
-                    <div style="display: flex; gap: 0.75rem;">
-                        ${doc.arquivo_existe !== false ? `
-                            <button onclick="downloadDocumentoUpload(${doc.id})" style="
-                                background: transparent;
-                                color: #6c757d;
-                                border: 1px solid #dee2e6;
-                                padding: 0.5rem 1rem;
-                                border-radius: 8px;
-                                font-size: 0.8125rem;
-                                cursor: pointer;
-                                display: inline-flex;
-                                align-items: center;
-                                gap: 0.5rem;
-                                transition: all 0.3s ease;
-                            " onmouseover="this.style.background='#f8f9fa'" onmouseout="this.style.background='transparent'">
-                                <i class="fas fa-cloud-download-alt"></i>
-                                Baixar
-                            </button>
-                        ` : `
-                            <button disabled style="
-                                background: transparent;
-                                color: #adb5bd;
-                                border: 1px solid #dee2e6;
-                                padding: 0.5rem 1rem;
-                                border-radius: 8px;
-                                font-size: 0.8125rem;
-                                cursor: not-allowed;
-                                display: inline-flex;
-                                align-items: center;
-                                gap: 0.5rem;
-                            ">
-                                <i class="fas fa-exclamation-triangle"></i>
-                                Indisponível
-                            </button>
-                        `}
-                        
-                        <button onclick="if(confirm('Deseja remover este documento?')) { removerDocumento(${doc.id}); }" style="
-                            background: transparent;
-                            color: #dc3545;
-                            border: 1px solid #dc3545;
-                            padding: 0.5rem 1rem;
-                            border-radius: 8px;
-                            font-size: 0.8125rem;
-                            cursor: pointer;
-                            display: inline-flex;
-                            align-items: center;
-                            gap: 0.5rem;
-                            transition: all 0.3s ease;
-                        " onmouseover="this.style.background='#dc3545'; this.style.color='white';" onmouseout="this.style.background='transparent'; this.style.color='#dc3545';">
-                            <i class="fas fa-trash"></i>
-                            Remover
-                        </button>
-                    </div>
-                </div>
-            `;
-        });
-        
-        html += '</div>';
-    } else {
-        // Nenhum documento - Estado vazio
-        html += `
-            <div style="
-                background: #f8f9fa;
-                padding: 3rem 2rem;
-                border-radius: 16px;
-                border: 2px dashed #dee2e6;
-                text-align: center;
-                margin: 1rem;
-            ">
-                <div style="
-                    font-size: 4rem;
-                    color: #dee2e6;
-                    margin-bottom: 1rem;
-                ">
-                    <i class="fas fa-folder-open"></i>
-                </div>
-                <h5 style="
-                    color: #495057;
-                    margin-bottom: 0.5rem;
-                    font-weight: 600;
-                ">
-                    Nenhum documento anexado
-                </h5>
-                <p style="
-                    color: #6c757d;
-                    margin-bottom: 2rem;
-                    font-size: 0.875rem;
-                ">
-                    ${associado.nome} ainda não possui documentos anexados ao cadastro
-                </p>
-                <button onclick="abrirModalUploadDocumento(${associado.id}, '${associado.nome.replace(/'/g, "\\'")}')" style="
-                    background: #4169E1;
-                    color: white;
-                    border: none;
-                    padding: 0.75rem 1.5rem;
-                    border-radius: 12px;
-                    font-weight: 600;
-                    cursor: pointer;
-                    transition: all 0.3s ease;
-                " onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
-                    <i class="fas fa-plus me-2"></i>
-                    Anexar Primeiro Documento
-                </button>
-            </div>
-        `;
-    }
-
-    html += '</div>'; // Fecha detail-section
-
-    container.innerHTML = html;
-}
-
-// ADD this new function to dashboard.php
-function downloadDocumentoUpload(id) {
-    window.open('../api/documentos/upload_documentos_download.php?id=' + id, '_blank');
-}
-
-// NEW FUNCTION: Handle file drop
-function handleFileDrop(event) {
-    event.preventDefault();
-    const files = event.dataTransfer.files;
-    if (files.length > 0) {
-        document.getElementById('arquivoDocumento').files = files;
-        updateFileInfo(document.getElementById('arquivoDocumento'));
-    }
-    // Reset visual state
-    event.target.style.borderColor = 'var(--gray-300)';
-    event.target.style.background = 'var(--gray-50)';
-}
-
-function updateFileInfo(input) {
-    const fileInfo = document.getElementById('fileInfo');
-    if (input.files.length > 0) {
-        const file = input.files[0];
-        const fileSize = (file.size / 1024 / 1024).toFixed(2);
-        
-        fileInfo.innerHTML = `
-            <div class="alert alert-info d-flex align-items-center" style="margin: 0;">
-                <i class="fas fa-file me-2"></i>
-                <div>
-                    <strong>${file.name}</strong><br>
-                    <small>${fileSize} MB</small>
-                </div>
-            </div>
-        `;
-        fileInfo.style.display = 'block';
-    } else {
-        fileInfo.style.display = 'none';
-    }
-}
-
-// NEW FUNCTION: Send document
-function enviarDocumento() {
-    const form = document.getElementById('uploadDocumentoForm');
-    const formData = new FormData(form);
-    const uploadProgress = document.getElementById('uploadProgress');
-    const progressBar = uploadProgress.querySelector('.progress-bar');
-
-    // Validate form
-    if (!form.checkValidity()) {
-        form.reportValidity();
-        return;
-    }
-
-    // Validate file
-    const arquivo = document.getElementById('arquivoDocumento').files[0];
-    if (!arquivo) {
-        alert('Por favor, selecione um arquivo.');
-        return;
-    }
-
-    // Check file size (5MB max)
-    if (arquivo.size > 5 * 1024 * 1024) {
-        alert('Arquivo muito grande. Máximo: 5MB');
-        return;
-    }
-
-    // Show progress
-    uploadProgress.style.display = 'block';
-    
-    // Disable buttons
-    const buttons = document.querySelectorAll('#uploadDocumentoModal button');
-    buttons.forEach(btn => btn.disabled = true);
-
-    // Upload with progress
-    const xhr = new XMLHttpRequest();
-
-    xhr.upload.addEventListener('progress', function(e) {
-        if (e.lengthComputable) {
-            const percent = (e.loaded / e.total) * 100;
-            progressBar.style.width = percent + '%';
-        }
-    });
-
-    xhr.addEventListener('load', function() {
-        if (xhr.status === 200) {
-            try {
-                const response = JSON.parse(xhr.responseText);
-                if (response.status === 'success') {
-                    alert('Documento enviado com sucesso!');
-                    
-                    // Close modal
-                    const modal = bootstrap.Modal.getInstance(document.getElementById('uploadDocumentoModal'));
-                    modal.hide();
-                    
-                    // Reload documents tab
-                    const associadoId = document.getElementById('modalId').textContent.replace('ID: ', '');
-                    const associado = todosAssociados.find(a => a.id == associadoId);
-                    if (associado) {
-                        preencherTabDocumentos(associado);
-                    }
-                } else {
-                    alert('Erro: ' + response.message);
-                }
-            } catch (e) {
-                alert('Erro ao processar resposta');
-            }
-        } else {
-            alert('Erro ao enviar arquivo');
-        }
-        
-        // Re-enable buttons
-        buttons.forEach(btn => btn.disabled = false);
-        uploadProgress.style.display = 'none';
-    });
-
-    xhr.addEventListener('error', function() {
-        alert('Erro de conexão');
-        buttons.forEach(btn => btn.disabled = false);
-        uploadProgress.style.display = 'none';
-    });
-
-    xhr.open('POST', '../api/documentos/documentos_upload.php');
-    xhr.send(formData);
-}
-
-        // FUNÇÃO ATUALIZADA: Renderizar documentos no modal com validação extra
-        function renderizarDocumentosNoModal(documentos, container) {
-            let html = '<div class="document-flow-container">';
-
-            // Adiciona contador de documentos
-            html += `
-                <div class="document-count-info" style="margin-bottom: 1rem; padding: 1rem; background: var(--gray-100); border-radius: 8px;">
-                    <i class="fas fa-info-circle" style="color: var(--primary); margin-right: 0.5rem;"></i>
-                    <span style="font-size: 0.875rem; color: var(--gray-600);">
-                        ${documentos.length} documento${documentos.length > 1 ? 's' : ''} em fluxo de assinatura
-                    </span>
-                </div>
-            `;
-
-            documentos.forEach(doc => {
-                const statusClass = doc.status_fluxo.toLowerCase().replace('_', '-');
-                
-                html += `
-                    <div class="document-flow-card">
-                        <span class="status-badge-modal ${statusClass}">
-                            <i class="fas fa-${getStatusIcon(doc.status_fluxo)} me-1"></i>
-                            ${doc.status_descricao}
-                        </span>
-                        
-                        <div class="document-flow-header">
-                            <div class="document-flow-icon">
-                                <i class="fas fa-file-pdf"></i>
-                            </div>
-                            <div class="document-flow-info">
-                                <h6>Ficha de Filiação</h6>
-                                <p>${doc.tipo_origem === 'VIRTUAL' ? 'Gerada no Sistema' : 'Digitalizada'}</p>
-                            </div>
-                        </div>
-                        
-                        <div class="document-meta-modal">
-                            <div class="meta-item-modal">
-                                <i class="fas fa-calendar"></i>
-                                <span>Cadastrado em ${formatarDataDocumento(doc.data_upload)}</span>
-                            </div>
-                            ${doc.departamento_atual_nome ? `
-                                <div class="meta-item-modal">
-                                    <i class="fas fa-building"></i>
-                                    <span>${doc.departamento_atual_nome}</span>
-                                </div>
-                            ` : ''}
-                            ${doc.dias_em_processo > 0 ? `
-                                <div class="meta-item-modal">
-                                    <i class="fas fa-hourglass-half"></i>
-                                    <span>${doc.dias_em_processo} dia${doc.dias_em_processo > 1 ? 's' : ''} em processo</span>
-                                </div>
-                            ` : ''}
-                            ${doc.funcionario_upload ? `
-                                <div class="meta-item-modal">
-                                    <i class="fas fa-user"></i>
-                                    <span>Por: ${doc.funcionario_upload}</span>
-                                </div>
-                            ` : ''}
-                        </div>
-                        
-                        <!-- Progress do Fluxo -->
-                        <div class="fluxo-progress-modal">
-                            <div class="fluxo-steps-modal">
-                                <div class="fluxo-step-modal ${doc.status_fluxo !== 'DIGITALIZADO' ? 'completed' : 'active'}">
-                                    <div class="fluxo-step-icon-modal">
-                                        <i class="fas fa-upload"></i>
-                                    </div>
-                                    <div class="fluxo-step-label-modal">Digitalizado</div>
-                                    <div class="fluxo-line-modal"></div>
-                                </div>
-                                <div class="fluxo-step-modal ${doc.status_fluxo === 'AGUARDANDO_ASSINATURA' ? 'active' : (doc.status_fluxo === 'ASSINADO' || doc.status_fluxo === 'FINALIZADO' ? 'completed' : '')}">
-                                    <div class="fluxo-step-icon-modal">
-                                        <i class="fas fa-signature"></i>
-                                    </div>
-                                    <div class="fluxo-step-label-modal">Assinatura</div>
-                                    <div class="fluxo-line-modal"></div>
-                                </div>
-                                <div class="fluxo-step-modal ${doc.status_fluxo === 'ASSINADO' ? 'active' : (doc.status_fluxo === 'FINALIZADO' ? 'completed' : '')}">
-                                    <div class="fluxo-step-icon-modal">
-                                        <i class="fas fa-check"></i>
-                                    </div>
-                                    <div class="fluxo-step-label-modal">Assinado</div>
-                                    <div class="fluxo-line-modal"></div>
-                                </div>
-                                <div class="fluxo-step-modal ${doc.status_fluxo === 'FINALIZADO' ? 'completed' : ''}">
-                                    <div class="fluxo-step-icon-modal">
-                                        <i class="fas fa-flag-checkered"></i>
-                                    </div>
-                                    <div class="fluxo-step-label-modal">Finalizado</div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Informações adicionais baseadas no status -->
-                        ${renderizarInfoAdicional(doc)}
-                        
-                        <div class="document-actions-modal">
-                            <button class="btn-modern btn-primary btn-sm" onclick="downloadDocumentoModal(${doc.id})">
-                                <i class="fas fa-download"></i>
-                                Baixar
-                            </button>
-                            
-                            ${getAcoesFluxoModal(doc)}
-                            
-                            <button class="btn-modern btn-secondary btn-sm" onclick="verHistoricoModal(${doc.id})">
-                                <i class="fas fa-history"></i>
-                                Histórico
-                            </button>
-                        </div>
-                    </div>
-                `;
-            });
-
-            html += '</div>';
-            container.innerHTML = html;
-        }
-
-
-        function abrirModalUploadDocumento(associadoId, associadoNome) {
-    const uploadModalHtml = `
-        <div class="modal fade" id="uploadDocumentoModal" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog modal-lg">
-                <div class="modal-content">
-                    <div class="modal-header" style="background: var(--primary); color: white;">
-                        <h5 class="modal-title">
-                            <i class="fas fa-cloud-upload-alt me-2"></i>
-                            Anexar Documento
-                        </h5>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="mb-4" style="background: var(--gray-100); padding: 1rem; border-radius: 8px;">
-                            <h6 style="margin: 0;">
-                                <i class="fas fa-user me-2"></i>
-                                ${associadoNome}
-                            </h6>
-                            <small class="text-muted">ID: ${associadoId}</small>
-                        </div>
-
-                        <form id="uploadDocumentoForm" enctype="multipart/form-data">
-                            <input type="hidden" name="associado_id" value="${associadoId}">
-                            
-                            <div class="mb-3">
-                                <label class="form-label">Tipo de Documento</label>
-                                <select class="form-select" id="tipoDocumento" name="tipo_documento" required>
-                                    <option value="">Selecione o tipo</option>
-                                    <option value="FICHA_FILIACAO">Ficha de Filiação</option>
-                                    <option value="RG">RG (Cópia)</option>
-                                    <option value="CPF">CPF (Cópia)</option>
-                                    <option value="COMPROVANTE_RESIDENCIA">Comprovante de Residência</option>
-                                    <option value="FOTO_3X4">Foto 3x4</option>
-                                    <option value="CERTIDAO_NASCIMENTO">Certidão de Nascimento</option>
-                                    <option value="CERTIDAO_CASAMENTO">Certidão de Casamento</option>
-                                    <option value="OUTROS">Outros</option>
-                                </select>
-                            </div>
-
-                            <div class="mb-3" id="outroTipoDiv" style="display: none;">
-                                <label class="form-label">Especifique o tipo</label>
-                                <input type="text" class="form-control" id="outroTipo" name="outro_tipo">
-                            </div>
-
-                            <div class="mb-3">
-                                <label class="form-label">Arquivo</label>
-                                <div onclick="document.getElementById('arquivoDocumento').click()" style="
-                                    border: 2px dashed var(--gray-300);
-                                    border-radius: 12px;
-                                    padding: 2rem;
-                                    text-align: center;
-                                    background: var(--gray-50);
-                                    cursor: pointer;
-                                ">
-                                    <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
-                                    <p class="mb-2"><strong>Clique para selecionar</strong> o arquivo</p>
-                                    <small class="text-muted">PDF, JPG, PNG até 5MB</small>
-                                    <input type="file" id="arquivoDocumento" name="arquivo" accept=".pdf,.jpg,.jpeg,.png" required style="display: none;" onchange="updateFileInfo(this)">
-                                </div>
-                                <div id="fileInfo" class="mt-2" style="display: none;"></div>
-                            </div>
-
-                            <div class="mb-3">
-                                <label class="form-label">Observações (opcional)</label>
-                                <textarea class="form-control" name="observacao" rows="3"></textarea>
-                            </div>
-
-                            <div id="uploadProgress" style="display: none;">
-                                <div class="progress" style="height: 20px;">
-                                    <div class="progress-bar progress-bar-striped progress-bar-animated" style="width: 0%"></div>
-                                </div>
-                                <small class="text-muted mt-1 d-block">Enviando arquivo...</small>
-                            </div>
-                        </form>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                        <button type="button" class="btn btn-primary" onclick="enviarDocumento()">
-                            <i class="fas fa-upload me-2"></i>
-                            Enviar Documento
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-
-    // Remove existing modal
-    $('#uploadDocumentoModal').remove();
-    
-    // Add new modal
-    $('body').append(uploadModalHtml);
-    
-    // Show modal
-    const modal = new bootstrap.Modal(document.getElementById('uploadDocumentoModal'));
-    modal.show();
-
-    // Handle document type change
-    document.getElementById('tipoDocumento').addEventListener('change', function() {
-        const outroTipoDiv = document.getElementById('outroTipoDiv');
-        if (this.value === 'OUTROS') {
-            outroTipoDiv.style.display = 'block';
-            document.getElementById('outroTipo').required = true;
-        } else {
-            outroTipoDiv.style.display = 'none';
-            document.getElementById('outroTipo').required = false;
-        }
-    });
-}
-
-        // NOVA FUNÇÃO: Renderizar informações adicionais baseadas no status
-        function renderizarInfoAdicional(doc) {
-            let html = '';
-            
-            switch(doc.status_fluxo) {
-                case 'DIGITALIZADO':
-                    html = `
-                        <div class="alert-info-custom" style="margin: 1rem 0; padding: 0.75rem; background: rgba(0, 123, 255, 0.1); border-radius: 8px;">
-                            <i class="fas fa-info-circle" style="color: var(--info);"></i>
-                            <span style="font-size: 0.8125rem;">Documento aguardando envio para assinatura</span>
-                        </div>
-                    `;
-                    break;
-                    
-                case 'AGUARDANDO_ASSINATURA':
-                    html = `
-                        <div class="alert-warning-custom" style="margin: 1rem 0; padding: 0.75rem; background: rgba(255, 193, 7, 0.1); border-radius: 8px;">
-                            <i class="fas fa-clock" style="color: var(--warning);"></i>
-                            <span style="font-size: 0.8125rem;">Documento na presidência aguardando assinatura</span>
-                        </div>
-                    `;
-                    break;
-                    
-                case 'ASSINADO':
-                    html = `
-                        <div class="alert-success-custom" style="margin: 1rem 0; padding: 0.75rem; background: rgba(40, 167, 69, 0.1); border-radius: 8px;">
-                            <i class="fas fa-check-circle" style="color: var(--success);"></i>
-                            <span style="font-size: 0.8125rem;">Documento assinado e retornado ao comercial</span>
-                        </div>
-                    `;
-                    break;
-                    
-                case 'FINALIZADO':
-                    html = `
-                        <div class="alert-primary-custom" style="margin: 1rem 0; padding: 0.75rem; background: rgba(0, 86, 210, 0.1); border-radius: 8px;">
-                            <i class="fas fa-flag-checkered" style="color: var(--primary);"></i>
-                            <span style="font-size: 0.8125rem;">Processo concluído com sucesso</span>
-                        </div>
-                    `;
-                    break;
-            }
-            
-            return html;
-        }
-
-        // NOVA FUNÇÃO: Obter ícone do status
-        function getStatusIcon(status) {
-            const icons = {
-                'DIGITALIZADO': 'upload',
-                'AGUARDANDO_ASSINATURA': 'clock',
-                'ASSINADO': 'check',
-                'FINALIZADO': 'flag-checkered'
-            };
-            return icons[status] || 'file';
-        }
-
-        // NOVA FUNÇÃO: Obter ações do fluxo para o modal
         function getAcoesFluxoModal(doc) {
             let acoes = '';
 
@@ -2677,12 +706,12 @@ function enviarDocumento() {
                 case 'AGUARDANDO_ASSINATURA':
                     // Verificar se usuário tem permissão para assinar (apenas presidência)
                     <?php if ($auth->isDiretor() || $usuarioLogado['departamento_id'] == 2): ?>
-                        acoes = `
-                        <button class="btn-modern btn-success btn-sm" onclick="abrirModalAssinaturaModal(${doc.id})" title="Assinar">
-                            <i class="fas fa-signature"></i>
-                            Assinar
-                        </button>
-                    `;
+                    acoes = `
+                            <button class="btn-modern btn-success btn-sm" onclick="abrirModalAssinaturaModal(${doc.id})" title="Assinar">
+                                <i class="fas fa-signature"></i>
+                                Assinar
+                            </button>
+                        `;
                     <?php endif; ?>
                     break;
 
@@ -2698,368 +727,153 @@ function enviarDocumento() {
 
             return acoes;
         }
-
-        // NOVA FUNÇÃO: Formatar data para documentos
-        function formatarDataDocumento(dataStr) {
-            if (!dataStr) return '-';
-            const data = new Date(dataStr);
-            return data.toLocaleDateString('pt-BR', {
-                day: '2-digit',
-                month: '2-digit',
-                year: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-            });
-        }
-
-        // NOVA FUNÇÃO: Download documento no modal
-        function downloadDocumentoModal(id) {
-            window.open('../api/documentos/documentos_download.php?id=' + id, '_blank');
-        }
-
-        // FUNÇÃO ATUALIZADA: Ver histórico no modal com mais detalhes
-        function verHistoricoModal(documentoId) {
-            // Criar um modal secundário para o histórico
-            const historicoHtml = `
-                <div class="modal fade" id="historicoDocumentoModal" tabindex="-1" aria-hidden="true">
-                    <div class="modal-dialog modal-lg">
-                        <div class="modal-content">
-                            <div class="modal-header">
-                                <h5 class="modal-title">
-                                    <i class="fas fa-history me-2" style="color: var(--primary);"></i>
-                                    Histórico do Documento
-                                </h5>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                            </div>
-                            <div class="modal-body">
-                                <div id="historicoDocumentoContent">
-                                    <div class="text-center py-5">
-                                        <div class="loading-spinner mb-3"></div>
-                                        <p class="text-muted">Carregando histórico...</p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="modal-footer">
-                                <button type="button" class="btn-modern btn-secondary" data-bs-dismiss="modal">
-                                    Fechar
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-            
-            // Remove modal anterior se existir
-            $('#historicoDocumentoModal').remove();
-            
-            // Adiciona o novo modal ao body
-            $('body').append(historicoHtml);
-            
-            // Abre o modal
-            const modalHistorico = new bootstrap.Modal(document.getElementById('historicoDocumentoModal'));
-            modalHistorico.show();
-            
-            // Busca o histórico
-            $.get('../api/documentos/documentos_historico_fluxo.php', { documento_id: documentoId }, function(response) {
-                if (response.status === 'success' && response.data) {
-                    renderizarHistoricoNoModal(response.data);
-                } else {
-                    $('#historicoDocumentoContent').html(`
-                        <div class="alert alert-warning">
-                            <i class="fas fa-exclamation-triangle me-2"></i>
-                            Não foi possível carregar o histórico do documento
-                        </div>
-                    `);
-                }
-            }).fail(function() {
-                $('#historicoDocumentoContent').html(`
-                    <div class="alert alert-danger">
-                        <i class="fas fa-times-circle me-2"></i>
-                        Erro ao carregar histórico
-                    </div>
-                `);
-            });
-        }
-
-        // NOVA FUNÇÃO: Renderizar histórico no modal
-        function renderizarHistoricoNoModal(historico) {
-            if (!historico || historico.length === 0) {
-                $('#historicoDocumentoContent').html(`
-                    <div class="alert alert-info">
-                        <i class="fas fa-info-circle me-2"></i>
-                        Nenhum histórico disponível para este documento
-                    </div>
-                `);
-                return;
-            }
-            
-            let html = '<div class="timeline">';
-            
-            historico.forEach((item, index) => {
-                const isLast = index === historico.length - 1;
-                html += `
-                    <div class="timeline-item ${isLast ? 'last' : ''}">
-                        <div class="timeline-marker">
-                            <i class="fas fa-${getIconForStatus(item.status_novo)}"></i>
-                        </div>
-                        <div class="timeline-content">
-                            <div class="timeline-header">
-                                <h6 class="timeline-title">${getStatusLabel(item.status_novo)}</h6>
-                                <span class="timeline-date">${formatarDataDocumento(item.data_acao)}</span>
-                            </div>
-                            <p class="timeline-description">${item.observacao || 'Sem observações'}</p>
-                            <div class="timeline-meta">
-                                <small class="text-muted">
-                                    <i class="fas fa-user me-1"></i> ${item.funcionario_nome || 'Sistema'}
-                                    ${item.dept_origem_nome ? `<br><i class="fas fa-building me-1"></i> De: ${item.dept_origem_nome}` : ''}
-                                    ${item.dept_destino_nome ? ` → Para: ${item.dept_destino_nome}` : ''}
-                                </small>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            });
-            
-            html += '</div>';
-            $('#historicoDocumentoContent').html(html);
-        }
-
-        // FUNÇÃO AUXILIAR: Obter ícone para status
-        function getIconForStatus(status) {
-            const icons = {
-                'DIGITALIZADO': 'fa-upload',
-                'AGUARDANDO_ASSINATURA': 'fa-clock',
-                'ENVIADO_PRESIDENCIA': 'fa-paper-plane',
-                'ASSINADO': 'fa-signature',
-                'FINALIZADO': 'fa-flag-checkered'
-            };
-            return icons[status] || 'fa-circle';
-        }
-
-        // FUNÇÃO AUXILIAR: Obter label para status
-        function getStatusLabel(status) {
-            const labels = {
-                'DIGITALIZADO': 'Documento Digitalizado',
-                'AGUARDANDO_ASSINATURA': 'Enviado para Assinatura',
-                'ENVIADO_PRESIDENCIA': 'Na Presidência',
-                'ASSINADO': 'Documento Assinado',
-                'FINALIZADO': 'Processo Finalizado'
-            };
-            return labels[status] || status;
-        }
-
-        // NOVA FUNÇÃO: Enviar para assinatura no modal
-        function enviarParaAssinaturaModal(documentoId) {
-            if (confirm('Deseja enviar este documento para assinatura na presidência?')) {
-                $.ajax({
-                    url: '../api/documentos/documentos_enviar_assinatura.php',
-                    type: 'POST',
-                    contentType: 'application/json',
-                    data: JSON.stringify({
-                        documento_id: documentoId,
-                        observacao: 'Documento enviado para assinatura via modal'
-                    }),
-                    success: function (response) {
-                        if (response.status === 'success') {
-                            alert('Documento enviado para assinatura com sucesso!');
-                            // Recarrega a tab de documentos
-                            const associadoId = document.getElementById('modalId').textContent.replace('ID: ', '');
-                            const associado = todosAssociados.find(a => a.id == associadoId);
-                            if (associado) {
-                                preencherTabDocumentos(associado);
-                            }
-                        } else {
-                            alert('Erro: ' + response.message);
-                        }
-                    },
-                    error: function () {
-                        alert('Erro ao enviar documento para assinatura');
-                    }
-                });
-            }
-        }
-
-        // NOVA FUNÇÃO: Finalizar processo no modal
-        function finalizarProcessoModal(documentoId) {
-            if (confirm('Deseja finalizar o processo deste documento?')) {
-                $.ajax({
-                    url: '../api/documentos/documentos_finalizar.php',
-                    type: 'POST',
-                    contentType: 'application/json',
-                    data: JSON.stringify({
-                        documento_id: documentoId,
-                        observacao: 'Processo finalizado via modal'
-                    }),
-                    success: function (response) {
-                        if (response.status === 'success') {
-                            alert('Processo finalizado com sucesso!');
-                            // Recarrega a tab de documentos
-                            const associadoId = document.getElementById('modalId').textContent.replace('ID: ', '');
-                            const associado = todosAssociados.find(a => a.id == associadoId);
-                            if (associado) {
-                                preencherTabDocumentos(associado);
-                            }
-                        } else {
-                            alert('Erro: ' + response.message);
-                        }
-                    },
-                    error: function () {
-                        alert('Erro ao finalizar processo');
-                    }
-                });
-            }
-        }
-
-        // Função para fechar modal
-        function fecharModal() {
-            const modal = document.getElementById('modalAssociado');
-            modal.classList.remove('show');
-            document.body.style.overflow = 'auto';
-
-            // Volta para a primeira tab
-            abrirTab('overview');
-        }
-
-        // Função para trocar de tab
-        function abrirTab(tabName) {
-            // Remove active de todas as tabs
-            document.querySelectorAll('.tab-button').forEach(btn => {
-                btn.classList.remove('active');
-            });
-
-            document.querySelectorAll('.tab-content').forEach(content => {
-                content.classList.remove('active');
-            });
-
-            // Adiciona active na tab selecionada
-            const activeButton = document.querySelector(`.tab-button[onclick="abrirTab('${tabName}')"]`);
-            if (activeButton) {
-                activeButton.classList.add('active');
-            }
-
-            const activeContent = document.getElementById(`${tabName}-tab`);
-            if (activeContent) {
-                activeContent.classList.add('active');
-            }
-        }
-
-        // Função para editar associado
-        function editarAssociado(id) {
-            console.log('Editando associado ID:', id);
-            event.stopPropagation();
-            window.location.href = `cadastroForm.php?id=${id}`;
-        }
-
-        // Função para excluir associado
-        function excluirAssociado(id) {
-            console.log('Excluindo associado ID:', id);
-            event.stopPropagation();
-
-            const associado = todosAssociados.find(a => a.id == id);
-
-            if (!associado) {
-                alert('Associado não encontrado!');
-                return;
-            }
-
-            if (!confirm(`Tem certeza que deseja excluir o associado ${associado.nome}?\n\nEsta ação não pode ser desfeita!`)) {
-                return;
-            }
-
-            showLoading();
-
-            // Chamada AJAX para excluir
-            $.ajax({
-                url: '../api/excluir_associado.php',
-                method: 'POST',
-                data: { id: id },
-                dataType: 'json',
-                success: function (response) {
-                    hideLoading();
-
-                    if (response.status === 'success') {
-                        alert('Associado excluído com sucesso!');
-
-                        // Remove da lista local
-                        todosAssociados = todosAssociados.filter(a => a.id != id);
-                        associadosFiltrados = associadosFiltrados.filter(a => a.id != id);
-
-                        // Recalcula paginação e renderiza
-                        calcularPaginacao();
-                        renderizarPagina();
-                    } else {
-                        alert('Erro ao excluir associado: ' + response.message);
-                    }
-                },
-                error: function (xhr, status, error) {
-                    hideLoading();
-                    console.error('Erro ao excluir:', error);
-                    alert('Erro ao excluir associado. Por favor, tente novamente.');
-                }
-            });
-        }
-
-        // Fecha modal ao clicar fora
-        window.addEventListener('click', function (event) {
-            const modal = document.getElementById('modalAssociado');
-            if (event.target === modal) {
-                fecharModal();
-            }
-        });
-
-        // Tecla ESC fecha o modal
-        document.addEventListener('keydown', function (event) {
-            if (event.key === 'Escape') {
-                fecharModal();
-            }
-        });
-
-        // Event listeners - só adiciona UMA VEZ
-        document.addEventListener('DOMContentLoaded', function () {
-            // Adiciona listeners aos filtros
-            const searchInput = document.getElementById('searchInput');
-            const filterSituacao = document.getElementById('filterSituacao');
-            const filterCorporacao = document.getElementById('filterCorporacao');
-            const filterPatente = document.getElementById('filterPatente');
-
-            if (searchInput) searchInput.addEventListener('input', aplicarFiltros);
-            if (filterSituacao) filterSituacao.addEventListener('change', aplicarFiltros);
-            if (filterCorporacao) filterCorporacao.addEventListener('change', aplicarFiltros);
-            if (filterPatente) filterPatente.addEventListener('change', aplicarFiltros);
-
-            // Paginação
-            const perPageSelect = document.getElementById('perPageSelect');
-            if (perPageSelect) {
-                perPageSelect.addEventListener('change', function () {
-                    registrosPorPagina = parseInt(this.value);
-                    paginaAtual = 1;
-                    calcularPaginacao();
-                    renderizarPagina();
-                });
-            }
-            //teste
-
-            const firstPage = document.getElementById('firstPage');
-            const prevPage = document.getElementById('prevPage');
-            const nextPage = document.getElementById('nextPage');
-            const lastPage = document.getElementById('lastPage');
-
-            if (firstPage) firstPage.addEventListener('click', () => irParaPagina(1));
-            if (prevPage) prevPage.addEventListener('click', () => irParaPagina(paginaAtual - 1));
-            if (nextPage) nextPage.addEventListener('click', () => irParaPagina(paginaAtual + 1));
-            if (lastPage) lastPage.addEventListener('click', () => irParaPagina(totalPaginas));
-
-            console.log('Event listeners adicionados');
-            console.log('Event listeners adicionados');
-
-            // Carrega dados apenas UMA vez após 500ms
-            setTimeout(function () {
-                carregarAssociados();
-            }, 500);
-        });
-
-        console.log('Sistema inicializado com Header Component e Fluxo de Documentos!');
     </script>
+
+
+    <script src="js/dashboard.js"></script>
+
+
+
+<script>
+/**
+ * Função para recalcular valores dos serviços
+ */
+function recalcularServicos() {
+    // Confirmação
+    if (!confirm(
+        'ATENÇÃO!\n\n' +
+        'Esta ação irá recalcular TODOS os valores dos serviços dos associados ' +
+        'baseado nos valores base atuais do sistema.\n\n' +
+        'Isso pode alterar centenas de registros!\n\n' +
+        'Deseja continuar?'
+    )) {
+        return;
+    }
+
+    const btnRecalcular = document.getElementById('btnRecalcular');
+    const originalText = btnRecalcular.innerHTML;
+    
+    // Desabilita botão e mostra loading
+    btnRecalcular.disabled = true;
+    btnRecalcular.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Recalculando...';
+    
+    // Mostra loading geral
+    showLoading();
+    
+    console.log('Iniciando recálculo dos serviços...');
+    
+    fetch('../api/recalcular_servicos.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => {
+        console.log('Response status:', response.status);
+        return response.text();
+    })
+    .then(responseText => {
+        console.log('Response:', responseText);
+        
+        let data;
+        try {
+            data = JSON.parse(responseText);
+        } catch (e) {
+            console.error('Erro ao fazer parse JSON:', e);
+            throw new Error('Resposta inválida do servidor');
+        }
+
+        
+        if (data.status === 'success') {
+            console.log('✓ Recálculo concluído:', data.data);
+            
+            // Monta mensagem detalhada
+            let mensagem = data.message;
+            
+            if (data.data.total_valores_alterados > 0) {
+                mensagem += '\n\n📊 RESUMO:';
+                mensagem += '\n• Total processados: ' + data.data.total_servicos_processados;
+                mensagem += '\n• Valores alterados: ' + data.data.total_valores_alterados;
+                mensagem += '\n• Sem alteração: ' + data.data.total_sem_alteracao;
+                
+                if (data.data.economia_total !== 0) {
+                    const economia = data.data.economia_total;
+                    if (economia > 0) {
+                        mensagem += '\n• Aumento total: +R$ ' + economia.toFixed(2).replace('.', ',');
+                    } else {
+                        mensagem += '\n• Redução total: R$ ' + Math.abs(economia).toFixed(2).replace('.', ',');
+                    }
+                }
+                
+                mensagem += '\n\n🕒 Processado em: ' + data.data.data_recalculo;
+                
+                // Mostra alguns exemplos
+                if (data.data.alteracoes_detalhadas && data.data.alteracoes_detalhadas.length > 0) {
+                    mensagem += '\n\n📋 EXEMPLOS DE ALTERAÇÕES:';
+                    data.data.alteracoes_detalhadas.slice(0, 5).forEach(alt => {
+                        mensagem += `\n• ${alt.associado} (${alt.servico}): R$ ${alt.valor_anterior.toFixed(2)} → R$ ${alt.valor_novo.toFixed(2)}`;
+                    });
+                    
+                    if (data.data.alteracoes_detalhadas.length > 5) {
+                        mensagem += `\n... e mais ${data.data.alteracoes_detalhadas.length - 5} alterações`;
+
+                    }
+                }
+
+            }
+            
+            alert(mensagem);
+            
+            // Recarrega a página para atualizar os dados
+            setTimeout(() => {
+                window.location.reload();
+            }, 2000);
+            
+        } else {
+            console.error('Erro na API:', data);
+            alert('❌ ERRO: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Erro de rede:', error);
+        alert('❌ Erro de comunicação: ' + error.message);
+    })
+    .finally(() => {
+        // Restaura botão
+        btnRecalcular.disabled = false;
+        btnRecalcular.innerHTML = originalText;
+        hideLoading();
+    });
+}
+
+// Adiciona CSS para o botão (coloque no <head> ou arquivo CSS)
+const style = document.createElement('style');
+style.textContent = `
+.btn-modern.btn-warning {
+    background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 600;
+    box-shadow: 0 4px 12px rgba(243, 156, 18, 0.3);
+    transition: all 0.3s ease;
+}
+
+.btn-modern.btn-warning:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(243, 156, 18, 0.4);
+    background: linear-gradient(135deg, #e67e22 0%, #d35400 100%);
+}
+
+.btn-modern:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none !important;
+}
+`;
+document.head.appendChild(style);
+</script>
 
 </body>
 
