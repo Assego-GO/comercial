@@ -81,49 +81,113 @@ if (!$temPermissaoFinanceiro) {
     error_log("✅ ACESSO PERMITIDO - Usuário " . ($isFinanceiro ? 'do Financeiro' : 'da Presidência'));
 }
 
+
+// No arquivo financeiro.php, substitua a seção de busca de estatísticas (linhas ~128-165) por:
+
 // Busca estatísticas do setor financeiro (apenas se tem permissão)
 if ($temPermissaoFinanceiro) {
     try {
         $db = Database::getInstance(DB_NAME_CADASTRO)->getConnection();
         
-        // Total de associados ativos (para cálculo de arrecadação)
-        $sql = "SELECT COUNT(*) as total FROM Associados WHERE situacao = 'Filiado'";
+        // 1. Total de associados ativos (igual ao dashboard)
+        $sql = "SELECT COUNT(DISTINCT a.id) as total 
+                FROM Associados a 
+                WHERE a.situacao = 'Filiado'";
         $stmt = $db->prepare($sql);
         $stmt->execute();
-        $totalAssociadosAtivos = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
+        $totalAssociadosAtivos = $stmt->fetch(PDO::FETCH_ASSOC)['total'] ?? 0;
         
-        // Mensalidades recebidas hoje
-        $sql = "SELECT COUNT(*) as hoje FROM Pagamentos WHERE DATE(data_pagamento) = CURDATE() AND status_pagamento = 'PAGO'";
+        error_log("Total associados ativos: " . $totalAssociadosAtivos);
+        
+        // 2. Arrecadação do mês atual - CORRIGIDO para buscar dos serviços
+        $sql = "SELECT COALESCE(SUM(sa.valor_aplicado), 0) as valor_mes 
+                FROM Servicos_Associado sa
+                INNER JOIN Associados a ON sa.associado_id = a.id
+                WHERE sa.ativo = 1 
+                AND a.situacao = 'Filiado'";
         $stmt = $db->prepare($sql);
         $stmt->execute();
-        $pagamentosHoje = $stmt->fetch(PDO::FETCH_ASSOC)['hoje'] ?? 0;
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        $arrecadacaoMes = floatval($result['valor_mes'] ?? 0);
         
-        // Associados em débito
-        $sql = "SELECT COUNT(*) as inadimplentes FROM Associados a 
-                LEFT JOIN Pagamentos p ON a.id = p.associado_id 
+        error_log("Arrecadação mensal total: R$ " . $arrecadacaoMes);
+        
+        // 3. Pagamentos recebidos hoje (se existir tabela de pagamentos)
+        $pagamentosHoje = 0;
+        try {
+            $sql = "SELECT COUNT(*) as hoje 
+                    FROM Pagamentos 
+                    WHERE DATE(data_pagamento) = CURDATE() 
+                    AND status_pagamento = 'PAGO'";
+            $stmt = $db->prepare($sql);
+            $stmt->execute();
+            $pagamentosHoje = $stmt->fetch(PDO::FETCH_ASSOC)['hoje'] ?? 0;
+        } catch (Exception $e) {
+            // Tabela pode não existir, mantém 0
+            error_log("Tabela Pagamentos não encontrada ou erro: " . $e->getMessage());
+            $pagamentosHoje = 0;
+        }
+        
+        // 4. Associados inadimplentes - CORRIGIDO
+        $sql = "SELECT COUNT(DISTINCT a.id) as inadimplentes 
+                FROM Associados a
+                LEFT JOIN Financeiro f ON a.id = f.associado_id
                 WHERE a.situacao = 'Filiado' 
-                AND (p.status_pagamento IS NULL OR p.status_pagamento = 'PENDENTE')
-                AND a.situacao_financeira = 'INADIMPLENTE'";
+                AND (
+                    f.situacaoFinanceira = 'Inadimplente' 
+                    OR f.situacaoFinanceira = 'INADIMPLENTE'
+                    OR f.situacaoFinanceira IS NULL
+                )";
         $stmt = $db->prepare($sql);
         $stmt->execute();
         $associadosInadimplentes = $stmt->fetch(PDO::FETCH_ASSOC)['inadimplentes'] ?? 0;
         
-        // Valor total arrecadado no mês atual
-        $sql = "SELECT COALESCE(SUM(valor_pagamento), 0) as valor_mes FROM Pagamentos 
-                WHERE YEAR(data_pagamento) = YEAR(CURDATE()) 
-                AND MONTH(data_pagamento) = MONTH(CURDATE())
-                AND status_pagamento = 'PAGO'";
-        $stmt = $db->prepare($sql);
-        $stmt->execute();
-        $arrecadacaoMes = $stmt->fetch(PDO::FETCH_ASSOC)['valor_mes'] ?? 0;
+        error_log("Associados inadimplentes: " . $associadosInadimplentes);
+        
+        // OPCIONAL: Se quiser calcular a arrecadação REAL do mês (pagamentos efetivos)
+        // Isso seria diferente da arrecadação POTENCIAL calculada acima
+        try {
+            $sql = "SELECT COALESCE(SUM(valor_pagamento), 0) as valor_mes_real 
+                    FROM Pagamentos 
+                    WHERE YEAR(data_pagamento) = YEAR(CURDATE()) 
+                    AND MONTH(data_pagamento) = MONTH(CURDATE())
+                    AND status_pagamento = 'PAGO'";
+            $stmt = $db->prepare($sql);
+            $stmt->execute();
+            $arrecadacaoMesReal = $stmt->fetch(PDO::FETCH_ASSOC)['valor_mes_real'] ?? 0;
+            
+            // Se tiver pagamentos reais, usa esse valor
+            if ($arrecadacaoMesReal > 0) {
+                error_log("Usando arrecadação real (pagamentos): R$ " . $arrecadacaoMesReal);
+                // Descomente a linha abaixo se quiser usar os pagamentos reais ao invés do potencial
+                // $arrecadacaoMes = $arrecadacaoMesReal;
+            }
+        } catch (Exception $e) {
+            // Tabela de pagamentos pode não existir
+            error_log("Não foi possível buscar pagamentos reais: " . $e->getMessage());
+        }
 
     } catch (Exception $e) {
         error_log("Erro ao buscar estatísticas financeiras: " . $e->getMessage());
-        $totalAssociadosAtivos = $pagamentosHoje = $associadosInadimplentes = $arrecadacaoMes = 0;
+        $totalAssociadosAtivos = 0;
+        $pagamentosHoje = 0;
+        $associadosInadimplentes = 0;
+        $arrecadacaoMes = 0;
     }
 } else {
-    $totalAssociadosAtivos = $pagamentosHoje = $associadosInadimplentes = $arrecadacaoMes = 0;
+    $totalAssociadosAtivos = 0;
+    $pagamentosHoje = 0;
+    $associadosInadimplentes = 0;
+    $arrecadacaoMes = 0;
 }
+
+// Debug final
+error_log("=== ESTATÍSTICAS FINANCEIRAS FINAIS ===");
+error_log("Associados Ativos: " . $totalAssociadosAtivos);
+error_log("Arrecadação do Mês: R$ " . $arrecadacaoMes);
+error_log("Pagamentos Hoje: " . $pagamentosHoje);
+error_log("Inadimplentes: " . $associadosInadimplentes);
+
 
 // Cria instância do Header Component
 $headerComponent = HeaderComponent::create([
@@ -778,7 +842,7 @@ $headerComponent = HeaderComponent::create([
                     <div class="stat-header">
                         <div>
                             <div class="stat-value">R$ <?php echo number_format($arrecadacaoMes, 2, ',', '.'); ?></div>
-                            <div class="stat-label">Arrecadação do Mês</div>
+                            <div class="stat-label">Arrecadação Potencial do Mês</div>
                             <div class="stat-change positive">
                                 <i class="fas fa-arrow-up"></i>
                                 Receita atual
