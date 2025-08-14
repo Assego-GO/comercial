@@ -2017,6 +2017,7 @@
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
 }
+
 /* ========================================
    ESTILOS DA ABA DE OBSERVAÇÕES
    ======================================== */
@@ -2686,4 +2687,5 @@
 
 .observacao-edited i {
     font-size: 0.75rem;
+
 }

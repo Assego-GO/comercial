@@ -237,6 +237,8 @@ $headerComponent = HeaderComponent::create([
                             <option value="">Todos</option>
                             <option value="Filiado">Filiado</option>
                             <option value="Desfiliado">Desfiliado</option>
+                            <option value="Remido">Remido</option>
+                            <option value="Agregado">Agregado</option>
                         </select>
                     </div>
 
@@ -780,6 +782,7 @@ function recalcularServicos() {
             console.error('Erro ao fazer parse JSON:', e);
             throw new Error('Resposta inválida do servidor');
         }
+
         
         if (data.status === 'success') {
             console.log('✓ Recálculo concluído:', data.data);
@@ -813,8 +816,10 @@ function recalcularServicos() {
                     
                     if (data.data.alteracoes_detalhadas.length > 5) {
                         mensagem += `\n... e mais ${data.data.alteracoes_detalhadas.length - 5} alterações`;
+
                     }
                 }
+
             }
             
             alert(mensagem);
@@ -869,7 +874,6 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 </script>
-
 
 </body>
 
