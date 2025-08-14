@@ -3037,6 +3037,7 @@ function enviarDocumento() {
                     renderizarPagina();
                 });
             }
+            //teste
 
             const firstPage = document.getElementById('firstPage');
             const prevPage = document.getElementById('prevPage');
@@ -3048,6 +3049,7 @@ function enviarDocumento() {
             if (nextPage) nextPage.addEventListener('click', () => irParaPagina(paginaAtual + 1));
             if (lastPage) lastPage.addEventListener('click', () => irParaPagina(totalPaginas));
 
+            console.log('Event listeners adicionados');
             console.log('Event listeners adicionados');
 
             // Carrega dados apenas UMA vez após 500ms
