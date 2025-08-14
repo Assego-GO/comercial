@@ -953,6 +953,17 @@ function removerDependente(button) {
 function salvarAssociado() {
     console.log('=== SALVANDO ASSOCIADO COM TODOS OS CAMPOS ===');
 
+    // ✅ DEBUG ESPECÍFICO PARA SITUAÇÃO
+    const situacaoElement = document.getElementById('situacao');
+    console.log('🔍 === DEBUG SITUAÇÃO NO JAVASCRIPT ===');
+    console.log('🔍 Elemento situacao encontrado:', !!situacaoElement);
+    if (situacaoElement) {
+        console.log('🔍 Valor da situação no DOM:', situacaoElement.value);
+        console.log('🔍 Opção selecionada:', situacaoElement.options[situacaoElement.selectedIndex].text);
+        console.log('🔍 Selected index:', situacaoElement.selectedIndex);
+    }
+    console.log('🔍 === FIM DEBUG SITUAÇÃO JAVASCRIPT ===');
+
     // Validação final
     if (!validarFormularioCompleto()) {
         showAlert('Por favor, verifique todos os campos obrigatórios!', 'error');
@@ -1058,6 +1069,9 @@ function salvarAssociado() {
         formData.set('servicoJuridico', servicoJuridicoEl.checked ? '2' : '');
         console.log('✓ Serviço jurídico:', servicoJuridicoEl.checked);
     }
+
+    // ✅ DEBUG ADICIONAL: Verificar o valor de situação no FormData
+    console.log('🔍 Valor de situação no FormData:', formData.get('situacao'));
 
     // URL da API
     const url = isEdit
