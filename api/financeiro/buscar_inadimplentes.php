@@ -2,29 +2,66 @@
 /**
  * API para buscar inadimplentes - Sistema ASSEGO
  * api/financeiro/buscar_inadimplentes.php
+ * VERSÃO CORRIGIDA - Sem exibição de erros HTML
  */
 
-// Headers para CORS e JSON
+// IMPORTANTE: Desabilitar exibição de erros HTML
+error_reporting(E_ALL);
+ini_set('display_errors', 0); // NUNCA deixe como 1 em produção
+ini_set('log_errors', 1);
+
+// Headers para CORS e JSON - DEVE vir ANTES de qualquer output
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET');
 header('Access-Control-Allow-Headers: Content-Type');
 
-// Tratamento de erros
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
+// Função para enviar resposta JSON e encerrar
+function sendJsonResponse($data, $statusCode = 200) {
+    http_response_code($statusCode);
+    echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+    exit;
+}
 
 try {
+    // Verifica se os arquivos necessários existem antes de incluir
+    $requiredFiles = [
+        '../../config/config.php',
+        '../../config/database.php',
+        '../../classes/Database.php',
+        '../../classes/Auth.php'
+    ];
+    
+    foreach ($requiredFiles as $file) {
+        if (!file_exists($file)) {
+            error_log("Arquivo não encontrado: $file");
+            sendJsonResponse([
+                'status' => 'error',
+                'message' => 'Erro de configuração do servidor',
+                'data' => []
+            ], 500);
+        }
+    }
+    
     // Inclui arquivos necessários
     require_once '../../config/config.php';
     require_once '../../config/database.php';
     require_once '../../classes/Database.php';
     require_once '../../classes/Auth.php';
 
+    // Verificar se session já foi iniciada
+    if (session_status() == PHP_SESSION_NONE) {
+        session_start();
+    }
+
     // Verifica autenticação
     $auth = new Auth();
     if (!$auth->isLoggedIn()) {
-        throw new Exception('Usuário não autenticado');
+        sendJsonResponse([
+            'status' => 'error',
+            'message' => 'Usuário não autenticado',
+            'data' => []
+        ], 401);
     }
 
     // Verifica permissões
@@ -40,11 +77,24 @@ try {
     }
     
     if (!$temPermissao) {
-        throw new Exception('Acesso negado. Apenas funcionários do setor financeiro e presidência podem acessar este relatório.');
+        sendJsonResponse([
+            'status' => 'error',
+            'message' => 'Acesso negado. Apenas funcionários do setor financeiro e presidência podem acessar este relatório.',
+            'data' => []
+        ], 403);
     }
 
     // Conecta ao banco de dados
-    $db = Database::getInstance(DB_NAME_CADASTRO)->getConnection();
+    try {
+        $db = Database::getInstance(DB_NAME_CADASTRO)->getConnection();
+    } catch (Exception $e) {
+        error_log("Erro ao conectar ao banco: " . $e->getMessage());
+        sendJsonResponse([
+            'status' => 'error',
+            'message' => 'Erro ao conectar ao banco de dados',
+            'data' => []
+        ], 500);
+    }
 
     // Parâmetros de filtro (opcionais)
     $filtroNome = $_GET['nome'] ?? '';
@@ -97,24 +147,34 @@ try {
     // Adiciona limite e offset
     $sql .= " LIMIT :limite OFFSET :offset";
     
-    // Log da query para debug
+    // Log da query para debug (apenas em arquivo de log)
     error_log("Query SQL: " . $sql);
     error_log("Parâmetros: " . json_encode($params));
 
-    // Prepara e executa a query
-    $stmt = $db->prepare($sql);
-    
-    // Bind dos parâmetros de filtro
-    foreach ($params as $key => $value) {
-        $stmt->bindValue($key, $value, PDO::PARAM_STR);
+    try {
+        // Prepara e executa a query
+        $stmt = $db->prepare($sql);
+        
+        // Bind dos parâmetros de filtro
+        foreach ($params as $key => $value) {
+            $stmt->bindValue($key, $value, PDO::PARAM_STR);
+        }
+        
+        // Bind dos parâmetros de paginação
+        $stmt->bindValue(':limite', $limite, PDO::PARAM_INT);
+        $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+        
+        $stmt->execute();
+        $inadimplentes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    } catch (PDOException $e) {
+        error_log("Erro SQL ao buscar inadimplentes: " . $e->getMessage());
+        sendJsonResponse([
+            'status' => 'error',
+            'message' => 'Erro ao buscar dados dos inadimplentes',
+            'data' => []
+        ], 500);
     }
-    
-    // Bind dos parâmetros de paginação
-    $stmt->bindValue(':limite', $limite, PDO::PARAM_INT);
-    $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
-    
-    $stmt->execute();
-    $inadimplentes = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     // Query para contar o total de registros (sem limite)
     $sqlCount = "
@@ -142,50 +202,74 @@ try {
         $paramsCount[':vinculo'] = $filtroVinculo;
     }
     
-    $stmtCount = $db->prepare($sqlCount);
-    foreach ($paramsCount as $key => $value) {
-        $stmtCount->bindValue($key, $value, PDO::PARAM_STR);
+    try {
+        $stmtCount = $db->prepare($sqlCount);
+        foreach ($paramsCount as $key => $value) {
+            $stmtCount->bindValue($key, $value, PDO::PARAM_STR);
+        }
+        $stmtCount->execute();
+        $totalRegistros = $stmtCount->fetch(PDO::FETCH_ASSOC)['total'];
+    } catch (PDOException $e) {
+        error_log("Erro ao contar registros: " . $e->getMessage());
+        $totalRegistros = 0;
     }
-    $stmtCount->execute();
-    $totalRegistros = $stmtCount->fetch(PDO::FETCH_ASSOC)['total'];
 
     // Busca estatísticas adicionais
     $estatisticas = [];
     
-    // Total de inadimplentes por vínculo
-    $sqlVinculo = "
-        SELECT 
-            f.vinculoServidor, 
-            COUNT(*) as total,
-            ROUND((COUNT(*) * 100.0 / (SELECT COUNT(*) FROM Associados a2 INNER JOIN Financeiro f2 ON a2.id = f2.associado_id WHERE a2.situacao = 'Filiado' AND f2.situacaoFinanceira = 'INADIMPLENTE')), 2) as percentual
-        FROM Associados a
-        INNER JOIN Financeiro f ON a.id = f.associado_id
-        WHERE a.situacao = 'Filiado' 
-        AND f.situacaoFinanceira = 'INADIMPLENTE'
-        GROUP BY f.vinculoServidor
-        ORDER BY total DESC
-    ";
-    
-    $stmtVinculo = $db->prepare($sqlVinculo);
-    $stmtVinculo->execute();
-    $estatisticas['por_vinculo'] = $stmtVinculo->fetchAll(PDO::FETCH_ASSOC);
+    try {
+        // Total de inadimplentes por vínculo
+        $sqlVinculo = "
+            SELECT 
+                f.vinculoServidor, 
+                COUNT(*) as total
+            FROM Associados a
+            INNER JOIN Financeiro f ON a.id = f.associado_id
+            WHERE a.situacao = 'Filiado' 
+            AND f.situacaoFinanceira = 'INADIMPLENTE'
+            GROUP BY f.vinculoServidor
+            ORDER BY total DESC
+        ";
+        
+        $stmtVinculo = $db->prepare($sqlVinculo);
+        $stmtVinculo->execute();
+        $estatisticas['por_vinculo'] = $stmtVinculo->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Calcular percentuais
+        if ($totalRegistros > 0) {
+            foreach ($estatisticas['por_vinculo'] as &$vinculo) {
+                $vinculo['percentual'] = round(($vinculo['total'] * 100.0 / $totalRegistros), 2);
+            }
+        }
+        
+    } catch (PDOException $e) {
+        error_log("Erro ao buscar estatísticas: " . $e->getMessage());
+        $estatisticas['por_vinculo'] = [];
+    }
     
     // Processa dados para formatação
     foreach ($inadimplentes as &$inadimplente) {
         // Adiciona informações calculadas
         $inadimplente['idade'] = null;
-        if ($inadimplente['nasc']) {
-            $nascimento = new DateTime($inadimplente['nasc']);
-            $hoje = new DateTime();
-            $inadimplente['idade'] = $nascimento->diff($hoje)->y;
+        if (!empty($inadimplente['nasc']) && $inadimplente['nasc'] != '0000-00-00') {
+            try {
+                $nascimento = new DateTime($inadimplente['nasc']);
+                $hoje = new DateTime();
+                $inadimplente['idade'] = $nascimento->diff($hoje)->y;
+            } catch (Exception $e) {
+                $inadimplente['idade'] = null;
+            }
         }
-        
-        // Limpa dados sensíveis se necessário
-        // (mantém todos os dados pois é para uso interno do setor financeiro)
         
         // Adiciona flags úteis
         $inadimplente['tem_telefone'] = !empty($inadimplente['telefone']);
         $inadimplente['tem_email'] = !empty($inadimplente['email']);
+        
+        // Garantir que campos nulos sejam strings vazias para evitar problemas no frontend
+        $inadimplente['telefone'] = $inadimplente['telefone'] ?? '';
+        $inadimplente['email'] = $inadimplente['email'] ?? '';
+        $inadimplente['vinculoServidor'] = $inadimplente['vinculoServidor'] ?? 'Não informado';
+        $inadimplente['tipoAssociado'] = $inadimplente['tipoAssociado'] ?? 'Não informado';
     }
 
     // Monta resposta de sucesso
@@ -194,7 +278,7 @@ try {
         'message' => 'Inadimplentes carregados com sucesso',
         'data' => $inadimplentes,
         'meta' => [
-            'total_registros' => $totalRegistros,
+            'total_registros' => intval($totalRegistros),
             'registros_retornados' => count($inadimplentes),
             'limite' => $limite,
             'offset' => $offset,
@@ -210,35 +294,21 @@ try {
 
     // Log de sucesso
     error_log("Inadimplentes carregados com sucesso: " . count($inadimplentes) . " registros de " . $totalRegistros . " total");
-
-} catch (PDOException $e) {
-    // Erro de banco de dados
-    error_log("Erro de banco de dados ao buscar inadimplentes: " . $e->getMessage());
     
-    $response = [
-        'status' => 'error',
-        'message' => 'Erro interno do servidor. Tente novamente.',
-        'error_type' => 'database_error',
-        'data' => []
-    ];
-    
-    http_response_code(500);
+    // Envia resposta de sucesso
+    sendJsonResponse($response);
 
 } catch (Exception $e) {
-    // Outros erros
-    error_log("Erro ao buscar inadimplentes: " . $e->getMessage());
+    // Outros erros não capturados
+    error_log("Erro geral ao buscar inadimplentes: " . $e->getMessage());
     
-    $response = [
+    sendJsonResponse([
         'status' => 'error',
-        'message' => $e->getMessage(),
+        'message' => 'Erro ao processar requisição',
         'error_type' => 'general_error',
         'data' => []
-    ];
-    
-    http_response_code(400);
-
-} finally {
-    // Sempre retorna JSON
-    echo json_encode($response, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+    ], 500);
 }
-?>
+
+// Garantir que nada mais seja enviado
+exit;
