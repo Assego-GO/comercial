@@ -277,6 +277,7 @@ try {
             'nasc' => $row['nasc'] ?? '',
             'sexo' => $row['sexo'] ?? '',
             'situacao' => $row['situacao'],
+            'situacao_debug' => 'Original: ' . ($row['situacao'] ?? 'NULL') . ' | Row: ' . json_encode($row),
             'escolaridade' => $row['escolaridade'] ?? '',
             'estadoCivil' => $row['estadoCivil'] ?? '',
             'foto' => $row['foto'] ?? '',

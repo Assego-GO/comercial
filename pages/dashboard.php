@@ -237,6 +237,8 @@ $headerComponent = HeaderComponent::create([
                             <option value="">Todos</option>
                             <option value="Filiado">Filiado</option>
                             <option value="Desfiliado">Desfiliado</option>
+                            <option value="Remido">Remido</option>
+                            <option value="Agregado">Agregado</option>
                         </select>
                     </div>
 
@@ -839,6 +841,509 @@ function recalcularServicos() {
         btnRecalcular.innerHTML = originalText;
         hideLoading();
     });
+}
+
+// Renderiza tabela
+function renderizarTabela(dados) {
+    console.log(`Renderizando ${dados.length} registros...`);
+    const tbody = document.getElementById('tableBody');
+
+    if (!tbody) {
+        console.error('Elemento tableBody não encontrado!');
+        return;
+    }
+
+    tbody.innerHTML = '';
+
+    if (dados.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="10" class="text-center py-5">
+                    <div class="d-flex flex-column align-items-center">
+                        <i class="fas fa-inbox fa-3x text-muted mb-3" style="opacity: 0.3;"></i>
+                        <p class="text-muted mb-0">Nenhum associado encontrado</p>
+                        <small class="text-muted">Tente ajustar os filtros de busca</small>
+                    </div>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    dados.forEach(associado => {
+        // EXIBICICAO DA SITUACAO
+        const getSituacaoBadge = (situacao) => {
+            const badges = {
+                'Filiado': '<span class="status-badge active"><i class="fas fa-check-circle"></i> Filiado</span>',
+                'Desfiliado': '<span class="status-badge inactive"><i class="fas fa-times-circle"></i> Desfiliado</span>',
+                'Remido': '<span class="status-badge remido"><i class="fas fa-star"></i> Remido</span>',
+                'Agregado': '<span class="status-badge agregado"><i class="fas fa-user-plus"></i> Agregado</span>'
+            };
+            return badges[situacao] || `<span class="status-badge default"><i class="fas fa-question-circle"></i> ${situacao || 'Indefinido'}</span>`;
+        };
+
+        const situacaoBadge = getSituacaoBadge(associado.situacao);
+
+        const row = document.createElement('tr');
+        row.onclick = (e) => {
+            if (!e.target.closest('.btn-icon')) {
+                visualizarAssociado(associado.id);
+            }
+        };
+
+        // Código da foto
+        let fotoHtml;
+        if (associado.cpf) {
+            const cpfNormalizado = normalizarCPF(associado.cpf);
+            const fotoUrl = associado.foto
+                ? `../${associado.foto}`
+                : `https://assegonaopara.com.br/QRV/images/fotos/${cpfNormalizado}.jpg`;
+
+            fotoHtml = `
+                <img src="${fotoUrl}" 
+                     alt="${associado.nome}"
+                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+                     onload="this.style.display='block'; this.nextElementSibling.style.display='none';">
+                <div class="table-avatar-placeholder" style="display:none;">
+                    ${associado.nome ? associado.nome.charAt(0).toUpperCase() : '?'}
+                </div>
+            `;
+        } else {
+            fotoHtml = `
+                <div class="table-avatar-placeholder">
+                    ${associado.nome ? associado.nome.charAt(0).toUpperCase() : '?'}
+                </div>
+            `;
+        }
+
+        row.innerHTML = `
+            <td>
+                <div class="table-avatar">
+                    ${fotoHtml}
+                </div>
+            </td>
+            <td>
+                <span class="fw-semibold">${associado.nome || 'Sem nome'}</span>
+                <br>
+                <small class="text-muted">Matrícula: ${associado.id}</small>
+            </td>
+            <td>${formatarCPF(associado.cpf)}</td>
+            <td>${associado.rg || '-'}</td>
+            <td>${situacaoBadge}</td>
+            <td>${associado.corporacao || '-'}</td>
+            <td>${associado.patente || '-'}</td>
+            <td>${formatarData(associado.data_filiacao)}</td>
+            <td>${formatarTelefone(associado.telefone)}</td>
+            <td>
+                <div class="action-buttons-table">
+                    <button class="btn-icon view" onclick="visualizarAssociado(${associado.id})" title="Visualizar">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                    <button class="btn-icon edit" onclick="editarAssociado(${associado.id})" title="Editar">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn-icon delete" onclick="excluirAssociado(${associado.id})" title="Excluir">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+// Aplica filtros
+function aplicarFiltros() {
+    console.log('Aplicando filtros...');
+    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+    const filterSituacao = document.getElementById('filterSituacao').value;
+    const filterCorporacao = document.getElementById('filterCorporacao').value;
+    const filterPatente = document.getElementById('filterPatente').value;
+
+    associadosFiltrados = todosAssociados.filter(associado => {
+        const matchSearch = !searchTerm ||
+            (associado.nome && associado.nome.toLowerCase().includes(searchTerm)) ||
+            (associado.cpf && associado.cpf.includes(searchTerm)) ||
+            (associado.rg && associado.rg.includes(searchTerm)) ||
+            (associado.telefone && associado.telefone.includes(searchTerm));
+
+        const matchSituacao = !filterSituacao || associado.situacao === filterSituacao;
+        const matchCorporacao = !filterCorporacao || associado.corporacao === filterCorporacao;
+        const matchPatente = !filterPatente || associado.patente === filterPatente;
+
+        return matchSearch && matchSituacao && matchCorporacao && matchPatente;
+    });
+
+    console.log(`Filtros aplicados: ${associadosFiltrados.length} de ${todosAssociados.length} registros`);
+
+    paginaAtual = 1;
+    calcularPaginacao();
+    renderizarPagina();
+}
+
+// Limpa filtros
+function limparFiltros() {
+    console.log('Limpando filtros...');
+    document.getElementById('searchInput').value = '';
+    document.getElementById('filterSituacao').value = '';
+    document.getElementById('filterCorporacao').value = '';
+    document.getElementById('filterPatente').value = '';
+
+    associadosFiltrados = [...todosAssociados];
+    paginaAtual = 1;
+    calcularPaginacao();
+    renderizarPagina();
+}
+
+// Função para visualizar detalhes do associado
+function visualizarAssociado(id) {
+    console.log('Visualizando associado ID:', id);
+    const associado = todosAssociados.find(a => a.id == id);
+
+    if (!associado) {
+        console.error('Associado não encontrado:', id);
+        alert('Associado não encontrado!');
+        return;
+    }
+
+    // Atualiza o header do modal
+    atualizarHeaderModal(associado);
+
+    // Preenche as tabs
+    preencherTabVisaoGeral(associado);
+    preencherTabMilitar(associado);
+    preencherTabFinanceiro(associado);
+    preencherTabContato(associado);
+    preencherTabDependentes(associado);
+    preencherTabDocumentos(associado);
+
+    // Abre o modal
+    document.getElementById('modalAssociado').classList.add('show');
+    document.body.style.overflow = 'hidden';
+}
+
+// Atualiza o header do modal
+function atualizarHeaderModal(associado) {
+    // Nome e ID
+    document.getElementById('modalNome').textContent = associado.nome || 'Sem nome';
+    document.getElementById('modalId').textContent = `Matrícula: ${associado.id}`;
+
+    // Data de filiação
+    document.getElementById('modalDataFiliacao').textContent =
+        formatarData(associado.data_filiacao) !== '-'
+            ? `Desde ${formatarData(associado.data_filiacao)}`
+            : 'Data não informada';
+
+    // Status
+    // CORREÇÃO: Status baseado na situação real
+    const statusPill = document.getElementById('modalStatusPill');
+    let statusHtml = '';
+
+    switch(associado.situacao) {
+        case 'Filiado':
+            statusHtml = `
+                <div class="status-pill active">
+                    <i class="fas fa-check-circle"></i>
+                    Ativo
+                </div>
+            `;
+            break;
+        case 'Desfiliado':
+            statusHtml = `
+                <div class="status-pill inactive">
+                    <i class="fas fa-times-circle"></i>
+                    Inativo
+                </div>
+            `;
+            break;
+        case 'Remido':
+            statusHtml = `
+                <div class="status-pill remido">
+                    <i class="fas fa-star"></i>
+                    Remido
+                </div>
+            `;
+            break;
+        case 'Agregado':
+            statusHtml = `
+                <div class="status-pill agregado">
+                    <i class="fas fa-user-plus"></i>
+                    Agregado
+                </div>
+            `;
+            break;
+        default:
+            statusHtml = `
+                <div class="status-pill default">
+                    <i class="fas fa-question-circle"></i>
+                    ${associado.situacao || 'Indefinido'}
+                </div>
+            `;
+    }
+
+    statusPill.innerHTML = statusHtml;
+
+    // Avatar
+    const modalAvatar = document.getElementById('modalAvatarHeader');
+    if (associado.cpf) {
+        const cpfNormalizado = normalizarCPF(associado.cpf);
+        const fotoUrl = associado.foto
+            ? `../${associado.foto}`
+            : `https://assegonaopara.com.br/QRV/images/fotos/${cpfNormalizado}.jpg`;
+
+        modalAvatar.innerHTML = `
+            <img src="${fotoUrl}" 
+                 alt="${associado.nome}"
+                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+                 onload="this.style.display='block'; this.nextElementSibling.style.display='none';">
+            <div class="modal-avatar-header-placeholder" style="display:none;">
+                ${associado.nome ? associado.nome.charAt(0).toUpperCase() : '?'}
+            </div>
+        `;
+    } else {
+        modalAvatar.innerHTML = `
+            <div class="modal-avatar-header-placeholder">
+                ${associado.nome ? associado.nome.charAt(0).toUpperCase() : '?'}
+            </div>
+        `;
+    }
+}
+
+// Preenche tab Visão Geral
+function preencherTabVisaoGeral(associado) {
+    const overviewTab = document.getElementById('overview-tab');
+
+    // Calcula idade
+    let idade = '-';
+    if (associado.nasc && associado.nasc !== '0000-00-00') {
+        const hoje = new Date();
+        const nascimento = new Date(associado.nasc);
+        idade = Math.floor((hoje - nascimento) / (365.25 * 24 * 60 * 60 * 1000));
+        idade = idade + ' anos';
+    }
+
+    // Monta o conteúdo da tab Visão Geral
+    const conteudoHTML = `
+        <div class="info-grid">
+            <div class="info-section">
+                <h5><i class="fas fa-user"></i> Dados Pessoais</h5>
+                <div class="info-row">
+                    <span class="info-label">Nome Completo:</span>
+                    <span class="info-value">${associado.nome || '-'}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">CPF:</span>
+                    <span class="info-value">${formatarCPF(associado.cpf) || '-'}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">RG:</span>
+                    <span class="info-value">${associado.rg || '-'}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Data de Nascimento:</span>
+                    <span class="info-value">${formatarData(associado.nasc) || '-'}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Idade:</span>
+                    <span class="info-value">${idade}</span>
+                </div>
+            </div>
+            
+            <div class="info-section">
+                <h5><i class="fas fa-shield-alt"></i> Dados Militares</h5>
+                <div class="info-row">
+                    <span class="info-label">Situação:</span>
+                    <span class="info-value">${associado.situacao || '-'}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Corporação:</span>
+                    <span class="info-value">${associado.corporacao || '-'}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Patente:</span>
+                    <span class="info-value">${associado.patente || '-'}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Data de Filiação:</span>
+                    <span class="info-value">${formatarData(associado.data_filiacao) || '-'}</span>
+                </div>
+            </div>
+        </div>
+    `;
+
+    overviewTab.innerHTML = conteudoHTML;
+}
+
+// Preenche tab Militar
+function preencherTabMilitar(associado) {
+    const militarTab = document.getElementById('militar-tab');
+    
+    const conteudoHTML = `
+        <div class="info-grid">
+            <div class="info-section">
+                <h5><i class="fas fa-shield-alt"></i> Informações Militares</h5>
+                <div class="info-row">
+                    <span class="info-label">Corporação:</span>
+                    <span class="info-value">${associado.corporacao || '-'}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Patente:</span>
+                    <span class="info-value">${associado.patente || '-'}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Situação:</span>
+                    <span class="info-value">${associado.situacao || '-'}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Data de Filiação:</span>
+                    <span class="info-value">${formatarData(associado.data_filiacao) || '-'}</span>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    militarTab.innerHTML = conteudoHTML;
+}
+
+// Preenche tab Financeiro
+function preencherTabFinanceiro(associado) {
+    const financeiroTab = document.getElementById('financeiro-tab');
+    
+    financeiroTab.innerHTML = `
+        <div class="info-section">
+            <h5><i class="fas fa-dollar-sign"></i> Informações Financeiras</h5>
+            <p class="text-muted">Dados financeiros em desenvolvimento...</p>
+        </div>
+    `;
+}
+
+// Funções auxiliares de formatação
+function formatarCPF(cpf) {
+    if (!cpf) return '-';
+    return cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+}
+
+function formatarData(data) {
+    if (!data || data === '0000-00-00') return '-';
+    const date = new Date(data);
+    return date.toLocaleDateString('pt-BR');
+}
+
+function formatarTelefone(telefone) {
+    if (!telefone) return '-';
+    // Remove caracteres não numéricos
+    const nums = telefone.replace(/\D/g, '');
+    if (nums.length === 11) {
+        return nums.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+    } else if (nums.length === 10) {
+        return nums.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
+    }
+    return telefone;
+}
+
+function normalizarCPF(cpf) {
+    if (!cpf) return '';
+    return cpf.replace(/\D/g, '');
+}
+
+// Funções de modal
+function fecharModal() {
+    document.getElementById('modalAssociado').classList.remove('show');
+    document.body.style.overflow = '';
+}
+
+function abrirTab(tabName) {
+    // Remove active de todas as tabs
+    document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+    
+    // Ativa a tab selecionada
+    document.querySelector(`[onclick="abrirTab('${tabName}')"]`).classList.add('active');
+    document.getElementById(`${tabName}-tab`).classList.add('active');
+}
+
+// Funções de loading
+function showLoading() {
+    const loading = document.getElementById('loadingOverlay');
+    if (loading) loading.style.display = 'flex';
+}
+
+function hideLoading() {
+    const loading = document.getElementById('loadingOverlay');
+    if (loading) loading.style.display = 'none';
+}
+
+// Placeholders para outras funções referenciadas
+function editarAssociado(id) {
+    console.log('Editar associado:', id);
+    alert('Funcionalidade de edição em desenvolvimento');
+}
+
+function excluirAssociado(id) {
+    console.log('Excluir associado:', id);
+    if (confirm('Tem certeza que deseja excluir este associado?')) {
+        alert('Funcionalidade de exclusão em desenvolvimento');
+    }
+}
+
+// Funções de paginação (placeholders)
+function calcularPaginacao() {
+    console.log('Calculando paginação...');
+}
+
+function renderizarPagina() {
+    console.log('Renderizando página...');
+}
+
+// Preenche tab Contato
+function preencherTabContato(associado) {
+    const contatoTab = document.getElementById('contato-tab');
+    
+    const conteudoHTML = `
+        <div class="info-grid">
+            <div class="info-section">
+                <h5><i class="fas fa-address-card"></i> Informações de Contato</h5>
+                <div class="info-row">
+                    <span class="info-label">Telefone:</span>
+                    <span class="info-value">${formatarTelefone(associado.telefone) || '-'}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Email:</span>
+                    <span class="info-value">${associado.email || '-'}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Endereço:</span>
+                    <span class="info-value">${associado.endereco || '-'}</span>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    contatoTab.innerHTML = conteudoHTML;
+}
+
+// Preenche tab Dependentes
+function preencherTabDependentes(associado) {
+    const dependentesTab = document.getElementById('dependentes-tab');
+    
+    dependentesTab.innerHTML = `
+        <div class="info-section">
+            <h5><i class="fas fa-users"></i> Dependentes</h5>
+            <p class="text-muted">Dados de dependentes em desenvolvimento...</p>
+        </div>
+    `;
+}
+
+// Preenche tab Documentos
+function preencherTabDocumentos(associado) {
+    const documentosTab = document.getElementById('documentos-tab');
+    
+    documentosTab.innerHTML = `
+        <div class="info-section">
+            <h5><i class="fas fa-folder-open"></i> Documentos</h5>
+            <p class="text-muted">Gerenciamento de documentos em desenvolvimento...</p>
+        </div>
+    `;
 }
 
 // Adiciona CSS para o botão (coloque no <head> ou arquivo CSS)

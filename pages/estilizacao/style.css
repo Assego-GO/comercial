@@ -2017,6 +2017,19 @@
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
 }
+
+
+.status-badge.remido {
+    background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
+    color: #ffffff;
+    border: 1px solid #ffc107;
+}
+
+.status-badge.agregado {
+    background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+    color: #ffffff;
+    border: 1px solid #17a2b8;
+=======
 /* ========================================
    ESTILOS DA ABA DE OBSERVAÇÕES
    ======================================== */
@@ -2686,4 +2699,5 @@
 
 .observacao-edited i {
     font-size: 0.75rem;
+
 }
