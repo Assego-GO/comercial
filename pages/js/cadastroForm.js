@@ -1,6 +1,7 @@
 /**
- * cadastroForm.js - JavaScript Completo Corrigido
+ * cadastroForm.js - JavaScript Completo Corrigido + Controle Serviço Jurídico
  * Versão com TODOS os campos financeiros incluindo doador e observações
+ * + Controle de acesso ao serviço jurídico por tipo de associado
  */
 
 // Estado do formulário - DECLARADO PRIMEIRO
@@ -23,7 +24,7 @@ let dadosCarregados = false;
 
 // Inicialização
 document.addEventListener('DOMContentLoaded', function () {
-    console.log('=== INICIANDO FORMULÁRIO DE FILIAÇÃO CORRIGIDO ===');
+    console.log('=== INICIANDO FORMULÁRIO DE FILIAÇÃO CORRIGIDO + CONTROLE JURÍDICO ===');
     console.log('Modo edição:', isEdit, 'ID:', associadoId);
 
     // Atalho ESC para voltar ao dashboard
@@ -52,7 +53,7 @@ document.addEventListener('DOMContentLoaded', function () {
             // Validação em tempo real
             setupRealtimeValidation();
 
-            // Event listeners dos serviços
+            // Event listeners dos serviços (INCLUINDO CONTROLE JURÍDICO)
             configurarListenersServicos();
 
             // Carrega dados dos serviços se estiver editando
@@ -72,7 +73,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 dependenteIndex = dependentesExistentes.length;
             }
 
-            console.log('✓ Formulário inicializado com sucesso!');
+            console.log('✓ Formulário inicializado com sucesso (+ controle jurídico)!');
 
         })
         .catch(error => {
@@ -187,16 +188,158 @@ function inicializarUploadPreviews() {
     console.log('✓ Uploads configurados');
 }
 
-// Configurar listeners dos serviços
+// FUNÇÃO NOVA: Controlar serviço jurídico por tipo de associado
+function controlarServicoJuridico() {
+    console.log('=== CONTROLANDO ACESSO AO SERVIÇO JURÍDICO ===');
+    
+    const tipoAssociado = document.getElementById('tipoAssociadoServico')?.value;
+    const servicoJuridicoCheckbox = document.getElementById('servicoJuridico');
+    const servicoJuridicoItem = document.getElementById('servicoJuridicoItem');
+    const badgeJuridico = document.getElementById('badgeJuridico');
+    const mensagemContainer = document.getElementById('mensagemRestricaoJuridico');
+    const infoTipoAssociado = document.getElementById('infoTipoAssociado');
+    const textoInfoTipo = document.getElementById('textoInfoTipo');
+    
+    // Tipos que NÃO têm direito ao serviço jurídico
+    const tiposSemJuridico = ['Benemérito', 'Benemerito', 'Agregado'];
+    
+    console.log('Tipo selecionado:', tipoAssociado);
+    console.log('Tipos sem jurídico:', tiposSemJuridico);
+    
+    if (tiposSemJuridico.includes(tipoAssociado)) {
+        console.log('❌ Tipo não tem direito ao serviço jurídico');
+        
+        // Desabilita o serviço jurídico
+        if (servicoJuridicoCheckbox) {
+            servicoJuridicoCheckbox.disabled = true;
+            servicoJuridicoCheckbox.checked = false;
+        }
+        
+        // Adiciona classes visuais
+        if (servicoJuridicoItem) {
+            servicoJuridicoItem.classList.add('desabilitado', 'servico-bloqueado');
+            servicoJuridicoItem.style.opacity = '0.5';
+            servicoJuridicoItem.style.pointerEvents = 'none';
+        }
+        
+        // Atualiza o badge
+        if (badgeJuridico) {
+            badgeJuridico.style.background = '#dc3545';
+            badgeJuridico.textContent = 'INDISPONÍVEL';
+        }
+        
+        // Mostra mensagem de restrição
+        if (mensagemContainer) {
+            mensagemContainer.style.display = 'block';
+            mensagemContainer.innerHTML = `
+                <div class="mensagem-restricao" style="
+                    background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+                    color: #721c24;
+                    padding: 0.75rem;
+                    border-radius: 6px;
+                    font-size: 0.8rem;
+                    margin-top: 0.75rem;
+                    border-left: 4px solid #dc3545;
+                    display: flex;
+                    align-items: center;
+                    gap: 0.5rem;
+                    box-shadow: 0 2px 4px rgba(220, 53, 69, 0.1);
+                ">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    Associados do tipo "${tipoAssociado}" não têm direito ao serviço jurídico conforme regulamento da ASSEGO.
+                </div>
+            `;
+        }
+        
+        // Mostra informação no campo de tipo
+        if (infoTipoAssociado && textoInfoTipo) {
+            infoTipoAssociado.style.display = 'block';
+            textoInfoTipo.innerHTML = `Tipo "${tipoAssociado}" não tem direito ao serviço jurídico.`;
+            infoTipoAssociado.style.color = '#dc3545';
+        }
+        
+        // Zera os valores do serviço jurídico
+        zerarValoresJuridico();
+        
+    } else {
+        console.log('✅ Tipo tem direito ao serviço jurídico');
+        
+        // Habilita o serviço jurídico
+        if (servicoJuridicoCheckbox) {
+            servicoJuridicoCheckbox.disabled = false;
+        }
+        
+        // Remove classes visuais
+        if (servicoJuridicoItem) {
+            servicoJuridicoItem.classList.remove('desabilitado', 'servico-bloqueado');
+            servicoJuridicoItem.style.opacity = '1';
+            servicoJuridicoItem.style.pointerEvents = 'auto';
+        }
+        
+        // Restaura o badge
+        if (badgeJuridico) {
+            badgeJuridico.style.background = 'var(--info)';
+            badgeJuridico.textContent = 'OPCIONAL';
+        }
+        
+        // Esconde mensagem de restrição
+        if (mensagemContainer) {
+            mensagemContainer.style.display = 'none';
+            mensagemContainer.innerHTML = '';
+        }
+        
+        // Esconde informação do tipo se era sobre restrição
+        if (textoInfoTipo && textoInfoTipo.textContent.includes('não tem direito')) {
+            if (infoTipoAssociado) {
+                infoTipoAssociado.style.display = 'none';
+            }
+        }
+    }
+    
+    console.log('=== FIM CONTROLE SERVIÇO JURÍDICO ===');
+}
+
+// FUNÇÃO NOVA: Zerar valores do serviço jurídico
+function zerarValoresJuridico() {
+    console.log('Zerando valores do serviço jurídico...');
+    
+    updateElementSafe('valorJuridico', '0', 'value');
+    updateElementSafe('percentualAplicadoJuridico', '0', 'value');
+    updateElementSafe('valorFinalJuridico', '0,00');
+    updateElementSafe('percentualJuridico', '0');
+    
+    console.log('✓ Valores jurídicos zerados');
+}
+
+// FUNÇÃO NOVA: Validar tipos e serviços
+function validarTipoEServicos() {
+    const tipoAssociado = document.getElementById('tipoAssociadoServico')?.value;
+    
+    if (!tipoAssociado) {
+        showAlert('Por favor, selecione o tipo de associado antes de prosseguir.', 'warning');
+        return false;
+    }
+    
+    // Executa o controle uma última vez para garantir consistência
+    controlarServicoJuridico();
+    
+    return true;
+}
+
+// Configurar listeners dos serviços (ATUALIZADA)
 function configurarListenersServicos() {
-    console.log('Configurando listeners dos serviços...');
+    console.log('Configurando listeners dos serviços + controle jurídico...');
     
     const tipoAssociadoEl = document.getElementById('tipoAssociadoServico');
     const servicoJuridicoEl = document.getElementById('servicoJuridico');
 
     if (tipoAssociadoEl) {
-        tipoAssociadoEl.addEventListener('change', calcularServicos);
-        console.log('✓ Listener do tipo de associado adicionado');
+        tipoAssociadoEl.addEventListener('change', function() {
+            console.log('Tipo de associado alterado:', this.value);
+            controlarServicoJuridico(); // NOVA LINHA
+            calcularServicos();
+        });
+        console.log('✓ Listener do tipo de associado adicionado (+ controle jurídico)');
     }
 
     if (servicoJuridicoEl) {
@@ -273,11 +416,22 @@ function preencherSelectTiposAssociado() {
     tiposAssociadoData.forEach(tipo => {
         const option = document.createElement('option');
         option.value = tipo;
-        option.textContent = tipo;
+        
+        // Adiciona indicação visual para tipos sem direito ao jurídico
+        const tiposSemJuridico = ['Benemérito', 'Benemerito', 'Agregado'];
+        if (tiposSemJuridico.includes(tipo)) {
+            option.textContent = `${tipo} (Sem serviço jurídico)`;
+            option.setAttribute('data-restricao', 'sem-juridico');
+            option.style.background = '#fff3cd';
+            option.style.color = '#856404';
+        } else {
+            option.textContent = tipo;
+        }
+        
         select.appendChild(option);
     });
 
-    console.log(`✓ Select preenchido com ${tiposAssociadoData.length} tipos de associado`);
+    console.log(`✓ Select preenchido com ${tiposAssociadoData.length} tipos de associado (+ indicações de restrição)`);
 
     // Atualiza Select2 se estiver inicializado
     if (typeof $ !== 'undefined' && $('#tipoAssociadoServico').hasClass('select2-hidden-accessible')) {
@@ -304,13 +458,13 @@ function useHardcodedData() {
         { tipo_associado: "Soldado 1ª Classe", servico_id: "1", percentual_valor: "100.00" },
         { tipo_associado: "Soldado 1ª Classe", servico_id: "2", percentual_valor: "100.00" },
         { tipo_associado: "Agregado", servico_id: "1", percentual_valor: "50.00" },
-        { tipo_associado: "Agregado", servico_id: "2", percentual_valor: "100.00" },
+        { tipo_associado: "Agregado", servico_id: "2", percentual_valor: "0.00" }, // SEM DIREITO
         { tipo_associado: "Remido", servico_id: "1", percentual_valor: "0.00" },
         { tipo_associado: "Remido", servico_id: "2", percentual_valor: "100.00" },
         { tipo_associado: "Remido 50%", servico_id: "1", percentual_valor: "50.00" },
         { tipo_associado: "Remido 50%", servico_id: "2", percentual_valor: "100.00" },
         { tipo_associado: "Benemerito", servico_id: "1", percentual_valor: "0.00" },
-        { tipo_associado: "Benemerito", servico_id: "2", percentual_valor: "100.00" }
+        { tipo_associado: "Benemerito", servico_id: "2", percentual_valor: "0.00" } // SEM DIREITO
     ];
 
     tiposAssociadoData = ["Contribuinte", "Aluno", "Soldado 2ª Classe", "Soldado 1ª Classe", "Agregado", "Remido 50%", "Remido", "Benemerito"];
@@ -349,6 +503,7 @@ function carregarServicosAssociado() {
                 // Mesmo assim, tenta calcular com os dados atuais
                 setTimeout(() => {
                     if (document.getElementById('tipoAssociadoServico').value) {
+                        controlarServicoJuridico(); // NOVA LINHA
                         calcularServicos();
                     }
                 }, 500);
@@ -358,6 +513,7 @@ function carregarServicosAssociado() {
             console.error('Erro ao carregar serviços:', error);
             setTimeout(() => {
                 if (document.getElementById('tipoAssociadoServico').value) {
+                    controlarServicoJuridico(); // NOVA LINHA
                     calcularServicos();
                 }
             }, 500);
@@ -440,13 +596,21 @@ function preencherDadosServicos(dadosServicos) {
     const totalMensal = dadosServicos.valor_total_mensal || 0;
     updateElementSafe('valorTotalGeral', parseFloat(totalMensal).toFixed(2).replace('.', ','));
 
+    // IMPORTANTE: Executa controle do serviço jurídico após preencher
+    setTimeout(() => {
+        controlarServicoJuridico();
+    }, 100);
+
     console.log('✓ Total mensal:', totalMensal);
     console.log('=== FIM PREENCHIMENTO ===');
 }
 
-// FUNÇÃO CORRIGIDA: Cálculo de serviços
+// FUNÇÃO CORRIGIDA: Cálculo de serviços (INCLUINDO CONTROLE JURÍDICO)
 function calcularServicos() {
-    console.log('=== CALCULANDO SERVIÇOS ===');
+    console.log('=== CALCULANDO SERVIÇOS + CONTROLE JURÍDICO ===');
+    
+    // PRIMEIRO: Controla o acesso ao serviço jurídico
+    controlarServicoJuridico();
 
     if (!dadosCarregados) {
         console.warn('Dados ainda não carregados, aguardando...');
@@ -463,9 +627,9 @@ function calcularServicos() {
     }
 
     const tipoAssociado = tipoAssociadoEl.value;
-    const servicoJuridicoChecked = servicoJuridicoEl.checked;
+    const servicoJuridicoChecked = servicoJuridicoEl.checked && !servicoJuridicoEl.disabled; // NOVA CONDIÇÃO
 
-    console.log('Calculando para:', { tipoAssociado, servicoJuridicoChecked });
+    console.log('Calculando para:', { tipoAssociado, servicoJuridicoChecked, disabled: servicoJuridicoEl.disabled });
 
     if (!tipoAssociado) {
         resetarCalculos();
@@ -504,7 +668,7 @@ function calcularServicos() {
         valorTotalGeral += valorFinal;
     }
 
-    // Calcular Serviço Jurídico (se selecionado)
+    // Calcular Serviço Jurídico (SE habilitado E selecionado)
     if (servicoJuridicoChecked && regrasJuridico.length > 0) {
         const regra = regrasJuridico[0];
         const servicoJuridico = servicosData.find(s => s.id == 2);
@@ -522,11 +686,13 @@ function calcularServicos() {
 
         valorTotalGeral += valorFinal;
     } else {
-        // Reset jurídico se não selecionado
+        // Reset jurídico se não selecionado ou desabilitado
         updateElementSafe('percentualJuridico', '0');
         updateElementSafe('valorFinalJuridico', '0,00');
         updateElementSafe('valorJuridico', '0', 'value');
         updateElementSafe('percentualAplicadoJuridico', '0', 'value');
+        
+        console.log('Serviço jurídico zerado (não selecionado ou desabilitado)');
     }
 
     // Atualizar total geral
@@ -579,8 +745,15 @@ function updateElementSafe(elementId, value, property = 'textContent') {
     }
 }
 
-// Navegação entre steps
+// Navegação entre steps (ATUALIZADA COM VALIDAÇÃO)
 function proximoStep() {
+    // VALIDAÇÃO ESPECÍFICA para step financeiro
+    if (currentStep === 4) {
+        if (!validarTipoEServicos()) {
+            return; // Para a navegação se validação falhar
+        }
+    }
+    
     if (validarStepAtual()) {
         if (currentStep < totalSteps) {
             // Marca step atual como completo
@@ -722,7 +895,7 @@ function validarStepAtual() {
     }
 
     if (currentStep === 4) {
-        // Validação do step financeiro
+        // Validação do step financeiro + controle jurídico
         const tipoAssociadoServico = document.getElementById('tipoAssociadoServico');
         const tipoAssociado = document.getElementById('tipoAssociado');
         const valorSocial = document.getElementById('valorSocial');
@@ -743,6 +916,16 @@ function validarStepAtual() {
         if (valorSocial && valorSocial.value === '') {
             isValid = false;
             showAlert('Erro no cálculo dos serviços. Verifique o tipo de associado selecionado!', 'error');
+        }
+        
+        // NOVA VALIDAÇÃO: Verifica se o serviço jurídico está corretamente configurado
+        const servicoJuridicoEl = document.getElementById('servicoJuridico');
+        const tipoSelecionado = tipoAssociadoServico?.value;
+        const tiposSemJuridico = ['Benemérito', 'Benemerito', 'Agregado'];
+        
+        if (tiposSemJuridico.includes(tipoSelecionado) && servicoJuridicoEl && servicoJuridicoEl.checked) {
+            showAlert(`Associados do tipo "${tipoSelecionado}" não podem contratar o serviço jurídico!`, 'error');
+            isValid = false;
         }
     }
 
@@ -951,7 +1134,7 @@ function removerDependente(button) {
 
 // FUNÇÃO CORRIGIDA: Salvar associado com TODOS os campos
 function salvarAssociado() {
-    console.log('=== SALVANDO ASSOCIADO COM TODOS OS CAMPOS ===');
+    console.log('=== SALVANDO ASSOCIADO COM TODOS OS CAMPOS + VALIDAÇÃO JURÍDICO ===');
 
     // ✅ DEBUG ESPECÍFICO PARA SITUAÇÃO
     const situacaoElement = document.getElementById('situacao');
@@ -970,9 +1153,34 @@ function salvarAssociado() {
         return;
     }
 
+    // VALIDAÇÃO EXTRA: Verifica serviço jurídico antes de salvar
+    const tipoAssociadoEl = document.getElementById('tipoAssociadoServico');
+    const servicoJuridicoEl = document.getElementById('servicoJuridico');
+    
+    if (tipoAssociadoEl && servicoJuridicoEl) {
+        const tipoSelecionado = tipoAssociadoEl.value;
+        const tiposSemJuridico = ['Benemérito', 'Benemerito', 'Agregado'];
+        
+        if (tiposSemJuridico.includes(tipoSelecionado) && servicoJuridicoEl.checked) {
+            showAlert(`ERRO: Associados do tipo "${tipoSelecionado}" não podem contratar o serviço jurídico!`, 'error');
+            return;
+        }
+    }
+
     showLoading();
 
     const formData = new FormData(document.getElementById('formAssociado'));
+    // *** CORREÇÃO: Garante tipo de associado correto ***
+    const tipoAssociadoSelect = document.getElementById('tipoAssociadoServico');
+    if (tipoAssociadoSelect && tipoAssociadoSelect.value) {
+        const tipoReal = tipoAssociadoSelect.value;
+        formData.set('tipoAssociadoServico', tipoReal);
+        console.log('🔍 TIPO REAL sendo enviado:', tipoReal);
+    } else {
+        hideLoading();
+        showAlert('Erro: Selecione o tipo de associado!', 'error');
+        return;
+    }
 
     // GARANTIR TODOS OS CAMPOS FINANCEIROS
     console.log('Garantindo campos financeiros...');
@@ -985,10 +1193,10 @@ function salvarAssociado() {
     }
 
     // Categoria do associado
-    const tipoAssociadoEl = document.getElementById('tipoAssociado');
-    if (tipoAssociadoEl && tipoAssociadoEl.value) {
-        formData.set('tipoAssociado', tipoAssociadoEl.value);
-        console.log('✓ Categoria do associado:', tipoAssociadoEl.value);
+    const tipoAssociadoElCat = document.getElementById('tipoAssociado');
+    if (tipoAssociadoElCat && tipoAssociadoElCat.value) {
+        formData.set('tipoAssociado', tipoAssociadoElCat.value);
+        console.log('✓ Categoria do associado:', tipoAssociadoElCat.value);
     }
 
     // Situação financeira
@@ -1063,11 +1271,12 @@ function salvarAssociado() {
         console.log('✓ Percentual jurídico:', percentualJuridicoEl.value);
     }
 
-    // Checkbox do serviço jurídico
-    const servicoJuridicoEl = document.getElementById('servicoJuridico');
+    // Checkbox do serviço jurídico (COM VALIDAÇÃO)
     if (servicoJuridicoEl) {
-        formData.set('servicoJuridico', servicoJuridicoEl.checked ? '2' : '');
-        console.log('✓ Serviço jurídico:', servicoJuridicoEl.checked);
+        const podeContratar = !servicoJuridicoEl.disabled;
+        const checkboxValue = (servicoJuridicoEl.checked && podeContratar) ? '2' : '';
+        formData.set('servicoJuridico', checkboxValue);
+        console.log('✓ Serviço jurídico:', servicoJuridicoEl.checked, 'Pode contratar:', podeContratar, 'Valor final:', checkboxValue);
     }
 
     // ✅ DEBUG ADICIONAL: Verificar o valor de situação no FormData
@@ -1083,6 +1292,9 @@ function salvarAssociado() {
 
     // Log dos dados sendo enviados (sem arquivos)
     console.log('Dados sendo enviados:');
+    // *** DEBUG: Verificar tipo ***
+console.log('Valor no select:', document.getElementById('tipoAssociadoServico')?.value);
+console.log('Valor no FormData:', formData.get('tipoAssociadoServico'));
     for (let [key, value] of formData.entries()) {
         if (key.includes('ficha_assinada') || key.includes('foto')) {
             console.log(`${key}: [arquivo]`);
@@ -1090,6 +1302,30 @@ function salvarAssociado() {
             console.log(`${key}: ${value}`);
         }
     }
+    // DEBUG: Verificar se o tipo está sendo enviado
+const tipoAssociadoServico = document.getElementById('tipoAssociadoServico').value;
+const tipoAssociado = document.getElementById('tipoAssociado').value;
+
+console.log('=== VERIFICANDO TRANSMISSÃO ===');
+console.log('Tipo Serviço (elemento):', tipoAssociadoServico);
+console.log('Tipo Associado (elemento):', tipoAssociado);
+
+// FORÇA a inclusão dos dados
+formData.set('tipoAssociadoServico', tipoAssociadoServico);
+formData.set('tipoAssociado', tipoAssociado);
+
+// DEBUG: Mostra TODOS os dados relacionados a tipo
+console.log('=== FORMDATA TIPOS ===');
+for (let [key, value] of formData.entries()) {
+    if (key.toLowerCase().includes('tipo')) {
+        console.log(`${key}: "${value}"`);
+    }
+}
+
+// DEBUG: Verificar se os campos existem no DOM
+console.log('=== VERIFICAÇÃO DOM ===');
+console.log('Campo tipoAssociadoServico existe?', document.getElementById('tipoAssociadoServico') !== null);
+console.log('Campo tipoAssociado existe?', document.getElementById('tipoAssociado') !== null);
 
     fetch(url, {
         method: 'POST',
@@ -1143,7 +1379,7 @@ function salvarAssociado() {
                 setTimeout(() => {
                     if (!isEdit && data.data && data.data.fluxo_documento && data.data.fluxo_documento.enviado_presidencia) {
                         // Se foi enviado para presidência, redireciona para a página de fluxo
-                        window.location.href = 'documentos_fluxo.php?novo=1';
+                        //window.location.href = 'documentos_fluxo.php?novo=1';
                     } else {
                         // Caso contrário, vai para o dashboard normal
                         window.location.href = 'dashboard.php?success=1';
@@ -1185,6 +1421,14 @@ function preencherRevisao() {
         tipoAssociado: formData.get('tipoAssociado') || '-',
         valorTotal: document.getElementById('valorTotalGeral')?.textContent || '0,00'
     };
+
+    // NOVA INFORMAÇÃO: Status do serviço jurídico
+    const servicoJuridicoEl = document.getElementById('servicoJuridico');
+    const statusJuridico = servicoJuridicoEl?.disabled 
+        ? '❌ Não disponível para este tipo'
+        : servicoJuridicoEl?.checked 
+            ? '✅ Contratado' 
+            : '⚪ Não contratado';
 
     let html = `
         <div class="overview-card" style="background: var(--gray-100); padding: 2rem; border-radius: 16px; margin-bottom: 1.5rem;">
@@ -1228,6 +1472,10 @@ function preencherRevisao() {
                             <span class="overview-value" style="font-size: 1rem; color: var(--dark); font-weight: 500;">${dadosRevisao.tipoAssociado}</span>
                         </div>
                         <div class="overview-item" style="margin-bottom: 1rem;">
+                            <span class="overview-label" style="font-size: 0.875rem; color: var(--gray-600); font-weight: 600;">Serviço Jurídico:</span>
+                            <span class="overview-value" style="font-size: 1rem; color: var(--dark); font-weight: 500;">${statusJuridico}</span>
+                        </div>
+                        <div class="overview-item" style="margin-bottom: 1rem;">
                             <span class="overview-label" style="font-size: 0.875rem; color: var(--gray-600); font-weight: 600;">Valor Total Mensal:</span>
                             <span class="overview-value" style="font-size: 1.25rem; color: var(--primary); font-weight: 700;">R$ ${dadosRevisao.valorTotal}</span>
                         </div>
@@ -1255,7 +1503,7 @@ function preencherRevisao() {
     }
 
     container.innerHTML = html;
-    console.log('✓ Revisão preenchida');
+    console.log('✓ Revisão preenchida (+ status serviço jurídico)');
 }
 
 // Validação do formulário completo
@@ -1334,5 +1582,7 @@ function showAlert(message, type = 'info') {
 }
 
 // Log final
-console.log('✓ JavaScript do formulário carregado completamente com TODOS os campos financeiros!');
+console.log('✓ JavaScript do formulário carregado completamente com TODOS os campos financeiros + CONTROLE JURÍDICO!');
 console.log('✓ Incluindo: doador, observações, vínculo servidor, local de débito, agência, operação, conta corrente');
+console.log('✓ Controle de serviço jurídico: Benemérito e Agregado não podem contratar o serviço jurídico');
+console.log('✓ Validações robustas implementadas para garantir integridade dos dados');
