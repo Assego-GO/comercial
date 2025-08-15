@@ -942,7 +942,7 @@ $headerComponent = HeaderComponent::create([
                                 <th>Parentesco</th>
                                 <th>Responsável</th>
                                 <th>Contato</th>
-                                <th>Ações</th>
+                                
                             </tr>
                         </thead>
                         <tbody id="corpoTabelaDependentes">
@@ -1518,17 +1518,7 @@ $headerComponent = HeaderComponent::create([
                             </div>
                         </td>
                         <td>
-                            ${dep.telefone_responsavel ? 
-                                `<a href="tel:${dep.telefone_responsavel}" class="btn-acao btn-contato" title="Ligar">
-                                    <i class="fas fa-phone"></i>
-                                </a>` : 
-                                `<span class="btn-acao" style="opacity: 0.3;" title="Sem telefone">
-                                    <i class="fas fa-phone-slash"></i>
-                                </span>`
-                            }
-                            <button class="btn-acao btn-detalhes" onclick="verDetalhes('${dep.dependente_id}')" title="Ver detalhes">
-                                <i class="fas fa-eye"></i>
-                            </button>
+                           
                         </td>
                     </tr>
                 `;
