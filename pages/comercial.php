@@ -947,6 +947,15 @@ $headerComponent = HeaderComponent::create([
                                 <p>Busque e consulte dados de associados existentes</p>
                             </div>
 
+                            <div class="cadastro-option" onclick="consultarDependentes18()">
+                            <div class="cadastro-option-icon">
+                            <i class="fas fa-birthday-cake"></i>
+                            </div>
+                            <h5>Dependentes 18+</h5>
+                            <p>Veja os dependentes que já completaram ou estão prestes a completar 18 anos</p>
+                        </div>
+
+
                             <div class="cadastro-option" onclick="relatoriosComerciais()">
                                 <div class="cadastro-option-icon">
                                     <i class="fas fa-chart-bar"></i>
@@ -1591,6 +1600,13 @@ $headerComponent = HeaderComponent::create([
             notifications.show('Abrindo consulta de associados...', 'info');
             setTimeout(() => {
                 window.location.href = '../pages/dashboard.php';
+            }, 1000);
+        }
+        // Consultar dependentes com 18 anos
+        function consultarDependentes18() {
+            notifications.show('Carregando relatórios comerciais...', 'info');
+            setTimeout(() => {
+                window.location.href = '../pages/dependentes_18anos.php';
             }, 1000);
         }
 
