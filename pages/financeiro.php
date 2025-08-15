@@ -1021,7 +1021,7 @@ $headerComponent = HeaderComponent::create([
                                 <div class="financeiro-option-icon">
                                     <i class="fas fa-file-download"></i>
                                 </div>
-                                <h5>Gerar Arquivo de Recorrência</h5>
+                                <h5>Optantes NeoConsig</h5>
                                 <p>Gere arquivos TXT para inclusões, cancelamentos e alterações</p>
                             </div>
 
