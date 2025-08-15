@@ -495,45 +495,6 @@ $headerComponent = HeaderComponent::create([
                     <div class="observacoes-container" id="observacoesContainer">
                         <!-- As observações serão carregadas dinamicamente aqui -->
                         
-                        <!-- Template de uma observação (exemplo) -->
-                        <div class="observacao-card">
-                            <div class="observacao-header">
-                                <div class="observacao-meta">
-                                    <div class="observacao-author">
-                                        <div class="author-avatar">
-                                            <i class="fas fa-user"></i>
-                                        </div>
-                                        <div class="author-info">
-                                            <span class="author-name">João Silva</span>
-                                            <span class="author-role">Secretaria</span>
-                                        </div>
-                                    </div>
-                                    <div class="observacao-actions">
-                                        <button class="btn-observacao-action" title="Marcar como importante">
-                                            <i class="far fa-star"></i>
-                                        </button>
-                                        <button class="btn-observacao-action" title="Editar">
-                                            <i class="fas fa-edit"></i>
-                                        </button>
-                                        <button class="btn-observacao-action delete" title="Excluir">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                                <div class="observacao-date">
-                                    <i class="far fa-calendar"></i>
-                                    12/08/2025 às 14:30
-                                </div>
-                            </div>
-                            <div class="observacao-content">
-                                <p>Esta é uma observação de exemplo. O associado compareceu para atualização cadastral e apresentou todos os documentos necessários.</p>
-                            </div>
-                            <div class="observacao-tags">
-                                <span class="tag tag-info">Atualização</span>
-                                <span class="tag tag-success">Documentos OK</span>
-                            </div>
-                        </div>
-
                         <!-- Estado vazio -->
                         <div class="empty-observacoes-state" style="display: none;">
                             <div class="empty-observacoes-icon">
