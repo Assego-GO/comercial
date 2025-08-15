@@ -630,7 +630,7 @@ $headerComponent = HeaderComponent::create([
                     <div class="page-title-icon">
                         <i class="fas fa-file-download"></i>
                     </div>
-                    Gerar Arquivo de Recorrência
+                    Optantes NeoConsig
                     <?php if ($isFinanceiro): ?>
                         <small style="opacity: 0.8; font-size: 1rem; font-weight: 400;">Setor Financeiro</small>
                     <?php elseif ($isPresidencia): ?>
