@@ -1,4 +1,3 @@
-
 // Configuração inicial
 console.log('=== INICIANDO SISTEMA ASSEGO ===');
 console.log('jQuery versão:', jQuery.fn.jquery);
@@ -698,7 +697,7 @@ function preencherTabMilitar(associado) {
     `;
 }
 
-// FUNÇÃO ATUALIZADA: Preenche tab Financeiro com novos campos
+// FUNÇÃO ATUALIZADA COM CAMPO NEOCONSIG: Preenche tab Financeiro
 function preencherTabFinanceiro(associado) {
     const financeiroTab = document.getElementById('financeiro-tab');
 
@@ -815,7 +814,7 @@ function preencherTabFinanceiro(associado) {
                     ${servicosHtml}
                 </div>
 
-                <!-- Dados Bancários e Cobrança - ATUALIZADO COM NOVOS CAMPOS -->
+                <!-- Dados Bancários e Cobrança - ATUALIZADO COM CAMPO NEOCONSIG -->
                 <div class="detail-section">
                     <div class="section-header">
                         <div class="section-icon">
@@ -856,6 +855,18 @@ function preencherTabFinanceiro(associado) {
                         <div class="detail-item">
                             <span class="detail-label">Conta Corrente</span>
                             <span class="detail-value">${associado.contaCorrente || '-'}</span>
+                        </div>
+                        <!-- CAMPO NEOCONSIG ADICIONADO -->
+                        <div class="detail-item">
+                            <span class="detail-label">ID Neoconsig</span>
+                            <span class="detail-value">
+                                ${associado.id_neoconsig ?
+                    `<span style="color: var(--info); font-weight: 600;">
+                                        <i class="fas fa-link" style="margin-right: 0.25rem;"></i>
+                                        ${associado.id_neoconsig}
+                                    </span>`
+                    : '<span style="color: var(--gray-500);">Não cadastrado</span>'}
+                            </span>
                         </div>
                         <div class="detail-item">
                             <span class="detail-label">É Doador</span>
@@ -918,7 +929,7 @@ function preencherTabFinanceiro(associado) {
         .catch(error => {
             console.error('Erro ao buscar serviços:', error);
 
-            // Fallback: mostra apenas dados tradicionais
+            // Fallback: mostra apenas dados tradicionais com campo Neoconsig
             financeiroTab.innerHTML = `
                 <div class="detail-section">
                     <div class="section-header">
@@ -957,6 +968,18 @@ function preencherTabFinanceiro(associado) {
                         <div class="detail-item">
                             <span class="detail-label">Conta Corrente</span>
                             <span class="detail-value">${associado.contaCorrente || '-'}</span>
+                        </div>
+                        <!-- CAMPO NEOCONSIG NO FALLBACK TAMBÉM -->
+                        <div class="detail-item">
+                            <span class="detail-label">ID Neoconsig</span>
+                            <span class="detail-value">
+                                ${associado.id_neoconsig ?
+                    `<span style="color: var(--info); font-weight: 600;">
+                                        <i class="fas fa-link" style="margin-right: 0.25rem;"></i>
+                                        ${associado.id_neoconsig}
+                                    </span>`
+                    : '<span style="color: var(--gray-500);">Não cadastrado</span>'}
+                            </span>
                         </div>
                         <div class="detail-item">
                             <span class="detail-label">É Doador</span>
@@ -2546,7 +2569,7 @@ function carregarObservacoes(associadoId) {
         dataType: 'json',
         success: function (response) {
             console.log('Resposta do servidor:', response); // Debug
-            
+
             if (response.status === 'success') {
                 // Dados vem diretamente em response.data agora
                 observacoesData = response.data || [];
@@ -2563,10 +2586,10 @@ function carregarObservacoes(associadoId) {
                 responseText: xhr.responseText,
                 error: error
             });
-            
+
             // Tentar mostrar mensagem de erro mais específica
             let mensagemErro = 'Erro de conexão ao carregar observações';
-            
+
             if (xhr.responseText) {
                 try {
                     const resposta = JSON.parse(xhr.responseText);
@@ -2577,7 +2600,7 @@ function carregarObservacoes(associadoId) {
                     // Se não for JSON, usar mensagem padrão
                 }
             }
-            
+
             mostrarErroObservacoes(mensagemErro);
         }
     });
