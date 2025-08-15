@@ -1017,6 +1017,14 @@ $headerComponent = HeaderComponent::create([
                                 <p>Consulte e gerencie associados com pendências financeiras</p>
                             </div>
 
+                            <div class="financeiro-option" onclick="gerarRecorrencia()">
+                                <div class="financeiro-option-icon">
+                                    <i class="fas fa-file-download"></i>
+                                </div>
+                                <h5>Gerar Arquivo de Recorrência</h5>
+                                <p>Gere arquivos TXT para inclusões, cancelamentos e alterações</p>
+                            </div>
+
                             <div class="financeiro-option" onclick="extratoFinanceiro()">
                                 <div class="financeiro-option-icon">
                                     <i class="fas fa-file-invoice-dollar"></i>
@@ -1579,6 +1587,13 @@ $headerComponent = HeaderComponent::create([
             } catch (e) {
                 return data;
             }
+        }
+
+        function gerarRecorrencia() {
+            notifications.show('Abrindo gerador de recorrência...', 'info');
+            setTimeout(() => {
+                window.location.href = 'gerar_recorrencia.php';
+            }, 1000);
         }
 
         // Log de inicialização
