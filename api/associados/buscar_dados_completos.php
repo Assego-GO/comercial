@@ -26,7 +26,7 @@ try {
     
     $db = Database::getInstance(DB_NAME_CADASTRO)->getConnection();
     
-    // CORRIGIDO: Buscar dados completos incluindo TODOS os campos da tabela Financeiro
+    // CORRIGIDO: Removida f.observacoes e adicionada f.id_neoconsig
     $stmt = $db->prepare("
         SELECT 
             a.*,
@@ -48,7 +48,7 @@ try {
             f.agencia,
             f.operacao,
             f.contaCorrente,
-            f.observacoes,
+            f.id_neoconsig,
             f.doador,
             c.dataFiliacao,
             c.dataDesfiliacao
@@ -110,7 +110,7 @@ try {
             'agencia' => $dados['agencia'],
             'operacao' => $dados['operacao'],
             'contaCorrente' => $dados['contaCorrente'],
-            'observacoes' => $dados['observacoes'],
+            'id_neoconsig' => $dados['id_neoconsig'], // CORRIGIDO: Agora usa id_neoconsig
             'doador' => intval($dados['doador'] ?? 0),
             'eh_doador' => ($dados['doador'] ?? 0) == 1 ? 'Sim' : 'Não'
         ],
@@ -142,11 +142,47 @@ try {
     
     $dadosEstruturados['redes_sociais'] = $redesSociais;
     
+    // NOVO: Buscar observações da nova tabela Observacoes_Associado
+    $stmtObs = $db->prepare("
+        SELECT 
+            o.*,
+            f.nome as funcionario_nome 
+        FROM Observacoes_Associado o
+        LEFT JOIN Funcionarios f ON o.criado_por = f.id
+        WHERE o.associado_id = ? 
+            AND o.ativo = 1
+        ORDER BY o.data_criacao DESC
+    ");
+    $stmtObs->execute([$associadoId]);
+    $observacoes = $stmtObs->fetchAll(PDO::FETCH_ASSOC);
+    
+    // Separar observações por categoria
+    $observacoesEstruturadas = [
+        'todas' => $observacoes,
+        'importantes' => array_filter($observacoes, function($obs) {
+            return $obs['importante'] == 1;
+        }),
+        'pendencias' => array_filter($observacoes, function($obs) {
+            return $obs['categoria'] == 'pendencia';
+        }),
+        'financeiras' => array_filter($observacoes, function($obs) {
+            return $obs['categoria'] == 'financeiro';
+        }),
+        'total' => count($observacoes),
+        'total_importantes' => count(array_filter($observacoes, function($obs) {
+            return $obs['importante'] == 1;
+        }))
+    ];
+    
+    $dadosEstruturados['observacoes'] = $observacoesEstruturadas;
+    
     // NOVO: Adicionar informações de status baseadas nos novos campos
     $dadosEstruturados['status_info'] = [
         'eh_pre_cadastro' => ($dados['pre_cadastro'] ?? 0) == 1,
         'tem_dados_financeiros' => !empty($dados['tipoAssociado']),
-        'tem_observacoes_financeiras' => !empty($dados['observacoes']),
+        'tem_neoconsig' => !empty($dados['id_neoconsig']),
+        'tem_observacoes' => count($observacoes) > 0,
+        'tem_observacoes_importantes' => $observacoesEstruturadas['total_importantes'] > 0,
         'eh_doador' => ($dados['doador'] ?? 0) == 1,
         'situacao_cadastro' => $dados['situacao']
     ];
