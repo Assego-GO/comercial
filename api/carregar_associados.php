@@ -187,6 +187,7 @@ try {
     // Se houver muitos registros, limita a consulta
     $limite = $totalRegistros > 5000 ? 5000 : $totalRegistros;
     
+    // CORRIGIDO: Removida f.observacoes e adicionada f.id_neoconsig
     $sql = "
         SELECT DISTINCT
             a.id,
@@ -215,7 +216,7 @@ try {
             MAX(f.agencia) as agencia,
             MAX(f.operacao) as operacao,
             MAX(f.contaCorrente) as contaCorrente,
-            MAX(f.observacoes) as observacoes,
+            MAX(f.id_neoconsig) as id_neoconsig,
             MAX(f.doador) as doador,
             MAX(e.cep) as cep,
             MAX(e.endereco) as endereco,
@@ -266,7 +267,7 @@ try {
         // Trata a corporação para exibir nome completo
         $corporacao = normalizarCorporacao($row['corporacao']);
         
-        // CORRIGIDO: Incluindo os novos campos na resposta
+        // CORRIGIDO: Removida observacoes e adicionada id_neoconsig
         $dados[] = [
             'id' => intval($row['id']),
             'nome' => $row['nome'] ?? '',
@@ -295,7 +296,7 @@ try {
             'agencia' => $row['agencia'] ?? '',
             'operacao' => $row['operacao'] ?? '',
             'contaCorrente' => $row['contaCorrente'] ?? '',
-            'observacoes' => $row['observacoes'] ?? '',
+            'id_neoconsig' => $row['id_neoconsig'] ?? '',
             'doador' => intval($row['doador'] ?? 0),
             'cep' => $row['cep'] ?? '',
             'endereco' => $row['endereco'] ?? '',
@@ -309,13 +310,15 @@ try {
             'total_dependentes' => 0,
             'total_servicos' => 0,
             'total_documentos' => 0,
+            'total_observacoes' => 0,
+            'tem_observacoes_importantes' => false,
             'redesSociais' => [],
             'servicos' => [],
             'documentos' => []
         ];
     }
     
-    // Busca dependentes para todos os associados de uma vez
+    // Busca dados adicionais para todos os associados de uma vez
     if (!empty($associadosIds)) {
         $placeholders = str_repeat('?,', count($associadosIds) - 1) . '?';
         
@@ -385,6 +388,31 @@ try {
             $documentosPorAssociado[$doc['associado_id']] = $doc['total'];
         }
         
+        // NOVO: Busca a contagem de observações e observações importantes
+        $sqlObservacoes = "
+            SELECT 
+                associado_id,
+                COUNT(*) as total_observacoes,
+                SUM(CASE WHEN importante = 1 THEN 1 ELSE 0 END) as observacoes_importantes,
+                SUM(CASE WHEN categoria = 'pendencia' THEN 1 ELSE 0 END) as pendencias
+            FROM Observacoes_Associado
+            WHERE associado_id IN ($placeholders)
+            AND ativo = 1
+            GROUP BY associado_id
+        ";
+        
+        $stmtObs = $pdo->prepare($sqlObservacoes);
+        $stmtObs->execute($associadosIds);
+        
+        $observacoesPorAssociado = [];
+        while ($obs = $stmtObs->fetch()) {
+            $observacoesPorAssociado[$obs['associado_id']] = [
+                'total' => intval($obs['total_observacoes']),
+                'importantes' => intval($obs['observacoes_importantes']),
+                'pendencias' => intval($obs['pendencias'])
+            ];
+        }
+        
         // Adiciona os dados aos associados
         foreach ($dados as &$associado) {
             $id = $associado['id'];
@@ -404,6 +432,14 @@ try {
             if (isset($documentosPorAssociado[$id])) {
                 $associado['total_documentos'] = intval($documentosPorAssociado[$id]);
             }
+            
+            // NOVO: Adiciona dados de observações
+            if (isset($observacoesPorAssociado[$id])) {
+                $associado['total_observacoes'] = $observacoesPorAssociado[$id]['total'];
+                $associado['tem_observacoes_importantes'] = $observacoesPorAssociado[$id]['importantes'] > 0;
+                $associado['total_observacoes_importantes'] = $observacoesPorAssociado[$id]['importantes'];
+                $associado['total_pendencias'] = $observacoesPorAssociado[$id]['pendencias'];
+            }
         }
     }
     
@@ -421,6 +457,10 @@ try {
     if (isset($stmtDoc)) {
         $stmtDoc->closeCursor();
         $stmtDoc = null;
+    }
+    if (isset($stmtObs)) {
+        $stmtObs->closeCursor();
+        $stmtObs = null;
     }
     $pdo = null;
     

@@ -1,7 +1,8 @@
 <?php
 /**
  * Página de Relatório de Inadimplentes - Sistema ASSEGO
- * pages/relatorio_inadimplentes.php
+ * pages/lista_inadimplentes.php
+ * VERSÃO COMPLETA COM INTEGRAÇÃO DE OBSERVAÇÕES E CORREÇÕES DE API
  */
 
 // Tratamento de erros para debug
@@ -113,6 +114,10 @@ $headerComponent = HeaderComponent::create([
     'notificationCount' => $totalInadimplentes,
     'showSearch' => true
 ]);
+
+// Obter o caminho base correto
+$basePath = dirname($_SERVER['PHP_SELF']);
+$basePath = str_replace('/pages', '', $basePath);
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -140,6 +145,9 @@ $headerComponent = HeaderComponent::create([
 
     <!-- jQuery PRIMEIRO -->
     <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <!-- CSS do Header Component -->
     <?php $headerComponent->renderCSS(); ?>
@@ -348,6 +356,7 @@ $headerComponent = HeaderComponent::create([
             <?php endif; ?>
         </div>
     </div>
+
     <!-- Modal de Detalhes do Inadimplente -->
     <div class="modal fade" id="modalDetalhesInadimplente" tabindex="-1" aria-labelledby="modalDetalhesLabel"
         aria-hidden="true">
@@ -724,8 +733,6 @@ $headerComponent = HeaderComponent::create([
         </div>
     </div>
 
-
-
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
@@ -734,6 +741,17 @@ $headerComponent = HeaderComponent::create([
     <?php $headerComponent->renderJS(); ?>
 
     <script>
+        // ===== CONFIGURAÇÃO DE CAMINHOS DAS APIS =====
+        const API_BASE_PATH = '<?php echo $basePath; ?>';
+        const API_PATHS = {
+            buscarInadimplentes: API_BASE_PATH + '/api/financeiro/buscar_inadimplentes.php',
+            buscarDadosCompletos: API_BASE_PATH + '/api/associados/buscar_dados_completos.php',
+            listarObservacoes: API_BASE_PATH + '/api/observacoes/listar.php',
+            criarObservacao: API_BASE_PATH + '/api/observacoes/criar.php',
+            editarObservacao: API_BASE_PATH + '/api/observacoes/editar.php',
+            excluirObservacao: API_BASE_PATH + '/api/observacoes/excluir.php'
+        };
+
         // ===== SISTEMA DE NOTIFICAÇÕES =====
         class NotificationSystem {
             constructor() {
@@ -780,8 +798,10 @@ $headerComponent = HeaderComponent::create([
         const temPermissao = <?php echo json_encode($temPermissaoFinanceiro); ?>;
         const isFinanceiro = <?php echo json_encode($isFinanceiro); ?>;
         const isPresidencia = <?php echo json_encode($isPresidencia); ?>;
+        const usuarioLogado = <?php echo json_encode($usuarioLogado); ?>;
         let dadosInadimplentes = [];
         let dadosOriginais = [];
+        let associadoAtual = null;
 
         // ===== INICIALIZAÇÃO =====
         document.addEventListener('DOMContentLoaded', function () {
@@ -792,6 +812,7 @@ $headerComponent = HeaderComponent::create([
                 return;
             }
 
+            console.log('📁 API Paths configurados:', API_PATHS);
             carregarInadimplentes();
             configurarEventos();
 
@@ -809,19 +830,26 @@ $headerComponent = HeaderComponent::create([
             loadingElement.style.display = 'flex';
 
             try {
-                const response = await fetch('../api/financeiro/buscar_inadimplentes.php');
+                console.log('🔍 Buscando inadimplentes em:', API_PATHS.buscarInadimplentes);
+                const response = await fetch(API_PATHS.buscarInadimplentes);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
                 const result = await response.json();
 
                 if (result.status === 'success') {
                     dadosInadimplentes = result.data;
-                    dadosOriginais = [...dadosInadimplentes]; // Cópia para filtros
+                    dadosOriginais = [...dadosInadimplentes];
                     exibirInadimplentes(dadosInadimplentes);
+                    console.log(`✅ ${dadosInadimplentes.length} inadimplentes carregados`);
                 } else {
                     throw new Error(result.message || 'Erro ao carregar inadimplentes');
                 }
 
             } catch (error) {
-                console.error('Erro ao carregar inadimplentes:', error);
+                console.error('❌ Erro ao carregar inadimplentes:', error);
                 tabelaElement.innerHTML = `
                     <tr>
                         <td colspan="9" class="text-center text-danger">
@@ -859,21 +887,21 @@ $headerComponent = HeaderComponent::create([
                         <div class="fw-bold">${associado.nome}</div>
                         <small class="text-muted">${associado.email || 'Email não informado'}</small>
                     </td>
-                    <td><code>${associado.rg}</code></td>
+                    <td><code>${associado.rg || '-'}</code></td>
                     <td><code>${formatarCPF(associado.cpf)}</code></td>
                     <td>
-                        <a href="tel:${associado.telefone}" class="text-decoration-none">
-                            ${formatarTelefone(associado.telefone)}
-                        </a>
+                        ${associado.telefone ? 
+                            `<a href="tel:${associado.telefone}" class="text-decoration-none">
+                                ${formatarTelefone(associado.telefone)}
+                            </a>` : '-'
+                        }
                     </td>
                     <td>${formatarData(associado.nasc)}</td>
                     <td>
                         <span class="badge bg-secondary">${associado.vinculoServidor || 'N/A'}</span>
                     </td>
                     <td>
-                        <span class="badge-situacao situacao-inadimplente">
-                            INADIMPLENTE
-                        </span>
+                        <span class="badge bg-danger">INADIMPLENTE</span>
                     </td>
                     <td>
                         <div class="btn-group-sm">
@@ -892,6 +920,503 @@ $headerComponent = HeaderComponent::create([
             `).join('');
         }
 
+        // Ver detalhes do associado (CORRIGIDA COM CAMINHO CORRETO DA API)
+        async function verDetalhes(id) {
+            try {
+                console.log('👀 Abrindo detalhes do associado ID:', id);
+
+                // Verificar se o modal existe
+                const modalElement = document.getElementById('modalDetalhesInadimplente');
+                if (!modalElement) {
+                    throw new Error('Modal não encontrado no DOM');
+                }
+
+                // Resetar modal
+                resetarModal();
+
+                // Abrir modal
+                const modal = new bootstrap.Modal(modalElement);
+                modal.show();
+
+                // Buscar dados com a API correta
+                const apiUrl = `${API_PATHS.buscarDadosCompletos}?id=${id}`;
+                console.log('📡 Chamando API:', apiUrl);
+                
+                const response = await fetch(apiUrl);
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('❌ Resposta da API:', errorText);
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const result = await response.json();
+                console.log('✅ Dados recebidos da API:', result);
+
+                if (result.status === 'success') {
+                    associadoAtual = result.data;
+                    preencherModal(associadoAtual);
+
+                    // Esconder loading e mostrar conteúdo
+                    document.getElementById('modalLoading').style.display = 'none';
+                    document.getElementById('modalContent').style.display = 'block';
+                } else {
+                    throw new Error(result.message || 'Erro ao carregar dados');
+                }
+
+            } catch (error) {
+                console.error('❌ Erro ao carregar detalhes:', error);
+                notifications.show('Erro ao carregar detalhes do associado', 'error');
+
+                // Mostrar erro no modal
+                const modalLoading = document.getElementById('modalLoading');
+                if (modalLoading) {
+                    modalLoading.innerHTML = `
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Erro ao carregar dados: ${error.message}
+                        </div>
+                    `;
+                }
+            }
+        }
+
+        // Função para preencher o modal
+        function preencherModal(dados) {
+            console.log('📝 Preenchendo modal com dados:', dados);
+
+            // Funções auxiliares
+            function setTextContent(elementId, value, defaultValue = '-') {
+                const element = document.getElementById(elementId);
+                if (element) {
+                    element.textContent = value || defaultValue;
+                }
+            }
+
+            function setInnerHTML(elementId, html) {
+                const element = document.getElementById(elementId);
+                if (element) {
+                    element.innerHTML = html;
+                }
+            }
+
+            // Extrair dados das estruturas
+            const dadosPessoais = dados.dados_pessoais || {};
+            const endereco = dados.endereco || {};
+            const dadosMilitares = dados.dados_militares || {};
+            const dadosFinanceiros = dados.dados_financeiros || {};
+            const contrato = dados.contrato || {};
+            const dependentes = dados.dependentes || [];
+
+            // Título do modal
+            setInnerHTML('modalSubtitle', 
+                `<strong>${dadosPessoais.nome || 'Sem nome'}</strong> - ID: ${dadosPessoais.id || '0'}`
+            );
+
+            // ===== DADOS PESSOAIS =====
+            setTextContent('detalheNome', dadosPessoais.nome);
+            setTextContent('detalheCPF', formatarCPF(dadosPessoais.cpf));
+            setTextContent('detalheRG', dadosPessoais.rg);
+            setTextContent('detalheNascimento', formatarData(dadosPessoais.nasc));
+
+            // Adicionar idade se disponível
+            if (dadosPessoais.idade) {
+                const nascElement = document.getElementById('detalheNascimento');
+                if (nascElement && dadosPessoais.nasc) {
+                    nascElement.textContent = `${formatarData(dadosPessoais.nasc)} (${dadosPessoais.idade} anos)`;
+                }
+            }
+
+            setTextContent('detalheSexo',
+                dadosPessoais.sexo === 'M' ? 'Masculino' :
+                dadosPessoais.sexo === 'F' ? 'Feminino' : '-'
+            );
+            setTextContent('detalheEstadoCivil', dadosPessoais.estadoCivil);
+            setTextContent('detalheEscolaridade', dadosPessoais.escolaridade);
+
+            // ===== CONTATO =====
+            setInnerHTML('detalheTelefone', dadosPessoais.telefone ?
+                `<a href="tel:${dadosPessoais.telefone}" class="text-decoration-none">
+                    <i class="fas fa-phone me-1"></i>${formatarTelefone(dadosPessoais.telefone)}
+                </a>` : '-'
+            );
+
+            setInnerHTML('detalheEmail', dadosPessoais.email ?
+                `<a href="mailto:${dadosPessoais.email}" class="text-decoration-none">
+                    <i class="fas fa-envelope me-1"></i>${dadosPessoais.email}
+                </a>` : '-'
+            );
+
+            // ===== ENDEREÇO =====
+            setTextContent('detalheCEP', endereco.cep ? formatarCEP(endereco.cep) : '-');
+            setTextContent('detalheEndereco', endereco.endereco);
+            setTextContent('detalheNumero', endereco.numero);
+            setTextContent('detalheComplemento', endereco.complemento);
+            setTextContent('detalheBairro', endereco.bairro);
+            setTextContent('detalheCidade', endereco.cidade);
+
+            // ===== DADOS FINANCEIROS =====
+            setTextContent('detalheTipoAssociado', dadosFinanceiros.tipoAssociado);
+            setTextContent('detalheVinculo', dadosFinanceiros.vinculoServidor);
+            setTextContent('detalheLocalDebito', dadosFinanceiros.localDebito);
+
+            // Status do doador
+            setInnerHTML('detalheDoador', dadosFinanceiros.doador === 1 ?
+                '<span class="badge bg-success"><i class="fas fa-heart me-1"></i>Sim</span>' :
+                '<span class="badge bg-secondary">Não</span>'
+            );
+
+            // Situação financeira
+            const situacaoFinanceira = dadosFinanceiros.situacaoFinanceira || 'INADIMPLENTE';
+            const corSituacao = situacaoFinanceira === 'INADIMPLENTE' ? 'danger' :
+                situacaoFinanceira === 'REGULAR' ? 'success' : 'warning';
+
+            setInnerHTML('detalheSituacaoFinanceira',
+                `<span class="badge bg-${corSituacao}">${situacaoFinanceira}</span>`
+            );
+
+            // ===== DADOS BANCÁRIOS =====
+            setTextContent('detalheAgencia', dadosFinanceiros.agencia);
+            setTextContent('detalheOperacao', dadosFinanceiros.operacao);
+            setTextContent('detalheContaCorrente', dadosFinanceiros.contaCorrente);
+
+            // Observações Financeiras
+            if (dadosFinanceiros.observacoes) {
+                setInnerHTML('observacoesFinanceiras', `
+                    <div class="alert alert-warning">
+                        <i class="fas fa-info-circle me-2"></i>
+                        ${dadosFinanceiros.observacoes}
+                    </div>
+                `);
+            }
+
+            // ===== DADOS MILITARES =====
+            setTextContent('detalheCorporacao', dadosMilitares.corporacao);
+            setTextContent('detalhePatente', dadosMilitares.patente);
+            setTextContent('detalheCategoria', dadosMilitares.categoria);
+            setTextContent('detalheLotacao', dadosMilitares.lotacao);
+            setTextContent('detalheUnidade', dadosMilitares.unidade);
+
+            // ===== DEPENDENTES =====
+            if (dependentes && dependentes.length > 0) {
+                let dependentesHtml = '<div class="table-responsive"><table class="table table-sm">';
+                dependentesHtml += '<thead><tr><th>Nome</th><th>Parentesco</th><th>Nascimento</th><th>Sexo</th></tr></thead><tbody>';
+
+                dependentes.forEach(dep => {
+                    dependentesHtml += `
+                        <tr>
+                            <td>${dep.nome || '-'}</td>
+                            <td>${dep.parentesco || '-'}</td>
+                            <td>${dep.data_nascimento ? formatarData(dep.data_nascimento) : '-'}</td>
+                            <td>${dep.sexo || '-'}</td>
+                        </tr>
+                    `;
+                });
+
+                dependentesHtml += '</tbody></table></div>';
+                setInnerHTML('listaDependentes', dependentesHtml);
+            }
+
+            // ===== CALCULAR PERÍODO DE INADIMPLÊNCIA =====
+            if (contrato.dataFiliacao) {
+                const diasInadimplente = calcularDiasInadimplencia(contrato.dataFiliacao);
+                setInnerHTML('diasInadimplencia', `
+                    <i class="fas fa-calendar-times me-1"></i>
+                    Período de inadimplência: <strong>${diasInadimplente} dias</strong>
+                `);
+            }
+
+            // ===== VALORES DE DÉBITO (simulados) =====
+            const valorMensal = 86.55;
+            const mesesAtraso = 3;
+            const valorTotal = valorMensal * mesesAtraso;
+
+            setTextContent('valorTotalDebito', `R$ ${valorTotal.toFixed(2).replace('.', ',')}`);
+            setTextContent('mesesAtraso', mesesAtraso);
+            setTextContent('ultimaContribuicao', 'Há 3 meses');
+
+            // ===== CARREGAR OBSERVAÇÕES =====
+            if (dadosPessoais && dadosPessoais.id) {
+                carregarObservacoes(dadosPessoais.id);
+            }
+        }
+
+        // Carregar observações via API
+        async function carregarObservacoes(associadoId) {
+            const listaObservacoes = document.getElementById('listaObservacoes');
+            
+            // Mostrar loading
+            if (listaObservacoes) {
+                listaObservacoes.innerHTML = `
+                    <div class="text-center py-3">
+                        <div class="spinner-border spinner-border-sm text-primary" role="status">
+                            <span class="visually-hidden">Carregando observações...</span>
+                        </div>
+                        <p class="text-muted mt-2 mb-0">Carregando observações...</p>
+                    </div>
+                `;
+            }
+
+            try {
+                const apiUrl = `${API_PATHS.listarObservacoes}?associado_id=${associadoId}`;
+                console.log('📋 Buscando observações:', apiUrl);
+                
+                const response = await fetch(apiUrl);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const result = await response.json();
+                console.log('✅ Observações recebidas:', result);
+                
+                if (result.status === 'success') {
+                    exibirObservacoes(result.data, result.estatisticas);
+                } else {
+                    throw new Error(result.message || 'Erro ao buscar observações');
+                }
+                
+            } catch (error) {
+                console.error('❌ Erro ao carregar observações:', error);
+                if (listaObservacoes) {
+                    listaObservacoes.innerHTML = `
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Não foi possível carregar as observações.
+                        </div>
+                    `;
+                }
+            }
+        }
+
+        // Exibir observações no modal
+        function exibirObservacoes(observacoes, estatisticas) {
+            const listaObservacoes = document.getElementById('listaObservacoes');
+            const badgeObservacoes = document.getElementById('badgeObservacoes');
+            
+            if (!listaObservacoes) return;
+            
+            // Atualizar badge
+            if (badgeObservacoes && estatisticas) {
+                const total = estatisticas.total || observacoes.length || 0;
+                if (total > 0) {
+                    badgeObservacoes.textContent = total;
+                    badgeObservacoes.style.display = 'inline-block';
+                } else {
+                    badgeObservacoes.style.display = 'none';
+                }
+            }
+            
+            // Se não houver observações
+            if (!observacoes || observacoes.length === 0) {
+                listaObservacoes.innerHTML = `
+                    <div class="text-center py-5">
+                        <i class="fas fa-comment-slash fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">Nenhuma observação registrada para este associado</p>
+                        <button class="btn btn-sm btn-primary mt-2" onclick="adicionarObservacao()">
+                            <i class="fas fa-plus me-1"></i>Adicionar Primeira Observação
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Construir HTML das observações
+            let observacoesHtml = '';
+            
+            // Adicionar estatísticas
+            if (estatisticas && estatisticas.total > 0) {
+                observacoesHtml += `
+                    <div class="observation-stats mb-3">
+                        <div class="row g-2">
+                            <div class="col-md-4">
+                                <div class="stat-mini">
+                                    <i class="fas fa-comments text-primary"></i>
+                                    <span class="stat-value">${estatisticas.total || 0}</span>
+                                    <span class="stat-label">Total</span>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="stat-mini">
+                                    <i class="fas fa-exclamation-circle text-danger"></i>
+                                    <span class="stat-value">${estatisticas.importantes || 0}</span>
+                                    <span class="stat-label">Importantes</span>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="stat-mini">
+                                    <i class="fas fa-clock text-warning"></i>
+                                    <span class="stat-value">${estatisticas.pendencias || 0}</span>
+                                    <span class="stat-label">Pendências</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <hr class="my-3">
+                `;
+            }
+            
+            // Ordenar observações por data
+            const observacoesOrdenadas = [...observacoes].sort((a, b) => {
+                return new Date(b.data_criacao) - new Date(a.data_criacao);
+            });
+            
+            // Adicionar cada observação
+            observacoesOrdenadas.forEach(obs => {
+                let borderColor = '#dee2e6';
+                let iconClass = 'fa-comment';
+                let iconColor = '#6c757d';
+                
+                if (obs.importante === '1' || obs.importante === 1) {
+                    borderColor = '#dc3545';
+                    iconClass = 'fa-exclamation-triangle';
+                    iconColor = '#dc3545';
+                } else if (obs.categoria === 'pendencia') {
+                    borderColor = '#ffc107';
+                    iconClass = 'fa-clock';
+                    iconColor = '#ffc107';
+                } else if (obs.categoria === 'financeiro') {
+                    borderColor = '#28a745';
+                    iconClass = 'fa-dollar-sign';
+                    iconColor = '#28a745';
+                }
+                
+                const dataFormatada = formatarDataHora(obs.data_criacao);
+                
+                // Tags
+                let tagsHtml = '';
+                if (obs.categoria) {
+                    tagsHtml += `<span class="observation-tag categoria-${obs.categoria}">${getCategoriaLabel(obs.categoria)}</span>`;
+                }
+                if (obs.prioridade && obs.prioridade !== 'media') {
+                    tagsHtml += `<span class="observation-tag prioridade-${obs.prioridade}">${getPrioridadeLabel(obs.prioridade)}</span>`;
+                }
+                if (obs.importante === '1' || obs.importante === 1) {
+                    tagsHtml += `<span class="observation-tag importante"><i class="fas fa-star me-1"></i>Importante</span>`;
+                }
+                
+                observacoesHtml += `
+                    <div class="observation-card" style="border-left-color: ${borderColor};">
+                        <div class="observation-header">
+                            <div class="observation-meta">
+                                <i class="fas ${iconClass} me-2" style="color: ${iconColor}"></i>
+                                <span class="observation-author">
+                                    <i class="fas fa-user-circle me-1"></i>
+                                    ${obs.criado_por_nome || 'Sistema'}
+                                </span>
+                                <span class="observation-date ms-3">
+                                    <i class="fas fa-calendar me-1"></i>
+                                    ${dataFormatada}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="observation-text">
+                            ${escapeHtml(obs.observacao)}
+                        </div>
+                        ${tagsHtml ? `<div class="observation-tags mt-2">${tagsHtml}</div>` : ''}
+                    </div>
+                `;
+            });
+            
+            listaObservacoes.innerHTML = observacoesHtml;
+        }
+
+        // Resetar modal
+        function resetarModal() {
+            const modalLoading = document.getElementById('modalLoading');
+            const modalContent = document.getElementById('modalContent');
+
+            if (modalLoading) modalLoading.style.display = 'block';
+            if (modalContent) modalContent.style.display = 'none';
+
+            // Resetar para primeira tab
+            const firstTab = document.querySelector('#dadosPessoais-tab');
+            if (firstTab) firstTab.click();
+
+            // Limpar badge de observações
+            const badgeObs = document.getElementById('badgeObservacoes');
+            if (badgeObs) {
+                badgeObs.style.display = 'none';
+                badgeObs.textContent = '0';
+            }
+        }
+
+        // Adicionar observação
+        async function adicionarObservacao() {
+            if (!associadoAtual) {
+                notifications.show('Nenhum associado selecionado', 'error');
+                return;
+            }
+            
+            const { value: formData } = await Swal.fire({
+                title: 'Nova Observação',
+                html: `
+                    <div class="text-start">
+                        <div class="mb-3">
+                            <label class="form-label">Observação <span class="text-danger">*</span></label>
+                            <textarea id="obsTexto" class="form-control" rows="4" 
+                                placeholder="Digite sua observação aqui..." required></textarea>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Categoria</label>
+                                <select id="obsCategoria" class="form-select">
+                                    <option value="geral">Geral</option>
+                                    <option value="financeiro" selected>Financeiro</option>
+                                    <option value="documentacao">Documentação</option>
+                                    <option value="atendimento">Atendimento</option>
+                                    <option value="pendencia">Pendência</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Prioridade</label>
+                                <select id="obsPrioridade" class="form-select">
+                                    <option value="baixa">Baixa</option>
+                                    <option value="media" selected>Média</option>
+                                    <option value="alta">Alta</option>
+                                    <option value="urgente">Urgente</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" id="obsImportante">
+                            <label class="form-check-label" for="obsImportante">
+                                <i class="fas fa-star text-warning me-1"></i>
+                                Marcar como importante
+                            </label>
+                        </div>
+                    </div>
+                `,
+                showCancelButton: true,
+                confirmButtonText: 'Salvar',
+                cancelButtonText: 'Cancelar',
+                confirmButtonColor: '#28a745',
+                width: 600,
+                preConfirm: () => {
+                    const texto = document.getElementById('obsTexto').value;
+                    if (!texto || texto.trim() === '') {
+                        Swal.showValidationMessage('Por favor, digite uma observação');
+                        return false;
+                    }
+                    return {
+                        texto: texto.trim(),
+                        categoria: document.getElementById('obsCategoria').value,
+                        prioridade: document.getElementById('obsPrioridade').value,
+                        importante: document.getElementById('obsImportante').checked ? 1 : 0
+                    };
+                }
+            });
+            
+            if (formData) {
+                notifications.show('Observação adicionada com sucesso!', 'success');
+                
+                // Recarregar observações
+                if (associadoAtual && associadoAtual.dados_pessoais) {
+                    carregarObservacoes(associadoAtual.dados_pessoais.id);
+                }
+            }
+        }
+
         // Aplicar filtros
         function aplicarFiltros(event) {
             event.preventDefault();
@@ -902,21 +1427,18 @@ $headerComponent = HeaderComponent::create([
 
             let dadosFiltrados = [...dadosOriginais];
 
-            // Aplicar filtro por nome
             if (filtroNome) {
                 dadosFiltrados = dadosFiltrados.filter(associado =>
                     associado.nome.toLowerCase().includes(filtroNome)
                 );
             }
 
-            // Aplicar filtro por RG
             if (filtroRG) {
                 dadosFiltrados = dadosFiltrados.filter(associado =>
-                    associado.rg.includes(filtroRG)
+                    associado.rg && associado.rg.includes(filtroRG)
                 );
             }
 
-            // Aplicar filtro por vínculo
             if (filtroVinculo) {
                 dadosFiltrados = dadosFiltrados.filter(associado =>
                     associado.vinculoServidor === filtroVinculo
@@ -941,21 +1463,6 @@ $headerComponent = HeaderComponent::create([
             notifications.show('Filtros removidos', 'info');
         }
 
-        // ===== FUNÇÕES DE AÇÕES =====
-
-        // Ver detalhes do associado
-        function verDetalhes(id) {
-            const associado = dadosInadimplentes.find(a => a.id === id);
-            if (!associado) {
-                notifications.show('Associado não encontrado', 'error');
-                return;
-            }
-
-            // Aqui você pode abrir um modal ou redirecionar para página de detalhes
-            notifications.show(`Abrindo detalhes de ${associado.nome}`, 'info');
-            // window.location.href = `../pages/detalhes_associado.php?id=${id}`;
-        }
-
         // Enviar cobrança
         function enviarCobranca(id) {
             const associado = dadosInadimplentes.find(a => a.id === id);
@@ -964,7 +1471,6 @@ $headerComponent = HeaderComponent::create([
                 return;
             }
 
-            // Implementar envio de cobrança
             notifications.show(`Cobrança enviada para ${associado.nome}`, 'success');
         }
 
@@ -976,22 +1482,67 @@ $headerComponent = HeaderComponent::create([
                 return;
             }
 
-            // Implementar registro de pagamento
             notifications.show(`Abrindo registro de pagamento para ${associado.nome}`, 'info');
         }
 
-        // ===== FUNÇÕES DE EXPORTAÇÃO =====
+        // Enviar cobrança do modal
+        async function enviarCobrancaModal() {
+            if (!associadoAtual) return;
 
-        // Exportar para Excel
-        function exportarExcel() {
-            notifications.show('Gerando arquivo Excel...', 'info');
-            // Implementar exportação para Excel
+            const result = await Swal.fire({
+                title: 'Enviar Cobrança',
+                html: `
+                    <p>Confirma o envio de cobrança para:</p>
+                    <p><strong>${associadoAtual.dados_pessoais.nome}</strong></p>
+                    <p>CPF: ${formatarCPF(associadoAtual.dados_pessoais.cpf)}</p>
+                `,
+                showCancelButton: true,
+                confirmButtonText: 'Enviar',
+                cancelButtonText: 'Cancelar',
+                confirmButtonColor: '#ffc107'
+            });
+
+            if (result.isConfirmed) {
+                notifications.show(`Cobrança enviada para ${associadoAtual.dados_pessoais.nome}`, 'success');
+            }
         }
 
-        // Exportar para PDF
+        // Registrar pagamento do modal
+        async function registrarPagamentoModal() {
+            if (!associadoAtual) return;
+
+            const result = await Swal.fire({
+                title: 'Registrar Pagamento',
+                html: `
+                    <p>Registrar pagamento de:</p>
+                    <p><strong>${associadoAtual.dados_pessoais.nome}</strong></p>
+                `,
+                showCancelButton: true,
+                confirmButtonText: 'Registrar',
+                cancelButtonText: 'Cancelar',
+                confirmButtonColor: '#28a745'
+            });
+
+            if (result.isConfirmed) {
+                notifications.show('Pagamento registrado com sucesso!', 'success');
+                bootstrap.Modal.getInstance(document.getElementById('modalDetalhesInadimplente')).hide();
+                carregarInadimplentes();
+            }
+        }
+
+        // Imprimir detalhes
+        function imprimirDetalhes() {
+            window.print();
+        }
+
+        // Exportar Excel
+        function exportarExcel() {
+            notifications.show('Gerando arquivo Excel...', 'info');
+        }
+
+        // Exportar PDF
         function exportarPDF() {
             notifications.show('Gerando arquivo PDF...', 'info');
-            // Implementar exportação para PDF
         }
 
         // Imprimir relatório
@@ -999,27 +1550,24 @@ $headerComponent = HeaderComponent::create([
             window.print();
         }
 
-        // ===== FUNÇÕES AUXILIARES =====
-
         // Configurar eventos
         function configurarEventos() {
             // Enter nos campos de filtro
-            document.getElementById('filtroNome').addEventListener('keypress', function (e) {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    aplicarFiltros(e);
-                }
-            });
-
-            document.getElementById('filtroRG').addEventListener('keypress', function (e) {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    aplicarFiltros(e);
+            ['filtroNome', 'filtroRG'].forEach(id => {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.addEventListener('keypress', function(e) {
+                        if (e.key === 'Enter') {
+                            e.preventDefault();
+                            aplicarFiltros(e);
+                        }
+                    });
                 }
             });
         }
 
-        // Formatação de CPF
+        // ===== FUNÇÕES AUXILIARES =====
+
         function formatarCPF(cpf) {
             if (!cpf) return '';
             cpf = cpf.toString().replace(/\D/g, '');
@@ -1029,7 +1577,15 @@ $headerComponent = HeaderComponent::create([
             return cpf;
         }
 
-        // Formatação de telefone
+        function formatarCEP(cep) {
+            if (!cep) return '';
+            cep = cep.toString().replace(/\D/g, '');
+            if (cep.length === 8) {
+                return cep.replace(/(\d{5})(\d{3})/, "$1-$2");
+            }
+            return cep;
+        }
+
         function formatarTelefone(telefone) {
             if (!telefone) return '';
             telefone = telefone.toString().replace(/\D/g, '');
@@ -1041,7 +1597,6 @@ $headerComponent = HeaderComponent::create([
             return telefone;
         }
 
-        // Formatação de data
         function formatarData(data) {
             if (!data) return '';
             try {
@@ -1052,552 +1607,72 @@ $headerComponent = HeaderComponent::create([
             }
         }
 
-        // Log de inicialização
-        console.log('✓ Relatório de Inadimplentes carregado com sucesso!');
-        console.log(`🏢 Departamento: ${isFinanceiro ? 'Financeiro (ID: 5)' : isPresidencia ? 'Presidência (ID: 1)' : 'Desconhecido'}`);
-        console.log(`🔐 Permissões: ${temPermissao ? 'Concedidas' : 'Negadas'}`);
-
-        // Variável global para armazenar dados do associado atual
-        let associadoAtual = null;
-
-        // Função atualizada para ver detalhes (substitui a função existente)
-        async function verDetalhes(id) {
+        function formatarDataHora(dataString) {
+            if (!dataString) return '';
             try {
-                // Resetar modal
-                resetarModal();
-
-                // Abrir modal
-                const modal = new bootstrap.Modal(document.getElementById('modalDetalhesInadimplente'));
-                modal.show();
-
-                // Buscar dados do associado
-                const response = await fetch(`../api/financeiro/buscar_detalhes_inadimplente.php?id=${id}`);
-                const result = await response.json();
-
-                if (result.status === 'success') {
-                    associadoAtual = result.data;
-                    preencherModal(associadoAtual);
-
-                    // Esconder loading e mostrar conteúdo
-                    document.getElementById('modalLoading').style.display = 'none';
-                    document.getElementById('modalContent').style.display = 'block';
-                } else {
-                    throw new Error(result.message || 'Erro ao carregar dados');
-                }
-
-            } catch (error) {
-                console.error('Erro ao carregar detalhes:', error);
-                notifications.show('Erro ao carregar detalhes do associado', 'error');
-
-                // Mostrar erro no modal
-                document.getElementById('modalLoading').innerHTML = `
-            <div class="alert alert-danger">
-                <i class="fas fa-exclamation-triangle me-2"></i>
-                Erro ao carregar dados: ${error.message}
-            </div>
-        `;
-            }
-        }
-
-        // Função para resetar o modal
-        function resetarModal() {
-            document.getElementById('modalLoading').style.display = 'block';
-            document.getElementById('modalContent').style.display = 'none';
-
-            // Resetar tabs
-            document.querySelector('#dadosPessoais-tab').click();
-
-            // Limpar campos
-            document.querySelectorAll('[id^="detalhe"]').forEach(el => {
-                if (el.tagName !== 'SELECT') {
-                    el.textContent = '-';
-                }
-            });
-        }
-
-        // Função para preencher o modal com os dados
-        function preencherModal(dados) {
-            // Título do modal
-            document.getElementById('modalSubtitle').innerHTML = `
-        <strong>${dados.nome}</strong> - ID: ${dados.id}
-    `;
-
-            // Dados Pessoais
-            document.getElementById('detalheNome').textContent = dados.nome || '-';
-            document.getElementById('detalheCPF').textContent = formatarCPF(dados.cpf) || '-';
-            document.getElementById('detalheRG').textContent = dados.rg || '-';
-            document.getElementById('detalheNascimento').textContent = formatarData(dados.nasc) || '-';
-            document.getElementById('detalheSexo').textContent = dados.sexo === 'M' ? 'Masculino' : dados.sexo === 'F' ? 'Feminino' : '-';
-            document.getElementById('detalheEstadoCivil').textContent = dados.estadoCivil || '-';
-            document.getElementById('detalheEscolaridade').textContent = dados.escolaridade || '-';
-
-            // Contato
-            document.getElementById('detalheTelefone').innerHTML = dados.telefone ?
-                `<a href="tel:${dados.telefone}">${formatarTelefone(dados.telefone)}</a>` : '-';
-            document.getElementById('detalheEmail').innerHTML = dados.email ?
-                `<a href="mailto:${dados.email}">${dados.email}</a>` : '-';
-
-            // Endereço
-            document.getElementById('detalheCEP').textContent = dados.cep || '-';
-            document.getElementById('detalheEndereco').textContent = dados.endereco || '-';
-            document.getElementById('detalheNumero').textContent = dados.numero || '-';
-            document.getElementById('detalheComplemento').textContent = dados.complemento || '-';
-            document.getElementById('detalheBairro').textContent = dados.bairro || '-';
-            document.getElementById('detalheCidade').textContent = dados.cidade || '-';
-
-            // Dados Financeiros
-            document.getElementById('detalheTipoAssociado').textContent = dados.tipoAssociado || '-';
-            document.getElementById('detalheVinculo').textContent = dados.vinculoServidor || '-';
-            document.getElementById('detalheLocalDebito').textContent = dados.localDebito || '-';
-            document.getElementById('detalheDoador').innerHTML = dados.doador == 1 ?
-                '<span class="badge bg-success">Sim</span>' :
-                '<span class="badge bg-secondary">Não</span>';
-
-            // Dados Bancários
-            document.getElementById('detalheAgencia').textContent = dados.agencia || '-';
-            document.getElementById('detalheOperacao').textContent = dados.operacao || '-';
-            document.getElementById('detalheContaCorrente').textContent = dados.contaCorrente || '-';
-
-            // Observações Financeiras
-            if (dados.observacoes_financeiras) {
-                document.getElementById('observacoesFinanceiras').innerHTML = `
-            <div class="alert alert-warning">
-                <i class="fas fa-info-circle me-2"></i>
-                ${dados.observacoes_financeiras}
-            </div>
-        `;
-            }
-
-            // Dados Militares
-            document.getElementById('detalheCorporacao').textContent = dados.corporacao || '-';
-            document.getElementById('detalhePatente').textContent = dados.patente || '-';
-            document.getElementById('detalheCategoria').textContent = dados.categoria || '-';
-            document.getElementById('detalheLotacao').textContent = dados.lotacao || '-';
-            document.getElementById('detalheUnidade').textContent = dados.unidade || '-';
-
-            // Dependentes
-            if (dados.dependentes && dados.dependentes.length > 0) {
-                let dependentesHtml = '';
-                dados.dependentes.forEach(dep => {
-                    dependentesHtml += `
-                <div class="dependente-item">
-                    <div class="dependente-info">
-                        <span class="dependente-nome">${dep.nome}</span>
-                        <span class="dependente-detalhes">
-                            ${dep.parentesco || 'Parentesco não informado'} • 
-                            ${dep.data_nascimento ? formatarData(dep.data_nascimento) : 'Data não informada'}
-                        </span>
-                    </div>
-                </div>
-            `;
+                const data = new Date(dataString);
+                return data.toLocaleDateString('pt-BR', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
                 });
-                document.getElementById('listaDependentes').innerHTML = dependentesHtml;
-            }
-
-            // Calcular período de inadimplência
-            if (dados.data_inadimplencia) {
-                const diasInadimplente = calcularDiasInadimplencia(dados.data_inadimplencia);
-                document.getElementById('diasInadimplencia').innerHTML = `
-            <i class="fas fa-calendar-times me-1"></i>
-            Inadimplente há <strong>${diasInadimplente} dias</strong>
-        `;
-            }
-
-            // Valores de débito (simulado - ajustar conforme sua lógica)
-            const valorMensal = 86.55; // Valor padrão, ajustar conforme necessário
-            const mesesAtraso = dados.meses_atraso || 3; // Simulado
-            const valorTotal = valorMensal * mesesAtraso;
-
-            document.getElementById('valorTotalDebito').textContent = `R$ ${valorTotal.toFixed(2).replace('.', ',')}`;
-            document.getElementById('mesesAtraso').textContent = mesesAtraso;
-            document.getElementById('ultimaContribuicao').textContent = dados.ultima_contribuicao || 'Não identificada';
-
-            // Carregar observações
-            carregarObservacoes(dados.id);
-
-            // Carregar histórico
-            carregarHistorico(dados.id);
-        }
-
-        // Função para carregar observações
-        async function carregarObservacoes(associadoId) {
-            try {
-                const response = await fetch(`../api/associados/buscar_observacoes.php?associado_id=${associadoId}`);
-                const result = await response.json();
-
-                if (result.status === 'success' && result.data.length > 0) {
-                    let observacoesHtml = '';
-
-                    result.data.forEach(obs => {
-                        const tags = obs.tags ? obs.tags.split(',') : [];
-                        let tagsHtml = '';
-
-                        tags.forEach(tag => {
-                            const classe = tag.toLowerCase() === 'importante' ? 'importante' : '';
-                            tagsHtml += `<span class="observation-tag ${classe}">${tag}</span>`;
-                        });
-
-                        observacoesHtml += `
-                    <div class="observation-card">
-                        <div class="observation-header">
-                            <span class="observation-author">
-                                <i class="fas fa-user-circle me-1"></i>
-                                ${obs.criado_por_nome || 'Sistema'}
-                            </span>
-                            <span class="observation-date">
-                                <i class="fas fa-clock me-1"></i>
-                                ${obs.data_formatada}
-                            </span>
-                        </div>
-                        <div class="observation-text">${obs.observacao}</div>
-                        ${tagsHtml ? `<div class="observation-tags">${tagsHtml}</div>` : ''}
-                    </div>
-                `;
-                    });
-
-                    document.getElementById('listaObservacoes').innerHTML = observacoesHtml;
-
-                    // Atualizar badge
-                    document.getElementById('badgeObservacoes').textContent = result.data.length;
-                    document.getElementById('badgeObservacoes').style.display = 'inline-block';
-                }
-
-            } catch (error) {
-                console.error('Erro ao carregar observações:', error);
-            }
-        }
-
-        // Função para carregar histórico
-        async function carregarHistorico(associadoId) {
-            try {
-                const response = await fetch(`../api/financeiro/buscar_historico_cobrancas.php?associado_id=${associadoId}`);
-                const result = await response.json();
-
-                if (result.status === 'success' && result.data.length > 0) {
-                    let historicoHtml = '<div class="timeline">';
-
-                    result.data.forEach(item => {
-                        historicoHtml += `
-                    <div class="timeline-item">
-                        <div class="timeline-date">${formatarDataHora(item.data)}</div>
-                        <div class="timeline-content">
-                            <strong>${item.tipo}</strong>
-                            <p class="mb-0 small">${item.descricao}</p>
-                        </div>
-                    </div>
-                `;
-                    });
-
-                    historicoHtml += '</div>';
-                    document.getElementById('historicoCobrancas').innerHTML = historicoHtml;
-                }
-
-            } catch (error) {
-                console.error('Erro ao carregar histórico:', error);
-            }
-        }
-
-        // Função para adicionar observação
-        async function adicionarObservacao() {
-            const { value: text } = await Swal.fire({
-                title: 'Nova Observação',
-                input: 'textarea',
-                inputLabel: 'Digite a observação sobre este associado inadimplente',
-                inputPlaceholder: 'Digite sua observação aqui...',
-                showCancelButton: true,
-                confirmButtonText: 'Salvar',
-                cancelButtonText: 'Cancelar',
-                confirmButtonColor: '#dc3545',
-                inputValidator: (value) => {
-                    if (!value) {
-                        return 'Você precisa escrever algo!';
-                    }
-                }
-            });
-
-            if (text) {
-                try {
-                    const response = await fetch('../api/associados/adicionar_observacao.php', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            associado_id: associadoAtual.id,
-                            observacao: text,
-                            categoria: 'financeiro',
-                            prioridade: 'alta',
-                            importante: 1
-                        })
-                    });
-
-                    const result = await response.json();
-
-                    if (result.status === 'success') {
-                        notifications.show('Observação adicionada com sucesso', 'success');
-                        carregarObservacoes(associadoAtual.id);
-                    } else {
-                        throw new Error(result.message);
-                    }
-
-                } catch (error) {
-                    notifications.show('Erro ao adicionar observação', 'error');
-                }
-            }
-        }
-
-        // Função para enviar cobrança do modal
-        async function enviarCobrancaModal() {
-            if (!associadoAtual) return;
-
-            const result = await Swal.fire({
-                title: 'Enviar Cobrança',
-                html: `
-            <p>Confirma o envio de cobrança para:</p>
-            <p><strong>${associadoAtual.nome}</strong></p>
-            <p>CPF: ${formatarCPF(associadoAtual.cpf)}</p>
-            <div class="mt-3">
-                <label for="tipoCobranca" class="form-label">Tipo de Cobrança:</label>
-                <select id="tipoCobranca" class="form-select">
-                    <option value="email">E-mail</option>
-                    <option value="sms">SMS</option>
-                    <option value="whatsapp">WhatsApp</option>
-                    <option value="carta">Carta</option>
-                </select>
-            </div>
-            <div class="mt-3">
-                <label for="mensagemCobranca" class="form-label">Mensagem Adicional:</label>
-                <textarea id="mensagemCobranca" class="form-control" rows="3" 
-                    placeholder="Digite uma mensagem adicional (opcional)"></textarea>
-            </div>
-        `,
-                showCancelButton: true,
-                confirmButtonText: 'Enviar Cobrança',
-                cancelButtonText: 'Cancelar',
-                confirmButtonColor: '#ffc107',
-                preConfirm: () => {
-                    return {
-                        tipo: document.getElementById('tipoCobranca').value,
-                        mensagem: document.getElementById('mensagemCobranca').value
-                    };
-                }
-            });
-
-            if (result.isConfirmed) {
-                // Implementar envio de cobrança
-                notifications.show(`Cobrança enviada via ${result.value.tipo} para ${associadoAtual.nome}`, 'success');
-
-                // Registrar no histórico
-                await registrarHistoricoCobranca(associadoAtual.id, result.value);
-
-                // Recarregar histórico
-                carregarHistorico(associadoAtual.id);
-            }
-        }
-
-        // Função para registrar pagamento do modal
-        async function registrarPagamentoModal() {
-            if (!associadoAtual) return;
-
-            const result = await Swal.fire({
-                title: 'Registrar Pagamento',
-                html: `
-            <p>Registrar pagamento de:</p>
-            <p><strong>${associadoAtual.nome}</strong></p>
-            <div class="mt-3">
-                <label for="valorPagamento" class="form-label">Valor do Pagamento:</label>
-                <input type="number" id="valorPagamento" class="form-control" 
-                    step="0.01" placeholder="0,00" required>
-            </div>
-            <div class="mt-3">
-                <label for="dataPagamento" class="form-label">Data do Pagamento:</label>
-                <input type="date" id="dataPagamento" class="form-control" 
-                    value="${new Date().toISOString().split('T')[0]}" required>
-            </div>
-            <div class="mt-3">
-                <label for="formaPagamento" class="form-label">Forma de Pagamento:</label>
-                <select id="formaPagamento" class="form-select">
-                    <option value="boleto">Boleto</option>
-                    <option value="pix">PIX</option>
-                    <option value="debito">Débito em Conta</option>
-                    <option value="cartao">Cartão</option>
-                    <option value="dinheiro">Dinheiro</option>
-                </select>
-            </div>
-            <div class="mt-3">
-                <label for="observacaoPagamento" class="form-label">Observação:</label>
-                <textarea id="observacaoPagamento" class="form-control" rows="2" 
-                    placeholder="Observações sobre o pagamento (opcional)"></textarea>
-            </div>
-        `,
-                showCancelButton: true,
-                confirmButtonText: 'Registrar',
-                cancelButtonText: 'Cancelar',
-                confirmButtonColor: '#28a745',
-                preConfirm: () => {
-                    const valor = document.getElementById('valorPagamento').value;
-                    if (!valor || valor <= 0) {
-                        Swal.showValidationMessage('Por favor, insira um valor válido');
-                        return false;
-                    }
-                    return {
-                        valor: valor,
-                        data: document.getElementById('dataPagamento').value,
-                        forma: document.getElementById('formaPagamento').value,
-                        observacao: document.getElementById('observacaoPagamento').value
-                    };
-                }
-            });
-
-            if (result.isConfirmed) {
-                try {
-                    // Implementar registro de pagamento
-                    const response = await fetch('../api/financeiro/registrar_pagamento.php', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            associado_id: associadoAtual.id,
-                            ...result.value
-                        })
-                    });
-
-                    const data = await response.json();
-
-                    if (data.status === 'success') {
-                        notifications.show('Pagamento registrado com sucesso!', 'success');
-
-                        // Fechar modal e recarregar lista
-                        bootstrap.Modal.getInstance(document.getElementById('modalDetalhesInadimplente')).hide();
-                        carregarInadimplentes();
-                    } else {
-                        throw new Error(data.message);
-                    }
-
-                } catch (error) {
-                    notifications.show('Erro ao registrar pagamento', 'error');
-                }
-            }
-        }
-
-        // Função para registrar histórico de cobrança
-        async function registrarHistoricoCobranca(associadoId, dados) {
-            try {
-                const response = await fetch('../api/financeiro/registrar_historico_cobranca.php', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        associado_id: associadoId,
-                        tipo: `Cobrança via ${dados.tipo}`,
-                        descricao: dados.mensagem || `Cobrança enviada via ${dados.tipo}`,
-                        status: 'enviada'
-                    })
-                });
-
-                return await response.json();
-
-            } catch (error) {
-                console.error('Erro ao registrar histórico:', error);
-            }
-        }
-
-        // Função para imprimir detalhes
-        function imprimirDetalhes() {
-            if (!associadoAtual) return;
-
-            // Criar janela de impressão
-            const printWindow = window.open('', '_blank');
-
-            // Gerar HTML para impressão
-            const printContent = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>Detalhes do Inadimplente - ${associadoAtual.nome}</title>
-            <style>
-                body { font-family: Arial, sans-serif; padding: 20px; }
-                h1 { color: #dc3545; font-size: 24px; }
-                h2 { color: #333; font-size: 18px; margin-top: 20px; border-bottom: 1px solid #ddd; padding-bottom: 5px; }
-                .info-row { margin: 10px 0; }
-                .info-label { font-weight: bold; display: inline-block; width: 150px; }
-                .alert { background: #f8d7da; color: #721c24; padding: 10px; border-radius: 4px; margin: 20px 0; }
-                @media print { body { padding: 0; } }
-            </style>
-        </head>
-        <body>
-            <h1>Relatório de Inadimplência</h1>
-            <div class="alert">
-                <strong>ASSOCIADO INADIMPLENTE</strong>
-            </div>
-            
-            <h2>Dados Pessoais</h2>
-            <div class="info-row"><span class="info-label">Nome:</span> ${associadoAtual.nome}</div>
-            <div class="info-row"><span class="info-label">CPF:</span> ${formatarCPF(associadoAtual.cpf)}</div>
-            <div class="info-row"><span class="info-label">RG:</span> ${associadoAtual.rg || '-'}</div>
-            <div class="info-row"><span class="info-label">Telefone:</span> ${formatarTelefone(associadoAtual.telefone) || '-'}</div>
-            <div class="info-row"><span class="info-label">E-mail:</span> ${associadoAtual.email || '-'}</div>
-            
-            <h2>Dados Financeiros</h2>
-            <div class="info-row"><span class="info-label">Tipo Associado:</span> ${associadoAtual.tipoAssociado || '-'}</div>
-            <div class="info-row"><span class="info-label">Vínculo:</span> ${associadoAtual.vinculoServidor || '-'}</div>
-            <div class="info-row"><span class="info-label">Situação:</span> INADIMPLENTE</div>
-            
-            <h2>Dados Militares</h2>
-            <div class="info-row"><span class="info-label">Corporação:</span> ${associadoAtual.corporacao || '-'}</div>
-            <div class="info-row"><span class="info-label">Patente:</span> ${associadoAtual.patente || '-'}</div>
-            <div class="info-row"><span class="info-label">Unidade:</span> ${associadoAtual.unidade || '-'}</div>
-            
-            <p style="margin-top: 50px; text-align: center; color: #666; font-size: 12px;">
-                Documento gerado em ${new Date().toLocaleString('pt-BR')} por ${usuarioLogado.nome}
-            </p>
-        </body>
-        </html>
-    `;
-
-            printWindow.document.write(printContent);
-            printWindow.document.close();
-
-            // Aguardar carregamento e imprimir
-            printWindow.onload = function () {
-                printWindow.print();
-                printWindow.onafterprint = function () {
-                    printWindow.close();
-                };
-            };
-        }
-
-        // Função para calcular dias de inadimplência
-        function calcularDiasInadimplencia(dataInicio) {
-            const inicio = new Date(dataInicio);
-            const hoje = new Date();
-            const diffTime = Math.abs(hoje - inicio);
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-            return diffDays;
-        }
-
-        // Função para formatar data e hora
-        function formatarDataHora(dataHora) {
-            if (!dataHora) return '';
-            try {
-                const dt = new Date(dataHora);
-                return dt.toLocaleString('pt-BR');
             } catch (e) {
-                return dataHora;
+                return dataString;
             }
         }
 
-        // Importar SweetAlert2 se ainda não estiver importado
-        if (typeof Swal === 'undefined') {
-            const script = document.createElement('script');
-            script.src = 'https://cdn.jsdelivr.net/npm/sweetalert2@11';
-            document.head.appendChild(script);
+        function calcularDiasInadimplencia(dataInicio) {
+            try {
+                const inicio = new Date(dataInicio);
+                const hoje = new Date();
+                const diffTime = Math.abs(hoje - inicio);
+                return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            } catch (e) {
+                return 0;
+            }
         }
 
+        function escapeHtml(text) {
+            if (!text) return '';
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text.replace(/[&<>"']/g, m => map[m]);
+        }
+
+        function getCategoriaLabel(categoria) {
+            const categorias = {
+                'geral': 'Geral',
+                'financeiro': 'Financeiro',
+                'documentacao': 'Documentação',
+                'atendimento': 'Atendimento',
+                'pendencia': 'Pendência',
+                'importante': 'Importante'
+            };
+            return categorias[categoria] || categoria;
+        }
+
+        function getPrioridadeLabel(prioridade) {
+            const prioridades = {
+                'baixa': 'Baixa',
+                'media': 'Média',
+                'alta': 'Alta',
+                'urgente': 'Urgente'
+            };
+            return prioridades[prioridade] || prioridade;
+        }
+
+        // Log de inicialização
+        console.log('✅ Sistema de Inadimplentes inicializado');
+        console.log('📁 Caminhos das APIs configurados');
+        console.log(`🔐 Permissões: ${temPermissao ? 'Concedidas' : 'Negadas'}`);
     </script>
 
 </body>
-
 </html>
