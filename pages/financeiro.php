@@ -986,39 +986,68 @@ $headerComponent = HeaderComponent::create([
                             Acesse relatórios de arrecadação, inadimplência e estatísticas financeiras.
                         </p>
                         
-                        <div class="financeiro-options">
-                            <div class="financeiro-option" onclick="relatorioArrecadacao()">
-                                <div class="financeiro-option-icon">
-                                    <i class="fas fa-chart-bar"></i>
-                                </div>
-                                <h5>Relatório de Arrecadação</h5>
-                                <p>Visualize a evolução da arrecadação mensal e anual</p>
-                            </div>
 
-                            <div class="financeiro-option" onclick="listarInadimplentes()">
-                                <div class="financeiro-option-icon">
-                                    <i class="fas fa-list-ul"></i>
-                                </div>
-                                <h5>Lista de Inadimplentes</h5>
-                                <p>Consulte e gerencie associados com pendências financeiras</p>
-                            </div>
 
-                            <div class="financeiro-option" onclick="extratoFinanceiro()">
-                                <div class="financeiro-option-icon">
-                                    <i class="fas fa-file-invoice-dollar"></i>
-                                </div>
-                                <h5>Extrato Financeiro</h5>
-                                <p>Acompanhe entradas, saídas e saldo atual da associação</p>
-                            </div>
+<script>
+// ===== FUNÇÃO PARA GESTÃO DE PECÚLIO =====
+// Adicionar esta função junto com as outras funções de relatórios (após linha 890)
 
-                            <div class="financeiro-option" onclick="estatisticasFinanceiras()">
-                                <div class="financeiro-option-icon">
-                                    <i class="fas fa-calculator"></i>
-                                </div>
-                                <h5>Estatísticas Financeiras</h5>
-                                <p>Dashboard completo com indicadores financeiros</p>
-                            </div>
-                        </div>
+// Gestão de Pecúlio
+function gerenciarPeculio() {
+    notifications.show('Carregando gestão de pecúlio...', 'info');
+    setTimeout(() => {
+        window.location.href = '../pages/gestao_peculio.php';
+    }, 1000);
+}
+
+</script>
+
+<?php
+// ===== CÓDIGO COMPLETO PARA INSERIR =====
+// Aqui está a seção completa atualizada da div financeiro-options:
+?>
+
+<div class="financeiro-options">
+    <div class="financeiro-option" onclick="relatorioArrecadacao()">
+        <div class="financeiro-option-icon">
+            <i class="fas fa-chart-bar"></i>
+        </div>
+        <h5>Relatório de Arrecadação</h5>
+        <p>Visualize a evolução da arrecadação mensal e anual</p>
+    </div>
+
+    <div class="financeiro-option" onclick="listarInadimplentes()">
+        <div class="financeiro-option-icon">
+            <i class="fas fa-list-ul"></i>
+        </div>
+        <h5>Lista de Inadimplentes</h5>
+        <p>Consulte e gerencie associados com pendências financeiras</p>
+    </div>
+
+    <div class="financeiro-option" onclick="extratoFinanceiro()">
+        <div class="financeiro-option-icon">
+            <i class="fas fa-file-invoice-dollar"></i>
+        </div>
+        <h5>Extrato Financeiro</h5>
+        <p>Acompanhe entradas, saídas e saldo atual da associação</p>
+    </div>
+
+    <div class="financeiro-option" onclick="gerenciarPeculio()">
+        <div class="financeiro-option-icon">
+            <i class="fas fa-piggy-bank"></i>
+        </div>
+        <h5>Gestão de Pecúlio</h5>
+        <p>Gerencie fundos de pecúlio, reservas e benefícios especiais</p>
+    </div>
+
+    <div class="financeiro-option" onclick="estatisticasFinanceiras()">
+        <div class="financeiro-option-icon">
+            <i class="fas fa-calculator"></i>
+        </div>
+        <h5>Estatísticas Financeiras</h5>
+        <p>Dashboard completo com indicadores financeiros</p>
+    </div>
+</div>
                     </div>
                 </div>
             </div>

@@ -791,6 +791,44 @@ $headerComponent = HeaderComponent::create([
     }
 }
 
+
+#modalEditarValoresBase .card {
+    transition: all 0.3s ease;
+}
+
+#modalEditarValoresBase .card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+#modalEditarValoresBase .input-group-text {
+    background-color: #f8f9fa;
+    border-color: #ced4da;
+    font-weight: 600;
+}
+
+#modalEditarValoresBase .bg-light {
+    border: 1px solid #e9ecef;
+}
+
+#modalEditarValoresBase .modal-lg {
+    max-width: 900px;
+}
+
+.text-money-positive {
+    color: #28a745 !important;
+}
+
+.text-money-negative {
+    color: #dc3545 !important;
+}
+
+.text-money-neutral {
+    color: #6c757d !important;
+}
+
+
+
     </style>
 </head>
 
@@ -940,8 +978,17 @@ $headerComponent = HeaderComponent::create([
 
             <!-- Quick Actions -->
             <div class="quick-actions" data-aos="fade-up" data-aos-delay="100">
-                <h3 class="quick-actions-title">Ações Rápidas</h3>
-                <div class="quick-actions-grid">
+                                    <h3 class="quick-actions-title">Ações Rápidas</h3>
+                                    <div class="quick-actions-grid">
+                                        
+                       
+                    <button class="btn-modern btn-warning" onclick="abrirModalEditarValores()" id="btnEditarValoresBase">
+                        <i class="fas fa-calculator"></i>
+                        Editar Valores Base dos Serviços
+                    </button>
+
+                     
+                    
                     <button class="quick-action-btn" onclick="abrirRelatorios()">
                         <i class="fas fa-chart-line quick-action-icon"></i>
                         Relatórios
@@ -1359,6 +1406,192 @@ $headerComponent = HeaderComponent::create([
             </div>
         </div>
     </div>
+
+
+    <div class="modal fade" id="modalEditarValoresBase" tabindex="-1" role="dialog" aria-labelledby="modalEditarValoresBaseLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="modalEditarValoresBaseLabel">
+                    <i class="fas fa-calculator"></i>
+                    Editar Valores Base dos Serviços
+                </h5>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i>
+                    <strong>Atenção:</strong> Alterar os valores base irá recalcular automaticamente todos os valores dos associados baseado nos percentuais do tipo de cada um.
+                </div>
+
+                <form id="formEditarValoresBase">
+                    <div class="row">
+                        <!-- Serviço Social -->
+                        <div class="col-md-6">
+                            <div class="card border-success">
+                                <div class="card-header bg-success text-white">
+                                    <h6 class="mb-0">
+                                        <i class="fas fa-users"></i>
+                                        Serviço Social
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="form-group">
+                                        <label for="valorBaseSocial">Valor Base Atual:</label>
+                                        <div class="input-group">
+                                            <div class="input-group-prepend">
+                                                <span class="input-group-text">R$</span>
+                                            </div>
+                                            <input type="number" 
+                                                   class="form-control" 
+                                                   id="valorBaseSocial"
+                                                   name="valorBaseSocial"
+                                                   step="0.01" 
+                                                   min="0"
+                                                   placeholder="0,00"
+                                                   required>
+                                        </div>
+                                        <small class="form-text text-muted">
+                                            Valor que será aplicado aos percentuais de cada tipo de associado
+                                        </small>
+                                    </div>
+                                    
+                                    <div class="bg-light p-3 rounded">
+                                        <h6 class="text-success mb-2">
+                                            <i class="fas fa-chart-pie"></i>
+                                            Impacto Estimado:
+                                        </h6>
+                                        <div id="impactoSocial">
+                                            <div class="d-flex justify-content-between">
+                                                <span>Contribuintes (100%):</span>
+                                                <span id="impactoSocialContribuinte" class="font-weight-bold">R$ 0,00</span>
+                                            </div>
+                                            <div class="d-flex justify-content-between">
+                                                <span>Alunos (50%):</span>
+                                                <span id="impactoSocialAluno" class="font-weight-bold">R$ 0,00</span>
+                                            </div>
+                                            <div class="d-flex justify-content-between">
+                                                <span>Remidos (0%):</span>
+                                                <span id="impactoSocialRemido" class="font-weight-bold">R$ 0,00</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Serviço Jurídico -->
+                        <div class="col-md-6">
+                            <div class="card border-warning">
+                                <div class="card-header bg-warning text-dark">
+                                    <h6 class="mb-0">
+                                        <i class="fas fa-balance-scale"></i>
+                                        Serviço Jurídico
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="form-group">
+                                        <label for="valorBaseJuridico">Valor Base Atual:</label>
+                                        <div class="input-group">
+                                            <div class="input-group-prepend">
+                                                <span class="input-group-text">R$</span>
+                                            </div>
+                                            <input type="number" 
+                                                   class="form-control" 
+                                                   id="valorBaseJuridico"
+                                                   name="valorBaseJuridico"
+                                                   step="0.01" 
+                                                   min="0"
+                                                   placeholder="0,00"
+                                                   required>
+                                        </div>
+                                        <small class="form-text text-muted">
+                                            Valor aplicado apenas aos associados que aderiram ao serviço jurídico
+                                        </small>
+                                    </div>
+                                    
+                                    <div class="bg-light p-3 rounded">
+                                        <h6 class="text-warning mb-2">
+                                            <i class="fas fa-chart-pie"></i>
+                                            Impacto Estimado:
+                                        </h6>
+                                        <div id="impactoJuridico">
+                                            <div class="d-flex justify-content-between">
+                                                <span>Contribuintes (100%):</span>
+                                                <span id="impactoJuridicoContribuinte" class="font-weight-bold">R$ 0,00</span>
+                                            </div>
+                                            <div class="d-flex justify-content-between">
+                                                <span>Alunos (50%):</span>
+                                                <span id="impactoJuridicoAluno" class="font-weight-bold">R$ 0,00</span>
+                                            </div>
+                                            <div class="d-flex justify-content-between">
+                                                <span>Remidos (0%):</span>
+                                                <span id="impactoJuridicoRemido" class="font-weight-bold">R$ 0,00</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Resumo de Impacto -->
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <div class="card border-info">
+                                <div class="card-header bg-info text-white">
+                                    <h6 class="mb-0">
+                                        <i class="fas fa-calculator"></i>
+                                        Resumo do Impacto
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    <div id="resumoImpacto" class="text-center">
+                                        <div class="row">
+                                            <div class="col-md-4">
+                                                <h5 class="text-info mb-1" id="totalAssociadosAfetados">0</h5>
+                                                <small class="text-muted">Associados Afetados</small>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <h5 class="text-success mb-1" id="totalValorAnterior">R$ 0,00</h5>
+                                                <small class="text-muted">Valor Total Anterior</small>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <h5 class="text-primary mb-1" id="totalValorNovo">R$ 0,00</h5>
+                                                <small class="text-muted">Valor Total Novo</small>
+                                            </div>
+                                        </div>
+                                        <hr>
+                                        <div class="row">
+                                            <div class="col-12">
+                                                <h4 id="diferencaTotal" class="mb-1">R$ 0,00</h4>
+                                                <small class="text-muted">Diferença Total (+ Aumento | - Redução)</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                    <i class="fas fa-times"></i>
+                    Cancelar
+                </button>
+                <button type="button" class="btn btn-primary" onclick="confirmarAlteracaoValores()" id="btnConfirmarAlteracao">
+                    <i class="fas fa-check"></i>
+                    Confirmar e Atualizar Todos os Associados
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
     <!-- Modal de Configurações -->
     <div class="modal fade" id="configuracoesModal" tabindex="-1" aria-labelledby="configuracoesModalLabel" aria-hidden="true">
@@ -4152,6 +4385,655 @@ if (typeof autoUpdater !== 'undefined') {
 
 
     </script>
+
+
+<script>
+
+
+function showLoading() {
+            const overlay = document.getElementById('loadingOverlay');
+            if (overlay) {
+                overlay.classList.add('active');
+                console.log('Loading ativado');
+            }
+        }
+/**
+ * Função para recalcular valores dos serviços
+ */
+function recalcularServicos() {
+    // Confirmação
+    if (!confirm(
+        'ATENÇÃO!\n\n' +
+        'Esta ação irá recalcular TODOS os valores dos serviços dos associados ' +
+        'baseado nos valores base atuais do sistema.\n\n' +
+        'Isso pode alterar centenas de registros!\n\n' +
+        'Deseja continuar?'
+    )) {
+        return;
+    }
+
+    const btnRecalcular = document.getElementById('btnRecalcular');
+    const originalText = btnRecalcular.innerHTML;
+    
+    // Desabilita botão e mostra loading
+    btnRecalcular.disabled = true;
+    btnRecalcular.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Recalculando...';
+    
+    // Mostra loading geral
+    showLoading();
+    
+    console.log('Iniciando recálculo dos serviços...');
+    
+    fetch('../api/recalcular_servicos.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => {
+        console.log('Response status:', response.status);
+        return response.text();
+    })
+    .then(responseText => {
+        console.log('Response:', responseText);
+        
+        let data;
+        try {
+            data = JSON.parse(responseText);
+        } catch (e) {
+            console.error('Erro ao fazer parse JSON:', e);
+            throw new Error('Resposta inválida do servidor');
+        }
+        
+        if (data.status === 'success') {
+            console.log('✓ Recálculo concluído:', data.data);
+            
+            // Monta mensagem detalhada
+            let mensagem = data.message;
+            
+            if (data.data.total_valores_alterados > 0) {
+                mensagem += '\n\n📊 RESUMO:';
+                mensagem += '\n• Total processados: ' + data.data.total_servicos_processados;
+                mensagem += '\n• Valores alterados: ' + data.data.total_valores_alterados;
+                mensagem += '\n• Sem alteração: ' + data.data.total_sem_alteracao;
+                
+                if (data.data.economia_total !== 0) {
+                    const economia = data.data.economia_total;
+                    if (economia > 0) {
+                        mensagem += '\n• Aumento total: +R$ ' + economia.toFixed(2).replace('.', ',');
+                    } else {
+                        mensagem += '\n• Redução total: R$ ' + Math.abs(economia).toFixed(2).replace('.', ',');
+                    }
+                }
+                
+                mensagem += '\n\n🕒 Processado em: ' + data.data.data_recalculo;
+                
+                // Mostra alguns exemplos
+                if (data.data.alteracoes_detalhadas && data.data.alteracoes_detalhadas.length > 0) {
+                    mensagem += '\n\n📋 EXEMPLOS DE ALTERAÇÕES:';
+                    data.data.alteracoes_detalhadas.slice(0, 5).forEach(alt => {
+                        mensagem += `\n• ${alt.associado} (${alt.servico}): R$ ${alt.valor_anterior.toFixed(2)} → R$ ${alt.valor_novo.toFixed(2)}`;
+                    });
+                    
+                    if (data.data.alteracoes_detalhadas.length > 5) {
+                        mensagem += `\n... e mais ${data.data.alteracoes_detalhadas.length - 5} alterações`;
+                    }
+                }
+            }
+            
+            alert(mensagem);
+            
+            // Recarrega a página para atualizar os dados
+            setTimeout(() => {
+                window.location.reload();
+            }, 2000);
+            
+        } else {
+            console.error('Erro na API:', data);
+            alert('❌ ERRO: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Erro de rede:', error);
+        alert('❌ Erro de comunicação: ' + error.message);
+    })
+    .finally(() => {
+        // Restaura botão
+        btnRecalcular.disabled = false;
+        btnRecalcular.innerHTML = originalText;
+        hideLoading();
+    });
+}
+
+// Adiciona CSS para o botão (coloque no <head> ou arquivo CSS)
+const style = document.createElement('style');
+style.textContent = `
+.btn-modern.btn-warning {
+    background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 600;
+    box-shadow: 0 4px 12px rgba(243, 156, 18, 0.3);
+    transition: all 0.3s ease;
+}
+
+.btn-modern.btn-warning:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(243, 156, 18, 0.4);
+    background: linear-gradient(135deg, #e67e22 0%, #d35400 100%);
+}
+
+.btn-modern:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none !important;
+}
+`;
+document.head.appendChild(style);
+</script>
+
+
+<script>
+// Variáveis globais para o modal
+let valoresBaseAtuais = {};
+let dadosSimulacao = {};
+
+/**
+ * Abre o modal de edição de valores base
+ */
+function abrirModalEditarValores() {
+    console.log('Abrindo modal de edição de valores...');
+    
+    // Carrega valores atuais
+    carregarValoresBaseAtuais();
+    
+    // Mostra o modal
+    $('#modalEditarValoresBase').modal('show');
+}
+
+/**
+ * Carrega os valores base atuais do banco
+ */
+function carregarValoresBaseAtuais() {
+    console.log('Carregando valores base atuais...');
+    
+    fetch('../api/buscar_valores_base.php')
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                valoresBaseAtuais = data.data;
+                
+                // Preenche os campos
+                document.getElementById('valorBaseSocial').value = valoresBaseAtuais.social.valor_base;
+                document.getElementById('valorBaseJuridico').value = valoresBaseAtuais.juridico.valor_base;
+                
+                // Calcula impacto inicial
+                calcularImpacto();
+                
+                console.log('✓ Valores base carregados:', valoresBaseAtuais);
+            } else {
+                console.error('Erro ao carregar valores base:', data.message);
+                alert('❌ Erro ao carregar valores atuais: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Erro de rede:', error);
+            alert('❌ Erro de comunicação: ' + error.message);
+        });
+}
+
+/**
+ * Calcula o impacto da alteração em tempo real
+ */
+function calcularImpacto() {
+    const valorSocial = parseFloat(document.getElementById('valorBaseSocial').value) || 0;
+    const valorJuridico = parseFloat(document.getElementById('valorBaseJuridico').value) || 0;
+    
+    // Atualiza preview dos valores por tipo
+    atualizarPreviewValores(valorSocial, valorJuridico);
+    
+    // Simula impacto nos associados (opcional - pode ser pesado)
+    simularImpactoAssociados(valorSocial, valorJuridico);
+}
+
+/**
+ * Atualiza o preview dos valores por tipo de associado
+ */
+function atualizarPreviewValores(valorSocial, valorJuridico) {
+    // Percentuais típicos (você pode buscar do banco se quiser)
+    const percentuais = {
+        'Contribuinte': 100,
+        'Aluno': 50,
+        'Remido': 0
+    };
+    
+    // Atualiza Social
+    document.getElementById('impactoSocialContribuinte').textContent = 
+        'R$ ' + ((valorSocial * percentuais.Contribuinte) / 100).toFixed(2).replace('.', ',');
+    document.getElementById('impactoSocialAluno').textContent = 
+        'R$ ' + ((valorSocial * percentuais.Aluno) / 100).toFixed(2).replace('.', ',');
+    document.getElementById('impactoSocialRemido').textContent = 
+        'R$ ' + ((valorSocial * percentuais.Remido) / 100).toFixed(2).replace('.', ',');
+    
+    // Atualiza Jurídico
+    document.getElementById('impactoJuridicoContribuinte').textContent = 
+        'R$ ' + ((valorJuridico * percentuais.Contribuinte) / 100).toFixed(2).replace('.', ',');
+    document.getElementById('impactoJuridicoAluno').textContent = 
+        'R$ ' + ((valorJuridico * percentuais.Aluno) / 100).toFixed(2).replace('.', ',');
+    document.getElementById('impactoJuridicoRemido').textContent = 
+        'R$ ' + ((valorJuridico * percentuais.Remido) / 100).toFixed(2).replace('.', ',');
+}
+
+/**
+ * Simula o impacto nos associados (chamada rápida ao backend)
+ */
+function simularImpactoAssociados(valorSocial, valorJuridico) {
+    // Para não sobrecarregar, só simula se os valores mudaram significativamente
+    if (Math.abs(valorSocial - (valoresBaseAtuais.social?.valor_base || 0)) < 0.01 && 
+        Math.abs(valorJuridico - (valoresBaseAtuais.juridico?.valor_base || 0)) < 0.01) {
+        return;
+    }
+    
+    fetch('../api/simular_impacto_valores.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            valor_social: valorSocial,
+            valor_juridico: valorJuridico
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            dadosSimulacao = data.data;
+            atualizarResumoImpacto(data.data);
+        }
+    })
+    .catch(error => {
+        console.log('Simulação não disponível:', error.message);
+        // Não é crítico, continua sem simulação
+    });
+}
+
+/**
+ * Atualiza o resumo de impacto
+ */
+function atualizarResumoImpacto(simulacao) {
+    document.getElementById('totalAssociadosAfetados').textContent = simulacao.total_afetados || 0;
+    document.getElementById('totalValorAnterior').textContent = 
+        'R$ ' + (simulacao.valor_total_anterior || 0).toFixed(2).replace('.', ',');
+    document.getElementById('totalValorNovo').textContent = 
+        'R$ ' + (simulacao.valor_total_novo || 0).toFixed(2).replace('.', ',');
+    
+    const diferenca = (simulacao.valor_total_novo || 0) - (simulacao.valor_total_anterior || 0);
+    const elementoDiferenca = document.getElementById('diferencaTotal');
+    
+    if (diferenca > 0) {
+        elementoDiferenca.textContent = '+R$ ' + diferenca.toFixed(2).replace('.', ',');
+        elementoDiferenca.className = 'mb-1 text-money-positive';
+    } else if (diferenca < 0) {
+        elementoDiferenca.textContent = '-R$ ' + Math.abs(diferenca).toFixed(2).replace('.', ',');
+        elementoDiferenca.className = 'mb-1 text-money-negative';
+    } else {
+        elementoDiferenca.textContent = 'R$ 0,00';
+        elementoDiferenca.className = 'mb-1 text-money-neutral';
+    }
+}
+
+/**
+ * Confirma a alteração e atualiza todos os associados
+ */
+function confirmarAlteracaoValores() {
+    const valorSocial = parseFloat(document.getElementById('valorBaseSocial').value);
+    const valorJuridico = parseFloat(document.getElementById('valorBaseJuridico').value);
+    
+    if (!valorSocial || valorSocial <= 0) {
+        alert('❌ Informe um valor válido para o Serviço Social');
+        document.getElementById('valorBaseSocial').focus();
+        return;
+    }
+    
+    if (!valorJuridico || valorJuridico <= 0) {
+        alert('❌ Informe um valor válido para o Serviço Jurídico');
+        document.getElementById('valorBaseJuridico').focus();
+        return;
+    }
+    
+    // Confirmação final
+    const diferenca = (dadosSimulacao.valor_total_novo || 0) - (dadosSimulacao.valor_total_anterior || 0);
+    let mensagemConfirmacao = `CONFIRMAÇÃO FINAL\n\n`;
+    mensagemConfirmacao += `Serviço Social: R$ ${valoresBaseAtuais.social?.valor_base || 0} → R$ ${valorSocial.toFixed(2)}\n`;
+    mensagemConfirmacao += `Serviço Jurídico: R$ ${valoresBaseAtuais.juridico?.valor_base || 0} → R$ ${valorJuridico.toFixed(2)}\n\n`;
+    
+    if (dadosSimulacao.total_afetados) {
+        mensagemConfirmacao += `Isso irá afetar ${dadosSimulacao.total_afetados} associados.\n`;
+        if (diferenca !== 0) {
+            mensagemConfirmacao += `Impacto financeiro: ${diferenca >= 0 ? '+' : ''}R$ ${diferenca.toFixed(2)}\n\n`;
+        }
+    }
+    
+    mensagemConfirmacao += `Deseja continuar?`;
+    
+    if (!confirm(mensagemConfirmacao)) {
+        return;
+    }
+    
+    // Desabilita botão e mostra loading
+    const btnConfirmar = document.getElementById('btnConfirmarAlteracao');
+    const textoOriginal = btnConfirmar.innerHTML;
+    btnConfirmar.disabled = true;
+    btnConfirmar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processando...';
+    
+    // Envia alterações
+    fetch('../api/atualizar_valores_base_e_recalcular.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            valor_social: valorSocial,
+            valor_juridico: valorJuridico
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            alert(`✅ ${data.message}\n\n📊 Resumo:\n• ${data.data.total_valores_alterados} valores atualizados\n• Processado em: ${data.data.data_processamento}`);
+            
+            // Fecha modal e recarrega página
+            $('#modalEditarValoresBase').modal('hide');
+            setTimeout(() => {
+                window.location.reload();
+            }, 1500);
+        } else {
+            alert('❌ Erro: ' + data.message);
+        }
+    })
+    .catch(error => {
+        alert('❌ Erro de comunicação: ' + error.message);
+    })
+    .finally(() => {
+        // Restaura botão
+        btnConfirmar.disabled = false;
+        btnConfirmar.innerHTML = textoOriginal;
+    });
+}
+
+// Event listeners para calcular impacto em tempo real
+document.addEventListener('DOMContentLoaded', function() {
+    // Calcula impacto quando os valores mudam
+    const valorSocial = document.getElementById('valorBaseSocial');
+    const valorJuridico = document.getElementById('valorBaseJuridico');
+    
+    if (valorSocial) {
+        valorSocial.addEventListener('input', calcularImpacto);
+        valorSocial.addEventListener('change', calcularImpacto);
+    }
+    
+    if (valorJuridico) {
+        valorJuridico.addEventListener('input', calcularImpacto);
+        valorJuridico.addEventListener('change', calcularImpacto);
+    }
+});
+</script>
+
+
+
+<script>
+/**
+ * Função para abrir o modal de edição de valores base
+ * VERSÃO CORRIGIDA - funciona com ou sem jQuery
+ */
+function abrirModalEditarValores() {
+    console.log('Abrindo modal de edição de valores base...');
+    
+    // Verifica se o modal existe no DOM
+    const modal = document.getElementById('modalEditarValoresBase');
+    if (!modal) {
+        alert('❌ Modal de edição não encontrado. Verifique se o HTML do modal foi incluído na página.');
+        return;
+    }
+    
+    // Carrega valores antes de abrir
+    carregarValoresBaseAtuais()
+        .then(() => {
+            // Tenta usar Bootstrap Modal
+            if (typeof $ !== 'undefined' && $.fn.modal) {
+                // jQuery + Bootstrap disponível
+                $('#modalEditarValoresBase').modal('show');
+                console.log('✓ Modal aberto via jQuery');
+            } else if (typeof bootstrap !== 'undefined') {
+                // Bootstrap 5 (sem jQuery)
+                const modalInstance = new bootstrap.Modal(modal);
+                modalInstance.show();
+                console.log('✓ Modal aberto via Bootstrap 5');
+            } else {
+                // Fallback: mostrar modal manualmente
+                modal.style.display = 'block';
+                modal.classList.add('show');
+                document.body.classList.add('modal-open');
+                
+                // Adiciona backdrop
+                let backdrop = document.querySelector('.modal-backdrop');
+                if (!backdrop) {
+                    backdrop = document.createElement('div');
+                    backdrop.className = 'modal-backdrop fade show';
+                    document.body.appendChild(backdrop);
+                }
+                
+                console.log('✓ Modal aberto via fallback');
+            }
+        })
+        .catch(error => {
+            console.error('Erro ao carregar valores:', error);
+            alert('❌ Erro ao carregar valores atuais: ' + error.message);
+        });
+}
+
+/**
+ * Carrega os valores base atuais do banco
+ * VERSÃO COM PROMISE para melhor controle
+ */
+function carregarValoresBaseAtuais() {
+    console.log('Carregando valores base atuais...');
+    
+    return new Promise((resolve, reject) => {
+        fetch('../api/buscar_valores_base.php')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.status === 'success') {
+                    valoresBaseAtuais = data.data;
+                    
+                    // Preenche os campos
+                    const campoSocial = document.getElementById('valorBaseSocial');
+                    const campoJuridico = document.getElementById('valorBaseJuridico');
+                    
+                    if (campoSocial && campoJuridico) {
+                        campoSocial.value = valoresBaseAtuais.social.valor_base;
+                        campoJuridico.value = valoresBaseAtuais.juridico.valor_base;
+                        
+                        // Calcula impacto inicial
+                        calcularImpacto();
+                        
+                        console.log('✓ Valores base carregados:', valoresBaseAtuais);
+                        resolve(valoresBaseAtuais);
+                    } else {
+                        reject(new Error('Campos do formulário não encontrados'));
+                    }
+                } else {
+                    reject(new Error(data.message || 'Erro desconhecido ao carregar valores'));
+                }
+            })
+            .catch(error => {
+                console.error('Erro de rede:', error);
+                reject(error);
+            });
+    });
+}
+
+/**
+ * Função para fechar o modal (compatível com múltiplas versões)
+ */
+function fecharModalEditarValores() {
+    const modal = document.getElementById('modalEditarValoresBase');
+    if (!modal) return;
+    
+    if (typeof $ !== 'undefined' && $.fn.modal) {
+        // jQuery + Bootstrap
+        $('#modalEditarValoresBase').modal('hide');
+    } else if (typeof bootstrap !== 'undefined') {
+        // Bootstrap 5
+        const modalInstance = bootstrap.Modal.getInstance(modal);
+        if (modalInstance) {
+            modalInstance.hide();
+        }
+    } else {
+        // Fallback manual
+        modal.style.display = 'none';
+        modal.classList.remove('show');
+        document.body.classList.remove('modal-open');
+        
+        // Remove backdrop
+        const backdrop = document.querySelector('.modal-backdrop');
+        if (backdrop) {
+            backdrop.remove();
+        }
+    }
+}
+
+/**
+ * Adiciona event listeners para fechar modal
+ */
+document.addEventListener('DOMContentLoaded', function() {
+    // Botão X do modal
+    const closeButtons = document.querySelectorAll('#modalEditarValoresBase .close, #modalEditarValoresBase [data-dismiss="modal"]');
+    closeButtons.forEach(button => {
+        button.addEventListener('click', fecharModalEditarValores);
+    });
+    
+    // Clique fora do modal
+    const modal = document.getElementById('modalEditarValoresBase');
+    if (modal) {
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) {
+                fecharModalEditarValores();
+            }
+        });
+    }
+    
+    // ESC para fechar
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            const modal = document.getElementById('modalEditarValoresBase');
+            if (modal && modal.style.display === 'block') {
+                fecharModalEditarValores();
+            }
+        }
+    });
+});
+
+/**
+ * Versão melhorada da confirmação que fecha o modal corretamente
+ */
+function confirmarAlteracaoValores() {
+    const valorSocial = parseFloat(document.getElementById('valorBaseSocial').value);
+    const valorJuridico = parseFloat(document.getElementById('valorBaseJuridico').value);
+    
+    if (!valorSocial || valorSocial <= 0) {
+        alert('❌ Informe um valor válido para o Serviço Social');
+        document.getElementById('valorBaseSocial').focus();
+        return;
+    }
+    
+    if (!valorJuridico || valorJuridico <= 0) {
+        alert('❌ Informe um valor válido para o Serviço Jurídico');
+        document.getElementById('valorBaseJuridico').focus();
+        return;
+    }
+    
+    // Confirmação final
+    const diferenca = (dadosSimulacao.valor_total_novo || 0) - (dadosSimulacao.valor_total_anterior || 0);
+    let mensagemConfirmacao = `CONFIRMAÇÃO FINAL\n\n`;
+    mensagemConfirmacao += `Serviço Social: R$ ${valoresBaseAtuais.social?.valor_base || 0} → R$ ${valorSocial.toFixed(2)}\n`;
+    mensagemConfirmacao += `Serviço Jurídico: R$ ${valoresBaseAtuais.juridico?.valor_base || 0} → R$ ${valorJuridico.toFixed(2)}\n\n`;
+    
+    if (dadosSimulacao.total_afetados) {
+        mensagemConfirmacao += `Isso irá afetar ${dadosSimulacao.total_afetados} associados.\n`;
+        if (diferenca !== 0) {
+            mensagemConfirmacao += `Impacto financeiro: ${diferenca >= 0 ? '+' : ''}R$ ${diferenca.toFixed(2)}\n\n`;
+        }
+    }
+    
+    mensagemConfirmacao += `Deseja continuar?`;
+    
+    if (!confirm(mensagemConfirmacao)) {
+        return;
+    }
+    
+    // Desabilita botão e mostra loading
+    const btnConfirmar = document.getElementById('btnConfirmarAlteracao');
+    const textoOriginal = btnConfirmar.innerHTML;
+    btnConfirmar.disabled = true;
+    btnConfirmar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processando...';
+    
+    // Envia alterações
+    fetch('../api/atualizar_valores_base_e_recalcular.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            valor_social: valorSocial,
+            valor_juridico: valorJuridico
+        })
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.status === 'success') {
+            alert(`✅ ${data.message}\n\n📊 Resumo:\n• ${data.data.resultado_recalculo.total_valores_alterados} valores atualizados\n• Processado em: ${data.data.data_processamento}`);
+            
+            // Fecha modal corretamente
+            fecharModalEditarValores();
+            
+            // Recarrega página
+            setTimeout(() => {
+                window.location.reload();
+            }, 1500);
+        } else {
+            alert('❌ Erro: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Erro na requisição:', error);
+        alert('❌ Erro de comunicação: ' + error.message);
+    })
+    .finally(() => {
+        // Restaura botão
+        btnConfirmar.disabled = false;
+        btnConfirmar.innerHTML = textoOriginal;
+    });
+}
+
+
+
+
+    </script>
+
+
 </body>
 
 </html>

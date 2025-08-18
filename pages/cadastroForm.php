@@ -1095,23 +1095,29 @@ $lotacoes = [
                     <div class="form-grid">
                         <!-- Tipo de Associado (controla percentuais) -->
                         <div class="form-group full-width">
-                            <label class="form-label">
-                                Tipo de Associado <span class="required">*</span>
-                                <i class="fas fa-info-circle info-tooltip"
-                                    title="Define o percentual de cobrança dos serviços"></i>
-                            </label>
-                            <select class="form-input form-select" name="tipoAssociadoServico" id="tipoAssociadoServico"
-                                required onchange="calcularServicos()">
-                                <option value="">Selecione o tipo de associado...</option>
-                                <?php foreach($tiposAssociado as $tipo): ?>
-                                    <option value="<?php echo $tipo; ?>" 
-                                        <?php echo (isset($associadoData['tipoAssociadoServico']) && $associadoData['tipoAssociadoServico'] == $tipo) ? 'selected' : ''; ?>>
-                                        <?php echo $tipo; ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
-                            <span class="form-error">Por favor, selecione o tipo de associado</span>
-                        </div>
+    <label class="form-label">
+        Tipo de Associado <span class="required">*</span>
+        <i class="fas fa-info-circle info-tooltip"
+            title="Define o percentual de cobrança dos serviços. Benemérito e Agregado não têm direito ao serviço jurídico."></i>
+    </label>
+    <select class="form-input form-select" name="tipoAssociadoServico" id="tipoAssociadoServico"
+        required onchange="calcularServicos()">
+        <option value="">Selecione o tipo de associado...</option>
+        <?php foreach($tiposAssociado as $tipo): ?>
+            <option value="<?php echo $tipo; ?>" 
+                <?php echo (isset($associadoData['tipoAssociadoServico']) && $associadoData['tipoAssociadoServico'] == $tipo) ? 'selected' : ''; ?>
+                <?php echo (in_array($tipo, ['Benemérito', 'Agregado'])) ? 'data-restricao="sem-juridico"' : ''; ?>>
+                <?php echo $tipo; ?>
+                <?php echo (in_array($tipo, ['Benemérito', 'Agregado'])) ? ' (Sem serviço jurídico)' : ''; ?>
+            </option>
+        <?php endforeach; ?>
+    </select>
+    <span class="form-error">Por favor, selecione o tipo de associado</span>
+    <div class="tipo-associado-info" id="infoTipoAssociado" style="display: none;">
+        <i class="fas fa-info-circle"></i>
+        <span id="textoInfoTipo"></span>
+    </div>
+</div>
 
                         <!-- Seção de Serviços -->
                         <div class="form-group full-width">
@@ -1153,8 +1159,9 @@ $lotacoes = [
                                 </div>
 
                                 <!-- Serviço Jurídico (Opcional) -->
-                                <div class="servico-item"
-                                    style="margin-bottom: 1rem; padding: 1rem; background: var(--gray-100); border-radius: 8px;">
+                               <!-- Serviço Jurídico (Opcional) -->
+                                    <div class="servico-item" id="servicoJuridicoItem"
+                                        style="margin-bottom: 1rem; padding: 1rem; background: var(--gray-100); border-radius: 8px;">
                                     <div
                                         style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
                                         <div style="display: flex; align-items: center; gap: 0.5rem;">
@@ -1165,10 +1172,10 @@ $lotacoes = [
                                                 style="font-weight: 600; color: var(--info); cursor: pointer;">
                                                 <i class="fas fa-balance-scale"></i> Serviço Jurídico
                                             </label>
-                                            <span
-                                                style="background: var(--info); color: white; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.7rem;">
-                                                OPCIONAL
-                                            </span>
+                                                <span
+                                                    style="background: var(--info); color: white; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.7rem;">
+                                                    OPCIONAL
+                                                </span>
                                         </div>
                                         <div style="text-align: right;">
                                             <div style="font-size: 0.8rem; color: var(--gray-600);">Valor Base: R$ <span
@@ -1184,6 +1191,7 @@ $lotacoes = [
                                     <input type="hidden" name="valorJuridico" id="valorJuridico" value="0">
                                     <input type="hidden" name="percentualAplicadoJuridico"
                                         id="percentualAplicadoJuridico" value="0">
+                                        <div id="mensagemRestricaoJuridico" style="display: none;"></div>
                                 </div>
 
                                 <!-- Total Geral -->
