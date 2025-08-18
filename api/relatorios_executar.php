@@ -1169,6 +1169,7 @@ function gerarHTML($resultado) {
         }
 
         .stat-card {
+            margin-top: 20px;
             background: white;
             padding: 2rem;
             border-radius: var(--border-radius);
@@ -1710,7 +1711,7 @@ function gerarHTML($resultado) {
                     <div class="header-content">
                         <div class="row align-items-center">
                             <div class="col-md-8">
-                                <h1><i class="fas fa-chart-line me-3"></i><?php echo htmlspecialchars($titulo); ?></h1>
+                                <h1><i class="fas fa-chart-line me-3 mt-10"></i><?php echo htmlspecialchars($titulo); ?></h1>
                                 <p class="subtitle mb-0">
                                     <i class="fas fa-calendar-alt me-2"></i>
                                     Gerado em <?php echo date('d/m/Y \à\s H:i'); ?>
@@ -1729,7 +1730,7 @@ function gerarHTML($resultado) {
         
         <!-- Action Bar -->
         <div class="action-bar no-print fade-in-up" style="animation-delay: 0.1s;">
-            <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mt-3">
                 <div class="d-flex flex-wrap gap-2">
                     <button class="btn btn-primary btn-modern" onclick="window.print()" data-bs-toggle="tooltip" title="Imprimir relatório">
                         <i class="fas fa-print"></i>
