@@ -58,14 +58,16 @@ if ($funcionarioCompleto['criado_em']) {
 }
 
 // Cria instância do Header Component
+// ✅ CORRIGIDO
 $headerComponent = HeaderComponent::create([
     'usuario' => [
         'nome' => $usuarioLogado['nome'],
         'cargo' => $usuarioLogado['cargo'] ?? 'Funcionário',
-        'avatar' => $usuarioLogado['avatar'] ?? null
+        'avatar' => $usuarioLogado['avatar'] ?? null,
+        'departamento_id' => $usuarioLogado['departamento_id'] ?? null  // ✅ ADICIONAR ESTA LINHA
     ],
     'isDiretor' => $auth->isDiretor(),
-    'activeTab' => '', // Página de perfil não tem tab ativa
+    'activeTab' => '',
     'notificationCount' => 0,
     'showSearch' => true
 ]);
