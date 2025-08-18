@@ -9,7 +9,6 @@ require_once '../config/config.php';
 require_once '../config/database.php';
 require_once '../classes/Database.php';
 require_once '../classes/Auth.php';
-require_once '../classes/Relatorios.php';
 
 // Inicia sessão se necessário
 if (session_status() === PHP_SESSION_NONE) {
@@ -49,24 +48,29 @@ foreach ($_POST as $key => $value) {
         }
     }
 }
+foreach ($_GET as $key => $value) {
+    if (!in_array($key, ['tipo', 'campos', 'formato', 'salvar_modelo', 'nome_modelo', 'modelo_id'])) {
+        if (!empty($value)) {
+            $parametros[$key] = $value;
+        }
+    }
+}
 
 try {
-    // Inicializa classe de relatórios
-    $relatorios = new Relatorios();
-    
     // Se há um modelo_id, carrega e executa o modelo
     if ($modeloId) {
-        $resultado = $relatorios->executarRelatorio($modeloId, $parametros);
+        // Implementar carregamento de modelo salvo quando necessário
+        $resultado = [];
     } else {
         // Executa relatório sem modelo (temporário)
         $modeloTemp = [
             'tipo' => $tipo,
             'campos' => $campos,
             'filtros' => $parametros,
-            'ordenacao' => $_POST['ordenacao'] ?? null
+            'ordenacao' => $_POST['ordenacao'] ?? $_GET['ordenacao'] ?? null
         ];
         
-        $resultado = executarRelatorioTemporario($modeloTemp, $relatorios);
+        $resultado = executarRelatorioTemporario($modeloTemp);
     }
     
     // Processa formato de saída
@@ -96,7 +100,7 @@ try {
 /**
  * Executa relatório temporário (sem modelo salvo)
  */
-function executarRelatorioTemporario($config, $relatorios) {
+function executarRelatorioTemporario($config) {
     $db = Database::getInstance(DB_NAME_CADASTRO)->getConnection();
     
     // Constrói query baseada na configuração
@@ -106,9 +110,6 @@ function executarRelatorioTemporario($config, $relatorios) {
     $stmt = $db->prepare($query['sql']);
     $stmt->execute($query['params']);
     $dados = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    
-    // Registra execução no histórico (opcional para relatórios temporários)
-    // $relatorios->registrarHistoricoTemporario($config, count($dados));
     
     return [
         'modelo' => $config,
@@ -300,7 +301,7 @@ function obterJoins($tipo, $campos) {
             break;
     }
     
-    // JOINs condicionais baseados nos campos - mas só adiciona se ainda não foi adicionado
+    // JOINs condicionais baseados nos campos
     
     // Militar
     if (!isset($tabelasAdicionadas['Militar']) && $tipo !== 'militar' &&
@@ -479,6 +480,7 @@ function aplicarFiltros($tipo, $filtros, &$params) {
  * Gera saída HTML
  */
 function gerarHTML($resultado) {
+    global $usuarioLogado;
     $modelo = $resultado['modelo'] ?? [];
     $dados = $resultado['dados'] ?? [];
     $total = $resultado['total'] ?? 0;
@@ -495,149 +497,784 @@ function gerarHTML($resultado) {
     <title><?php echo htmlspecialchars($titulo); ?> - ASSEGO</title>
     
     <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     
     <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
     <style>
+        :root {
+            --primary-color: #0056D2;
+            --primary-dark: #003db3;
+            --primary-light: #1a6bdb;
+            --secondary-color: #6c757d;
+            --success-color: #28a745;
+            --info-color: #17a2b8;
+            --warning-color: #ffc107;
+            --danger-color: #dc3545;
+            --light-bg: #f8fafc;
+            --border-color: #e1e5e9;
+            --shadow-sm: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+            --shadow-md: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+            --shadow-lg: 0 1rem 3rem rgba(0, 0, 0, 0.175);
+            --border-radius: 12px;
+            --border-radius-sm: 8px;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            color: #334155;
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
         @media print {
             .no-print { display: none !important; }
-            body { font-size: 12pt; }
-            table { font-size: 10pt; }
+            body { 
+                font-size: 11pt; 
+                background: white !important;
+                color: black !important;
+            }
+            .container-fluid { max-width: 100% !important; }
+            .card { box-shadow: none !important; border: 1px solid #ddd !important; }
+            .table-report { font-size: 9pt; }
+            .header-report { background: #0056D2 !important; }
         }
-        
+
+        /* Loading Animation */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.95);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            backdrop-filter: blur(5px);
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid #e1e5e9;
+            border-top: 4px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .fade-in-up {
+            animation: fadeInUp 0.6s ease-out;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.4s ease-out;
+        }
+
+        /* Header */
         .header-report {
-            background: #0056D2;
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
             color: white;
+            padding: 3rem 0;
+            margin-bottom: 2rem;
+            border-radius: 0 0 var(--border-radius) var(--border-radius);
+            box-shadow: var(--shadow-lg);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header-report::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="0.5"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
+            opacity: 0.3;
+        }
+
+        .header-content {
+            position: relative;
+            z-index: 2;
+        }
+
+        .header-report h1 {
+            font-weight: 700;
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .header-report .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            font-weight: 400;
+        }
+
+        .header-report .badge {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            backdrop-filter: blur(10px);
+        }
+
+        /* Cards */
+        .card {
+            background: white;
+            border: none;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-md);
+            transition: var(--transition);
+            overflow: hidden;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .card-header {
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            border-bottom: 2px solid var(--border-color);
+            padding: 1.5rem;
+            font-weight: 600;
+            color: var(--secondary-color);
+        }
+
+        /* Action Buttons */
+        .action-bar {
+            background: white;
+            padding: 1.5rem;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-md);
+            margin-bottom: 2rem;
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-modern {
+            padding: 0.75rem 1.5rem;
+            border-radius: var(--border-radius-sm);
+            font-weight: 500;
+            text-transform: none;
+            transition: var(--transition);
+            border: none;
+            position: relative;
+            overflow: hidden;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-modern:before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        .btn-modern:hover:before {
+            width: 300px;
+            height: 300px;
+        }
+
+        .btn-modern i {
+            transition: transform 0.3s ease;
+        }
+
+        .btn-modern:hover i {
+            transform: scale(1.1);
+        }
+
+        .btn-primary.btn-modern {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+            color: white;
+        }
+
+        .btn-success.btn-modern {
+            background: linear-gradient(135deg, var(--success-color) 0%, #1e7e34 100%);
+            color: white;
+        }
+
+        .btn-secondary.btn-modern {
+            background: linear-gradient(135deg, #6c757d 0%, #545b62 100%);
+            color: white;
+        }
+
+        .btn-info.btn-modern {
+            background: linear-gradient(135deg, var(--info-color) 0%, #117a8b 100%);
+            color: white;
+        }
+
+        /* Stats Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: white;
             padding: 2rem;
-            margin-bottom: 2rem;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-md);
+            text-align: center;
+            transition: var(--transition);
+            border: 1px solid var(--border-color);
+            position: relative;
+            overflow: hidden;
         }
-        
-        .stats-box {
-            background: #f8f9fa;
-            padding: 1rem;
-            border-radius: 8px;
-            margin-bottom: 2rem;
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%);
         }
-        
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .stat-icon {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1rem;
+            color: white;
+            font-size: 1.5rem;
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            color: var(--secondary-color);
+            font-weight: 500;
+            text-transform: uppercase;
+            font-size: 0.875rem;
+            letter-spacing: 0.5px;
+        }
+
+        /* Filters */
+        .filters-container {
+            background: white;
+            padding: 1.5rem;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-md);
+            margin-bottom: 2rem;
+            border: 1px solid var(--border-color);
+        }
+
+        .filter-badge {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 50px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin: 0.25rem;
+            border: none;
+            transition: var(--transition);
+        }
+
+        .filter-badge:hover {
+            transform: scale(1.05);
+            box-shadow: var(--shadow-sm);
+        }
+
+        /* Table */
+        .table-container {
+            background: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-md);
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+        }
+
+        .table-header {
+            background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+            padding: 1.5rem;
+            border-bottom: 2px solid var(--border-color);
+        }
+
         .table-report {
             font-size: 0.875rem;
+            margin-bottom: 0;
         }
-        
+
         .table-report th {
-            background: #f8f9fa;
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+            color: white;
             font-weight: 600;
             text-transform: uppercase;
             font-size: 0.75rem;
             letter-spacing: 0.5px;
+            padding: 1rem 0.75rem;
+            border: none;
+            text-align: center;
+            position: sticky;
+            top: 0;
+            z-index: 10;
         }
-        
+
+        .table-report td {
+            padding: 1rem 0.75rem;
+            border-bottom: 1px solid #f1f5f9;
+            vertical-align: middle;
+            transition: var(--transition);
+        }
+
+        .table-report tbody tr {
+            transition: var(--transition);
+        }
+
+        .table-report tbody tr:hover {
+            background: #f8fafc;
+            transform: scale(1.001);
+        }
+
+        .table-report tbody tr:hover td {
+            border-color: var(--primary-color);
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            background: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-md);
+            border: 1px solid var(--border-color);
+        }
+
+        .empty-state-icon {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.5rem;
+            color: var(--secondary-color);
+            font-size: 2rem;
+        }
+
+        .empty-state h3 {
+            color: var(--secondary-color);
+            margin-bottom: 0.5rem;
+        }
+
+        .empty-state p {
+            color: #94a3b8;
+        }
+
+        /* Footer */
         .footer-report {
             margin-top: 3rem;
-            padding-top: 2rem;
-            border-top: 1px solid #dee2e6;
+            padding: 2rem;
             text-align: center;
-            color: #6c757d;
+            color: var(--secondary-color);
+            background: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-md);
+            border: 1px solid var(--border-color);
+        }
+
+        .footer-logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header-report {
+                padding: 2rem 0;
+            }
+            
+            .header-report h1 {
+                font-size: 1.75rem;
+            }
+            
+            .action-bar {
+                padding: 1rem;
+            }
+            
+            .btn-modern {
+                padding: 0.625rem 1rem;
+                font-size: 0.875rem;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+            
+            .stat-card {
+                padding: 1.5rem;
+            }
+            
+            .table-report {
+                font-size: 0.75rem;
+            }
+            
+            .table-report th,
+            .table-report td {
+                padding: 0.75rem 0.5rem;
+            }
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--primary-color);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--primary-dark);
+        }
+
+        /* Animations */
+        .animate-on-scroll {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.6s ease-out;
+        }
+
+        .animate-on-scroll.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Progress indicator for large tables */
+        .table-progress {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 3px;
+            background: var(--primary-color);
+            z-index: 9999;
+            transition: width 0.3s ease;
         }
     </style>
 </head>
 <body>
-    <div class="container-fluid">
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="text-center">
+            <div class="loading-spinner"></div>
+            <p class="mt-3 text-muted">Carregando relatório...</p>
+        </div>
+    </div>
+
+    <!-- Progress Bar -->
+    <div class="table-progress" id="progressBar" style="width: 0%;"></div>
+
+    <div class="container-fluid py-4">
         <!-- Header -->
-        <div class="header-report no-print">
-            <h1><?php echo htmlspecialchars($titulo); ?></h1>
-            <p class="mb-0">Gerado em <?php echo date('d/m/Y \à\s H:i'); ?></p>
-        </div>
-        
-        <!-- Ações -->
-        <div class="d-flex justify-content-between align-items-center mb-3 no-print">
-            <div>
-                <button class="btn btn-primary" onclick="window.print()">
-                    <i class="fas fa-print"></i> Imprimir
-                </button>
-                <button class="btn btn-success" onclick="exportarExcel()">
-                    <i class="fas fa-file-excel"></i> Exportar Excel
-                </button>
-                <button class="btn btn-secondary" onclick="window.close()">
-                    <i class="fas fa-times"></i> Fechar
-                </button>
-            </div>
-        </div>
-        
-        <!-- Estatísticas -->
-        <div class="stats-box">
-            <div class="row">
-                <div class="col-md-3">
-                    <h5 class="text-muted mb-1">Total de Registros</h5>
-                    <h2 class="mb-0"><?php echo number_format($total, 0, ',', '.'); ?></h2>
-                </div>
-                <?php if (!empty($resultado['parametros'])): ?>
-                <div class="col-md-9">
-                    <h5 class="text-muted mb-2">Filtros Aplicados</h5>
-                    <div class="d-flex flex-wrap gap-2">
-                        <?php foreach ($resultado['parametros'] as $key => $value): ?>
-                            <?php if (!empty($value)): ?>
-                            <span class="badge bg-primary">
-                                <?php echo ucfirst(str_replace('_', ' ', $key)); ?>: 
-                                <?php echo htmlspecialchars($value); ?>
+        <div class="header-report no-print fade-in-up">
+            <div class="container-fluid">
+                <div class="header-content">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h1><i class="fas fa-chart-line me-3"></i><?php echo htmlspecialchars($titulo); ?></h1>
+                            <p class="subtitle mb-0">
+                                <i class="fas fa-calendar-alt me-2"></i>
+                                Gerado em <?php echo date('d/m/Y \à\s H:i'); ?>
+                            </p>
+                        </div>
+                        <div class="col-md-4 text-md-end">
+                            <span class="badge fs-6 px-3 py-2">
+                                <i class="fas fa-database me-2"></i>
+                                Sistema ASSEGO
                             </span>
-                            <?php endif; ?>
-                        <?php endforeach; ?>
+                        </div>
                     </div>
                 </div>
-                <?php endif; ?>
             </div>
         </div>
         
-        <!-- Tabela de Dados -->
+        <!-- Action Bar -->
+        <div class="action-bar no-print fade-in-up" style="animation-delay: 0.1s;">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+                <div class="d-flex flex-wrap gap-2">
+                    <button class="btn btn-primary btn-modern" onclick="window.print()" data-bs-toggle="tooltip" title="Imprimir relatório">
+                        <i class="fas fa-print"></i>
+                        <span>Imprimir</span>
+                    </button>
+                    <button class="btn btn-success btn-modern" onclick="exportarExcel()" data-bs-toggle="tooltip" title="Exportar para Excel">
+                        <i class="fas fa-file-excel"></i>
+                        <span>Excel</span>
+                    </button>
+                    <button class="btn btn-info btn-modern" onclick="exportarCSV()" data-bs-toggle="tooltip" title="Exportar para CSV">
+                        <i class="fas fa-file-csv"></i>
+                        <span>CSV</span>
+                    </button>
+                </div>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-secondary btn-modern" onclick="voltarFormulario()" data-bs-toggle="tooltip" title="Voltar ao formulário">
+                        <i class="fas fa-arrow-left"></i>
+                        <span>Voltar</span>
+                    </button>
+                    <button class="btn btn-secondary btn-modern" onclick="window.close()" data-bs-toggle="tooltip" title="Fechar janela">
+                        <i class="fas fa-times"></i>
+                        <span>Fechar</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Statistics -->
+        <div class="stats-grid fade-in-up" style="animation-delay: 0.2s;">
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-list-ol"></i>
+                </div>
+                <div class="stat-number" id="totalRecords"><?php echo number_format($total, 0, ',', '.'); ?></div>
+                <div class="stat-label">Total de Registros</div>
+            </div>
+            
+            <?php if (!empty($resultado['parametros'])): ?>
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-filter"></i>
+                </div>
+                <div class="stat-number"><?php echo count(array_filter($resultado['parametros'])); ?></div>
+                <div class="stat-label">Filtros Aplicados</div>
+            </div>
+            <?php endif; ?>
+            
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <div class="stat-number"><?php echo date('H:i'); ?></div>
+                <div class="stat-label">Hora de Geração</div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-user"></i>
+                </div>
+                <div class="stat-number">
+                    <?php 
+                    $nomeUsuario = explode(' ', $usuarioLogado['nome']);
+                    echo htmlspecialchars($nomeUsuario[0]);
+                    ?>
+                </div>
+                <div class="stat-label">Gerado por</div>
+            </div>
+        </div>
+        
+        <!-- Filters Applied -->
+        <?php if (!empty($resultado['parametros'])): ?>
+        <div class="filters-container fade-in-up" style="animation-delay: 0.3s;">
+            <h5 class="mb-3">
+                <i class="fas fa-sliders-h me-2 text-primary"></i>
+                Filtros Aplicados
+            </h5>
+            <div class="d-flex flex-wrap gap-2">
+                <?php foreach ($resultado['parametros'] as $key => $value): ?>
+                    <?php if (!empty($value)): ?>
+                    <span class="filter-badge">
+                        <i class="fas fa-tag me-1"></i>
+                        <strong><?php echo ucfirst(str_replace('_', ' ', $key)); ?>:</strong>
+                        <?php echo htmlspecialchars($value); ?>
+                    </span>
+                    <?php endif; ?>
+                <?php endforeach; ?>
+            </div>
+        </div>
+        <?php endif; ?>
+        
+        <!-- Data Table -->
         <?php if ($total > 0): ?>
-        <div class="table-responsive">
-            <table class="table table-bordered table-striped table-report">
-                <thead>
-                    <tr>
-                        <?php if (!empty($dados[0])): ?>
-                            <?php foreach (array_keys($dados[0]) as $coluna): ?>
-                            <th><?php echo formatarNomeColuna($coluna); ?></th>
+        <div class="table-container fade-in-up" style="animation-delay: 0.4s;">
+            <div class="table-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-table me-2 text-primary"></i>
+                    Dados do Relatório
+                </h5>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-report" id="dataTable">
+                    <thead>
+                        <tr>
+                            <?php if (!empty($dados[0])): ?>
+                                <?php foreach (array_keys($dados[0]) as $coluna): ?>
+                                <th>
+                                    <i class="fas fa-sort me-1"></i>
+                                    <?php echo formatarNomeColuna($coluna); ?>
+                                </th>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($dados as $index => $linha): ?>
+                        <tr class="animate-on-scroll" style="animation-delay: <?php echo ($index * 0.01); ?>s;">
+                            <?php foreach ($linha as $key => $valor): ?>
+                            <td><?php echo formatarValor($valor, $key); ?></td>
                             <?php endforeach; ?>
-                        <?php endif; ?>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($dados as $linha): ?>
-                    <tr>
-                        <?php foreach ($linha as $key => $valor): ?>
-                        <td><?php echo formatarValor($valor, $key); ?></td>
+                        </tr>
                         <?php endforeach; ?>
-                    </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
+                    </tbody>
+                </table>
+            </div>
         </div>
         <?php else: ?>
-        <div class="alert alert-info">
-            <i class="fas fa-info-circle"></i> Nenhum registro encontrado com os filtros aplicados.
+        <div class="empty-state fade-in-up" style="animation-delay: 0.4s;">
+            <div class="empty-state-icon">
+                <i class="fas fa-search"></i>
+            </div>
+            <h3>Nenhum registro encontrado</h3>
+            <p>Não foram encontrados registros com os filtros aplicados. Tente ajustar os parâmetros de busca.</p>
+            <button class="btn btn-primary btn-modern mt-3" onclick="voltarFormulario()">
+                <i class="fas fa-arrow-left me-2"></i>
+                Voltar ao Formulário
+            </button>
         </div>
         <?php endif; ?>
         
         <!-- Footer -->
-        <div class="footer-report">
-            <p class="mb-1">ASSEGO - Associação dos Servidores do Estado de Goiás</p>
-            <p class="text-muted small">
-                Relatório gerado por <?php echo htmlspecialchars($GLOBALS['usuarioLogado']['nome']); ?> 
-                em <?php echo date('d/m/Y \à\s H:i:s'); ?>
+        <div class="footer-report fade-in-up" style="animation-delay: 0.5s;">
+            <div class="footer-logo">
+                <i class="fas fa-building me-2"></i>
+                ASSEGO
+            </div>
+            <p class="mb-1">Associação dos Servidores do Estado de Goiás</p>
+            <p class="text-muted small mb-0">
+                <i class="fas fa-user me-1"></i>
+                Relatório gerado por <strong><?php echo htmlspecialchars($usuarioLogado['nome']); ?></strong> 
+                em <strong><?php echo date('d/m/Y \à\s H:i:s'); ?></strong>
             </p>
         </div>
     </div>
     
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    
     <script>
+        // Loading overlay
+        window.addEventListener('load', function() {
+            setTimeout(function() {
+                document.getElementById('loadingOverlay').style.display = 'none';
+            }, 500);
+        });
+
+        // Animate elements on scroll
+        function animateOnScroll() {
+            const elements = document.querySelectorAll('.animate-on-scroll');
+            const windowHeight = window.innerHeight;
+            
+            elements.forEach(element => {
+                const elementTop = element.getBoundingClientRect().top;
+                
+                if (elementTop < windowHeight - 100) {
+                    element.classList.add('visible');
+                }
+            });
+        }
+
+        // Progress bar for scrolling through large tables
+        function updateProgress() {
+            const table = document.getElementById('dataTable');
+            if (table) {
+                const scrollTop = window.pageYOffset;
+                const docHeight = document.body.offsetHeight;
+                const winHeight = window.innerHeight;
+                const scrollPercent = scrollTop / (docHeight - winHeight);
+                const progressBar = document.getElementById('progressBar');
+                progressBar.style.width = (scrollPercent * 100) + '%';
+            }
+        }
+
+        // Event listeners
+        window.addEventListener('scroll', function() {
+            animateOnScroll();
+            updateProgress();
+        });
+
+        // Initial animations
+        animateOnScroll();
+
+        // Export functions with loading states
         function exportarExcel() {
-            // Resubmete o formulário com formato excel
+            showExportLoading('Excel');
+            
             const form = document.createElement('form');
             form.method = 'POST';
             form.action = '<?php echo $_SERVER['PHP_SELF']; ?>';
             
-            // Copia todos os parâmetros
+            // Copy all parameters
             <?php foreach ($_POST as $key => $value): ?>
                 <?php if (is_array($value)): ?>
                     <?php foreach ($value as $item): ?>
@@ -656,7 +1293,7 @@ function gerarHTML($resultado) {
                 <?php endif; ?>
             <?php endforeach; ?>
             
-            // Muda formato para Excel
+            // Change format to Excel
             const inputFormato = document.createElement('input');
             inputFormato.type = 'hidden';
             inputFormato.name = 'formato';
@@ -665,7 +1302,112 @@ function gerarHTML($resultado) {
             
             document.body.appendChild(form);
             form.submit();
+            
+            hideExportLoading();
         }
+
+        function exportarCSV() {
+            showExportLoading('CSV');
+            
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '<?php echo $_SERVER['PHP_SELF']; ?>';
+            
+            // Copy all parameters
+            <?php foreach ($_POST as $key => $value): ?>
+                <?php if (is_array($value)): ?>
+                    <?php foreach ($value as $item): ?>
+                    const input_<?php echo $key; ?>_<?php echo $item; ?> = document.createElement('input');
+                    input_<?php echo $key; ?>_<?php echo $item; ?>.type = 'hidden';
+                    input_<?php echo $key; ?>_<?php echo $item; ?>.name = '<?php echo $key; ?>[]';
+                    input_<?php echo $key; ?>_<?php echo $item; ?>.value = '<?php echo $item; ?>';
+                    form.appendChild(input_<?php echo $key; ?>_<?php echo $item; ?>);
+                    <?php endforeach; ?>
+                <?php else: ?>
+                const input_<?php echo $key; ?>_csv = document.createElement('input');
+                input_<?php echo $key; ?>_csv.type = 'hidden';
+                input_<?php echo $key; ?>_csv.name = '<?php echo $key; ?>';
+                input_<?php echo $key; ?>_csv.value = '<?php echo $value; ?>';
+                form.appendChild(input_<?php echo $key; ?>_csv);
+                <?php endif; ?>
+            <?php endforeach; ?>
+            
+            // Change format to CSV
+            const inputFormato = document.createElement('input');
+            inputFormato.type = 'hidden';
+            inputFormato.name = 'formato';
+            inputFormato.value = 'csv';
+            form.appendChild(inputFormato);
+            
+            document.body.appendChild(form);
+            form.submit();
+            
+            hideExportLoading();
+        }
+
+        function showExportLoading(format) {
+            const exportButtons = document.querySelectorAll('.btn-success, .btn-info');
+            exportButtons.forEach(btn => {
+                btn.disabled = true;
+                const originalText = btn.innerHTML;
+                btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Exportando ${format}...`;
+                btn.setAttribute('data-original', originalText);
+            });
+        }
+
+        function hideExportLoading() {
+            setTimeout(() => {
+                const exportButtons = document.querySelectorAll('.btn-success, .btn-info');
+                exportButtons.forEach(btn => {
+                    btn.disabled = false;
+                    const originalText = btn.getAttribute('data-original');
+                    if (originalText) {
+                        btn.innerHTML = originalText;
+                    }
+                });
+            }, 2000);
+        }
+
+        function voltarFormulario() {
+            if (window.history.length > 1) {
+                window.history.back();
+            } else {
+                window.close();
+            }
+        }
+
+        // Counter animation for statistics
+        function animateCounter(element, target) {
+            let current = 0;
+            const increment = target / 100;
+            const timer = setInterval(() => {
+                current += increment;
+                if (current >= target) {
+                    current = target;
+                    clearInterval(timer);
+                }
+                element.textContent = Math.floor(current).toLocaleString('pt-BR');
+            }, 20);
+        }
+
+        // Animate statistics when page loads
+        window.addEventListener('load', function() {
+            const totalElement = document.getElementById('totalRecords');
+            if (totalElement) {
+                const target = parseInt(totalElement.textContent.replace(/\./g, ''));
+                totalElement.textContent = '0';
+                setTimeout(() => animateCounter(totalElement, target), 1000);
+            }
+        });
+
+        // Print optimization
+        window.addEventListener('beforeprint', function() {
+            document.body.classList.add('printing');
+        });
+
+        window.addEventListener('afterprint', function() {
+            document.body.classList.remove('printing');
+        });
     </script>
 </body>
 </html>
@@ -727,7 +1469,7 @@ function gerarExcel($resultado) {
     if (!empty($dados)) {
         echo '<tr>';
         foreach (array_keys($dados[0]) as $coluna) {
-            echo '<th style="background-color: #f0f0f0; font-weight: bold;">';
+            echo '<th style="background-color: #0056D2; color: white; font-weight: bold;">';
             echo htmlspecialchars(formatarNomeColuna($coluna));
             echo '</th>';
         }
@@ -819,7 +1561,7 @@ function formatarNomeColuna($coluna) {
  */
 function formatarValor($valor, $campo) {
     if ($valor === null || $valor === '') {
-        return '-';
+        return '<span class="text-muted">-</span>';
     }
     
     // Formatação por tipo de campo
@@ -827,40 +1569,67 @@ function formatarValor($valor, $campo) {
         if ($valor !== '0000-00-00' && $valor !== '0000-00-00 00:00:00') {
             try {
                 $data = new DateTime($valor);
-                return $data->format('d/m/Y');
+                return '<span class="text-info"><i class="fas fa-calendar-alt me-1"></i>' . $data->format('d/m/Y') . '</span>';
             } catch (Exception $e) {
                 return $valor;
             }
         }
-        return '-';
+        return '<span class="text-muted">-</span>';
     }
     
     if ($campo === 'cpf') {
-        return formatarCPF($valor);
+        return '<span class="font-monospace">' . formatarCPF($valor) . '</span>';
     }
     
     if ($campo === 'telefone') {
-        return formatarTelefone($valor);
+        return '<span class="font-monospace"><i class="fas fa-phone me-1"></i>' . formatarTelefone($valor) . '</span>';
+    }
+    
+    if ($campo === 'email') {
+        return '<span class="text-primary"><i class="fas fa-envelope me-1"></i>' . htmlspecialchars($valor) . '</span>';
     }
     
     if ($campo === 'cep') {
-        return formatarCEP($valor);
+        return '<span class="font-monospace">' . formatarCEP($valor) . '</span>';
     }
     
     if (strpos($campo, 'valor') !== false || strpos($campo, 'Valor') !== false) {
-        return 'R$ ' . number_format($valor, 2, ',', '.');
+        return '<span class="text-success fw-bold"><i class="fas fa-dollar-sign me-1"></i>R$ ' . number_format($valor, 2, ',', '.') . '</span>';
     }
     
     if (strpos($campo, 'percentual') !== false) {
-        return number_format($valor, 2, ',', '.') . '%';
+        return '<span class="text-warning fw-bold">' . number_format($valor, 2, ',', '.') . '%</span>';
     }
     
     if ($campo === 'ativo' || $campo === 'verificado') {
-        return $valor == 1 ? 'Sim' : 'Não';
+        if ($valor == 1) {
+            return '<span class="badge bg-success"><i class="fas fa-check me-1"></i>Sim</span>';
+        } else {
+            return '<span class="badge bg-danger"><i class="fas fa-times me-1"></i>Não</span>';
+        }
     }
     
     if ($campo === 'sexo') {
-        return $valor === 'M' ? 'Masculino' : ($valor === 'F' ? 'Feminino' : $valor);
+        if ($valor === 'M') {
+            return '<span class="text-primary"><i class="fas fa-mars me-1"></i>Masculino</span>';
+        } elseif ($valor === 'F') {
+            return '<span class="text-danger"><i class="fas fa-venus me-1"></i>Feminino</span>';
+        }
+        return $valor;
+    }
+    
+    if ($campo === 'situacao') {
+        $statusColors = [
+            'Ativo' => 'success',
+            'Filiado' => 'success',
+            'Inativo' => 'danger',
+            'DESFILIADO' => 'danger',
+            'Pendente' => 'warning',
+            'PENDENTE' => 'warning',
+            'Suspenso' => 'secondary'
+        ];
+        $color = $statusColors[$valor] ?? 'primary';
+        return '<span class="badge bg-' . $color . '">' . htmlspecialchars($valor) . '</span>';
     }
     
     return htmlspecialchars($valor);
