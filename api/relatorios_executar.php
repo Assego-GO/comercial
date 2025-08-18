@@ -1664,7 +1664,7 @@ function gerarHTML($resultado) {
                     'logout.php': '../pages/logout.php'
                 };
                 
-                // Corrige todos os links do header
+                // Corrige todos os links do header//
                 const allLinks = document.querySelectorAll('header a, nav a, .dropdown-menu-custom a');
                 let corrigidos = 0;
                 
