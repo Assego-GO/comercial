@@ -2,7 +2,7 @@
 /**
  * API para buscar situação financeira individual de associado - Sistema ASSEGO
  * api/associados/buscar_situacao_financeira.php
- * VERSÃO CORRIGIDA COM VALORES REAIS DOS SERVIÇOS
+ * VERSÃO MELHORADA - Suporta múltiplos RGs iguais de corporações diferentes
  */
 
 // Headers para CORS e JSON
@@ -48,6 +48,7 @@ try {
     $rg = $_GET['rg'] ?? '';
     $nome = $_GET['nome'] ?? '';
     $id = $_GET['id'] ?? '';
+    $corporacao = $_GET['corporacao'] ?? ''; // Novo parâmetro para filtrar por corporação
 
     if (empty($rg) && empty($nome) && empty($id)) {
         throw new Exception('É necessário informar RG, nome ou ID para busca');
@@ -56,7 +57,7 @@ try {
     // Conecta ao banco de dados
     $db = Database::getInstance(DB_NAME_CADASTRO)->getConnection();
 
-    // Constrói a query base
+    // Constrói a query base com dados militares
     $sql = "
         SELECT 
             a.id,
@@ -69,6 +70,7 @@ try {
             a.situacao as situacao_cadastro,
             a.estadoCivil,
             a.escolaridade,
+            a.foto,
             f.tipoAssociado,
             f.situacaoFinanceira,
             f.vinculoServidor,
@@ -77,9 +79,20 @@ try {
             f.operacao,
             f.contaCorrente,
             f.observacoes,
-            f.doador
+            f.doador,
+            m.corporacao,
+            m.patente,
+            m.categoria,
+            m.lotacao,
+            m.unidade,
+            e.endereco,
+            e.bairro,
+            e.cidade,
+            e.cep
         FROM Associados a
         LEFT JOIN Financeiro f ON a.id = f.associado_id
+        LEFT JOIN Militar m ON a.id = m.associado_id
+        LEFT JOIN Endereco e ON a.id = e.associado_id
         WHERE 1=1
     ";
     
@@ -92,13 +105,19 @@ try {
     } elseif (!empty($rg)) {
         $sql .= " AND a.rg = :rg";
         $params[':rg'] = $rg;
+        
+        // Se houver corporação especificada, filtra também por ela
+        if (!empty($corporacao)) {
+            $sql .= " AND m.corporacao = :corporacao";
+            $params[':corporacao'] = $corporacao;
+        }
     } elseif (!empty($nome)) {
         $sql .= " AND a.nome LIKE :nome";
         $params[':nome'] = '%' . $nome . '%';
     }
     
-    // Ordena por nome
-    $sql .= " ORDER BY a.nome ASC LIMIT 10";
+    // Ordena por nome e corporação
+    $sql .= " ORDER BY a.nome ASC, m.corporacao ASC LIMIT 50";
 
     // Log da query para debug
     error_log("Query SQL situação financeira: " . $sql);
@@ -117,39 +136,82 @@ try {
         throw new Exception('Associado não encontrado');
     }
 
-    // Se busca por RG ou ID, retorna apenas um resultado
-    if (!empty($rg) || !empty($id)) {
-        $associado = $resultados[0];
-    } else {
-        // Se busca por nome e há múltiplos resultados, retorna lista para escolha
-        if (count($resultados) > 1) {
-            $response = [
-                'status' => 'multiple_results',
-                'message' => 'Múltiplos associados encontrados. Selecione um:',
-                'data' => array_map(function($assoc) {
-                    return [
-                        'id' => $assoc['id'],
-                        'nome' => $assoc['nome'],
-                        'rg' => $assoc['rg'],
-                        'situacao_financeira' => $assoc['situacaoFinanceira']
-                    ];
-                }, $resultados)
-            ];
-            echo json_encode($response, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
-            exit;
-        }
-        $associado = $resultados[0];
+    // IMPORTANTE: Verifica se há múltiplos resultados com o mesmo RG
+    if (!empty($rg) && count($resultados) > 1 && empty($id)) {
+        // Retorna lista para seleção
+        $response = [
+            'status' => 'multiple_results',
+            'message' => 'Múltiplos associados encontrados com o mesmo RG. Selecione o correto:',
+            'data' => array_map(function($assoc) {
+                return [
+                    'id' => $assoc['id'],
+                    'nome' => $assoc['nome'],
+                    'rg' => $assoc['rg'],
+                    'cpf' => $assoc['cpf'],
+                    'corporacao' => $assoc['corporacao'] ?? 'Não informada',
+                    'patente' => $assoc['patente'] ?? 'Não informada',
+                    'unidade' => $assoc['unidade'] ?? 'Não informada',
+                    'lotacao' => $assoc['lotacao'] ?? 'Não informada',
+                    'situacao_financeira' => $assoc['situacaoFinanceira'] ?? 'Não informada',
+                    'foto' => $assoc['foto'] ?? null,
+                    'identificacao_completa' => sprintf(
+                        "%s - %s %s (%s)",
+                        $assoc['nome'],
+                        $assoc['patente'] ?? '',
+                        $assoc['corporacao'] ?? '',
+                        $assoc['unidade'] ?? ''
+                    )
+                ];
+            }, $resultados)
+        ];
+        echo json_encode($response, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+        exit;
     }
 
+    // Se busca por nome e há múltiplos resultados
+    if (!empty($nome) && count($resultados) > 1 && empty($id)) {
+        $response = [
+            'status' => 'multiple_results',
+            'message' => 'Múltiplos associados encontrados. Selecione um:',
+            'data' => array_map(function($assoc) {
+                return [
+                    'id' => $assoc['id'],
+                    'nome' => $assoc['nome'],
+                    'rg' => $assoc['rg'],
+                    'cpf' => $assoc['cpf'],
+                    'corporacao' => $assoc['corporacao'] ?? 'Não informada',
+                    'patente' => $assoc['patente'] ?? 'Não informada',
+                    'unidade' => $assoc['unidade'] ?? 'Não informada',
+                    'lotacao' => $assoc['lotacao'] ?? 'Não informada',
+                    'situacao_financeira' => $assoc['situacaoFinanceira'] ?? 'Não informada',
+                    'foto' => $assoc['foto'] ?? null,
+                    'identificacao_completa' => sprintf(
+                        "%s - RG: %s - %s %s (%s)",
+                        $assoc['nome'],
+                        $assoc['rg'],
+                        $assoc['patente'] ?? '',
+                        $assoc['corporacao'] ?? '',
+                        $assoc['unidade'] ?? ''
+                    )
+                ];
+            }, $resultados)
+        ];
+        echo json_encode($response, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+        exit;
+    }
+
+    // Pega o primeiro resultado (ou único)
+    $associado = $resultados[0];
+
     // ========================================
-    // NOVA LÓGICA: BUSCAR SERVIÇOS REAIS
+    // BUSCAR SERVIÇOS REAIS
     // ========================================
     
     $valorMensalidadeReal = 0;
     $servicosDetalhes = [];
     $tipoAssociadoServico = null;
     
-    // Buscar serviços ativos do associado (igual ao dashboard)
+    // Buscar serviços ativos do associado
     $stmtServicos = $db->prepare("
         SELECT 
             sa.id,
@@ -178,76 +240,40 @@ try {
         $valorMensalidadeReal += floatval($servico['valor_aplicado']);
         
         // Adiciona detalhes dos serviços
-        if ($servico['servico_id'] == 1) {
-            $servicosDetalhes['social'] = [
-                'ativo' => true,
-                'valor' => floatval($servico['valor_aplicado']),
-                'percentual' => floatval($servico['percentual_aplicado']),
-                'data_adesao' => $servico['data_adesao']
-            ];
-        } elseif ($servico['servico_id'] == 2) {
-            $servicosDetalhes['juridico'] = [
-                'ativo' => true,
-                'valor' => floatval($servico['valor_aplicado']),
-                'percentual' => floatval($servico['percentual_aplicado']),
-                'data_adesao' => $servico['data_adesao']
-            ];
-        }
+        $servicosDetalhes[] = [
+            'nome' => $servico['servico_nome'],
+            'descricao' => $servico['servico_descricao'],
+            'valor' => floatval($servico['valor_aplicado']),
+            'percentual' => floatval($servico['percentual_aplicado']),
+            'data_adesao' => $servico['data_adesao']
+        ];
     }
     
     error_log("Valor mensal REAL calculado: R$ " . $valorMensalidadeReal);
     
-    // Busca o tipo de associado baseado nos serviços (igual ao dashboard)
+    // Busca o tipo de associado baseado nos serviços
     if (!empty($servicosAtivos)) {
-        // Tenta buscar pela auditoria primeiro
-        $stmtAudit = $db->prepare("
-            SELECT alteracoes 
-            FROM Auditoria 
-            WHERE tabela = 'Servicos_Associado' 
-            AND registro_id = ? 
-            AND alteracoes LIKE '%tipo_associado_servico%'
-            ORDER BY data_hora DESC 
+        $primeiroServico = $servicosAtivos[0];
+        
+        $stmtRegras = $db->prepare("
+            SELECT DISTINCT rc.tipo_associado
+            FROM Regras_Contribuicao rc
+            WHERE rc.servico_id = ? 
+            AND ABS(rc.percentual_valor - ?) < 0.01
             LIMIT 1
         ");
-        $stmtAudit->execute([$associado['id']]);
-        $auditoria = $stmtAudit->fetch();
         
-        if ($auditoria && $auditoria['alteracoes']) {
-            $alteracoes = json_decode($auditoria['alteracoes'], true);
-            if (isset($alteracoes['tipo_associado_servico'])) {
-                $tipoAssociadoServico = $alteracoes['tipo_associado_servico'];
-            }
-        }
+        $stmtRegras->execute([
+            $primeiroServico['servico_id'], 
+            $primeiroServico['percentual_aplicado']
+        ]);
         
-        // Se não encontrou, tenta inferir pelas regras
-        if (!$tipoAssociadoServico && !empty($servicosAtivos)) {
-            $primeiroServico = $servicosAtivos[0];
-            
-            $stmtRegras = $db->prepare("
-                SELECT DISTINCT rc.tipo_associado
-                FROM Regras_Contribuicao rc
-                WHERE rc.servico_id = ? 
-                AND ABS(rc.percentual_valor - ?) < 0.01
-                LIMIT 1
-            ");
-            
-            $stmtRegras->execute([
-                $primeiroServico['servico_id'], 
-                $primeiroServico['percentual_aplicado']
-            ]);
-            
-            $tipoAssociadoServico = $stmtRegras->fetchColumn() ?: 'Contribuinte';
-        }
+        $tipoAssociadoServico = $stmtRegras->fetchColumn() ?: 'Contribuinte';
     }
-    
-    // ========================================
-    // FIM DA NOVA LÓGICA
-    // ========================================
 
-    // Busca dados financeiros adicionais
+    // Busca dados de pagamentos
     $dadosFinanceirosExtras = [];
     
-    // Busca histórico de pagamentos (se existir tabela de pagamentos)
     try {
         $sqlPagamentos = "
             SELECT 
@@ -268,7 +294,6 @@ try {
             $dadosFinanceirosExtras['pagamentos'] = $pagamentos;
         }
     } catch (PDOException $e) {
-        // Tabela de pagamentos pode não existir ainda
         error_log("Tabela de pagamentos não encontrada: " . $e->getMessage());
     }
 
@@ -283,7 +308,27 @@ try {
             'telefone' => $associado['telefone'],
             'data_nascimento' => $associado['nasc'],
             'estado_civil' => $associado['estadoCivil'],
-            'escolaridade' => $associado['escolaridade']
+            'escolaridade' => $associado['escolaridade'],
+            'foto' => $associado['foto']
+        ],
+        'dados_militares' => [
+            'corporacao' => $associado['corporacao'] ?? 'Não informada',
+            'patente' => $associado['patente'] ?? 'Não informada',
+            'categoria' => $associado['categoria'] ?? 'Não informada',
+            'lotacao' => $associado['lotacao'] ?? 'Não informada',
+            'unidade' => $associado['unidade'] ?? 'Não informada',
+            'identificacao_completa' => sprintf(
+                "%s %s - %s",
+                $associado['patente'] ?? '',
+                $associado['nome'],
+                $associado['corporacao'] ?? ''
+            )
+        ],
+        'endereco' => [
+            'logradouro' => $associado['endereco'] ?? null,
+            'bairro' => $associado['bairro'] ?? null,
+            'cidade' => $associado['cidade'] ?? null,
+            'cep' => $associado['cep'] ?? null
         ],
         'situacao_financeira' => [
             'situacao' => $associado['situacaoFinanceira'] ?? 'Adimplente',
@@ -296,12 +341,13 @@ try {
             'observacoes' => $associado['observacoes'] ?? '',
             'doador' => intval($associado['doador'] ?? 0),
             'eh_doador' => ($associado['doador'] ?? 0) == 1 ? 'Sim' : 'Não',
-            'valor_mensalidade' => $valorMensalidadeReal, // USA O VALOR REAL!
-            'servicos_ativos' => $servicosDetalhes, // Adiciona detalhes dos serviços
+            'valor_mensalidade' => $valorMensalidadeReal,
+            'servicos_ativos' => $servicosDetalhes,
+            'total_servicos' => count($servicosDetalhes),
             'ultimo_pagamento' => $dadosFinanceirosExtras['pagamentos']['ultimo_pagamento'] ?? null,
             'total_pago' => $dadosFinanceirosExtras['pagamentos']['total_pago'] ?? 0,
             'total_pendente' => $dadosFinanceirosExtras['pagamentos']['total_pendente'] ?? 0,
-            'valor_debito' => 0, // Implementar cálculo se necessário
+            'valor_debito' => $dadosFinanceirosExtras['pagamentos']['total_pendente'] ?? 0,
             'meses_atraso' => 0, // Implementar cálculo se necessário
             'vencimento_proxima' => null // Implementar se necessário
         ],
@@ -309,7 +355,7 @@ try {
         'tem_dados_financeiros' => !empty($associado['tipoAssociado']) || count($servicosAtivos) > 0
     ];
 
-    // Calcula dados adicionais
+    // Calcula idade
     if ($associado['nasc']) {
         $nascimento = new DateTime($associado['nasc']);
         $hoje = new DateTime();
@@ -318,10 +364,12 @@ try {
 
     // Adiciona alertas baseado na situação
     $alertas = [];
+    
     if ($associado['situacaoFinanceira'] === 'INADIMPLENTE' || $associado['situacaoFinanceira'] === 'Inadimplente') {
         $alertas[] = [
             'tipo' => 'warning',
-            'mensagem' => 'Associado com pendências financeiras'
+            'mensagem' => 'Associado com pendências financeiras',
+            'valor' => $dadosFinanceirosExtras['pagamentos']['total_pendente'] ?? 0
         ];
     }
     
@@ -354,6 +402,15 @@ try {
         ];
     }
 
+    // Adiciona alerta se não houver corporação cadastrada
+    if (empty($associado['corporacao'])) {
+        $alertas[] = [
+            'tipo' => 'warning',
+            'mensagem' => 'Corporação militar não cadastrada',
+            'sugestao' => 'Atualize o cadastro do associado com a corporação correta'
+        ];
+    }
+
     if (!empty($alertas)) {
         $dadosEstruturados['alertas'] = $alertas;
     }
@@ -366,7 +423,9 @@ try {
     ];
 
     // Log de sucesso
-    error_log("Situação financeira carregada com sucesso para associado ID: " . $associado['id'] . " - Valor: R$ " . $valorMensalidadeReal);
+    error_log("Situação financeira carregada com sucesso para associado ID: " . $associado['id'] . 
+             " - Corporação: " . ($associado['corporacao'] ?? 'N/A') . 
+             " - Valor: R$ " . $valorMensalidadeReal);
 
 } catch (PDOException $e) {
     // Erro de banco de dados
