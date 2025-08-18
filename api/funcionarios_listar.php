@@ -23,44 +23,110 @@ if (!$auth->isLoggedIn()) {
 // Pega dados do usuário logado
 $usuarioLogado = $auth->getUser();
 
+// CORREÇÃO: Lista de departamentos estratégicos que veem todos os funcionários
+// IDs baseados no banco de dados real
+$departamentosEstrategicos = [
+    1,  // Presidência (ID: 1)
+    2,  // Financeiro (ID: 2) 
+    9,  // Recursos Humanos (ID: 9) - CORRIGIDO
+    10, // Comercial (ID: 10) - CORRIGIDO
+];
+
+// Função para obter nome do departamento por ID (para logs)
+function getNomeDepartamento($departamentoId) {
+    $nomes = [
+        1  => 'Presidência',
+        2  => 'Financeiro',
+        3  => 'Jurídico',
+        4  => 'Hotel',
+        5  => 'Comunicação',
+        6  => 'Patrimônio',
+        7  => 'Aruana',
+        8  => 'Compras',
+        9  => 'Recursos Humanos',
+        10 => 'Comercial',
+        11 => 'Parque Aquático',
+        12 => 'Social',
+        13 => 'Obras',
+        14 => 'Geral',
+        15 => 'Tecnologia da Informação',
+        16 => 'Convênios',
+        17 => 'Paisagismo',
+        18 => 'Relacionamento',
+    ];
+    return $nomes[$departamentoId] ?? "Departamento {$departamentoId}";
+}
+
 // Sistema flexível de permissões
 $temPermissaoFuncionarios = true; // Todos têm acesso básico
 $escopoVisualizacao = ''; // 'TODOS', 'DEPARTAMENTO' ou 'PROPRIO'
 $departamentoPermitido = null;
 
-// Log para debug
+// Log detalhado para debug
 error_log("=== DEBUG API FUNCIONÁRIOS ===");
-error_log("Usuário: " . $usuarioLogado['nome']);
+error_log("Usuário: " . ($usuarioLogado['nome'] ?? 'NULL'));
+error_log("ID do Usuário: " . ($usuarioLogado['id'] ?? 'NULL'));
 error_log("Cargo: " . ($usuarioLogado['cargo'] ?? 'Sem cargo'));
 error_log("É Diretor: " . ($auth->isDiretor() ? 'SIM' : 'NÃO'));
 error_log("Departamento ID: " . ($usuarioLogado['departamento_id'] ?? 'NULL'));
+error_log("Departamento: " . getNomeDepartamento($usuarioLogado['departamento_id'] ?? 0));
+
+// Para debug: log dos departamentos estratégicos
+error_log("Departamentos com acesso total configurados na API:");
+foreach ($departamentosEstrategicos as $deptId) {
+    error_log("- ID {$deptId}: " . getNomeDepartamento($deptId));
+}
 
 // Determinar escopo baseado no cargo e departamento
 $cargoUsuario = $usuarioLogado['cargo'] ?? '';
 $departamentoUsuario = $usuarioLogado['departamento_id'] ?? null;
 
-// Cargos com permissões especiais
-$cargosAcessoTotal = ['Diretor', 'Presidente', 'Vice-Presidente'];
-$cargosAcessoDepartamento = ['Gerente', 'Supervisor', 'Coordenador'];
+// IMPORTANTE: Garantir que seja inteiro para comparação
+$departamentoUsuario = (int)$departamentoUsuario;
 
+error_log("Processando permissões na API:");
+error_log("Cargo: '{$cargoUsuario}'");
+error_log("Departamento (convertido para int): {$departamentoUsuario}");
+error_log("Departamentos estratégicos: " . implode(', ', $departamentosEstrategicos));
+
+// CORREÇÃO: Nova lógica de permissões com departamentos estratégicos
 // Define escopo de visualização
-if ($departamentoUsuario == 1) {
-    // PRESIDÊNCIA - vê todos
+error_log("Verificando permissões na API...");
+error_log("Departamento do usuário: {$departamentoUsuario} (tipo: " . gettype($departamentoUsuario) . ")");
+error_log("Testando se {$departamentoUsuario} está em [" . implode(', ', $departamentosEstrategicos) . "]");
+
+$estaNoDepartamentoEstrategico = in_array($departamentoUsuario, $departamentosEstrategicos, true);
+error_log("Está em departamento estratégico? " . ($estaNoDepartamentoEstrategico ? 'SIM' : 'NÃO'));
+
+if ($estaNoDepartamentoEstrategico) {
+    // DEPARTAMENTOS ESTRATÉGICOS - veem todos os funcionários
     $escopoVisualizacao = 'TODOS';
-    error_log("✅ PRESIDÊNCIA: API retornará TODOS os funcionários");
-} elseif (in_array($cargoUsuario, $cargosAcessoTotal)) {
-    // Cargos de alta gestão - veem todos
+    $nomeDept = getNomeDepartamento($departamentoUsuario);
+    error_log("✅ DEPARTAMENTO ESTRATÉGICO ({$nomeDept}): API retornará TODOS os funcionários");
+} elseif (in_array($cargoUsuario, ['Presidente', 'Vice-Presidente'])) {
+    // Presidente e Vice-Presidente sempre veem todos (independente do departamento)
     $escopoVisualizacao = 'TODOS';
     error_log("✅ {$cargoUsuario}: API retornará TODOS os funcionários");
-} elseif (in_array($cargoUsuario, $cargosAcessoDepartamento)) {
-    // Cargos de gestão intermediária - veem seu departamento
+} elseif (in_array($cargoUsuario, ['Diretor', 'Gerente', 'Supervisor', 'Coordenador'])) {
+    // Cargos de liderança em departamentos não-estratégicos - veem apenas seu departamento
     $escopoVisualizacao = 'DEPARTAMENTO';
     $departamentoPermitido = $departamentoUsuario;
-    error_log("✅ {$cargoUsuario}: API retornará funcionários do departamento {$departamentoPermitido}");
+    $nomeDept = getNomeDepartamento($departamentoUsuario);
+    error_log("✅ {$cargoUsuario} - {$nomeDept}: API retornará funcionários do departamento {$departamentoPermitido}");
 } else {
     // Funcionários comuns - veem apenas seus dados
     $escopoVisualizacao = 'PROPRIO';
     error_log("✅ Funcionário comum: API retornará apenas dados próprios");
+}
+
+// Log adicional para debug
+error_log("=== RESULTADO FINAL DAS PERMISSÕES NA API ===");
+error_log("Escopo final: {$escopoVisualizacao}");
+error_log("Departamento permitido: " . ($departamentoPermitido ?? 'NULL'));
+
+// Verificação final para garantir que o RH vê todos
+if ($departamentoUsuario === 9 && $escopoVisualizacao !== 'TODOS') {
+    error_log("❌ ERRO NA API: Usuário do RH (dept 9) deveria ter escopo TODOS mas tem: {$escopoVisualizacao}");
 }
 
 try {
@@ -81,6 +147,9 @@ try {
         $filtros['busca'] = $_GET['busca'];
     }
     
+    error_log("=== APLICANDO FILTROS NA API ===");
+    error_log("Escopo de visualização: {$escopoVisualizacao}");
+    
     // Aplicar filtros baseados no escopo do usuário
     if ($escopoVisualizacao === 'DEPARTAMENTO' && $departamentoPermitido) {
         // Gestores intermediários: força filtro pelo próprio departamento
@@ -90,6 +159,8 @@ try {
         // Funcionários comuns: retorna apenas seus próprios dados
         $filtros['id_especifico'] = $usuarioLogado['id'];
         error_log("🔒 Filtro forçado para ID próprio: " . $usuarioLogado['id']);
+    } else {
+        error_log("🔓 Sem filtro - API retornará todos os funcionários conforme filtros solicitados");
     }
     
     // Parâmetros especiais da requisição
@@ -126,6 +197,8 @@ try {
         $filtros['ordenar_por'] = $_GET['ordenar_por'];
     }
     
+    error_log("Filtros finais aplicados: " . print_r($filtros, true));
+    
     // Buscar funcionários
     $lista = $funcionarios->listar($filtros);
     
@@ -141,7 +214,7 @@ try {
     $total = $funcionarios->contar($filtros);
     
     // Log do resultado
-    error_log("📊 Retornando " . count($lista) . " funcionários de " . $total . " total");
+    error_log("📊 API retornando " . count($lista) . " funcionários de " . $total . " total");
     
     // Preparar resposta
     $resposta = [
@@ -157,13 +230,19 @@ try {
             'pode_ver_todos' => $escopoVisualizacao === 'TODOS',
             'pode_ver_departamento' => in_array($escopoVisualizacao, ['TODOS', 'DEPARTAMENTO']),
             'departamento_permitido' => $departamentoPermitido
+        ],
+        'debug_info' => [
+            'departamento_usuario' => $departamentoUsuario,
+            'cargo_usuario' => $cargoUsuario,
+            'departamentos_estrategicos' => $departamentosEstrategicos,
+            'esta_em_dept_estrategico' => $estaNoDepartamentoEstrategico
         ]
     ];
     
     echo json_encode($resposta);
     
 } catch (Exception $e) {
-    error_log("Erro ao listar funcionários: " . $e->getMessage());
+    error_log("Erro ao listar funcionários na API: " . $e->getMessage());
     http_response_code(500);
     echo json_encode([
         'status' => 'error',

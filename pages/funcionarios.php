@@ -1,6 +1,6 @@
 <?php
 /**
- * Página de Gestão de Funcionários
+ * Página de Gestão de Funcionários com Paginação
  * pages/funcionarios.php
  */
 
@@ -34,44 +34,105 @@ $departamentoPermitido = null;
 $podeEditar = false;
 $podeCriar = false;
 
-// Log para debug
+// CORREÇÃO: Lista de departamentos estratégicos que veem todos os funcionários
+// IDs baseados no banco de dados real
+$departamentosEstrategicos = [
+    1,  // Presidência (ID: 1)
+    2,  // Financeiro (ID: 2) 
+    9,  // Recursos Humanos (ID: 9) - CORRIGIDO
+    10, // Comercial (ID: 10) - CORRIGIDO
+];
+
+// Para debug: log dos departamentos estratégicos
+error_log("Departamentos com acesso total configurados:");
+foreach ($departamentosEstrategicos as $deptId) {
+    error_log("- ID {$deptId}: " . getNomeDepartamento($deptId));
+}
+
+// Função para obter nome do departamento por ID (para logs)
+function getNomeDepartamento($departamentoId) {
+    $nomes = [
+        1 => 'Presidência',
+        2 => 'Comercial',
+        3 => 'Financeiro',
+        4 => 'Recursos Humanos',
+        5 => 'TI',
+        6 => 'Operações',
+        // Adicione outros departamentos conforme necessário
+    ];
+    return $nomes[$departamentoId] ?? "Departamento {$departamentoId}";
+}
+
+// Log detalhado para debug
 error_log("=== DEBUG PERMISSÕES FUNCIONÁRIOS ===");
-error_log("Usuário: " . $usuarioLogado['nome']);
+error_log("Usuário: " . ($usuarioLogado['nome'] ?? 'NULL'));
+error_log("ID do Usuário: " . ($usuarioLogado['id'] ?? 'NULL'));
 error_log("Cargo: " . ($usuarioLogado['cargo'] ?? 'Sem cargo'));
 error_log("É Diretor: " . ($auth->isDiretor() ? 'SIM' : 'NÃO'));
 error_log("Departamento ID: " . ($usuarioLogado['departamento_id'] ?? 'NULL'));
+error_log("Departamento: " . getNomeDepartamento($usuarioLogado['departamento_id'] ?? 0));
+error_log("Dados completos do usuário: " . print_r($usuarioLogado, true));
 
 // Sistema de permissões baseado em cargo e departamento
 $cargoUsuario = $usuarioLogado['cargo'] ?? '';
 $departamentoUsuario = $usuarioLogado['departamento_id'] ?? null;
 
-// CORREÇÃO: Nova lógica de permissões
+// IMPORTANTE: Garantir que seja inteiro para comparação
+$departamentoUsuario = (int)$departamentoUsuario;
+
+error_log("Processando permissões:");
+error_log("Cargo: '{$cargoUsuario}'");
+error_log("Departamento (convertido para int): {$departamentoUsuario}");
+error_log("Departamentos estratégicos: " . implode(', ', $departamentosEstrategicos));
+
+// CORREÇÃO: Nova lógica de permissões com departamentos estratégicos
 // Define escopo de visualização
-if ($departamentoUsuario == 1) {
-    // PRESIDÊNCIA - vê todos
+error_log("Verificando permissões...");
+error_log("Departamento do usuário: {$departamentoUsuario} (tipo: " . gettype($departamentoUsuario) . ")");
+error_log("Testando se {$departamentoUsuario} está em [" . implode(', ', $departamentosEstrategicos) . "]");
+
+$estaNoDepartamentoEstrategico = in_array($departamentoUsuario, $departamentosEstrategicos, true);
+error_log("Está em departamento estratégico? " . ($estaNoDepartamentoEstrategico ? 'SIM' : 'NÃO'));
+
+if ($estaNoDepartamentoEstrategico) {
+    // DEPARTAMENTOS ESTRATÉGICOS - veem todos os funcionários
     $escopoVisualizacao = 'TODOS';
     $podeEditar = true;
     $podeCriar = true;
-    error_log("✅ PRESIDÊNCIA: Acesso total");
+    $nomeDept = getNomeDepartamento($departamentoUsuario);
+    error_log("✅ DEPARTAMENTO ESTRATÉGICO ({$nomeDept}): Acesso total a todos os funcionários");
 } elseif (in_array($cargoUsuario, ['Presidente', 'Vice-Presidente'])) {
-    // Apenas Presidente e Vice-Presidente veem todos (mesmo fora da presidência)
+    // Presidente e Vice-Presidente sempre veem todos (independente do departamento)
     $escopoVisualizacao = 'TODOS';
     $podeEditar = true;
     $podeCriar = true;
-    error_log("✅ {$cargoUsuario}: Acesso total");
+    error_log("✅ {$cargoUsuario}: Acesso total por cargo");
 } elseif (in_array($cargoUsuario, ['Diretor', 'Gerente', 'Supervisor', 'Coordenador'])) {
-    // CORREÇÃO: Diretores agora também veem apenas seu departamento
+    // Cargos de liderança em departamentos não-estratégicos - veem apenas seu departamento
     $escopoVisualizacao = 'DEPARTAMENTO';
     $departamentoPermitido = $departamentoUsuario;
     $podeEditar = true;
     $podeCriar = true;
-    error_log("✅ {$cargoUsuario}: Acesso ao departamento {$departamentoPermitido}");
+    $nomeDept = getNomeDepartamento($departamentoUsuario);
+    error_log("✅ {$cargoUsuario} - {$nomeDept}: Acesso ao departamento {$departamentoPermitido}");
 } else {
     // Funcionários comuns - veem apenas seus dados
     $escopoVisualizacao = 'PROPRIO';
     $podeEditar = false;
     $podeCriar = false;
     error_log("✅ Funcionário comum: Acesso apenas aos próprios dados");
+}
+
+// Log adicional para debug
+error_log("=== RESULTADO FINAL DAS PERMISSÕES ===");
+error_log("Escopo final: {$escopoVisualizacao}");
+error_log("Pode editar: " . ($podeEditar ? 'SIM' : 'NÃO'));
+error_log("Pode criar: " . ($podeCriar ? 'SIM' : 'NÃO'));
+error_log("Departamento permitido: " . ($departamentoPermitido ?? 'NULL'));
+
+// Verificação final para garantir que o RH vê todos
+if ($departamentoUsuario === 9 && $escopoVisualizacao !== 'TODOS') {
+    error_log("❌ ERRO: Usuário do RH (dept 9) deveria ter escopo TODOS mas tem: {$escopoVisualizacao}");
 }
 
 // Define o título da página
@@ -88,12 +149,22 @@ try {
     $filtroSQL = '';
     $params = [];
     
+    error_log("=== PREPARANDO CONSULTA SQL ===");
+    error_log("Escopo de visualização: {$escopoVisualizacao}");
+    
     if ($escopoVisualizacao === 'DEPARTAMENTO' && $departamentoPermitido) {
         $filtroSQL = ' WHERE departamento_id = ?';
         $params = [$departamentoPermitido];
+        error_log("Aplicando filtro de departamento: {$departamentoPermitido}");
+        error_log("SQL será: SELECT COUNT(*) as total FROM Funcionarios{$filtroSQL}");
     } elseif ($escopoVisualizacao === 'PROPRIO') {
         $filtroSQL = ' WHERE id = ?';
         $params = [$usuarioLogado['id']];
+        error_log("Aplicando filtro próprio: usuário {$usuarioLogado['id']}");
+        error_log("SQL será: SELECT COUNT(*) as total FROM Funcionarios{$filtroSQL}");
+    } else {
+        error_log("Sem filtro - visualizando todos os funcionários");
+        error_log("SQL será: SELECT COUNT(*) as total FROM Funcionarios");
     }
     
     // Total de funcionários (com filtro)
@@ -123,6 +194,13 @@ try {
     $stmt = $db->prepare("SELECT COUNT(*) as total FROM Departamentos WHERE ativo = 1");
     $stmt->execute();
     $totalDepartamentos = $stmt->fetch()['total'] ?? 0;
+    
+    // Log das estatísticas
+    error_log("Estatísticas calculadas:");
+    error_log("- Total: {$totalFuncionarios}");
+    error_log("- Ativos: {$funcionariosAtivos}");
+    error_log("- Inativos: {$funcionariosInativos}");
+    error_log("- Novos (30 dias): {$novosFuncionarios}");
     
 } catch (Exception $e) {
     error_log("Erro ao buscar estatísticas: " . $e->getMessage());
@@ -170,8 +248,199 @@ $headerComponent = HeaderComponent::create([
     <link rel="stylesheet" href="estilizacao/funcionarios.css">
     
     <style>
-    
-    
+        /* Estilos para Paginação */
+        .pagination-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem;
+            background: var(--white);
+            border-top: 1px solid var(--border-light);
+            border-radius: 0 0 16px 16px;
+            margin-top: auto;
+        }
+
+        .pagination-info {
+            color: var(--text-muted);
+            font-size: 0.875rem;
+        }
+
+        .pagination-controls {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .pagination-nav {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        .pagination-nav li {
+            margin: 0;
+        }
+
+        .pagination-nav .page-link {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 40px;
+            height: 40px;
+            padding: 0.5rem;
+            background: var(--white);
+            border: 1px solid var(--border-light);
+            color: var(--text-primary);
+            text-decoration: none;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .pagination-nav .page-link:hover {
+            background: var(--primary-light);
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateY(-1px);
+        }
+
+        .pagination-nav .page-item.active .page-link {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: var(--white);
+            font-weight: 600;
+        }
+
+        .pagination-nav .page-item.disabled .page-link {
+            background: var(--gray-100);
+            border-color: var(--border-light);
+            color: var(--text-muted);
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .pagination-nav .page-item.disabled .page-link:hover {
+            background: var(--gray-100);
+            border-color: var(--border-light);
+            color: var(--text-muted);
+            transform: none;
+        }
+
+        .page-size-selector {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+            color: var(--text-muted);
+        }
+
+        .page-size-selector select {
+            padding: 0.375rem 0.75rem;
+            border: 1px solid var(--border-light);
+            border-radius: 6px;
+            background: var(--white);
+            color: var(--text-primary);
+            font-size: 0.875rem;
+            cursor: pointer;
+        }
+
+        .page-size-selector select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+
+        /* Responsividade da paginação */
+        @media (max-width: 768px) {
+            .pagination-container {
+                flex-direction: column;
+                gap: 1rem;
+                text-align: center;
+            }
+
+            .pagination-nav .page-link {
+                min-width: 36px;
+                height: 36px;
+                font-size: 0.8rem;
+            }
+
+            .pagination-info {
+                order: 2;
+            }
+
+            .pagination-controls {
+                order: 1;
+                flex-direction: column;
+                gap: 1rem;
+                width: 100%;
+            }
+
+            .pagination-nav {
+                justify-content: center;
+                flex-wrap: wrap;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .pagination-nav .page-link {
+                min-width: 32px;
+                height: 32px;
+                padding: 0.25rem;
+            }
+
+            .pagination-nav .page-link i {
+                font-size: 0.75rem;
+            }
+        }
+
+        /* Loading state para paginação */
+        .pagination-loading {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
+        /* Estilos para números de página com ellipsis */
+        .pagination-ellipsis {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 40px;
+            height: 40px;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        /* Melhoria visual para o contador */
+        .table-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem;
+            background: var(--white);
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .table-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            font-size: 0.875rem;
+            color: var(--text-muted);
+        }
+
+        .table-info .info-item {
+            display: flex;
+            align-items: center;
+            gap: 0.375rem;
+        }
+
+        .table-info .info-item i {
+            color: var(--primary);
+        }
     </style>
 </head>
 
@@ -368,7 +637,7 @@ $headerComponent = HeaderComponent::create([
                         <i class="fas fa-eraser"></i>
                         Limpar Filtros
                     </button>
-                    <button class="btn-modern btn-secondary" onclick="window.location.reload()">
+                    <button class="btn-modern btn-secondary" onclick="recarregarDados()">
                         <i class="fas fa-sync-alt"></i>
                         Atualizar
                     </button>
@@ -399,7 +668,12 @@ $headerComponent = HeaderComponent::create([
                         }
                         ?>
                     </h3>
-                    <span class="table-info">Mostrando <span id="showingCount">0</span> registros</span>
+                    <div class="table-info">
+                        <div class="info-item">
+                            <i class="fas fa-list"></i>
+                            <span>Exibindo <span id="showingStart">0</span>-<span id="showingEnd">0</span> de <span id="totalRecords">0</span> registros</span>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="table-responsive p-2">
@@ -430,6 +704,28 @@ $headerComponent = HeaderComponent::create([
                             </tr>
                         </tbody>
                     </table>
+                </div>
+
+                <!-- Paginação -->
+                <div class="pagination-container" id="paginationContainer">
+                    <div class="pagination-info">
+                        <div class="page-size-selector">
+                            <span>Mostrar:</span>
+                            <select id="pageSize" onchange="alterarTamanhoPagina()">
+                                <option value="10">10</option>
+                                <option value="25">25</option>
+                                <option value="50">50</option>
+                                <option value="100">100</option>
+                            </select>
+                            <span>por página</span>
+                        </div>
+                    </div>
+
+                    <div class="pagination-controls">
+                        <ul class="pagination-nav" id="paginationNav">
+                            <!-- Controles de paginação serão inseridos aqui pelo JavaScript -->
+                        </ul>
+                    </div>
                 </div>
             </div>
         </div>
@@ -666,11 +962,18 @@ $headerComponent = HeaderComponent::create([
             once: true
         });
 
-        // Variáveis globais - INCLUINDO ESCOPO DE VISUALIZAÇÃO
+        // Variáveis globais - INCLUINDO PAGINAÇÃO
         let todosFuncionarios = [];
         let funcionariosFiltrados = [];
         let departamentosDisponiveis = [];
         let dropdownOpen = false;
+        
+        // Variáveis de paginação
+        let paginaAtual = 1;
+        let tamanhoPagina = 10;
+        let totalRegistros = 0;
+        let totalPaginas = 0;
+        let filtrosAtivos = {};
         
         // Configurações de permissão
         const escopoVisualizacao = <?php echo json_encode($escopoVisualizacao); ?>;
@@ -866,7 +1169,9 @@ $headerComponent = HeaderComponent::create([
                 const filterDepartamento = document.getElementById('filterDepartamento');
                 const filterCargo = document.getElementById('filterCargo');
                 
-                if (searchInput) searchInput.addEventListener('input', aplicarFiltros);
+                if (searchInput) {
+                    searchInput.addEventListener('input', debounce(aplicarFiltros, 500));
+                }
                 if (filterStatus) filterStatus.addEventListener('change', aplicarFiltros);
                 if (filterDepartamento) filterDepartamento.addEventListener('change', aplicarFiltros);
                 if (filterCargo) filterCargo.addEventListener('change', aplicarFiltros);
@@ -875,7 +1180,7 @@ $headerComponent = HeaderComponent::create([
             const formFuncionario = document.getElementById('formFuncionario');
             if (formFuncionario) formFuncionario.addEventListener('submit', salvarFuncionario);
 
-            // Carrega dados
+            // Carrega dados iniciais
             carregarFuncionarios();
             carregarDepartamentos();
         });
@@ -895,19 +1200,70 @@ $headerComponent = HeaderComponent::create([
             }
         }
 
-        // ===== FUNÇÕES DE DADOS =====
+        // ===== FUNÇÕES DE PAGINAÇÃO =====
         
-        // Carrega lista de funcionários - AJUSTADO PARA ESCOPO
-        function carregarFuncionarios() {
+        // Debounce para melhorar performance na busca
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        // Coleta filtros ativos
+        function coletarFiltros() {
+            const filtros = {};
+            
+            if (escopoVisualizacao !== 'PROPRIO') {
+                const searchInput = document.getElementById('searchInput');
+                const filterStatus = document.getElementById('filterStatus');
+                const filterDepartamento = document.getElementById('filterDepartamento');
+                const filterCargo = document.getElementById('filterCargo');
+                
+                if (searchInput && searchInput.value.trim()) {
+                    filtros.busca = searchInput.value.trim();
+                }
+                if (filterStatus && filterStatus.value) {
+                    filtros.status = filterStatus.value;
+                }
+                if (filterDepartamento && filterDepartamento.value) {
+                    filtros.departamento = filterDepartamento.value;
+                }
+                if (filterCargo && filterCargo.value) {
+                    filtros.cargo = filterCargo.value;
+                }
+            }
+            
+            return filtros;
+        }
+
+        // Carrega funcionários com paginação
+        function carregarFuncionarios(resetarPagina = true) {
+            if (resetarPagina) {
+                paginaAtual = 1;
+            }
+            
             showLoading();
             
-            // Parâmetros baseados no escopo
-            let params = {};
+            // Parâmetros baseados no escopo e filtros
+            let params = {
+                pagina: paginaAtual,
+                limite: tamanhoPagina,
+                ...coletarFiltros()
+            };
+            
             if (escopoVisualizacao === 'DEPARTAMENTO' && departamentoPermitido) {
                 params.departamento_filtro = departamentoPermitido;
             } else if (escopoVisualizacao === 'PROPRIO') {
                 params.proprio_id = usuarioLogadoId;
             }
+
+            console.log('📊 Carregando funcionários:', params);
 
             $.ajax({
                 url: '../api/funcionarios_listar.php',
@@ -918,25 +1274,191 @@ $headerComponent = HeaderComponent::create([
                     hideLoading();
                     
                     if (response.status === 'success') {
-                        todosFuncionarios = response.funcionarios;
-                        funcionariosFiltrados = [...todosFuncionarios];
-                        renderizarTabela();
+                        // Dados da paginação
+                        todosFuncionarios = response.funcionarios || [];
+                        totalRegistros = parseInt(response.total || 0);
+                        totalPaginas = Math.ceil(totalRegistros / tamanhoPagina);
                         
-                        console.log(`✅ Carregados ${todosFuncionarios.length} funcionários (escopo: ${escopoVisualizacao})`);
+                        // Renderizar
+                        renderizarTabela();
+                        renderizarPaginacao();
+                        atualizarInfoPaginacao();
+                        
+                        console.log(`✅ Carregados ${todosFuncionarios.length} funcionários (Página ${paginaAtual}/${totalPaginas}, Total: ${totalRegistros})`);
                     } else {
                         console.error('Erro ao carregar funcionários:', response);
-                        alert('Erro ao carregar dados: ' + (response.message || 'Erro desconhecido'));
+                        exibirErroTabela('Erro ao carregar dados: ' + (response.message || 'Erro desconhecido'));
                     }
                 },
                 error: function(xhr, status, error) {
                     hideLoading();
                     console.error('Erro:', error);
                     console.error('Response:', xhr.responseText);
-                    alert('Erro ao carregar funcionários: ' + error);
+                    exibirErroTabela('Erro ao carregar funcionários: ' + error);
                 }
             });
         }
 
+        // Exibe erro na tabela
+        function exibirErroTabela(mensagem) {
+            const tbody = document.getElementById('tableBody');
+            const totalColunas = escopoVisualizacao === 'TODOS' ? 9 : 8;
+            
+            if (tbody) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="${totalColunas}" class="text-center py-5">
+                            <div class="d-flex flex-column align-items-center">
+                                <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
+                                <p class="text-danger mb-0">${mensagem}</p>
+                                <button class="btn btn-outline-primary btn-sm mt-3" onclick="recarregarDados()">
+                                    <i class="fas fa-sync-alt"></i> Tentar Novamente
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }
+            
+            // Limpar paginação
+            const paginationNav = document.getElementById('paginationNav');
+            if (paginationNav) {
+                paginationNav.innerHTML = '';
+            }
+            
+            atualizarInfoPaginacao(true);
+        }
+
+        // Renderiza controles de paginação
+        function renderizarPaginacao() {
+            const container = document.getElementById('paginationNav');
+            if (!container) return;
+            
+            container.innerHTML = '';
+            
+            if (totalPaginas <= 1) {
+                return; // Não mostra paginação se há apenas 1 página
+            }
+            
+            // Primeira página
+            container.appendChild(criarBotaoPaginacao(1, 'first', '<i class="fas fa-angle-double-left"></i>', paginaAtual === 1));
+            
+            // Página anterior
+            container.appendChild(criarBotaoPaginacao(paginaAtual - 1, 'prev', '<i class="fas fa-angle-left"></i>', paginaAtual === 1));
+            
+            // Páginas numeradas com ellipsis
+            const paginas = calcularPaginasVisiveis();
+            paginas.forEach(item => {
+                if (item === '...') {
+                    const li = document.createElement('li');
+                    li.innerHTML = '<span class="pagination-ellipsis">...</span>';
+                    container.appendChild(li);
+                } else {
+                    container.appendChild(criarBotaoPaginacao(item, 'page', item.toString(), false, item === paginaAtual));
+                }
+            });
+            
+            // Próxima página
+            container.appendChild(criarBotaoPaginacao(paginaAtual + 1, 'next', '<i class="fas fa-angle-right"></i>', paginaAtual === totalPaginas));
+            
+            // Última página
+            container.appendChild(criarBotaoPaginacao(totalPaginas, 'last', '<i class="fas fa-angle-double-right"></i>', paginaAtual === totalPaginas));
+        }
+
+        // Cria botão de paginação
+        function criarBotaoPaginacao(pagina, tipo, texto, desabilitado = false, ativo = false) {
+            const li = document.createElement('li');
+            li.className = `page-item${ativo ? ' active' : ''}${desabilitado ? ' disabled' : ''}`;
+            
+            const a = document.createElement('a');
+            a.className = 'page-link';
+            a.innerHTML = texto;
+            a.href = '#';
+            
+            if (!desabilitado) {
+                a.onclick = (e) => {
+                    e.preventDefault();
+                    if (pagina !== paginaAtual) {
+                        irParaPagina(pagina);
+                    }
+                };
+            }
+            
+            li.appendChild(a);
+            return li;
+        }
+
+        // Calcula páginas visíveis (com ellipsis)
+        function calcularPaginasVisiveis() {
+            const delta = 2; // Quantas páginas mostrar antes/depois da atual
+            const range = [];
+            const rangeWithDots = [];
+            
+            for (let i = Math.max(2, paginaAtual - delta); i <= Math.min(totalPaginas - 1, paginaAtual + delta); i++) {
+                range.push(i);
+            }
+            
+            if (paginaAtual - delta > 2) {
+                rangeWithDots.push(1, '...');
+            } else {
+                rangeWithDots.push(1);
+            }
+            
+            rangeWithDots.push(...range);
+            
+            if (paginaAtual + delta < totalPaginas - 1) {
+                rangeWithDots.push('...', totalPaginas);
+            } else if (totalPaginas > 1) {
+                rangeWithDots.push(totalPaginas);
+            }
+            
+            return [...new Set(rangeWithDots)]; // Remove duplicatas
+        }
+
+        // Navega para página específica
+        function irParaPagina(pagina) {
+            if (pagina < 1 || pagina > totalPaginas || pagina === paginaAtual) {
+                return;
+            }
+            
+            paginaAtual = pagina;
+            carregarFuncionarios(false);
+        }
+
+        // Altera tamanho da página
+        function alterarTamanhoPagina() {
+            const select = document.getElementById('pageSize');
+            const novoTamanho = parseInt(select.value);
+            
+            if (novoTamanho !== tamanhoPagina) {
+                tamanhoPagina = novoTamanho;
+                carregarFuncionarios(true); // Reseta para página 1
+            }
+        }
+
+        // Atualiza informações da paginação
+        function atualizarInfoPaginacao(erro = false) {
+            const showingStart = document.getElementById('showingStart');
+            const showingEnd = document.getElementById('showingEnd');
+            const totalRecordsEl = document.getElementById('totalRecords');
+            
+            if (erro || totalRegistros === 0) {
+                if (showingStart) showingStart.textContent = '0';
+                if (showingEnd) showingEnd.textContent = '0';
+                if (totalRecordsEl) totalRecordsEl.textContent = '0';
+                return;
+            }
+            
+            const inicio = ((paginaAtual - 1) * tamanhoPagina) + 1;
+            const fim = Math.min(paginaAtual * tamanhoPagina, totalRegistros);
+            
+            if (showingStart) showingStart.textContent = inicio.toString();
+            if (showingEnd) showingEnd.textContent = fim.toString();
+            if (totalRecordsEl) totalRecordsEl.textContent = totalRegistros.toString();
+        }
+
+        // ===== FUNÇÕES DE DADOS =====
+        
         // Carrega departamentos
         function carregarDepartamentos() {
             $.ajax({
@@ -998,7 +1520,7 @@ $headerComponent = HeaderComponent::create([
             }
         }
 
-        // Renderiza tabela - AJUSTADO PARA PERMISSÕES
+        // Renderiza tabela - AJUSTADO PARA PAGINAÇÃO
         function renderizarTabela() {
             const tbody = document.getElementById('tableBody');
             const totalColunas = escopoVisualizacao === 'TODOS' ? 9 : 8;
@@ -1010,22 +1532,23 @@ $headerComponent = HeaderComponent::create([
             
             tbody.innerHTML = '';
             
-            if (funcionariosFiltrados.length === 0) {
+            if (todosFuncionarios.length === 0) {
+                const mensagem = totalRegistros === 0 ? 'Nenhum funcionário encontrado' : 'Nenhum resultado para esta página';
                 tbody.innerHTML = `
                     <tr>
                         <td colspan="${totalColunas}" class="text-center py-5">
                             <div class="d-flex flex-column align-items-center">
                                 <i class="fas fa-inbox fa-3x text-muted mb-3" style="opacity: 0.3;"></i>
-                                <p class="text-muted mb-0">Nenhum funcionário encontrado</p>
+                                <p class="text-muted mb-0">${mensagem}</p>
+                                ${totalRegistros > 0 ? '<button class="btn btn-outline-primary btn-sm mt-3" onclick="irParaPagina(1)"><i class="fas fa-arrow-left"></i> Voltar à primeira página</button>' : ''}
                             </div>
                         </td>
                     </tr>
                 `;
-                document.getElementById('showingCount').textContent = '0';
                 return;
             }
             
-            funcionariosFiltrados.forEach(funcionario => {
+            todosFuncionarios.forEach(funcionario => {
                 const statusBadge = funcionario.ativo == 1
                     ? '<span class="status-badge active"><i class="fas fa-check-circle"></i> Ativo</span>'
                     : '<span class="status-badge inactive"><i class="fas fa-times-circle"></i> Inativo</span>';
@@ -1124,42 +1647,15 @@ $headerComponent = HeaderComponent::create([
                 row.innerHTML = rowHtml;
                 tbody.appendChild(row);
             });
-            
-            const showingCount = document.getElementById('showingCount');
-            if (showingCount) {
-                showingCount.textContent = funcionariosFiltrados.length;
-            }
         }
 
-        // Aplica filtros
+        // Aplica filtros - AGORA COM PAGINAÇÃO
         function aplicarFiltros() {
-            const searchInput = document.getElementById('searchInput');
-            const filterStatus = document.getElementById('filterStatus');
-            const filterDepartamento = document.getElementById('filterDepartamento');
-            const filterCargo = document.getElementById('filterCargo');
-            
-            const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
-            const filterStatusValue = filterStatus ? filterStatus.value : '';
-            const filterDepartamentoValue = filterDepartamento ? filterDepartamento.value : '';
-            const filterCargoValue = filterCargo ? filterCargo.value : '';
-            
-            funcionariosFiltrados = todosFuncionarios.filter(funcionario => {
-                const matchSearch = !searchTerm || 
-                    funcionario.nome.toLowerCase().includes(searchTerm) ||
-                    funcionario.email.toLowerCase().includes(searchTerm) ||
-                    (funcionario.cargo && funcionario.cargo.toLowerCase().includes(searchTerm));
-                
-                const matchStatus = !filterStatusValue || funcionario.ativo == filterStatusValue;
-                const matchDepartamento = !filterDepartamentoValue || funcionario.departamento_id == filterDepartamentoValue;
-                const matchCargo = !filterCargoValue || funcionario.cargo === filterCargoValue;
-                
-                return matchSearch && matchStatus && matchDepartamento && matchCargo;
-            });
-            
-            renderizarTabela();
+            console.log('🔍 Aplicando filtros...');
+            carregarFuncionarios(true); // Reseta para página 1 quando filtrar
         }
 
-        // Limpa filtros
+        // Limpa filtros - AJUSTADO PARA PAGINAÇÃO
         function limparFiltros() {
             const searchInput = document.getElementById('searchInput');
             const filterStatus = document.getElementById('filterStatus');
@@ -1171,8 +1667,12 @@ $headerComponent = HeaderComponent::create([
             if (filterDepartamento) filterDepartamento.value = '';
             if (filterCargo) filterCargo.value = '';
             
-            funcionariosFiltrados = [...todosFuncionarios];
-            renderizarTabela();
+            carregarFuncionarios(true); // Recarrega dados sem filtros
+        }
+
+        // Recarrega dados
+        function recarregarDados() {
+            carregarFuncionarios(false); // Mantém página atual
         }
 
         // ===== FUNÇÕES DOS MODAIS =====
@@ -1535,7 +2035,7 @@ $headerComponent = HeaderComponent::create([
                             alert('Funcionário atualizado com sucesso!');
                         }
                         fecharModal();
-                        carregarFuncionarios();
+                        carregarFuncionarios(false); // Mantém página atual
                     } else {
                         alert('Erro: ' + response.message);
                     }
@@ -1581,7 +2081,7 @@ $headerComponent = HeaderComponent::create([
                     
                     if (response.status === 'success') {
                         alert(`Funcionário ${acao === 'desativar' ? 'desativado' : 'ativado'} com sucesso!`);
-                        carregarFuncionarios();
+                        carregarFuncionarios(false); // Mantém página atual
                     } else {
                         alert('Erro: ' + response.message);
                     }
