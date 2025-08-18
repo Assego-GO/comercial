@@ -1,5 +1,5 @@
-
 <?php
+
 /**
  * Página de Serviços Financeiros - Sistema ASSEGO
  * pages/financeiro.php
@@ -48,7 +48,7 @@ error_log("É Diretor: " . ($auth->isDiretor() ? 'SIM' : 'NÃO'));
 if (isset($usuarioLogado['departamento_id'])) {
     $deptId = $usuarioLogado['departamento_id'];
     $departamentoUsuario = $deptId;
-    
+
     if ($deptId == 5) { // Financeiro
         $temPermissaoFinanceiro = true;
         $isFinanceiro = true;
@@ -83,7 +83,7 @@ if (!$temPermissaoFinanceiro) {
 if ($temPermissaoFinanceiro) {
     try {
         $db = Database::getInstance(DB_NAME_CADASTRO)->getConnection();
-        
+
 
         // 1. Total de associados ativos (igual ao dashboard)
         $sql = "SELECT COUNT(DISTINCT a.id) as total 
@@ -92,9 +92,7 @@ if ($temPermissaoFinanceiro) {
         $stmt = $db->prepare($sql);
         $stmt->execute();
         $totalAssociadosAtivos = $stmt->fetch(PDO::FETCH_ASSOC)['total'] ?? 0;
-        
-        error_log("Total associados ativos: " . $totalAssociadosAtivos);
-        
+
         // 2. Arrecadação do mês atual - CORRIGIDO para buscar dos serviços
         $sql = "SELECT COALESCE(SUM(sa.valor_aplicado), 0) as valor_mes 
                 FROM Servicos_Associado sa
@@ -105,10 +103,10 @@ if ($temPermissaoFinanceiro) {
         $stmt->execute();
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
         $arrecadacaoMes = floatval($result['valor_mes'] ?? 0);
-        
+
 
         error_log("Arrecadação mensal total: R$ " . $arrecadacaoMes);
-        
+
         // 3. Pagamentos recebidos hoje (se existir tabela de pagamentos)
         $pagamentosHoje = 0;
         try {
@@ -124,7 +122,7 @@ if ($temPermissaoFinanceiro) {
             error_log("Tabela Pagamentos não encontrada ou erro: " . $e->getMessage());
             $pagamentosHoje = 0;
         }
-        
+
         // 4. Associados inadimplentes - CORRIGIDO
         $sql = "SELECT COUNT(DISTINCT a.id) as inadimplentes 
                 FROM Associados a
@@ -138,9 +136,9 @@ if ($temPermissaoFinanceiro) {
         $stmt = $db->prepare($sql);
         $stmt->execute();
         $associadosInadimplentes = $stmt->fetch(PDO::FETCH_ASSOC)['inadimplentes'] ?? 0;
-        
+
         error_log("Associados inadimplentes: " . $associadosInadimplentes);
-        
+
         // OPCIONAL: Se quiser calcular a arrecadação REAL do mês (pagamentos efetivos)
         // Isso seria diferente da arrecadação POTENCIAL calculada acima
         try {
@@ -152,7 +150,7 @@ if ($temPermissaoFinanceiro) {
             $stmt = $db->prepare($sql);
             $stmt->execute();
             $arrecadacaoMesReal = $stmt->fetch(PDO::FETCH_ASSOC)['valor_mes_real'] ?? 0;
-            
+
             // Se tiver pagamentos reais, usa esse valor
             if ($arrecadacaoMesReal > 0) {
                 error_log("Usando arrecadação real (pagamentos): R$ " . $arrecadacaoMesReal);
@@ -163,7 +161,6 @@ if ($temPermissaoFinanceiro) {
             // Tabela de pagamentos pode não existir
             error_log("Não foi possível buscar pagamentos reais: " . $e->getMessage());
         }
-
     } catch (Exception $e) {
         error_log("Erro ao buscar estatísticas financeiras: " . $e->getMessage());
         $totalAssociadosAtivos = 0;
@@ -223,7 +220,7 @@ $headerComponent = HeaderComponent::create([
 
     <!-- CSS do Header Component -->
     <?php $headerComponent->renderCSS(); ?>
-    
+
     <style>
         /* Variáveis CSS */
         :root {
@@ -322,10 +319,21 @@ $headerComponent = HeaderComponent::create([
             box-shadow: 0 8px 25px rgba(40, 167, 69, 0.15);
         }
 
-        .stat-card.primary { border-left-color: var(--primary); }
-        .stat-card.success { border-left-color: var(--success); }
-        .stat-card.warning { border-left-color: var(--warning); }
-        .stat-card.danger { border-left-color: var(--danger); }
+        .stat-card.primary {
+            border-left-color: var(--primary);
+        }
+
+        .stat-card.success {
+            border-left-color: var(--success);
+        }
+
+        .stat-card.warning {
+            border-left-color: var(--warning);
+        }
+
+        .stat-card.danger {
+            border-left-color: var(--danger);
+        }
 
         .stat-header {
             display: flex;
@@ -357,9 +365,17 @@ $headerComponent = HeaderComponent::create([
             gap: 0.25rem;
         }
 
-        .stat-change.positive { color: var(--success); }
-        .stat-change.negative { color: var(--danger); }
-        .stat-change.neutral { color: var(--info); }
+        .stat-change.positive {
+            color: var(--success);
+        }
+
+        .stat-change.negative {
+            color: var(--danger);
+        }
+
+        .stat-change.neutral {
+            color: var(--info);
+        }
 
         .stat-icon {
             width: 80px;
@@ -372,10 +388,25 @@ $headerComponent = HeaderComponent::create([
             opacity: 0.1;
         }
 
-        .stat-icon.primary { background: var(--primary); color: var(--primary); }
-        .stat-icon.success { background: var(--success); color: var(--success); }
-        .stat-icon.warning { background: var(--warning); color: var(--warning); }
-        .stat-icon.danger { background: var(--danger); color: var(--danger); }
+        .stat-icon.primary {
+            background: var(--primary);
+            color: var(--primary);
+        }
+
+        .stat-icon.success {
+            background: var(--success);
+            color: var(--success);
+        }
+
+        .stat-icon.warning {
+            background: var(--warning);
+            color: var(--warning);
+        }
+
+        .stat-icon.danger {
+            background: var(--danger);
+            color: var(--danger);
+        }
 
         /* Seções de Serviços */
         .services-container {
@@ -674,8 +705,13 @@ $headerComponent = HeaderComponent::create([
         }
 
         @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
         }
 
         .loading-overlay {
@@ -765,12 +801,12 @@ $headerComponent = HeaderComponent::create([
             .services-container {
                 grid-template-columns: 1fr;
             }
-            
+
             .busca-form {
                 flex-direction: column;
                 align-items: stretch;
             }
-            
+
             .dados-grid {
                 grid-template-columns: 1fr;
             }
@@ -790,260 +826,296 @@ $headerComponent = HeaderComponent::create([
         <!-- Content Area -->
         <div class="content-area">
             <?php if (!$temPermissaoFinanceiro): ?>
-            <!-- Sem Permissão -->
-            <div class="alert alert-danger" data-aos="fade-up">
-                <h4><i class="fas fa-ban me-2"></i>Acesso Negado aos Serviços Financeiros</h4>
-                <p class="mb-3"><?php echo htmlspecialchars($motivoNegacao); ?></p>
-                
-                <a href="../pages/dashboard.php" class="btn btn-secondary">
-                    <i class="fas fa-arrow-left me-1"></i>
-                    Voltar ao Dashboard
-                </a>
-            </div>
-            
-            <?php else: ?>
-            <!-- Com Permissão - Conteúdo Normal -->
-            
-            <!-- Page Header -->
-            <div class="page-header" data-aos="fade-right">
-                <h1 class="page-title">
-                    <div class="page-title-icon">
-                        <i class="fas fa-dollar-sign"></i>
-                    </div>
-                    Serviços Financeiros
-                    <?php if ($isFinanceiro): ?>
-                        <small class="text-muted">- Setor Financeiro</small>
-                    <?php elseif ($isPresidencia): ?>
-                        <small class="text-muted">- Presidência</small>
-                    <?php endif; ?>
-                </h1>
-                <p class="page-subtitle">
-                    Gerencie mensalidades, inadimplência, relatórios financeiros e arrecadação da ASSEGO
-                </p>
-            </div>
+                <!-- Sem Permissão -->
+                <div class="alert alert-danger" data-aos="fade-up">
+                    <h4><i class="fas fa-ban me-2"></i>Acesso Negado aos Serviços Financeiros</h4>
+                    <p class="mb-3"><?php echo htmlspecialchars($motivoNegacao); ?></p>
 
-            <!-- Estatísticas Financeiras -->
-            <div class="stats-grid" data-aos="fade-up">
-                <div class="stat-card primary">
-                    <div class="stat-header">
-                        <div>
-                            <div class="stat-value"><?php echo number_format($totalAssociadosAtivos, 0, ',', '.'); ?></div>
-                            <div class="stat-label">Associados Ativos</div>
-                            <div class="stat-change neutral">
-                                <i class="fas fa-users"></i>
-                                Base de contribuintes
-                            </div>
-                        </div>
-                        <div class="stat-icon primary">
-                            <i class="fas fa-users"></i>
-                        </div>
-                    </div>
+                    <a href="../pages/dashboard.php" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left me-1"></i>
+                        Voltar ao Dashboard
+                    </a>
                 </div>
 
-                <div class="stat-card success">
-                    <div class="stat-header">
-                        <div>
-                            <div class="stat-value">R$ <?php echo number_format($arrecadacaoMes, 2, ',', '.'); ?></div>
-                            <div class="stat-label">Arrecadação Potencial do Mês</div>
-                            <div class="stat-change positive">
-                                <i class="fas fa-arrow-up"></i>
-                                Receita atual
-                            </div>
-                        </div>
-                        <div class="stat-icon success">
+            <?php else: ?>
+                <!-- Com Permissão - Conteúdo Normal -->
+
+                <!-- Page Header -->
+                <div class="page-header" data-aos="fade-right">
+                    <h1 class="page-title">
+                        <div class="page-title-icon">
                             <i class="fas fa-dollar-sign"></i>
                         </div>
-                    </div>
-                </div>
-
-                <div class="stat-card warning">
-                    <div class="stat-header">
-                        <div>
-                            <div class="stat-value"><?php echo number_format($pagamentosHoje, 0, ',', '.'); ?></div>
-                            <div class="stat-label">Pagamentos Hoje</div>
-                            <div class="stat-change neutral">
-                                <i class="fas fa-calendar-day"></i>
-                                Recebimentos diários
-                            </div>
-                        </div>
-                        <div class="stat-icon warning">
-                            <i class="fas fa-credit-card"></i>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="stat-card danger">
-                    <div class="stat-header">
-                        <div>
-                            <div class="stat-value"><?php echo number_format($associadosInadimplentes, 0, ',', '.'); ?></div>
-                            <div class="stat-label">Associados em Débito</div>
-                            <div class="stat-change negative">
-                                <i class="fas fa-exclamation-triangle"></i>
-                                Requer atenção
-                            </div>
-                        </div>
-                        <div class="stat-icon danger">
-                            <i class="fas fa-exclamation-triangle"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Alert informativo -->
-            <div class="alert-custom alert-info-custom" data-aos="fade-up">
-                <div>
-                    <i class="fas fa-<?php echo $isFinanceiro ? 'dollar-sign' : 'crown'; ?>"></i>
-                </div>
-                <div>
-                    <h6 class="mb-1">
+                        Serviços Financeiros
                         <?php if ($isFinanceiro): ?>
-                            <i class="fas fa-dollar-sign text-success"></i> Setor Financeiro
+                            <small class="text-muted">- Setor Financeiro</small>
                         <?php elseif ($isPresidencia): ?>
-                            <i class="fas fa-crown text-warning"></i> Presidência
+                            <small class="text-muted">- Presidência</small>
                         <?php endif; ?>
-                    </h6>
-                    <small>
-                        Você tem acesso completo aos serviços financeiros. Sistema preparado para múltiplos RGs de diferentes corporações.
-                    </small>
+                    </h1>
+                    <p class="page-subtitle">
+                        Gerencie mensalidades, inadimplência, relatórios financeiros e arrecadação da ASSEGO
+                    </p>
                 </div>
-            </div>
 
-            <!-- Seções de Serviços -->
-            <div class="services-container" data-aos="fade-up" data-aos-delay="200">
-                
-                <!-- Seção de Gestão de Inadimplência -->
-                <div class="service-section">
-                    <div class="service-header">
-                        <h3>
-                            <i class="fas fa-exclamation-triangle"></i>
-                            Gestão de Inadimplência
-                        </h3>
-                    </div>
-                    <div class="service-content" style="position: relative;">
-                        <p class="text-muted mb-3">
-                            Consulte associados em débito. Sistema preparado para múltiplos RGs de diferentes corporações (PM, BM, PC, etc).
-                        </p>
-                        
-                        <form class="busca-form" onsubmit="buscarAssociadoPorRG(event)">
-                            <div class="busca-input-group">
-                                <label class="form-label" for="rgBuscaFinanceiro">
-                                    <i class="fas fa-id-card me-1"></i>
-                                    RG Militar ou Nome
-                                </label>
-                                <input type="text" class="form-control" id="rgBuscaFinanceiro" 
-                                       placeholder="Digite o RG militar ou nome..." required>
-                                <small class="text-muted">
-                                    Se houver múltiplos registros com o mesmo RG, você poderá escolher a corporação correta
-                                </small>
-                            </div>
+                <!-- Estatísticas Financeiras -->
+                <div class="stats-grid" data-aos="fade-up">
+                    <div class="stat-card primary">
+                        <div class="stat-header">
                             <div>
-                                <button type="submit" class="btn btn-primary" id="btnBuscarFinanceiro">
-                                    <i class="fas fa-search me-2"></i>
-                                    Buscar Associado
-                                </button>
+                                <div class="stat-value"><?php echo number_format($totalAssociadosAtivos, 0, ',', '.'); ?></div>
+                                <div class="stat-label">Associados Ativos</div>
+                                <div class="stat-change neutral">
+                                    <i class="fas fa-users"></i>
+                                    Base de contribuintes
+                                </div>
                             </div>
-                            <div>
-                                <button type="button" class="btn btn-secondary" onclick="limparBuscaFinanceiro()">
-                                    <i class="fas fa-eraser me-2"></i>
-                                    Limpar
-                                </button>
+                            <div class="stat-icon primary">
+                                <i class="fas fa-users"></i>
                             </div>
-                        </form>
-
-                        <!-- Alert para mensagens de busca -->
-                        <div id="alertBuscaFinanceiro" class="alert" style="display: none;">
-                            <i class="fas fa-info-circle me-2"></i>
-                            <span id="alertBuscaFinanceiroText"></span>
                         </div>
+                    </div>
 
-                        <!-- Container para dados financeiros do associado -->
-                        <div id="dadosFinanceirosContainer" class="dados-financeiros-container fade-in" style="display: none;">
-                            <h6 class="mb-3">
-                                <i class="fas fa-dollar-sign me-2" style="color: var(--primary);"></i>
-                                Situação Financeira do Associado
-                            </h6>
-                            
-                            <!-- Identificação Militar -->
-                            <div id="identificacaoMilitar" class="identificacao-militar" style="display: none;">
-                                <h6>
-                                    <i class="fas fa-shield-alt me-2"></i>
-                                    Identificação Militar
+                    <div class="stat-card success">
+                        <div class="stat-header">
+                            <div>
+                                <div class="stat-value">R$ <?php echo number_format($arrecadacaoMes, 2, ',', '.'); ?></div>
+                                <div class="stat-label">Arrecadação Potencial do Mês</div>
+                                <div class="stat-change positive">
+                                    <i class="fas fa-arrow-up"></i>
+                                    Receita atual
+                                </div>
+                            </div>
+                            <div class="stat-icon success">
+                                <i class="fas fa-dollar-sign"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card warning">
+                        <div class="stat-header">
+                            <div>
+                                <div class="stat-value"><?php echo number_format($pagamentosHoje, 0, ',', '.'); ?></div>
+                                <div class="stat-label">Pagamentos Hoje</div>
+                                <div class="stat-change neutral">
+                                    <i class="fas fa-calendar-day"></i>
+                                    Recebimentos diários
+                                </div>
+                            </div>
+                            <div class="stat-icon warning">
+                                <i class="fas fa-credit-card"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card danger">
+                        <div class="stat-header">
+                            <div>
+                                <div class="stat-value"><?php echo number_format($associadosInadimplentes, 0, ',', '.'); ?></div>
+                                <div class="stat-label">Associados em Débito</div>
+                                <div class="stat-change negative">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    Requer atenção
+                                </div>
+                            </div>
+                            <div class="stat-icon danger">
+                                <i class="fas fa-exclamation-triangle"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Alert informativo -->
+                <div class="alert-custom alert-info-custom" data-aos="fade-up">
+                    <div>
+                        <i class="fas fa-<?php echo $isFinanceiro ? 'dollar-sign' : 'crown'; ?>"></i>
+                    </div>
+                    <div>
+                        <h6 class="mb-1">
+                            <?php if ($isFinanceiro): ?>
+                                <i class="fas fa-dollar-sign text-success"></i> Setor Financeiro
+                            <?php elseif ($isPresidencia): ?>
+                                <i class="fas fa-crown text-warning"></i> Presidência
+                            <?php endif; ?>
+                        </h6>
+                        <small>
+                            Você tem acesso completo aos serviços financeiros. Sistema preparado para múltiplos RGs de diferentes corporações.
+                        </small>
+                    </div>
+                </div>
+
+                <!-- Seções de Serviços -->
+                <div class="services-container" data-aos="fade-up" data-aos-delay="200">
+
+                    <!-- Seção de Gestão de Inadimplência -->
+                    <div class="service-section">
+                        <div class="service-header">
+                            <h3>
+                                <i class="fas fa-exclamation-triangle"></i>
+                                Gestão de Inadimplência
+                            </h3>
+                        </div>
+                        <div class="service-content" style="position: relative;">
+                            <p class="text-muted mb-3">
+                                Consulte associados em débito. Sistema preparado para múltiplos RGs de diferentes corporações (PM, BM, PC, etc).
+                            </p>
+
+                            <form class="busca-form" onsubmit="buscarAssociadoPorRG(event)">
+                                <div class="busca-input-group">
+                                    <label class="form-label" for="rgBuscaFinanceiro">
+                                        <i class="fas fa-id-card me-1"></i>
+                                        RG Militar ou Nome
+                                    </label>
+                                    <input type="text" class="form-control" id="rgBuscaFinanceiro"
+                                        placeholder="Digite o RG militar ou nome..." required>
+                                    <small class="text-muted">
+                                        Se houver múltiplos registros com o mesmo RG, você poderá escolher a corporação correta
+                                    </small>
+                                </div>
+                                <div>
+                                    <button type="submit" class="btn btn-primary" id="btnBuscarFinanceiro">
+                                        <i class="fas fa-search me-2"></i>
+                                        Buscar Associado
+                                    </button>
+                                </div>
+                                <div>
+                                    <button type="button" class="btn btn-secondary" onclick="limparBuscaFinanceiro()">
+                                        <i class="fas fa-eraser me-2"></i>
+                                        Limpar
+                                    </button>
+                                </div>
+                            </form>
+
+                            <!-- Alert para mensagens de busca -->
+                            <div id="alertBuscaFinanceiro" class="alert" style="display: none;">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <span id="alertBuscaFinanceiroText"></span>
+                            </div>
+
+                            <!-- Container para dados financeiros do associado -->
+                            <div id="dadosFinanceirosContainer" class="dados-financeiros-container fade-in" style="display: none;">
+                                <h6 class="mb-3">
+                                    <i class="fas fa-dollar-sign me-2" style="color: var(--primary);"></i>
+                                    Situação Financeira do Associado
                                 </h6>
-                                <div class="militar-info-grid" id="militarInfoGrid">
-                                    <!-- Dados militares serão inseridos aqui -->
+
+                                <!-- Identificação Militar -->
+                                <div id="identificacaoMilitar" class="identificacao-militar" style="display: none;">
+                                    <h6>
+                                        <i class="fas fa-shield-alt me-2"></i>
+                                        Identificação Militar
+                                    </h6>
+                                    <div class="militar-info-grid" id="militarInfoGrid">
+                                        <!-- Dados militares serão inseridos aqui -->
+                                    </div>
+                                </div>
+
+                                <div class="dados-grid" id="dadosFinanceirosGrid">
+                                    <!-- Dados serão inseridos aqui dinamicamente -->
                                 </div>
                             </div>
-                            
-                            <div class="dados-grid" id="dadosFinanceirosGrid">
-                                <!-- Dados serão inseridos aqui dinamicamente -->
+
+                            <!-- Loading overlay -->
+                            <div id="loadingBuscaFinanceiro" class="loading-overlay" style="display: none;">
+                                <div class="loading-spinner mb-3"></div>
+                                <p class="text-muted">Consultando situação financeira...</p>
                             </div>
                         </div>
+                    </div>
 
-                        <!-- Loading overlay -->
-                        <div id="loadingBuscaFinanceiro" class="loading-overlay" style="display: none;">
-                            <div class="loading-spinner mb-3"></div>
-                            <p class="text-muted">Consultando situação financeira...</p>
+                    <!-- Seção de Relatórios e Gestão -->
+                    <div class="service-section">
+                        <div class="service-header">
+                            <h3>
+                                <i class="fas fa-chart-line"></i>
+                                Relatórios Financeiros
+                            </h3>
+                        </div>
+                        <div class="service-content">
+                            <p class="text-muted mb-4">
+                                Acesse relatórios de arrecadação, inadimplência e estatísticas financeiras.
+                            </p>
+
+
+
+
+                            <script>
+                                // ===== FUNÇÃO PARA GESTÃO DE PECÚLIO =====
+                                // Adicionar esta função junto com as outras funções de relatórios (após linha 890)
+
+
+
+
+                                // Gestão de Pecúlio
+                                function gerenciarPeculio() {
+                                    notifications.show('Carregando gestão de pecúlio...', 'info');
+                                    setTimeout(() => {
+                                        window.location.href = '../pages/gestao_peculio.php';
+                                    }, 1000);
+                                }
+                            </script>
+
+                            <?php
+                            // ===== CÓDIGO COMPLETO PARA INSERIR =====
+                            // Aqui está a seção completa atualizada da div financeiro-options:
+                            ?>
+
+
+
+                            <div class="financeiro-options">
+                                <div class="financeiro-option" onclick="relatorioArrecadacao()">
+                                    <div class="financeiro-option-icon">
+                                        <i class="fas fa-chart-bar"></i>
+                                    </div>
+                                    <h5>Relatório de Arrecadação</h5>
+                                    <p>Visualize a evolução da arrecadação mensal e anual</p>
+                                </div>
+
+
+
+                                <div class="financeiro-option" onclick="listarInadimplentes()">
+                                    <div class="financeiro-option-icon">
+                                        <i class="fas fa-list-ul"></i>
+                                    </div>
+                                    <h5>Lista de Inadimplentes</h5>
+                                    <p>Consulte e gerencie associados com pendências financeiras</p>
+                                </div>
+
+                                <div class="financeiro-option" onclick="gerarRecorrencia()">
+                                    <div class="financeiro-option-icon">
+                                        <i class="fas fa-file-download"></i>
+                                    </div>
+                                    <h5>Optantes NeoConsig</h5>
+                                    <p>Gere arquivos TXT para inclusões, cancelamentos e alterações</p>
+                                </div>
+
+                                <div class="financeiro-option" onclick="extratoFinanceiro()">
+                                    <div class="financeiro-option-icon">
+                                        <i class="fas fa-file-invoice-dollar"></i>
+                                    </div>
+                                    <h5>Extrato Financeiro</h5>
+                                    <p>Acompanhe entradas, saídas e saldo atual da associação</p>
+                                </div>
+
+                                <div class="financeiro-option" onclick="gerenciarPeculio()">
+                                    <div class="financeiro-option-icon">
+                                        <i class="fas fa-piggy-bank"></i>
+                                    </div>
+                                    <h5>Gestão de Pecúlio</h5>
+                                    <p>Gerencie fundos de pecúlio, reservas e benefícios especiais</p>
+                                </div>
+
+                                <div class="financeiro-option" onclick="estatisticasFinanceiras()">
+                                    <div class="financeiro-option-icon">
+                                        <i class="fas fa-calculator"></i>
+                                    </div>
+                                    <h5>Estatísticas Financeiras</h5>
+                                    <p>Dashboard completo com indicadores financeiros</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
-
-                <!-- Seção de Relatórios e Gestão -->
-                <div class="service-section">
-                    <div class="service-header">
-                        <h3>
-                            <i class="fas fa-chart-line"></i>
-                            Relatórios Financeiros
-                        </h3>
-                    </div>
-                    <div class="service-content">
-                        <p class="text-muted mb-4">
-                            Acesse relatórios de arrecadação, inadimplência e estatísticas financeiras.
-                        </p>
-                        
-                        <div class="financeiro-options">
-                            <div class="financeiro-option" onclick="relatorioArrecadacao()">
-                                <div class="financeiro-option-icon">
-                                    <i class="fas fa-chart-bar"></i>
-                                </div>
-                                <h5>Relatório de Arrecadação</h5>
-                                <p>Visualize a evolução da arrecadação mensal e anual</p>
-                            </div>
-
-                            <div class="financeiro-option" onclick="listarInadimplentes()">
-                                <div class="financeiro-option-icon">
-                                    <i class="fas fa-list-ul"></i>
-                                </div>
-                                <h5>Lista de Inadimplentes</h5>
-                                <p>Consulte e gerencie associados com pendências financeiras</p>
-                            </div>
-
-                            <div class="financeiro-option" onclick="gerarRecorrencia()">
-                                <div class="financeiro-option-icon">
-                                    <i class="fas fa-file-download"></i>
-                                </div>
-                                <h5>Optantes NeoConsig</h5>
-                                <p>Gere arquivos TXT para inclusões, cancelamentos e alterações</p>
-                            </div>
-
-                            <div class="financeiro-option" onclick="extratoFinanceiro()">
-                                <div class="financeiro-option-icon">
-                                    <i class="fas fa-file-invoice-dollar"></i>
-                                </div>
-                                <h5>Extrato Financeiro</h5>
-                                <p>Acompanhe entradas, saídas e saldo atual da associação</p>
-                            </div>
-
-                            <div class="financeiro-option" onclick="estatisticasFinanceiras()">
-                                <div class="financeiro-option-icon">
-                                    <i class="fas fa-calculator"></i>
-                                </div>
-                                <h5>Estatísticas Financeiras</h5>
-                                <p>Dashboard completo com indicadores financeiros</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
 
             <?php endif; ?>
         </div>
@@ -1063,7 +1135,7 @@ $headerComponent = HeaderComponent::create([
                 <div class="modal-body">
                     <div class="alert alert-info">
                         <i class="fas fa-info-circle me-2"></i>
-                        <strong>Atenção:</strong> Foram encontrados múltiplos associados com o mesmo RG em diferentes corporações. 
+                        <strong>Atenção:</strong> Foram encontrados múltiplos associados com o mesmo RG em diferentes corporações.
                         Selecione o associado correto para visualizar os dados financeiros.
                     </div>
                     <div id="listaAssociadosSelecao">
@@ -1097,12 +1169,12 @@ $headerComponent = HeaderComponent::create([
             constructor() {
                 this.container = document.getElementById('toastContainer');
             }
-            
+
             show(message, type = 'success', duration = 5000) {
                 const toast = document.createElement('div');
                 toast.className = `toast align-items-center text-white bg-${type} border-0`;
                 toast.setAttribute('role', 'alert');
-                
+
                 toast.innerHTML = `
                     <div class="d-flex">
                         <div class="toast-body">
@@ -1112,16 +1184,18 @@ $headerComponent = HeaderComponent::create([
                         <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
                     </div>
                 `;
-                
+
                 this.container.appendChild(toast);
-                const bsToast = new bootstrap.Toast(toast, { delay: duration });
+                const bsToast = new bootstrap.Toast(toast, {
+                    delay: duration
+                });
                 bsToast.show();
-                
+
                 toast.addEventListener('hidden.bs.toast', () => {
                     toast.remove();
                 });
             }
-            
+
             getIcon(type) {
                 const icons = {
                     success: 'check-circle',
@@ -1142,7 +1216,10 @@ $headerComponent = HeaderComponent::create([
 
         // ===== INICIALIZAÇÃO =====
         document.addEventListener('DOMContentLoaded', function() {
-            AOS.init({ duration: 800, once: true });
+            AOS.init({
+                duration: 800,
+                once: true
+            });
 
             if (!temPermissao) {
                 console.log('❌ Usuário sem permissão - não carregará funcionalidades');
@@ -1168,13 +1245,13 @@ $headerComponent = HeaderComponent::create([
         // Buscar associado por RG - ATUALIZADA para suportar múltiplos resultados
         async function buscarAssociadoPorRG(event) {
             event.preventDefault();
-            
+
             const rgInput = document.getElementById('rgBuscaFinanceiro');
             const busca = rgInput.value.trim();
             const btnBuscar = document.getElementById('btnBuscarFinanceiro');
             const loadingOverlay = document.getElementById('loadingBuscaFinanceiro');
             const dadosContainer = document.getElementById('dadosFinanceirosContainer');
-            
+
             if (!busca) {
                 mostrarAlertaBuscaFinanceiro('Por favor, digite um RG ou nome para buscar.', 'danger');
                 return;
@@ -1203,12 +1280,12 @@ $headerComponent = HeaderComponent::create([
                     exibirDadosFinanceiros(dadosFinanceirosAtual);
                     dadosContainer.style.display = 'block';
                     mostrarAlertaBuscaFinanceiro('Dados financeiros carregados com sucesso!', 'success');
-                    
+
                     // Scroll suave até os dados
                     setTimeout(() => {
-                        dadosContainer.scrollIntoView({ 
+                        dadosContainer.scrollIntoView({
                             behavior: 'smooth',
-                            block: 'start' 
+                            block: 'start'
                         });
                     }, 300);
                 } else {
@@ -1228,16 +1305,16 @@ $headerComponent = HeaderComponent::create([
         function mostrarModalSelecao(associados) {
             const listaContainer = document.getElementById('listaAssociadosSelecao');
             listaContainer.innerHTML = '';
-            
+
             associados.forEach(assoc => {
                 const card = document.createElement('div');
                 card.className = 'associado-card d-flex align-items-center';
                 card.dataset.id = assoc.id;
-                
+
                 // Determina a classe do badge baseado na corporação
                 let badgeClass = 'badge-default';
                 let corporacaoIcon = 'fa-shield-alt';
-                
+
                 if (assoc.corporacao) {
                     const corp = assoc.corporacao.toUpperCase();
                     if (corp.includes('PM') || corp.includes('POLÍCIA MILITAR')) {
@@ -1251,7 +1328,7 @@ $headerComponent = HeaderComponent::create([
                         corporacaoIcon = 'fa-user-shield';
                     }
                 }
-                
+
                 card.innerHTML = `
                     <div class="form-check me-3">
                         <input class="form-check-input" type="radio" name="associadoSelecionado" 
@@ -1297,24 +1374,24 @@ $headerComponent = HeaderComponent::create([
                         }
                     </div>
                 `;
-                
+
                 // Evento de clique no card
                 card.addEventListener('click', function() {
                     const radio = this.querySelector('input[type="radio"]');
                     radio.checked = true;
-                    
+
                     // Remove seleção anterior
                     document.querySelectorAll('.associado-card').forEach(c => c.classList.remove('selecionado'));
                     this.classList.add('selecionado');
-                    
+
                     // Habilita botão de confirmação
                     document.getElementById('btnConfirmarSelecao').disabled = false;
                     associadoSelecionadoId = assoc.id;
                 });
-                
+
                 listaContainer.appendChild(card);
             });
-            
+
             // Mostra o modal
             const modal = new bootstrap.Modal(document.getElementById('modalSelecaoAssociado'));
             modal.show();
@@ -1323,32 +1400,32 @@ $headerComponent = HeaderComponent::create([
         // NOVA FUNÇÃO - Buscar associado selecionado
         async function buscarAssociadoSelecionado() {
             if (!associadoSelecionadoId) return;
-            
+
             // Fecha o modal
             const modal = bootstrap.Modal.getInstance(document.getElementById('modalSelecaoAssociado'));
             modal.hide();
-            
+
             // Busca os dados do associado selecionado
             const loadingOverlay = document.getElementById('loadingBuscaFinanceiro');
             const dadosContainer = document.getElementById('dadosFinanceirosContainer');
-            
+
             loadingOverlay.style.display = 'flex';
-            
+
             try {
                 const response = await fetch(`../api/associados/buscar_situacao_financeira.php?id=${associadoSelecionadoId}`);
                 const result = await response.json();
-                
+
                 if (result.status === 'success') {
                     dadosFinanceirosAtual = result.data;
                     exibirDadosFinanceiros(result.data);
                     dadosContainer.style.display = 'block';
                     mostrarAlertaBuscaFinanceiro('Dados financeiros carregados com sucesso!', 'success');
-                    
+
                     // Scroll suave até os dados
                     setTimeout(() => {
-                        dadosContainer.scrollIntoView({ 
+                        dadosContainer.scrollIntoView({
                             behavior: 'smooth',
-                            block: 'start' 
+                            block: 'start'
                         });
                     }, 300);
                 } else {
@@ -1370,14 +1447,14 @@ $headerComponent = HeaderComponent::create([
             const grid = document.getElementById('dadosFinanceirosGrid');
             const militarContainer = document.getElementById('identificacaoMilitar');
             const militarGrid = document.getElementById('militarInfoGrid');
-            
+
             grid.innerHTML = '';
             militarGrid.innerHTML = '';
-            
+
             // Exibe dados militares se existirem
             if (dados.dados_militares && dados.dados_militares.corporacao !== 'Não informada') {
                 militarContainer.style.display = 'block';
-                
+
                 militarGrid.innerHTML = `
                     <div class="militar-info-item">
                         <span class="militar-info-label">Corporação</span>
@@ -1403,7 +1480,7 @@ $headerComponent = HeaderComponent::create([
             // Função auxiliar para criar item de dados
             function criarDadosItemFinanceiro(label, value, icone = 'fa-info', tipo = 'normal') {
                 if (!value || value === 'null' || value === '') return '';
-                
+
                 let valorFormatado = value;
                 let classeValor = 'dados-value';
 
@@ -1417,7 +1494,7 @@ $headerComponent = HeaderComponent::create([
                     const situacaoClass = value.toLowerCase() === 'inadimplente' ? 'situacao-inadimplente' : 'situacao-adimplente';
                     valorFormatado = `<span class="badge-situacao-financeira ${situacaoClass}">${value}</span>`;
                 }
-                
+
                 return `
                     <div class="dados-item">
                         <div class="dados-label">
@@ -1442,7 +1519,7 @@ $headerComponent = HeaderComponent::create([
             grid.innerHTML += criarDadosItemFinanceiro('Situação Atual', financeiro.situacao, 'fa-flag', 'situacao');
             grid.innerHTML += criarDadosItemFinanceiro('Tipo de Associado', financeiro.tipo_associado, 'fa-user-tag');
             grid.innerHTML += criarDadosItemFinanceiro('Valor Mensalidade', financeiro.valor_mensalidade, 'fa-dollar-sign', 'monetario');
-            
+
             // Dados bancários
             if (financeiro.agencia) {
                 grid.innerHTML += criarDadosItemFinanceiro('Agência', financeiro.agencia, 'fa-university');
@@ -1450,7 +1527,7 @@ $headerComponent = HeaderComponent::create([
             if (financeiro.conta_corrente) {
                 grid.innerHTML += criarDadosItemFinanceiro('Conta Corrente', financeiro.conta_corrente, 'fa-credit-card');
             }
-            
+
             // Dados de débito (se houver)
             if (financeiro.valor_debito && financeiro.valor_debito > 0) {
                 grid.innerHTML += criarDadosItemFinanceiro('Valor em Débito', financeiro.valor_debito, 'fa-exclamation-triangle', 'debito');
@@ -1493,12 +1570,12 @@ $headerComponent = HeaderComponent::create([
         function mostrarAlertaBuscaFinanceiro(mensagem, tipo) {
             const alertDiv = document.getElementById('alertBuscaFinanceiro');
             const alertText = document.getElementById('alertBuscaFinanceiroText');
-            
+
             alertText.textContent = mensagem;
-            
+
             // Remove classes anteriores
             alertDiv.className = 'alert';
-            
+
             // Adiciona classe baseada no tipo
             switch (tipo) {
                 case 'success':
@@ -1514,9 +1591,9 @@ $headerComponent = HeaderComponent::create([
                     alertDiv.classList.add('alert-warning');
                     break;
             }
-            
+
             alertDiv.style.display = 'flex';
-            
+
             // Auto-hide após 5 segundos se for sucesso
             if (tipo === 'success') {
                 setTimeout(esconderAlertaBuscaFinanceiro, 5000);
