@@ -697,7 +697,7 @@ function preencherTabMilitar(associado) {
     `;
 }
 
-// FUNÇÃO ATUALIZADA COM CAMPO NEOCONSIG: Preenche tab Financeiro
+// FUNÇÃO ATUALIZADA: Preenche tab Financeiro (SEM OBSERVAÇÕES)
 function preencherTabFinanceiro(associado) {
     const financeiroTab = document.getElementById('financeiro-tab');
 
@@ -814,7 +814,7 @@ function preencherTabFinanceiro(associado) {
                     ${servicosHtml}
                 </div>
 
-                <!-- Dados Bancários e Cobrança - ATUALIZADO COM CAMPO NEOCONSIG -->
+                <!-- Dados Bancários e Cobrança -->
                 <div class="detail-section">
                     <div class="section-header">
                         <div class="section-icon">
@@ -856,7 +856,6 @@ function preencherTabFinanceiro(associado) {
                             <span class="detail-label">Conta Corrente</span>
                             <span class="detail-value">${associado.contaCorrente || '-'}</span>
                         </div>
-                        <!-- CAMPO NEOCONSIG ADICIONADO -->
                         <div class="detail-item">
                             <span class="detail-label">ID Neoconsig</span>
                             <span class="detail-value">
@@ -878,58 +877,25 @@ function preencherTabFinanceiro(associado) {
                         </div>
                     </div>
                 </div>
-
-                <!-- NOVA SEÇÃO: Observações Financeiras -->
+                
+                ${historicoHtml ? `
+                <!-- Histórico de Alterações -->
                 <div class="detail-section">
                     <div class="section-header">
                         <div class="section-icon">
-                            <i class="fas fa-sticky-note"></i>
+                            <i class="fas fa-history"></i>
                         </div>
-                        <h3 class="section-title">Observações</h3>
+                        <h3 class="section-title">Histórico de Alterações</h3>
                     </div>
-                    
-                    ${associado.observacoes ? `
-                        <div style="background: var(--gray-100); padding: 1.5rem; border-radius: 12px; border-left: 4px solid var(--info);">
-                            <div style="display: flex; align-items: flex-start; gap: 1rem;">
-                                <div style="
-                                    width: 40px;
-                                    height: 40px;
-                                    background: var(--info);
-                                    color: white;
-                                    border-radius: 50%;
-                                    display: flex;
-                                    align-items: center;
-                                    justify-content: center;
-                                    flex-shrink: 0;
-                                ">
-                                    <i class="fas fa-info-circle"></i>
-                                </div>
-                                <div style="flex: 1;">
-                                    <h6 style="margin: 0 0 0.5rem 0; color: var(--dark); font-weight: 600;">
-                                        Observações do Registro Financeiro
-                                    </h6>
-                                    <p style="margin: 0; color: var(--gray-700); line-height: 1.5; white-space: pre-wrap;">
-                                        ${associado.observacoes}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    ` : `
-                        <div style="background: var(--gray-50); padding: 1.5rem; border-radius: 12px; border: 2px dashed var(--gray-300); text-align: center;">
-                            <div style="color: var(--gray-500);">
-                                <i class="fas fa-file-alt" style="font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.3;"></i>
-                                <p style="margin: 0; font-size: 0.875rem;">Nenhuma observação cadastrada</p>
-                                <small style="color: var(--gray-400);">Campo disponível para anotações sobre a situação financeira</small>
-                            </div>
-                        </div>
-                    `}
+                    ${historicoHtml}
                 </div>
+                ` : ''}
             `;
         })
         .catch(error => {
             console.error('Erro ao buscar serviços:', error);
 
-            // Fallback: mostra apenas dados tradicionais com campo Neoconsig
+            // Fallback: mostra apenas dados tradicionais
             financeiroTab.innerHTML = `
                 <div class="detail-section">
                     <div class="section-header">
@@ -969,7 +935,6 @@ function preencherTabFinanceiro(associado) {
                             <span class="detail-label">Conta Corrente</span>
                             <span class="detail-value">${associado.contaCorrente || '-'}</span>
                         </div>
-                        <!-- CAMPO NEOCONSIG NO FALLBACK TAMBÉM -->
                         <div class="detail-item">
                             <span class="detail-label">ID Neoconsig</span>
                             <span class="detail-value">
@@ -990,35 +955,6 @@ function preencherTabFinanceiro(associado) {
                             </span>
                         </div>
                     </div>
-                    
-                    <!-- Observações no fallback também -->
-                    ${associado.observacoes ? `
-                    <div style="margin-top: 2rem; background: var(--gray-100); padding: 1.5rem; border-radius: 12px; border-left: 4px solid var(--info);">
-                        <div style="display: flex; align-items: flex-start; gap: 1rem;">
-                            <div style="
-                                width: 40px;
-                                height: 40px;
-                                background: var(--info);
-                                color: white;
-                                border-radius: 50%;
-                                display: flex;
-                                align-items: center;
-                                justify-content: center;
-                                flex-shrink: 0;
-                            ">
-                                <i class="fas fa-info-circle"></i>
-                            </div>
-                            <div style="flex: 1;">
-                                <h6 style="margin: 0 0 0.5rem 0; color: var(--dark); font-weight: 600;">
-                                    Observações do Registro Financeiro
-                                </h6>
-                                <p style="margin: 0; color: var(--gray-700); line-height: 1.5; white-space: pre-wrap;">
-                                    ${associado.observacoes}
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                    ` : ''}
                 </div>
             `;
         });
@@ -1262,7 +1198,7 @@ function gerarHtmlHistorico(historico) {
     return historicoHtml;
 }
 
-// Função para buscar serviços do associado (mantém a mesma)
+// Função para buscar serviços do associado
 function buscarServicosAssociado(associadoId) {
     return fetch(`../api/buscar_servicos_associado.php?associado_id=${associadoId}`)
         .then(response => {
@@ -1272,6 +1208,11 @@ function buscarServicosAssociado(associadoId) {
             return response.json();
         });
 }
+
+// [RESTO DO CÓDIGO CONTINUA IGUAL...]
+// Incluindo todas as outras funções: preencherTabContato, preencherTabDependentes, 
+// preencherTabDocumentos, renderizarDocumentosUpload, e todas as funções de observações
+// que permanecem exatamente iguais ao código original...
 
 // Preenche tab Contato
 function preencherTabContato(associado) {
@@ -1392,6 +1333,7 @@ function preencherTabDependentes(associado) {
 
     dependentesTab.innerHTML = dependentesHtml;
 }
+
 
 function preencherTabDocumentos(associado) {
     const documentosTab = document.getElementById('documentos-tab');
@@ -2732,6 +2674,7 @@ function criarCardObservacao(obs) {
         </div>
     `;
 }
+
 
 // Função para criar tag
 function criarTagObs(texto) {

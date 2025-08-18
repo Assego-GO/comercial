@@ -2,6 +2,8 @@
 /**
  * API para buscar associado por RG ou CPF
  * api/associados/buscar_por_rg.php
+ * 
+ * CORREÇÃO: Removido campo 'observacoes' da tabela Financeiro que não existe no banco
  */
 
 // Configurações de erro - SEMPRE retornar JSON
@@ -81,7 +83,7 @@ try {
     $tipoDocumento = detectarTipoDocumento($documento);
     debug_log("Documento recebido: $documento (Tipo detectado: $tipoDocumento)");
     
-    // CORRIGIDO: Usa o mesmo padrão do seu projeto
+    // Usa o mesmo padrão do projeto
     $configPath = '../../config/config.php';
     $databaseConfigPath = '../../config/database.php';
     $classPath = '../../classes/Database.php';
@@ -110,7 +112,7 @@ try {
         ]);
     }
     
-    // Carrega os arquivos na ordem correta (igual ao dashboard)
+    // Carrega os arquivos na ordem correta
     debug_log("Carregando config.php...");
     require_once $configPath;
     
@@ -136,7 +138,7 @@ try {
     
     debug_log("Conectando ao banco usando Database::getInstance...");
     
-    // CORRIGIDO: Usa o mesmo padrão do seu projeto
+    // Usa o mesmo padrão do projeto
     $db = Database::getInstance(DB_NAME_CADASTRO)->getConnection();
     
     if (!$db) {
@@ -145,7 +147,7 @@ try {
     
     debug_log("Conexão estabelecida, executando query...");
     
-    // NOVA Query: Busca tanto por RG quanto por CPF
+    // Query corrigida: REMOVIDO campo f.observacoes que não existe na tabela Financeiro
     if ($tipoDocumento === 'CPF') {
         // Busca por CPF (remove formatação)
         $cpfParaBusca = formatarCPFParaBusca($documento);
@@ -164,6 +166,7 @@ try {
                 a.estadoCivil as estado_civil,
                 a.situacao,
                 a.pre_cadastro,
+                a.observacao_aprovacao,
                 
                 m.corporacao,
                 m.patente,
@@ -185,7 +188,7 @@ try {
                 f.agencia,
                 f.operacao,
                 f.contaCorrente as conta_corrente,
-                f.observacoes,
+                f.id_neoconsig,
                 f.doador,
                 
                 c.dataFiliacao as data_filiacao,
@@ -219,6 +222,7 @@ try {
                 a.estadoCivil as estado_civil,
                 a.situacao,
                 a.pre_cadastro,
+                a.observacao_aprovacao,
                 
                 m.corporacao,
                 m.patente,
@@ -240,7 +244,7 @@ try {
                 f.agencia,
                 f.operacao,
                 f.contaCorrente as conta_corrente,
-                f.observacoes,
+                f.id_neoconsig,
                 f.doador,
                 
                 c.dataFiliacao as data_filiacao,
@@ -265,10 +269,12 @@ try {
     debug_log("Query executada. Resultado: " . ($associado ? 'encontrado' : 'não encontrado'));
     
     if (!$associado) {
-        retornarResposta('error', "Associado não encontrado com o $tipoDocumento: $documento");
+        // Mensagem mais detalhada para ajudar no debug
+        $tipoMsg = $tipoDocumento === 'CPF' ? 'CPF' : 'RG';
+        retornarResposta('error', "Nenhum associado encontrado com o $tipoMsg informado: $documento");
     }
     
-    // Formatar dados para retorno - INCLUINDO NOVOS CAMPOS
+    // Formatar dados para retorno - CORRIGIDO SEM O CAMPO observacoes
     $dadosFormatados = [
         'dados_pessoais' => [
             'id' => $associado['associado_id'],
@@ -306,13 +312,16 @@ try {
             'agencia' => $associado['agencia'] ?? '',
             'operacao' => $associado['operacao'] ?? '',
             'conta_corrente' => $associado['conta_corrente'] ?? '',
-            'observacoes' => $associado['observacoes'] ?? '',
+            'id_neoconsig' => $associado['id_neoconsig'] ?? '',
             'doador' => intval($associado['doador'] ?? 0),
             'eh_doador' => ($associado['doador'] ?? 0) == 1 ? 'Sim' : 'Não'
         ],
         'contrato' => [
             'data_filiacao' => $associado['data_filiacao'] ?? '',
             'data_desfiliacao' => $associado['data_desfiliacao'] ?? ''
+        ],
+        'observacoes' => [
+            'observacao_aprovacao' => $associado['observacao_aprovacao'] ?? ''
         ],
         'status_cadastro' => ($associado['pre_cadastro'] == 1) ? 'PRE_CADASTRO' : 'DEFINITIVO',
         'tipo_busca' => $tipoDocumento // Informa qual tipo de documento foi usado na busca
@@ -329,9 +338,19 @@ try {
 } catch (PDOException $e) {
     debug_log("Erro PDO: " . $e->getMessage());
     ob_clean();
-    retornarResposta('error', 'Erro de banco de dados', null, [
+    
+    // Mensagem mais amigável para erros de banco
+    $mensagemErro = 'Erro ao buscar associado no banco de dados';
+    
+    // Se for erro de coluna desconhecida, personaliza a mensagem
+    if (strpos($e->getMessage(), 'Unknown column') !== false) {
+        $mensagemErro = 'Erro: Campo não encontrado no banco de dados. Verifique a estrutura das tabelas.';
+    }
+    
+    retornarResposta('error', $mensagemErro, null, [
         'error' => $e->getMessage(),
-        'code' => $e->getCode()
+        'code' => $e->getCode(),
+        'hint' => 'Verifique se todos os campos existem nas tabelas do banco'
     ]);
     
 } catch (Exception $e) {

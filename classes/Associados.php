@@ -1467,12 +1467,23 @@ class Associados
     public function adicionarObservacao($dados)
     {
         try {
+            // Garantir que temos sessão
+            if (!isset($_SESSION)) {
+                session_start();
+            }
+
             $this->db->beginTransaction();
 
             // Validar dados obrigatórios
             if (empty($dados['associado_id']) || empty($dados['observacao'])) {
                 throw new Exception("Associado ID e observação são obrigatórios");
             }
+
+            // Obter ID do funcionário atual
+            $funcionarioId = $_SESSION['funcionario_id'] ?? null;
+
+            // Log para debug
+            error_log("Adicionando observação - Associado: {$dados['associado_id']}, Funcionário: $funcionarioId");
 
             $stmt = $this->db->prepare("
             INSERT INTO Observacoes_Associado (
@@ -1487,27 +1498,40 @@ class Associados
             ) VALUES (?, ?, ?, ?, ?, ?, NOW(), 1)
         ");
 
-            $stmt->execute([
+            $result = $stmt->execute([
                 $dados['associado_id'],
                 $dados['observacao'],
                 $dados['categoria'] ?? 'geral',
                 $dados['prioridade'] ?? 'media',
                 $dados['importante'] ?? 0,
-                $_SESSION['funcionario_id'] ?? null
+                $funcionarioId
             ]);
+
+            if (!$result) {
+                throw new Exception("Erro ao inserir observação: " . implode(', ', $stmt->errorInfo()));
+            }
 
             $observacaoId = $this->db->lastInsertId();
 
-            // Registrar na auditoria
-            $this->registrarAuditoriaObservacao('INSERT', $observacaoId, $dados);
+            // Registrar na auditoria (opcional)
+            try {
+                $this->registrarAuditoriaObservacao('INSERT', $observacaoId, $dados);
+            } catch (Exception $e) {
+                error_log("Aviso: Erro ao registrar auditoria: " . $e->getMessage());
+                // Não é crítico, continua
+            }
 
             $this->db->commit();
 
-            // Retornar a observação criada
-            return $this->getObservacaoById($observacaoId);
+            error_log("✓ Observação $observacaoId criada com sucesso");
+
+            // Retornar dados da observação criada
+            return ['id' => $observacaoId];
 
         } catch (Exception $e) {
-            $this->db->rollBack();
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
             error_log("Erro ao adicionar observação: " . $e->getMessage());
             throw $e;
         }
@@ -1586,6 +1610,11 @@ class Associados
     public function excluirObservacao($id)
     {
         try {
+            // Garantir que temos sessão
+            if (!isset($_SESSION)) {
+                session_start();
+            }
+
             $this->db->beginTransaction();
 
             // Buscar observação
@@ -1594,10 +1623,30 @@ class Associados
                 throw new Exception("Observação não encontrada");
             }
 
-            // Verificar permissão
-            if ($obs['criado_por'] != $_SESSION['funcionario_id'] && !$this->isAdmin()) {
-                throw new Exception("Sem permissão para excluir esta observação");
+            // Obter ID do funcionário atual
+            $funcionarioId = $_SESSION['funcionario_id'] ?? null;
+
+            // Verificar permissão (criador ou admin pode excluir)
+            $podeExcluir = false;
+            $motivo = '';
+
+            // Verifica se é o criador
+            if ($obs['criado_por'] == $funcionarioId) {
+                $podeExcluir = true;
+                $motivo = 'É o criador da observação';
             }
+            // Verifica se é admin/diretor
+            elseif ($this->isAdmin()) {
+                $podeExcluir = true;
+                $motivo = 'Tem permissão administrativa';
+            }
+
+            if (!$podeExcluir) {
+                throw new Exception("Sem permissão para excluir esta observação. " . $motivo);
+            }
+
+            // Log para debug
+            error_log("Excluindo observação ID: $id, Funcionário: $funcionarioId, Motivo: $motivo");
 
             // Soft delete
             $stmt = $this->db->prepare("
@@ -1605,22 +1654,37 @@ class Associados
             SET ativo = 0, 
                 data_exclusao = NOW(),
                 excluido_por = ?
-            WHERE id = ?
+            WHERE id = ? AND ativo = 1
         ");
 
-            $stmt->execute([
-                $_SESSION['funcionario_id'] ?? null,
-                $id
-            ]);
+            $result = $stmt->execute([$funcionarioId, $id]);
 
-            // Registrar na auditoria
-            $this->registrarAuditoriaObservacao('DELETE', $id, [], $obs);
+            if (!$result) {
+                throw new Exception("Erro ao executar UPDATE: " . implode(', ', $stmt->errorInfo()));
+            }
+
+            // Verificar se alguma linha foi afetada
+            if ($stmt->rowCount() === 0) {
+                throw new Exception("Nenhuma linha foi afetada. A observação pode já estar excluída.");
+            }
+
+            // Registrar na auditoria (opcional)
+            try {
+                $this->registrarAuditoriaObservacao('DELETE', $id, [], $obs);
+            } catch (Exception $e) {
+                error_log("Aviso: Erro ao registrar auditoria: " . $e->getMessage());
+                // Não é crítico, continua
+            }
 
             $this->db->commit();
+
+            error_log("✓ Observação $id excluída com sucesso");
             return true;
 
         } catch (Exception $e) {
-            $this->db->rollBack();
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
             error_log("Erro ao excluir observação: " . $e->getMessage());
             throw $e;
         }
@@ -1805,12 +1869,46 @@ class Associados
      */
     private function isAdmin()
     {
-        // Implementar lógica de verificação de admin
-        // Por exemplo, verificar cargo ou departamento
+        // Verificar se tem sessão iniciada
+        if (!isset($_SESSION)) {
+            session_start();
+        }
+
+        // Verificar cargo diretamente da sessão
         if (isset($_SESSION['funcionario_cargo'])) {
             return in_array($_SESSION['funcionario_cargo'], ['Diretor', 'Administrador', 'Gerente']);
         }
+
+        // Verificar também pela flag is_diretor
+        if (isset($_SESSION['is_diretor']) && $_SESSION['is_diretor']) {
+            return true;
+        }
+
+        // Se não tem informação de cargo, tentar buscar do banco
+        if (isset($_SESSION['funcionario_id'])) {
+            try {
+                $stmt = $this->db->prepare("SELECT cargo FROM Funcionarios WHERE id = ?");
+                $stmt->execute([$_SESSION['funcionario_id']]);
+                $funcionario = $stmt->fetch();
+
+                if ($funcionario) {
+                    $_SESSION['funcionario_cargo'] = $funcionario['cargo'];
+                    return in_array($funcionario['cargo'], ['Diretor', 'Administrador', 'Gerente']);
+                }
+            } catch (Exception $e) {
+                error_log("Erro ao verificar admin: " . $e->getMessage());
+            }
+        }
+
         return false;
+    }
+    private function getFuncionarioId()
+    {
+        if (!isset($_SESSION)) {
+            session_start();
+        }
+
+        return $_SESSION['funcionario_id'] ?? null;
     }
 
     /**
