@@ -3,6 +3,7 @@
  * Página de Serviços Comerciais - Sistema ASSEGO
  * pages/servicos_comercial.php
  * VERSÃO ATUALIZADA - Suporte a múltiplos RGs de diferentes corporações
+ * LÓGICA DE PERMISSÕES: Estatísticas sempre visíveis, funcionalidades dependem de permissão
  */
 
 // Tratamento de erros para debug
@@ -72,46 +73,103 @@ if (!$temPermissaoComercial) {
     error_log("✅ ACESSO PERMITIDO - Usuário " . ($isComercial ? 'do Comercial' : 'da Presidência'));
 }
 
-// Busca estatísticas do setor comercial (apenas se tem permissão)
-if ($temPermissaoComercial) {
+// Busca estatísticas do setor comercial (SEMPRE VISÍVEIS - são apenas números gerais)
+try {
+    $db = Database::getInstance(DB_NAME_CADASTRO)->getConnection();
+    
+    // Total de associados ativos (SEMPRE VISÍVEL)
+    $sql = "SELECT COUNT(*) as total FROM Associados WHERE situacao = 'Filiado'";
+    $stmt = $db->prepare($sql);
+    $stmt->execute();
+    $totalAssociadosAtivos = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
+    
+    // Novos cadastros hoje (SEMPRE VISÍVEL) 
+    // Baseado na estrutura real da tabela: usa data_aprovacao ou data_pre_cadastro
     try {
-        $db = Database::getInstance(DB_NAME_CADASTRO)->getConnection();
-        
-        // Total de associados ativos
-        $sql = "SELECT COUNT(*) as total FROM Associados WHERE situacao = 'Filiado'";
-        $stmt = $db->prepare($sql);
-        $stmt->execute();
-        $totalAssociadosAtivos = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
-        
-        // Novos cadastros hoje
-        $sql = "SELECT COUNT(*) as hoje FROM Associados WHERE DATE(created_at) = CURDATE()";
+        // Primeiro tenta data_aprovacao (quando foi aprovado o cadastro)
+        $sql = "SELECT COUNT(*) as hoje FROM Associados WHERE DATE(data_aprovacao) = CURDATE()";
         $stmt = $db->prepare($sql);
         $stmt->execute();
         $cadastrosHoje = $stmt->fetch(PDO::FETCH_ASSOC)['hoje'];
         
-        // Pré-cadastros pendentes
-        $sql = "SELECT COUNT(*) as pendentes FROM Associados WHERE pre_cadastro = 1 AND situacao = 'PENDENTE'";
+        // Se não houver aprovações hoje, conta os pré-cadastros de hoje
+        if ($cadastrosHoje == 0) {
+            $sql = "SELECT COUNT(*) as hoje FROM Associados WHERE DATE(data_pre_cadastro) = CURDATE()";
+            $stmt = $db->prepare($sql);
+            $stmt->execute();
+            $cadastrosHoje = $stmt->fetch(PDO::FETCH_ASSOC)['hoje'];
+        }
+        
+        error_log("Cadastros hoje encontrados: " . $cadastrosHoje);
+        
+    } catch (Exception $e) {
+        error_log("Erro ao buscar cadastros hoje: " . $e->getMessage());
+        $cadastrosHoje = 0;
+    }
+    
+    // Pré-cadastros pendentes (SEMPRE VISÍVEL)
+    // Baseado na estrutura real: pre_cadastro = 1 são pré-cadastros
+    try {
+        // Conta todos os pré-cadastros ainda não aprovados
+        $sql = "SELECT COUNT(*) as pendentes FROM Associados WHERE pre_cadastro = 1";
         $stmt = $db->prepare($sql);
         $stmt->execute();
         $preCadastrosPendentes = $stmt->fetch(PDO::FETCH_ASSOC)['pendentes'];
         
-        // Solicitações de desfiliação (último mês)
-        $sql = "SELECT COUNT(*) as desfiliacao FROM Auditoria 
-                WHERE acao = 'UPDATE' 
-                AND tabela = 'Associados'
-                AND JSON_EXTRACT(valores_novos, '$.situacao') = 'DESFILIADO'
-                AND data_hora >= DATE_SUB(NOW(), INTERVAL 30 DAY)";
+        error_log("Pré-cadastros pendentes encontrados: " . $preCadastrosPendentes);
+        
+    } catch (Exception $e) {
+        error_log("Erro ao buscar pré-cadastros pendentes: " . $e->getMessage());
+        $preCadastrosPendentes = 0;
+    }
+    
+    // Solicitações de desfiliação (último mês) - SEMPRE VISÍVEL
+    try {
+        // Verifica se a tabela Auditoria existe
+        $sql = "SHOW TABLES LIKE 'Auditoria'";
         $stmt = $db->prepare($sql);
         $stmt->execute();
-        $desfiliacoesRecentes = $stmt->fetch(PDO::FETCH_ASSOC)['desfiliacao'];
-
+        
+        if ($stmt->rowCount() > 0) {
+            // Tabela existe, busca desfiliações
+            $sql = "SELECT COUNT(*) as desfiliacao FROM Auditoria 
+                    WHERE acao = 'UPDATE' 
+                    AND tabela = 'Associados'
+                    AND JSON_EXTRACT(valores_novos, '$.situacao') = 'DESFILIADO'
+                    AND data_hora >= DATE_SUB(NOW(), INTERVAL 30 DAY)";
+            $stmt = $db->prepare($sql);
+            $stmt->execute();
+            $desfiliacoesRecentes = $stmt->fetch(PDO::FETCH_ASSOC)['desfiliacao'];
+            
+            error_log("Desfiliações recentes (com Auditoria): " . $desfiliacoesRecentes);
+        } else {
+            // Tabela não existe, tenta contar diretamente por situação
+            $sql = "SELECT COUNT(*) as desfiliacao FROM Associados 
+                    WHERE situacao = 'DESFILIADO' 
+                    AND data_aprovacao >= DATE_SUB(NOW(), INTERVAL 30 DAY)";
+            $stmt = $db->prepare($sql);
+            $stmt->execute();
+            $desfiliacoesRecentes = $stmt->fetch(PDO::FETCH_ASSOC)['desfiliacao'];
+            
+            error_log("Desfiliações recentes (sem Auditoria): " . $desfiliacoesRecentes);
+        }
+        
     } catch (Exception $e) {
-        error_log("Erro ao buscar estatísticas comerciais: " . $e->getMessage());
-        $totalAssociadosAtivos = $cadastrosHoje = $preCadastrosPendentes = $desfiliacoesRecentes = 0;
+        error_log("Erro ao buscar desfiliações: " . $e->getMessage());
+        $desfiliacoesRecentes = 0;
     }
-} else {
+
+} catch (Exception $e) {
+    error_log("Erro ao buscar estatísticas comerciais: " . $e->getMessage());
     $totalAssociadosAtivos = $cadastrosHoje = $preCadastrosPendentes = $desfiliacoesRecentes = 0;
 }
+
+// Debug final das estatísticas
+error_log("=== ESTATÍSTICAS COMERCIAIS FINAIS ===");
+error_log("Associados Ativos: " . $totalAssociadosAtivos);
+error_log("Cadastros Hoje: " . $cadastrosHoje);
+error_log("Pré-cadastros Pendentes: " . $preCadastrosPendentes);
+error_log("Desfiliações (30 dias): " . $desfiliacoesRecentes);
 
 // Cria instância do Header Component
 $headerComponent = HeaderComponent::create([
@@ -904,7 +962,7 @@ $headerComponent = HeaderComponent::create([
                 </p>
             </div>
 
-            <!-- Estatísticas Comerciais -->
+            <!-- Estatísticas Comerciais - SEMPRE VISÍVEIS (independente de permissões) -->
             <div class="stats-grid" data-aos="fade-up">
                 <div class="stat-card primary">
                     <div class="stat-header">
@@ -985,7 +1043,14 @@ $headerComponent = HeaderComponent::create([
                         <?php endif; ?>
                     </h6>
                     <small>
-                        Você tem acesso completo aos serviços comerciais. Sistema preparado para múltiplos RGs de diferentes corporações.
+                        <?php if ($isComercial): ?>
+                            Você tem acesso completo aos serviços comerciais: estatísticas, desfiliações, cadastros e atendimento.
+                        <?php elseif ($isPresidencia): ?>
+                            Você tem acesso administrativo aos serviços comerciais como membro da presidência.
+                        <?php else: ?>
+                            Você pode visualizar as estatísticas, mas funcionalidades avançadas requerem permissão específica.
+                        <?php endif; ?>
+                        Sistema preparado para múltiplos RGs de diferentes corporações.
                     </small>
                 </div>
             </div>
@@ -1119,7 +1184,8 @@ $headerComponent = HeaderComponent::create([
                 </div>
             </div>
 
-            <!-- Container para ficha de desfiliação (inicialmente oculto) -->
+            <!-- Container para ficha de desfiliação (apenas com permissão) -->
+            <?php if ($temPermissaoComercial): ?>
             <div id="fichaDesfiliacao" class="ficha-desfiliacao-container fade-in" style="display: none;" data-aos="fade-up">
                 <div class="ficha-header-container no-print">
                     <h4>
@@ -1206,11 +1272,25 @@ $headerComponent = HeaderComponent::create([
                 </div>
             </div>
 
+            <?php else: ?>
+            <!-- Sem permissão - Apenas estatísticas visíveis -->
+            <div class="alert alert-warning" data-aos="fade-up">
+                <h5><i class="fas fa-lock me-2"></i>Funcionalidades Restritas</h5>
+                <p class="mb-2">
+                    Você pode visualizar as estatísticas comerciais, mas não tem permissão para acessar as funcionalidades avançadas.
+                </p>
+                <small class="text-muted">
+                    <strong>Para acesso completo:</strong> Entre em contato com o administrador para obter permissões do setor comercial ou presidência.
+                </small>
+            </div>
+            <?php endif; ?>
+
             <?php endif; ?>
         </div>
     </div>
 
-    <!-- Modal de Seleção de Associado (NOVO) -->
+    <!-- Modal de Seleção de Associado (apenas com permissão) -->
+    <?php if ($temPermissaoComercial): ?>
     <div class="modal fade modal-selecao-associado" id="modalSelecaoAssociadoComercial" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
@@ -1244,6 +1324,7 @@ $headerComponent = HeaderComponent::create([
             </div>
         </div>
     </div>
+    <?php endif; ?>
 
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -1320,15 +1401,22 @@ $headerComponent = HeaderComponent::create([
             AOS.init({ duration: 800, once: true });
 
             if (!temPermissao) {
-                console.log('❌ Usuário sem permissão - não carregará funcionalidades');
+                console.log('❌ Usuário sem permissão - funcionalidades restritas, mas estatísticas visíveis');
+                // Note: Estatísticas são sempre visíveis, apenas funcionalidades são restritas
+                configurarEventos(); // Configura eventos básicos mesmo sem permissão
+                preencherDataAtual(); // Preenche data atual sempre
+                notifications.show('Acesso limitado - apenas visualização de estatísticas!', 'warning', 4000);
                 return;
             }
 
             preencherDataAtual();
             configurarEventos();
+            <?php if ($temPermissaoComercial): ?>
             configurarFichaDesfiliacao();
+            <?php endif; ?>
 
             // Event listener para Enter no campo de busca
+            <?php if ($temPermissaoComercial): ?>
             $('#rgBuscaComercial').on('keypress', function(e) {
                 if (e.key === 'Enter') {
                     e.preventDefault();
@@ -1338,9 +1426,11 @@ $headerComponent = HeaderComponent::create([
 
             // Event listener para o botão de confirmar seleção
             document.getElementById('btnConfirmarSelecaoComercial').addEventListener('click', buscarAssociadoSelecionado);
+            <?php endif; ?>
 
-            const departamentoNome = isComercial ? 'Comercial' : isPresidencia ? 'Presidência' : 'Autorizado';
-            notifications.show(`Serviços comerciais carregados - ${departamentoNome}!`, 'success', 3000);
+            const departamentoNome = isComercial ? 'Comercial' : isPresidencia ? 'Presidência' : 'Outro';
+            const nivelAcesso = temPermissao ? 'completo' : 'visualização apenas';
+            notifications.show(`Serviços comerciais - ${departamentoNome} (${nivelAcesso})!`, temPermissao ? 'success' : 'info', 3000);
         });
 
         // ===== FUNÇÕES DE BUSCA (ATUALIZADAS PARA MÚLTIPLOS ASSOCIADOS) =====
@@ -1348,6 +1438,12 @@ $headerComponent = HeaderComponent::create([
         // Buscar associado por RG - ATUALIZADA para suportar múltiplos resultados
         async function buscarAssociadoPorRG(event) {
             event.preventDefault();
+            
+            // Verifica permissão
+            if (!temPermissao) {
+                notifications.show('Você não tem permissão para buscar associados', 'error');
+                return;
+            }
             
             const rgInput = document.getElementById('rgBuscaComercial');
             const busca = rgInput.value.trim();
@@ -1514,7 +1610,7 @@ $headerComponent = HeaderComponent::create([
 
         // NOVA FUNÇÃO - Buscar associado selecionado
         async function buscarAssociadoSelecionado() {
-            if (!associadoSelecionadoId) return;
+            if (!associadoSelecionadoId || !temPermissao) return;
 
             // Fecha o modal
             const modal = bootstrap.Modal.getInstance(document.getElementById('modalSelecaoAssociadoComercial'));
@@ -1768,6 +1864,9 @@ $headerComponent = HeaderComponent::create([
 
         // Configurar ficha de desfiliação
         function configurarFichaDesfiliacao() {
+            // Só configura se tiver permissão e os elementos existirem
+            if (!temPermissao) return;
+            
             // Limpar placeholder do motivo ao clicar
             const motivoArea = document.getElementById('motivoDesfiliacao');
             
@@ -1789,6 +1888,10 @@ $headerComponent = HeaderComponent::create([
 
         // Limpar busca comercial
         function limparBuscaComercial() {
+            if (!temPermissao) {
+                notifications.show('Você não tem permissão para esta funcionalidade', 'error');
+                return;
+            }
             document.getElementById('rgBuscaComercial').value = '';
             document.getElementById('dadosAssociadoContainer').style.display = 'none';
             document.getElementById('fichaDesfiliacao').style.display = 'none';
@@ -1821,6 +1924,9 @@ $headerComponent = HeaderComponent::create([
             const alertDiv = document.getElementById('alertBuscaComercial');
             const alertText = document.getElementById('alertBuscaComercialText');
             
+            // Só mostra se os elementos existirem (ou seja, se tiver permissão)
+            if (!alertDiv || !alertText) return;
+            
             alertText.textContent = mensagem;
             
             // Remove classes anteriores
@@ -1852,15 +1958,23 @@ $headerComponent = HeaderComponent::create([
 
         // Esconder alerta de busca comercial
         function esconderAlertaBuscaComercial() {
-            document.getElementById('alertBuscaComercial').style.display = 'none';
+            const alertDiv = document.getElementById('alertBuscaComercial');
+            if (alertDiv) {
+                alertDiv.style.display = 'none';
+            }
         }
 
         // Imprimir ficha
         function imprimirFicha() {
+            if (!temPermissao) {
+                notifications.show('Você não tem permissão para esta funcionalidade', 'error');
+                return;
+            }
+            
             // Verifica se os campos obrigatórios estão preenchidos
-            const nome = document.getElementById('nomeCompleto').textContent.trim();
-            const rg = document.getElementById('rgMilitar').textContent.trim();
-            const motivo = document.getElementById('motivoDesfiliacao').textContent.trim();
+            const nome = document.getElementById('nomeCompleto')?.textContent?.trim();
+            const rg = document.getElementById('rgMilitar')?.textContent?.trim();
+            const motivo = document.getElementById('motivoDesfiliacao')?.textContent?.trim();
             
             if (!nome || !rg) {
                 mostrarAlertaBuscaComercial('Por favor, busque um associado antes de imprimir.', 'danger');
@@ -1877,6 +1991,10 @@ $headerComponent = HeaderComponent::create([
 
         // Gerar PDF
         function gerarPDFFicha() {
+            if (!temPermissao) {
+                notifications.show('Você não tem permissão para esta funcionalidade', 'error');
+                return;
+            }
             notifications.show('Funcionalidade de geração de PDF será implementada em breve.', 'info');
         }
 
@@ -1884,6 +2002,10 @@ $headerComponent = HeaderComponent::create([
 
         // Novo pré-cadastro
         function novoPreCadastro() {
+            if (!temPermissao) {
+                notifications.show('Você não tem permissão para esta funcionalidade', 'error');
+                return;
+            }
             notifications.show('Redirecionando para novo pré-cadastro...', 'info');
             setTimeout(() => {
                 window.location.href = '../pages/cadastroForm.php';
@@ -1892,6 +2014,10 @@ $headerComponent = HeaderComponent::create([
 
         // Consultar associado
         function consultarAssociado() {
+            if (!temPermissao) {
+                notifications.show('Você não tem permissão para esta funcionalidade', 'error');
+                return;
+            }
             notifications.show('Abrindo consulta de associados...', 'info');
             setTimeout(() => {
                 window.location.href = '../pages/dashboard.php';
@@ -1900,6 +2026,10 @@ $headerComponent = HeaderComponent::create([
 
         // Consultar dependentes com 18 anos
         function consultarDependentes18() {
+            if (!temPermissao) {
+                notifications.show('Você não tem permissão para esta funcionalidade', 'error');
+                return;
+            }
             notifications.show('Carregando dependentes 18+...', 'info');
             setTimeout(() => {
                 window.location.href = '../pages/dependentes_18anos.php';
@@ -1908,6 +2038,10 @@ $headerComponent = HeaderComponent::create([
 
         // Relatórios comerciais
         function relatoriosComerciais() {
+            if (!temPermissao) {
+                notifications.show('Você não tem permissão para esta funcionalidade', 'error');
+                return;
+            }
             notifications.show('Carregando relatórios comerciais...', 'info');
             setTimeout(() => {
                 window.location.href = '../pages/relatorios.php';
@@ -1963,8 +2097,9 @@ $headerComponent = HeaderComponent::create([
 
         // Log de inicialização
         console.log('✓ Sistema de Serviços Comerciais carregado com sucesso!');
-        console.log(`🏢 Departamento: ${isComercial ? 'Comercial (ID: 10)' : isPresidencia ? 'Presidência (ID: 1)' : 'Desconhecido'}`);
-        console.log(`🔐 Permissões: ${temPermissao ? 'Concedidas' : 'Negadas'}`);
+        console.log(`🏢 Departamento: ${isComercial ? 'Comercial (ID: 10)' : isPresidencia ? 'Presidência (ID: 1)' : 'Outro'}`);
+        console.log(`🔐 Funcionalidades: ${temPermissao ? 'Liberadas' : 'Restritas'}`);
+        console.log(`📊 Estatísticas: Sempre visíveis (independente de permissões)`);
         console.log(`📋 Suporte a múltiplos RGs de diferentes corporações ativado`);
     </script>
 
