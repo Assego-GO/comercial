@@ -1033,6 +1033,14 @@ $headerComponent = HeaderComponent::create([
                                 <p>Acompanhe entradas, saídas e saldo atual da associação</p>
                             </div>
 
+                            <div class="financeiro-option" onclick="importarAsaas()">
+                                <div class="financeiro-option-icon">
+                                    <i class="fas fa-file-import"></i>
+                                </div>
+                                <h5>Importar CSV ASAAS</h5>
+                                <p>Importe arquivo CSV do ASAAS para atualizar status de adimplência automaticamente</p>
+                            </div>
+
                             <div class="financeiro-option" onclick="estatisticasFinanceiras()">
                                 <div class="financeiro-option-icon">
                                     <i class="fas fa-calculator"></i>
@@ -1555,6 +1563,14 @@ $headerComponent = HeaderComponent::create([
             notifications.show('Carregando estatísticas financeiras...', 'info');
             setTimeout(() => {
                 window.location.href = '../pages/dashboard_financeiro.php';
+            }, 1000);
+        }
+
+
+        function importarAsaas() {
+            notifications.show('Redirecionando para importação ASAAS...', 'info');
+            setTimeout(() => {
+                window.location.href = 'importar_asaas.php';
             }, 1000);
         }
 
