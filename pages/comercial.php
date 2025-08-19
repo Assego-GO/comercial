@@ -2,6 +2,7 @@
 /**
  * Página de Serviços Comerciais - Sistema ASSEGO
  * pages/servicos_comercial.php
+ * VERSÃO ATUALIZADA - Suporte a múltiplos RGs de diferentes corporações
  */
 
 // Tratamento de erros para debug
@@ -47,26 +48,17 @@ if (isset($usuarioLogado['departamento_id'])) {
     $deptId = $usuarioLogado['departamento_id'];
     $departamentoUsuario = $deptId;
     
-    // Debug dos testes de comparação
-    error_log("Testes de comparação:");
-    error_log("  deptId === '10': " . ($deptId === '10' ? 'true' : 'false'));
-    error_log("  deptId === 10: " . ($deptId === 10 ? 'true' : 'false'));
-    error_log("  deptId == 10: " . ($deptId == 10 ? 'true' : 'false'));
-    error_log("  deptId === '1': " . ($deptId === '1' ? 'true' : 'false'));
-    error_log("  deptId === 1: " . ($deptId === 1 ? 'true' : 'false'));
-    error_log("  deptId == 1: " . ($deptId == 1 ? 'true' : 'false'));
-    
-    if ($deptId == 10) { // Comercial - comparação flexível para pegar string ou int
+    if ($deptId == 10) { // Comercial
         $temPermissaoComercial = true;
         $isComercial = true;
         error_log("✅ Permissão concedida: Usuário pertence ao Setor Comercial (ID: 10)");
-    } elseif ($deptId == 1) { // Presidência - comparação flexível para pegar string ou int
+    } elseif ($deptId == 1) { // Presidência
         $temPermissaoComercial = true;
         $isPresidencia = true;
         error_log("✅ Permissão concedida: Usuário pertence à Presidência (ID: 1)");
     } else {
         $motivoNegacao = 'Acesso restrito EXCLUSIVAMENTE ao Setor Comercial e Presidência.';
-        error_log("❌ Acesso negado. Departamento: '$deptId' (tipo: " . gettype($deptId) . "). Permitido apenas: Comercial (ID: 10) ou Presidência (ID: 1)");
+        error_log("❌ Acesso negado. Departamento: '$deptId'. Permitido apenas: Comercial (ID: 10) ou Presidência (ID: 1)");
     }
 } else {
     $motivoNegacao = 'Departamento não identificado no perfil do usuário.';
@@ -123,7 +115,7 @@ if ($temPermissaoComercial) {
 
 // Cria instância do Header Component
 $headerComponent = HeaderComponent::create([
-    'usuario' => $usuarioLogado, // ← Passa TODO o array do usuário (como no exemplo da presidência)
+    'usuario' => $usuarioLogado,
     'isDiretor' => $auth->isDiretor(),
     'activeTab' => 'comercial',
     'notificationCount' => $preCadastrosPendentes,
@@ -410,6 +402,94 @@ $headerComponent = HeaderComponent::create([
             transform: translateY(-2px);
         }
 
+        /* Modal de Seleção de Associados */
+        .modal-selecao-associado {
+            z-index: 9999;
+        }
+
+        .associado-card {
+            border: 2px solid #e9ecef;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        .associado-card:hover {
+            border-color: var(--primary);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0, 86, 210, 0.15);
+        }
+
+        .associado-card.selecionado {
+            border-color: var(--success);
+            background: linear-gradient(135deg, #ffffff 0%, #f0fff4 100%);
+        }
+
+        .associado-foto {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid #e9ecef;
+        }
+
+        .associado-info {
+            flex: 1;
+            margin-left: 1.5rem;
+        }
+
+        .associado-nome {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--dark);
+            margin-bottom: 0.25rem;
+        }
+
+        .associado-rg {
+            color: var(--secondary);
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .associado-militar {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .badge-corporacao {
+            padding: 0.35rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .badge-pm {
+            background: #e3f2fd;
+            color: #1565c0;
+        }
+
+        .badge-bm {
+            background: #ffebee;
+            color: #c62828;
+        }
+
+        .badge-pc {
+            background: #f3e5f5;
+            color: #6a1b9a;
+        }
+
+        .badge-default {
+            background: #f5f5f5;
+            color: #616161;
+        }
+
         /* Seção de Cadastro */
         .cadastro-options {
             display: grid;
@@ -532,6 +612,45 @@ $headerComponent = HeaderComponent::create([
             font-size: 1rem;
             font-weight: 500;
             word-break: break-word;
+        }
+
+        /* Identificação Militar */
+        .identificacao-militar {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .identificacao-militar h6 {
+            color: var(--primary);
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        .militar-info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+
+        .militar-info-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .militar-info-label {
+            font-size: 0.8rem;
+            color: var(--secondary);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .militar-info-value {
+            font-size: 1rem;
+            color: var(--dark);
+            font-weight: 500;
         }
 
         /* Loading spinner */
@@ -758,57 +877,10 @@ $headerComponent = HeaderComponent::create([
                 <h4><i class="fas fa-ban me-2"></i>Acesso Negado aos Serviços Comerciais</h4>
                 <p class="mb-3"><?php echo htmlspecialchars($motivoNegacao); ?></p>
                 
-                <div class="alert alert-info">
-                    <h6><i class="fas fa-info-circle me-2"></i>Requisitos para acesso:</h6>
-                    <ul class="mb-0">
-                        <li>Estar no <strong>Setor Comercial</strong> (Departamento ID: 10) OU</li>
-                        <li>Estar na <strong>Presidência</strong> (Departamento ID: 1)</li>
-                    </ul>
-                    <hr class="my-2">
-                    <small class="text-muted">
-                        <i class="fas fa-exclamation-triangle me-1"></i>
-                        <strong>Atenção:</strong> Apenas funcionários destes dois departamentos específicos têm acesso aos serviços comerciais.
-                    </small>
-                </div>
-                
-                <div class="row">
-                    <div class="col-md-6">
-                        <h6>Suas informações atuais:</h6>
-                        <ul class="mb-0">
-                            <li><strong>Nome:</strong> <?php echo htmlspecialchars($usuarioLogado['nome']); ?></li>
-                            <li><strong>Cargo:</strong> <?php echo htmlspecialchars($usuarioLogado['cargo'] ?? 'N/A'); ?></li>
-                            <li><strong>Departamento ID:</strong> 
-                                <span class="badge bg-<?php echo isset($usuarioLogado['departamento_id']) ? 'info' : 'danger'; ?>">
-                                    <?php echo $usuarioLogado['departamento_id'] ?? 'Não identificado'; ?>
-                                </span>
-                            </li>
-                            <li><strong>É Diretor:</strong> 
-                                <span class="badge bg-<?php echo $auth->isDiretor() ? 'success' : 'secondary'; ?>">
-                                    <?php echo $auth->isDiretor() ? 'Sim' : 'Não'; ?>
-                                </span>
-                            </li>
-                        </ul>
-                    </div>
-                    <div class="col-md-6">
-                        <h6>Para resolver:</h6>
-                        <ol class="mb-3">
-                            <li>Verifique se você está no departamento correto no sistema</li>
-                            <li>Entre em contato com o administrador se necessário</li>
-                            <li>Confirme se deveria ter acesso aos serviços comerciais</li>
-                        </ol>
-                        
-                        <div class="btn-group d-block">
-                            <button class="btn btn-primary btn-sm me-2" onclick="window.location.reload()">
-                                <i class="fas fa-sync me-1"></i>
-                                Recarregar Página
-                            </button>
-                            <a href="../pages/dashboard.php" class="btn btn-secondary btn-sm">
-                                <i class="fas fa-arrow-left me-1"></i>
-                                Voltar ao Dashboard
-                            </a>
-                        </div>
-                    </div>
-                </div>
+                <a href="../pages/dashboard.php" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>
+                    Voltar ao Dashboard
+                </a>
             </div>
             
             <?php else: ?>
@@ -828,8 +900,75 @@ $headerComponent = HeaderComponent::create([
                     <?php endif; ?>
                 </h1>
                 <p class="page-subtitle">
-                    Gerencie desfiliações, cadastros de novos associados e demais serviços comerciais
+                    Gerencie desfiliações, cadastros de novos associados e demais serviços comerciais. Sistema preparado para múltiplos RGs de diferentes corporações.
                 </p>
+            </div>
+
+            <!-- Estatísticas Comerciais -->
+            <div class="stats-grid" data-aos="fade-up">
+                <div class="stat-card primary">
+                    <div class="stat-header">
+                        <div>
+                            <div class="stat-value"><?php echo number_format($totalAssociadosAtivos, 0, ',', '.'); ?></div>
+                            <div class="stat-label">Associados Ativos</div>
+                            <div class="stat-change neutral">
+                                <i class="fas fa-users"></i>
+                                Base atual
+                            </div>
+                        </div>
+                        <div class="stat-icon primary">
+                            <i class="fas fa-users"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stat-card success">
+                    <div class="stat-header">
+                        <div>
+                            <div class="stat-value"><?php echo number_format($cadastrosHoje, 0, ',', '.'); ?></div>
+                            <div class="stat-label">Cadastros Hoje</div>
+                            <div class="stat-change positive">
+                                <i class="fas fa-arrow-up"></i>
+                                Novos cadastros
+                            </div>
+                        </div>
+                        <div class="stat-icon success">
+                            <i class="fas fa-user-plus"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stat-card warning">
+                    <div class="stat-header">
+                        <div>
+                            <div class="stat-value"><?php echo number_format($preCadastrosPendentes, 0, ',', '.'); ?></div>
+                            <div class="stat-label">Pré-cadastros Pendentes</div>
+                            <div class="stat-change neutral">
+                                <i class="fas fa-clock"></i>
+                                Aguardando análise
+                            </div>
+                        </div>
+                        <div class="stat-icon warning">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stat-card info">
+                    <div class="stat-header">
+                        <div>
+                            <div class="stat-value"><?php echo number_format($desfiliacoesRecentes, 0, ',', '.'); ?></div>
+                            <div class="stat-label">Desfiliações (30 dias)</div>
+                            <div class="stat-change negative">
+                                <i class="fas fa-user-times"></i>
+                                Último mês
+                            </div>
+                        </div>
+                        <div class="stat-icon info">
+                            <i class="fas fa-user-times"></i>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- Alert informativo sobre o nível de acesso -->
@@ -846,11 +985,7 @@ $headerComponent = HeaderComponent::create([
                         <?php endif; ?>
                     </h6>
                     <small>
-                        <?php if ($isComercial): ?>
-                            Você tem acesso completo aos serviços comerciais: desfiliações, cadastros e atendimento.
-                        <?php elseif ($isPresidencia): ?>
-                            Você tem acesso administrativo aos serviços comerciais como membro da presidência.
-                        <?php endif; ?>
+                        Você tem acesso completo aos serviços comerciais. Sistema preparado para múltiplos RGs de diferentes corporações.
                     </small>
                 </div>
             </div>
@@ -868,23 +1003,29 @@ $headerComponent = HeaderComponent::create([
                     </div>
                     <div class="service-content" style="position: relative;">
                         <p class="text-muted mb-3">
-                            Busque um associado pelo RG militar e gere automaticamente a ficha de desfiliação.
+                            Busque um associado pelo RG militar ou nome e gere automaticamente a ficha de desfiliação. Sistema preparado para múltiplos RGs de diferentes corporações.
                         </p>
                         
                         <form class="busca-form" onsubmit="buscarAssociadoPorRG(event)">
                             <div class="busca-input-group">
-                                <label class="form-label" for="rgBusca">RG Militar</label>
-                                <input type="text" class="form-control" id="rgBusca" 
-                                       placeholder="Digite o RG militar..." required>
+                                <label class="form-label" for="rgBuscaComercial">
+                                    <i class="fas fa-id-card me-1"></i>
+                                    RG Militar ou Nome
+                                </label>
+                                <input type="text" class="form-control" id="rgBuscaComercial" 
+                                       placeholder="Digite o RG militar ou nome..." required>
+                                <small class="text-muted">
+                                    Se houver múltiplos registros com o mesmo RG, você poderá escolher a corporação correta
+                                </small>
                             </div>
                             <div>
-                                <button type="submit" class="btn btn-primary" id="btnBuscarRG">
+                                <button type="submit" class="btn btn-primary" id="btnBuscarComercial">
                                     <i class="fas fa-search me-2"></i>
                                     Buscar Associado
                                 </button>
                             </div>
                             <div>
-                                <button type="button" class="btn btn-secondary" onclick="limparBuscaRG()">
+                                <button type="button" class="btn btn-secondary" onclick="limparBuscaComercial()">
                                     <i class="fas fa-eraser me-2"></i>
                                     Limpar
                                 </button>
@@ -892,9 +1033,9 @@ $headerComponent = HeaderComponent::create([
                         </form>
 
                         <!-- Alert para mensagens de busca -->
-                        <div id="alertBusca" class="alert" style="display: none;">
+                        <div id="alertBuscaComercial" class="alert" style="display: none;">
                             <i class="fas fa-info-circle me-2"></i>
-                            <span id="alertBuscaText"></span>
+                            <span id="alertBuscaComercialText"></span>
                         </div>
 
                         <!-- Container para dados do associado -->
@@ -904,13 +1045,24 @@ $headerComponent = HeaderComponent::create([
                                 Dados do Associado Encontrado
                             </h6>
                             
+                            <!-- Identificação Militar -->
+                            <div id="identificacaoMilitarComercial" class="identificacao-militar" style="display: none;">
+                                <h6>
+                                    <i class="fas fa-shield-alt me-2"></i>
+                                    Identificação Militar
+                                </h6>
+                                <div class="militar-info-grid" id="militarInfoGridComercial">
+                                    <!-- Dados militares serão inseridos aqui -->
+                                </div>
+                            </div>
+                            
                             <div class="dados-grid" id="dadosAssociadoGrid">
                                 <!-- Dados serão inseridos aqui dinamicamente -->
                             </div>
                         </div>
 
                         <!-- Loading overlay -->
-                        <div id="loadingBuscaDesfiliacao" class="loading-overlay" style="display: none;">
+                        <div id="loadingBuscaComercial" class="loading-overlay" style="display: none;">
                             <div class="loading-spinner mb-3"></div>
                             <p class="text-muted">Buscando dados do associado...</p>
                         </div>
@@ -948,13 +1100,12 @@ $headerComponent = HeaderComponent::create([
                             </div>
 
                             <div class="cadastro-option" onclick="consultarDependentes18()">
-                            <div class="cadastro-option-icon">
-                            <i class="fas fa-birthday-cake"></i>
+                                <div class="cadastro-option-icon">
+                                    <i class="fas fa-birthday-cake"></i>
+                                </div>
+                                <h5>Dependentes 18+</h5>
+                                <p>Veja os dependentes que já completaram ou estão prestes a completar 18 anos</p>
                             </div>
-                            <h5>Dependentes 18+</h5>
-                            <p>Veja os dependentes que já completaram ou estão prestes a completar 18 anos</p>
-                        </div>
-
 
                             <div class="cadastro-option" onclick="relatoriosComerciais()">
                                 <div class="cadastro-option-icon">
@@ -1059,6 +1210,41 @@ $headerComponent = HeaderComponent::create([
         </div>
     </div>
 
+    <!-- Modal de Seleção de Associado (NOVO) -->
+    <div class="modal fade modal-selecao-associado" id="modalSelecaoAssociadoComercial" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">
+                        <i class="fas fa-users me-2"></i>
+                        Múltiplos Associados Encontrados
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Atenção:</strong> Foram encontrados múltiplos associados com o mesmo RG em diferentes corporações.
+                        Selecione o associado correto para visualizar os dados e gerar a ficha de desfiliação.
+                    </div>
+                    <div id="listaAssociadosSelecaoComercial">
+                        <!-- Lista de associados será inserida aqui -->
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>
+                        Cancelar
+                    </button>
+                    <button type="button" class="btn btn-primary" id="btnConfirmarSelecaoComercial" disabled>
+                        <i class="fas fa-check me-2"></i>
+                        Confirmar Seleção
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
@@ -1111,20 +1297,27 @@ $headerComponent = HeaderComponent::create([
         // ===== VARIÁVEIS GLOBAIS =====
         const notifications = new NotificationSystem();
         let dadosAssociadoAtual = null;
+        let associadoSelecionadoId = null;
+        let listaAssociadosMultiplos = [];
         const temPermissao = <?php echo json_encode($temPermissaoComercial); ?>;
         const isComercial = <?php echo json_encode($isComercial); ?>;
         const isPresidencia = <?php echo json_encode($isPresidencia); ?>;
         const departamentoUsuario = <?php echo json_encode($departamentoUsuario); ?>;
 
+        // ===== IMPORTANTE: API UTILIZADA =====
+        // Este módulo comercial utiliza a API atualizada buscar_por_rg.php que agora possui:
+        // - Suporte a múltiplos RGs de diferentes corporações  
+        // - Retorno de dados completos (pessoais, militares, endereço, financeiros)
+        // - Tratamento de múltiplos resultados com status 'multiple_results'
+        // - Busca por RG, CPF, nome ou ID específico
+        // - Sistema de alertas e dados estruturados
+        // - Compatibilidade total com o sistema de múltiplos associados
+        // 
+        // A API foi atualizada especificamente para suportar essas funcionalidades avançadas.
+
         // ===== INICIALIZAÇÃO =====
         document.addEventListener('DOMContentLoaded', function() {
             AOS.init({ duration: 800, once: true });
-
-            console.log('=== DEBUG SERVIÇOS COMERCIAIS - RESTRITO ===');
-            console.log('Tem permissão:', temPermissao);
-            console.log('É comercial:', isComercial);
-            console.log('É presidência:', isPresidencia);
-            console.log('Departamento usuário:', departamentoUsuario);
 
             if (!temPermissao) {
                 console.log('❌ Usuário sem permissão - não carregará funcionalidades');
@@ -1135,138 +1328,36 @@ $headerComponent = HeaderComponent::create([
             configurarEventos();
             configurarFichaDesfiliacao();
 
-            // Event listener para Enter no campo RG
-            $('#rgBusca').on('keypress', function(e) {
+            // Event listener para Enter no campo de busca
+            $('#rgBuscaComercial').on('keypress', function(e) {
                 if (e.key === 'Enter') {
                     e.preventDefault();
                     buscarAssociadoPorRG(e);
                 }
             });
 
+            // Event listener para o botão de confirmar seleção
+            document.getElementById('btnConfirmarSelecaoComercial').addEventListener('click', buscarAssociadoSelecionado);
+
             const departamentoNome = isComercial ? 'Comercial' : isPresidencia ? 'Presidência' : 'Autorizado';
             notifications.show(`Serviços comerciais carregados - ${departamentoNome}!`, 'success', 3000);
         });
 
-        // ===== FUNÇÃO DE DEBUG DETALHADO =====
-        function mostrarDebugDetalhado() {
-            const usuario = <?php echo json_encode($usuarioLogado); ?>;
-            const isDiretor = <?php echo json_encode($auth->isDiretor()); ?>;
-            
-            let debugHtml = `
-                <div class="debug-completo">
-                    <h6><i class="fas fa-bug"></i> Debug Detalhado - Serviços Comerciais</h6>
-                    <hr>
-                    
-                    <div class="row">
-                        <div class="col-md-6">
-                            <h6>Dados do Usuário:</h6>
-                            <pre class="bg-light p-2 small">${JSON.stringify(usuario, null, 2)}</pre>
-                        </div>
-                        <div class="col-md-6">
-                            <h6>Verificações de Acesso:</h6>
-                            <ul class="small">
-                                <li><strong>É Diretor:</strong> ${isDiretor ? 'SIM ✅' : 'NÃO ❌'}</li>
-                                <li><strong>Departamento ID:</strong> ${usuario.departamento_id} (tipo: ${typeof usuario.departamento_id})</li>
-                                <li><strong>É Comercial (dept==10):</strong> ${usuario.departamento_id == 10 ? 'SIM ✅' : 'NÃO ❌'}</li>
-                                <li><strong>É Presidência (dept==1):</strong> ${usuario.departamento_id == 1 ? 'SIM ✅' : 'NÃO ❌'}</li>
-                                <li><strong>Tem Permissão Final:</strong> ${temPermissao ? 'SIM ✅' : 'NÃO ❌'}</li>
-                            </ul>
-                            
-                            <div class="mt-3">
-                                <strong>Regra de Acesso:</strong><br>
-                                <code>departamento_id == 10 OU departamento_id == 1</code><br><br>
-                                
-                                <strong>Resultado:</strong><br>
-                                <code>Comercial: ${usuario.departamento_id == 10} | Presidência: ${usuario.departamento_id == 1}</code><br>
-                                <code>Final: ${usuario.departamento_id == 10 || usuario.departamento_id == 1}</code>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <hr>
-                    <div class="alert alert-warning">
-                        <h6><i class="fas fa-shield-alt"></i> Política de Acesso</h6>
-                        <p class="mb-0">
-                            <strong>RESTRITO:</strong> Apenas funcionários dos departamentos <strong>Comercial (ID: 10)</strong> 
-                            e <strong>Presidência (ID: 1)</strong> podem acessar os serviços comerciais.
-                            <br><br>
-                            <small><strong>Nota:</strong> Diretores de outros departamentos NÃO têm acesso automático.</small>
-                        </p>
-                    </div>
-                    
-                    <small class="text-muted">
-                        <strong>Para corrigir acesso:</strong>
-                        <br>1. Verifique o departamento_id no banco de dados
-                        <br>2. Confirme se o usuário deve ter acesso aos serviços comerciais
-                        <br>3. Se necessário, mova o usuário para o departamento correto
-                    </small>
-                </div>
-            `;
-            
-            // Criar modal customizado
-            const modal = document.createElement('div');
-            modal.className = 'modal fade';
-            modal.innerHTML = `
-                <div class="modal-dialog modal-xl">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title">Debug - Serviços Comerciais</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                        </div>
-                        <div class="modal-body">
-                            ${debugHtml}
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
-                            <button type="button" class="btn btn-primary" onclick="window.location.reload()">
-                                <i class="fas fa-sync me-1"></i>
-                                Recarregar Página
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            `;
-            
-            document.body.appendChild(modal);
-            const bsModal = new bootstrap.Modal(modal);
-            bsModal.show();
-            
-            modal.addEventListener('hidden.bs.modal', () => {
-                modal.remove();
-            });
-        }
+        // ===== FUNÇÕES DE BUSCA (ATUALIZADAS PARA MÚLTIPLOS ASSOCIADOS) =====
 
-        // ===== FUNÇÕES DE DESFILIAÇÃO =====
-
-        // Preencher data atual
-        function preencherDataAtual() {
-            const hoje = new Date();
-            const dia = hoje.getDate();
-            const meses = [
-                'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
-                'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'
-            ];
-            const mes = meses[hoje.getMonth()];
-            const ano = hoje.getFullYear();
-
-            document.getElementById('diaAtual').textContent = dia.toString().padStart(2, '0');
-            document.getElementById('mesAtual').textContent = mes;
-            document.getElementById('anoAtual').textContent = ano.toString();
-        }
-
-        // Buscar associado por RG
+        // Buscar associado por RG - ATUALIZADA para suportar múltiplos resultados
         async function buscarAssociadoPorRG(event) {
             event.preventDefault();
             
-            const rgInput = document.getElementById('rgBusca');
-            const rg = rgInput.value.trim();
-            const btnBuscar = document.getElementById('btnBuscarRG');
-            const loadingOverlay = document.getElementById('loadingBuscaDesfiliacao');
+            const rgInput = document.getElementById('rgBuscaComercial');
+            const busca = rgInput.value.trim();
+            const btnBuscar = document.getElementById('btnBuscarComercial');
+            const loadingOverlay = document.getElementById('loadingBuscaComercial');
             const dadosContainer = document.getElementById('dadosAssociadoContainer');
             const fichaContainer = document.getElementById('fichaDesfiliacao');
             
-            if (!rg) {
-                mostrarAlertaBusca('Por favor, digite um RG para buscar.', 'danger');
+            if (!busca) {
+                mostrarAlertaBuscaComercial('Por favor, digite um RG ou nome para buscar.', 'danger');
                 return;
             }
 
@@ -1275,13 +1366,27 @@ $headerComponent = HeaderComponent::create([
             btnBuscar.disabled = true;
             dadosContainer.style.display = 'none';
             fichaContainer.style.display = 'none';
-            esconderAlertaBusca();
+            esconderAlertaBuscaComercial();
 
             try {
-                const response = await fetch(`../api/associados/buscar_por_rg.php?rg=${encodeURIComponent(rg)}`);
+                // IMPORTANTE: Usando a API atualizada buscar_por_rg.php que agora tem:
+                // - Lógica de múltiplos resultados quando há RGs iguais em diferentes corporações
+                // - Retorno de dados completos do associado (pessoais, militares, endereço, etc.)
+                // - Suporte a busca por RG, nome, CPF ou ID específico
+                // - Sistema de alertas e dados estruturados
+                
+                // Determina se é busca por RG ou nome
+                const parametro = isNaN(busca) ? 'nome' : 'rg';
+                const response = await fetch(`../api/associados/buscar_por_rg.php?${parametro}=${encodeURIComponent(busca)}`);
                 const result = await response.json();
 
-                if (result.status === 'success') {
+                if (result.status === 'multiple_results') {
+                    // Múltiplos resultados encontrados
+                    listaAssociadosMultiplos = result.data;
+                    mostrarModalSelecaoComercial(result.data);
+                    mostrarAlertaBuscaComercial('Múltiplos associados encontrados. Por favor, selecione o correto.', 'warning');
+                } else if (result.status === 'success') {
+                    // Um único resultado
                     dadosAssociadoAtual = result.data;
                     exibirDadosAssociado(dadosAssociadoAtual);
                     preencherFichaDesfiliacao(dadosAssociadoAtual);
@@ -1289,7 +1394,7 @@ $headerComponent = HeaderComponent::create([
                     dadosContainer.style.display = 'block';
                     fichaContainer.style.display = 'block';
                     
-                    mostrarAlertaBusca('Associado encontrado! Dados carregados e ficha preenchida automaticamente.', 'success');
+                    mostrarAlertaBuscaComercial('Associado encontrado! Dados carregados e ficha preenchida automaticamente.', 'success');
                     
                     // Scroll suave até os dados
                     setTimeout(() => {
@@ -1299,22 +1404,198 @@ $headerComponent = HeaderComponent::create([
                         });
                     }, 300);
                 } else {
-                    mostrarAlertaBusca(result.message, 'danger');
+                    mostrarAlertaBuscaComercial(result.message || 'Erro ao buscar dados', 'danger');
                 }
 
             } catch (error) {
-                console.error('Erro na busca:', error);
-                mostrarAlertaBusca('Erro ao buscar associado. Verifique sua conexão.', 'danger');
+                console.error('Erro na busca comercial:', error);
+                mostrarAlertaBuscaComercial('Erro ao buscar associado. Verifique sua conexão.', 'danger');
             } finally {
                 loadingOverlay.style.display = 'none';
                 btnBuscar.disabled = false;
             }
         }
 
-        // Exibir dados do associado
+        // NOVA FUNÇÃO - Mostrar modal de seleção
+        function mostrarModalSelecaoComercial(associados) {
+            const listaContainer = document.getElementById('listaAssociadosSelecaoComercial');
+            listaContainer.innerHTML = '';
+
+            associados.forEach(assoc => {
+                const card = document.createElement('div');
+                card.className = 'associado-card d-flex align-items-center';
+                card.dataset.id = assoc.id;
+
+                // Determina a classe do badge baseado na corporação
+                let badgeClass = 'badge-default';
+                let corporacaoIcon = 'fa-shield-alt';
+
+                if (assoc.corporacao) {
+                    const corp = assoc.corporacao.toUpperCase();
+                    if (corp.includes('PM') || corp.includes('POLÍCIA MILITAR')) {
+                        badgeClass = 'badge-pm';
+                        corporacaoIcon = 'fa-shield';
+                    } else if (corp.includes('BM') || corp.includes('BOMBEIRO')) {
+                        badgeClass = 'badge-bm';
+                        corporacaoIcon = 'fa-fire';
+                    } else if (corp.includes('PC') || corp.includes('POLÍCIA CIVIL')) {
+                        badgeClass = 'badge-pc';
+                        corporacaoIcon = 'fa-user-shield';
+                    }
+                }
+
+                card.innerHTML = `
+                    <div class="form-check me-3">
+                        <input class="form-check-input" type="radio" name="associadoSelecionadoComercial" 
+                               value="${assoc.id}" id="assoc_comercial_${assoc.id}">
+                    </div>
+                    ${assoc.foto ? 
+                        `<img src="${assoc.foto}" class="associado-foto" alt="${assoc.nome}">` : 
+                        `<div class="associado-foto d-flex align-items-center justify-content-center bg-light">
+                            <i class="fas fa-user fa-2x text-muted"></i>
+                        </div>`
+                    }
+                    <div class="associado-info">
+                        <div class="associado-nome">${assoc.nome}</div>
+                        <div class="associado-rg">
+                            <i class="fas fa-id-card me-1"></i>
+                            RG: ${assoc.rg} | CPF: ${assoc.cpf || 'Não informado'}
+                        </div>
+                        <div class="associado-militar">
+                            <span class="badge-corporacao ${badgeClass}">
+                                <i class="fas ${corporacaoIcon}"></i>
+                                ${assoc.corporacao || 'Corporação não informada'}
+                            </span>
+                            ${assoc.patente ? 
+                                `<span class="badge bg-secondary">
+                                    <i class="fas fa-star me-1"></i>
+                                    ${assoc.patente}
+                                </span>` : ''
+                            }
+                            ${assoc.unidade ? 
+                                `<span class="badge bg-info text-dark">
+                                    <i class="fas fa-building me-1"></i>
+                                    ${assoc.unidade}
+                                </span>` : ''
+                            }
+                        </div>
+                        ${assoc.situacao ? 
+                            `<div class="mt-2">
+                                <small class="text-muted">Situação: </small>
+                                <span class="badge ${assoc.situacao === 'DESFILIADO' ? 'bg-danger' : 'bg-success'}">
+                                    ${assoc.situacao}
+                                </span>
+                            </div>` : ''
+                        }
+                    </div>
+                `;
+
+                // Evento de clique no card
+                card.addEventListener('click', function() {
+                    const radio = this.querySelector('input[type="radio"]');
+                    radio.checked = true;
+
+                    // Remove seleção anterior
+                    document.querySelectorAll('.associado-card').forEach(c => c.classList.remove('selecionado'));
+                    this.classList.add('selecionado');
+
+                    // Habilita botão de confirmação
+                    document.getElementById('btnConfirmarSelecaoComercial').disabled = false;
+                    associadoSelecionadoId = assoc.id;
+                });
+
+                listaContainer.appendChild(card);
+            });
+
+            // Mostra o modal
+            const modal = new bootstrap.Modal(document.getElementById('modalSelecaoAssociadoComercial'));
+            modal.show();
+        }
+
+        // NOVA FUNÇÃO - Buscar associado selecionado
+        async function buscarAssociadoSelecionado() {
+            if (!associadoSelecionadoId) return;
+
+            // Fecha o modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('modalSelecaoAssociadoComercial'));
+            modal.hide();
+
+            // Busca os dados do associado selecionado
+            const loadingOverlay = document.getElementById('loadingBuscaComercial');
+            const dadosContainer = document.getElementById('dadosAssociadoContainer');
+            const fichaContainer = document.getElementById('fichaDesfiliacao');
+
+            loadingOverlay.style.display = 'flex';
+
+            try {
+                const response = await fetch(`../api/associados/buscar_por_rg.php?id=${associadoSelecionadoId}`);
+                const result = await response.json();
+
+                if (result.status === 'success') {
+                    dadosAssociadoAtual = result.data;
+                    exibirDadosAssociado(result.data);
+                    preencherFichaDesfiliacao(result.data);
+                    
+                    dadosContainer.style.display = 'block';
+                    fichaContainer.style.display = 'block';
+                    
+                    mostrarAlertaBuscaComercial('Dados carregados e ficha preenchida automaticamente!', 'success');
+
+                    // Scroll suave até os dados
+                    setTimeout(() => {
+                        dadosContainer.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'start'
+                        });
+                    }, 300);
+                } else {
+                    mostrarAlertaBuscaComercial(result.message || 'Erro ao buscar dados', 'danger');
+                }
+            } catch (error) {
+                console.error('Erro:', error);
+                mostrarAlertaBuscaComercial('Erro ao consultar dados do associado.', 'danger');
+            } finally {
+                loadingOverlay.style.display = 'none';
+                // Reset seleção
+                associadoSelecionadoId = null;
+                document.getElementById('btnConfirmarSelecaoComercial').disabled = true;
+            }
+        }
+
+        // Exibir dados do associado - ATUALIZADA
         function exibirDadosAssociado(dados) {
             const grid = document.getElementById('dadosAssociadoGrid');
+            const militarContainer = document.getElementById('identificacaoMilitarComercial');
+            const militarGrid = document.getElementById('militarInfoGridComercial');
+
             grid.innerHTML = '';
+            militarGrid.innerHTML = '';
+
+            // Exibe dados militares se existirem
+            if (dados.dados_militares && dados.dados_militares.corporacao !== 'Não informada') {
+                militarContainer.style.display = 'block';
+
+                militarGrid.innerHTML = `
+                    <div class="militar-info-item">
+                        <span class="militar-info-label">Corporação</span>
+                        <span class="militar-info-value">${dados.dados_militares.corporacao}</span>
+                    </div>
+                    <div class="militar-info-item">
+                        <span class="militar-info-label">Patente</span>
+                        <span class="militar-info-value">${dados.dados_militares.patente}</span>
+                    </div>
+                    <div class="militar-info-item">
+                        <span class="militar-info-label">Unidade</span>
+                        <span class="militar-info-value">${dados.dados_militares.unidade || 'Não informada'}</span>
+                    </div>
+                    <div class="militar-info-item">
+                        <span class="militar-info-label">Lotação</span>
+                        <span class="militar-info-value">${dados.dados_militares.lotacao || 'Não informada'}</span>
+                    </div>
+                `;
+            } else {
+                militarContainer.style.display = 'none';
+            }
 
             // Função auxiliar para criar item de dados
             function criarDadosItem(label, value, icone = 'fa-info') {
@@ -1335,7 +1616,7 @@ $headerComponent = HeaderComponent::create([
             const pessoais = dados.dados_pessoais || {};
             grid.innerHTML += criarDadosItem('Nome Completo', pessoais.nome, 'fa-user');
             grid.innerHTML += criarDadosItem('RG Militar', pessoais.rg, 'fa-id-card');
-            grid.innerHTML += criarDadosItem('CPF', formatarCPF(pessoais.cpf), 'fa-id-card');
+            grid.innerHTML += criarDadosItem('CPF', formatarCPF(pessoais.cpf), 'fa-id-badge');
             grid.innerHTML += criarDadosItem('Data Nascimento', formatarData(pessoais.data_nascimento), 'fa-calendar');
             grid.innerHTML += criarDadosItem('Email', pessoais.email, 'fa-envelope');
             grid.innerHTML += criarDadosItem('Telefone', formatarTelefone(pessoais.telefone), 'fa-phone');
@@ -1383,6 +1664,24 @@ $headerComponent = HeaderComponent::create([
                     <div class="dados-value">${statusBadge}</div>
                 </div>
             `;
+        }
+
+        // ===== FUNÇÕES DE DESFILIAÇÃO =====
+
+        // Preencher data atual
+        function preencherDataAtual() {
+            const hoje = new Date();
+            const dia = hoje.getDate();
+            const meses = [
+                'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
+                'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'
+            ];
+            const mes = meses[hoje.getMonth()];
+            const ano = hoje.getFullYear();
+
+            document.getElementById('diaAtual').textContent = dia.toString().padStart(2, '0');
+            document.getElementById('mesAtual').textContent = mes;
+            document.getElementById('anoAtual').textContent = ano.toString();
         }
 
         // Preencher ficha de desfiliação
@@ -1472,28 +1771,32 @@ $headerComponent = HeaderComponent::create([
             // Limpar placeholder do motivo ao clicar
             const motivoArea = document.getElementById('motivoDesfiliacao');
             
-            motivoArea.addEventListener('focus', function() {
-                if (this.textContent === 'Clique aqui para digitar o motivo da desfiliação...') {
-                    this.textContent = '';
-                }
-            });
+            if (motivoArea) {
+                motivoArea.addEventListener('focus', function() {
+                    if (this.textContent === 'Clique aqui para digitar o motivo da desfiliação...') {
+                        this.textContent = '';
+                    }
+                });
 
-            // Restaurar placeholder se vazio
-            motivoArea.addEventListener('blur', function() {
-                if (this.textContent.trim() === '') {
-                    this.textContent = 'Clique aqui para digitar o motivo da desfiliação...';
-                }
-            });
+                // Restaurar placeholder se vazio
+                motivoArea.addEventListener('blur', function() {
+                    if (this.textContent.trim() === '') {
+                        this.textContent = 'Clique aqui para digitar o motivo da desfiliação...';
+                    }
+                });
+            }
         }
 
-        // Limpar busca por RG
-        function limparBuscaRG() {
-            document.getElementById('rgBusca').value = '';
+        // Limpar busca comercial
+        function limparBuscaComercial() {
+            document.getElementById('rgBuscaComercial').value = '';
             document.getElementById('dadosAssociadoContainer').style.display = 'none';
             document.getElementById('fichaDesfiliacao').style.display = 'none';
             document.getElementById('dadosAssociadoGrid').innerHTML = '';
+            document.getElementById('identificacaoMilitarComercial').style.display = 'none';
             dadosAssociadoAtual = null;
-            esconderAlertaBusca();
+            associadoSelecionadoId = null;
+            esconderAlertaBuscaComercial();
 
             // Limpa campos da ficha
             const campos = [
@@ -1513,10 +1816,10 @@ $headerComponent = HeaderComponent::create([
             }
         }
 
-        // Mostrar alerta de busca
-        function mostrarAlertaBusca(mensagem, tipo) {
-            const alertDiv = document.getElementById('alertBusca');
-            const alertText = document.getElementById('alertBuscaText');
+        // Mostrar alerta de busca comercial
+        function mostrarAlertaBuscaComercial(mensagem, tipo) {
+            const alertDiv = document.getElementById('alertBuscaComercial');
+            const alertText = document.getElementById('alertBuscaComercialText');
             
             alertText.textContent = mensagem;
             
@@ -1543,13 +1846,13 @@ $headerComponent = HeaderComponent::create([
             
             // Auto-hide após 5 segundos se for sucesso
             if (tipo === 'success') {
-                setTimeout(esconderAlertaBusca, 5000);
+                setTimeout(esconderAlertaBuscaComercial, 5000);
             }
         }
 
-        // Esconder alerta de busca
-        function esconderAlertaBusca() {
-            document.getElementById('alertBusca').style.display = 'none';
+        // Esconder alerta de busca comercial
+        function esconderAlertaBuscaComercial() {
+            document.getElementById('alertBuscaComercial').style.display = 'none';
         }
 
         // Imprimir ficha
@@ -1560,12 +1863,12 @@ $headerComponent = HeaderComponent::create([
             const motivo = document.getElementById('motivoDesfiliacao').textContent.trim();
             
             if (!nome || !rg) {
-                mostrarAlertaBusca('Por favor, busque um associado antes de imprimir.', 'danger');
+                mostrarAlertaBuscaComercial('Por favor, busque um associado antes de imprimir.', 'danger');
                 return;
             }
             
             if (!motivo || motivo === 'Clique aqui para digitar o motivo da desfiliação...') {
-                mostrarAlertaBusca('Por favor, informe o motivo da desfiliação antes de imprimir.', 'danger');
+                mostrarAlertaBuscaComercial('Por favor, informe o motivo da desfiliação antes de imprimir.', 'danger');
                 return;
             }
             
@@ -1587,14 +1890,6 @@ $headerComponent = HeaderComponent::create([
             }, 1000);
         }
 
-        // Ver pré-cadastros pendentes
-        function verPreCadastrosPendentes() {
-            notifications.show('Carregando pré-cadastros pendentes...', 'info');
-            setTimeout(() => {
-                window.location.href = '../pages/pre_cadastros_pendentes.php';
-            }, 1000);
-        }
-
         // Consultar associado
         function consultarAssociado() {
             notifications.show('Abrindo consulta de associados...', 'info');
@@ -1602,9 +1897,10 @@ $headerComponent = HeaderComponent::create([
                 window.location.href = '../pages/dashboard.php';
             }, 1000);
         }
+
         // Consultar dependentes com 18 anos
         function consultarDependentes18() {
-            notifications.show('Carregando relatórios comerciais...', 'info');
+            notifications.show('Carregando dependentes 18+...', 'info');
             setTimeout(() => {
                 window.location.href = '../pages/dependentes_18anos.php';
             }, 1000);
@@ -1622,7 +1918,7 @@ $headerComponent = HeaderComponent::create([
 
         // Configurar eventos
         function configurarEventos() {
-            // Aqui podem ser adicionados outros event listeners se necessário
+            // Outros event listeners se necessário
         }
 
         // Funções auxiliares de formatação
@@ -1669,7 +1965,7 @@ $headerComponent = HeaderComponent::create([
         console.log('✓ Sistema de Serviços Comerciais carregado com sucesso!');
         console.log(`🏢 Departamento: ${isComercial ? 'Comercial (ID: 10)' : isPresidencia ? 'Presidência (ID: 1)' : 'Desconhecido'}`);
         console.log(`🔐 Permissões: ${temPermissao ? 'Concedidas' : 'Negadas'}`);
-        console.log(`📋 Acesso restrito a: Comercial (ID: 10) e Presidência (ID: 1)`);
+        console.log(`📋 Suporte a múltiplos RGs de diferentes corporações ativado`);
     </script>
 
 </body>
