@@ -116,7 +116,7 @@ if ($isEdit) {
             $associadoData['agencia'] = $dadosFinanceiro['agencia'];
             $associadoData['operacao'] = $dadosFinanceiro['operacao'];
             $associadoData['contaCorrente'] = $dadosFinanceiro['contaCorrente'];
-            $associadoData['observacoes'] = $dadosFinanceiro['observacoes'];
+           
             $associadoData['doador'] = $dadosFinanceiro['doador'];
             error_log("✓ Dados financeiros carregados");
         }
