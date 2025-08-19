@@ -933,19 +933,6 @@ $patentes = [
                             <span class="form-error">Por favor, insira a data de filiação</span>
                         </div>
 
-                        <!-- CAMPO DE OBSERVAÇÕES ADICIONADO -->
-                        <div class="form-group full-width">
-                            <label class="form-label">
-                                Observações
-                                <i class="fas fa-info-circle info-tooltip"
-                                    title="Informações adicionais sobre o associado"></i>
-                            </label>
-                            <textarea class="form-input" name="observacoes" id="observacoes" rows="4"
-                                placeholder="Digite observações gerais sobre o associado, informações especiais, restrições médicas, etc."><?php echo $associadoData['observacoes'] ?? ''; ?></textarea>
-                            <small class="form-help" style="color: var(--gray-500); font-size: 0.75rem; margin-top: 0.5rem; display: block;">
-                                Use este campo para registrar informações importantes que não se encaixam nos outros campos
-                            </small>
-                        </div>
 
                         <div class="form-group full-width">
                             <label class="form-label">

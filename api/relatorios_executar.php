@@ -1,8 +1,174 @@
 <?php
 /**
+ * Gera saída Excel ultra simples (HTML básico)
+ */
+function gerarExcelSimples($resultado) {
+    error_log("=== INICIANDO GERAÇÃO EXCEL SIMPLES ===");
+    
+    if (!defined('EXPORT_MODE')) {
+        define('EXPORT_MODE', true);
+    }
+    
+    $dados = $resultado['dados'] ?? [];
+    $total = count($dados);
+    
+    if (empty($dados)) {
+        die('Erro: Nenhum dado disponível para exportação Excel.');
+    }
+    
+    $filename = 'relatorio_simples_' . date('Y-m-d_H-i-s') . '.xls';
+    
+    if (ob_get_level()) {
+        ob_end_clean();
+    }
+    
+    if (headers_sent($file, $line)) {
+        die('Erro interno: Headers já enviados.');
+    }
+    
+    // Headers mais básicos possíveis para Excel
+    header('Content-Type: application/vnd.ms-excel');
+    header('Content-Disposition: attachment; filename="' . $filename . '"');
+    header('Content-Transfer-Encoding: binary');
+    header('Cache-Control: must-revalidate, post-check=0, pre-check=0');
+    header('Pragma: public');
+    
+    try {
+        // HTML extremamente básico
+        echo "<html>\n<body>\n";
+        echo "<table>\n";
+        
+        // Informações básicas
+        echo "<tr><td colspan='" . count(array_keys($dados[0])) . "'><b>Relatório - " . date('d/m/Y H:i:s') . "</b></td></tr>\n";
+        echo "<tr><td colspan='" . count(array_keys($dados[0])) . "'>Registros: " . number_format($total, 0, ',', '.') . "</td></tr>\n";
+        echo "<tr><td>&nbsp;</td></tr>\n";
+        
+        // Cabeçalhos
+        echo "<tr>\n";
+        foreach (array_keys($dados[0]) as $coluna) {
+            echo "<td><b>" . formatarNomeColuna($coluna) . "</b></td>\n";
+        }
+        echo "</tr>\n";
+        
+        // Dados
+        foreach ($dados as $linha) {
+            echo "<tr>\n";
+            foreach ($linha as $key => $valor) {
+                $valorFormatado = formatarValor($valor, $key);
+                $valorFormatado = strip_tags($valorFormatado);
+                $valorFormatado = html_entity_decode($valorFormatado, ENT_QUOTES, 'UTF-8');
+                echo "<td>" . $valorFormatado . "</td>\n";
+            }
+            echo "</tr>\n";
+        }
+        
+        echo "</table>\n</body>\n</html>\n";
+        
+        error_log("=== EXCEL SIMPLES GERADO COM SUCESSO ===");
+        
+    } catch (Exception $e) {
+        error_log("ERRO ao gerar Excel Simples: " . $e->getMessage());
+        die('Erro ao gerar arquivo Excel: ' . $e->getMessage());
+    }
+    
+    flush();
+    exit;
+}
+
+/**
+ * Gera saída Excel usando CSV mascarado (fallback mais confiável)
+ */
+function gerarExcelCSV($resultado) {
+    error_log("=== INICIANDO GERAÇÃO EXCEL CSV ===");
+    
+    // Define modo de exportação para formatação limpa
+    if (!defined('EXPORT_MODE')) {
+        define('EXPORT_MODE', true);
+    }
+    
+    $dados = $resultado['dados'] ?? [];
+    $total = count($dados);
+    
+    if (empty($dados)) {
+        die('Erro: Nenhum dado disponível para exportação Excel CSV.');
+    }
+    
+    $filename = 'relatorio_csv_' . date('Y-m-d_H-i-s') . '.xls';
+    
+    // IMPORTANTE: Limpa qualquer output anterior
+    if (ob_get_level()) {
+        ob_end_clean();
+    }
+    
+    // Verifica se headers já foram enviados
+    if (headers_sent($file, $line)) {
+        die('Erro interno: Headers já enviados. Não é possível gerar Excel.');
+    }
+    
+    // Headers para Excel CSV (mais simples)
+    header('Content-Type: text/csv; charset=utf-8');
+    header('Content-Disposition: attachment; filename="' . $filename . '"');
+    header('Cache-Control: no-cache');
+    header('Pragma: public');
+    
+    // BOM para UTF-8
+    echo "\xEF\xBB\xBF";
+    
+    // Abre output
+    $output = fopen('php://output', 'w');
+    
+    if (!$output) {
+        die('Erro interno ao gerar Excel CSV.');
+    }
+    
+    try {
+        // Informações do cabeçalho
+        $modelo = $resultado['modelo'] ?? [];
+        $titulo = 'Relatório de ' . ucfirst($modelo['tipo'] ?? 'Dados');
+        
+        fputcsv($output, [$titulo], ',', '"');
+        fputcsv($output, ['Gerado em: ' . date('d/m/Y H:i:s')], ',', '"');
+        fputcsv($output, ['Total: ' . number_format($total, 0, ',', '.')], ',', '"');
+        fputcsv($output, [''], ',', '"'); // Linha vazia
+        
+        // Cabeçalhos das colunas
+        $headers = array_map('formatarNomeColuna', array_keys($dados[0]));
+        fputcsv($output, $headers, ',', '"');
+        
+        // Escreve dados
+        foreach ($dados as $linha) {
+            $linhaSemHTML = [];
+            foreach ($linha as $key => $valor) {
+                $valorFormatado = formatarValor($valor, $key);
+                $valorFormatado = is_string($valorFormatado) ? strip_tags($valorFormatado) : $valorFormatado;
+                $valorFormatado = html_entity_decode($valorFormatado, ENT_QUOTES, 'UTF-8');
+                $linhaSemHTML[] = $valorFormatado;
+            }
+            fputcsv($output, $linhaSemHTML, ',', '"');
+        }
+        
+        error_log("=== EXCEL CSV GERADO COM SUCESSO ===");
+        
+    } catch (Exception $e) {
+        error_log("ERRO ao gerar Excel CSV: " . $e->getMessage());
+        die('Erro ao gerar arquivo Excel CSV: ' . $e->getMessage());
+    } finally {
+        if ($output) {
+            fclose($output);
+        }
+    }
+    
+    flush();
+    exit;
+}
+
+/**
  * API para executar relatório e gerar saída
  * api/relatorios_executar.php
  */
+
+// IMPORTANTE: Controle de output para exportações
+ob_start();
 
 // Configuração e includes
 require_once '../config/config.php';
@@ -15,6 +181,58 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+/**
+ * Constrói query COUNT específica para paginação
+ */
+function construirQueryCount($config) {
+    $tipo = $config['tipo'];
+    $campos = $config['campos'];
+    $filtros = $config['filtros'] ?? [];
+    
+    // Mapear tabelas principais
+    $tabelasPrincipais = [
+        'associados' => 'Associados a',
+        'financeiro' => 'Financeiro f',
+        'militar' => 'Militar m',
+        'servicos' => 'Servicos_Associado sa',
+        'documentos' => 'Documentos_Associado da'
+    ];
+    
+    $tabelaPrincipal = $tabelasPrincipais[$tipo] ?? 'Associados a';
+    
+    // Construir SELECT COUNT
+    $where = ['1=1'];
+    $params = [];
+    
+    // Obtém JOINs necessários (mesmo da query principal)
+    $joinsInfo = obterJoins($tipo, $campos);
+    $joins = $joinsInfo['joins'];
+    $tabelasAdicionadas = $joinsInfo['tabelas'];
+    
+    // Verifica se precisa adicionar JOIN com Contrato para filtros de data
+    if (($tipo === 'associados' || $tipo === 'financeiro' || $tipo === 'militar') && 
+        (!empty($filtros['data_inicio']) || !empty($filtros['data_fim'])) &&
+        !isset($tabelasAdicionadas['Contrato'])) {
+        $joins[] = "LEFT JOIN Contrato c ON a.id = c.associado_id";
+        $tabelasAdicionadas['Contrato'] = true;
+    }
+    
+    // Aplica filtros (mesmo da query principal)
+    $whereFiltros = aplicarFiltros($tipo, $filtros, $params);
+    $where = array_merge($where, $whereFiltros);
+    
+    // Monta SQL COUNT
+    $sql = "SELECT COUNT(DISTINCT a.id) as total\n";
+    $sql .= "FROM " . $tabelaPrincipal . "\n";
+    $sql .= implode("\n", $joins);
+    $sql .= "\nWHERE " . implode(" AND ", $where);
+    
+    return [
+        'sql' => $sql,
+        'params' => $params
+    ];
+}
+
 // Verifica autenticação
 $auth = new Auth();
 if (!$auth->isLoggedIn()) {
@@ -24,34 +242,67 @@ if (!$auth->isLoggedIn()) {
 // Obtém dados do usuário
 $usuarioLogado = $auth->getUser();
 
+// Inicializa arrays se não existirem
+if (!isset($_GET)) $_GET = [];
+if (!isset($_POST)) $_POST = [];
+
 // Processa dados do formulário
 $tipo = $_POST['tipo'] ?? $_GET['tipo'] ?? '';
 $campos = $_POST['campos'] ?? $_GET['campos'] ?? [];
 $formato = $_POST['formato'] ?? $_GET['formato'] ?? 'html';
 $modeloId = $_POST['modelo_id'] ?? $_GET['modelo_id'] ?? null;
 
+// DEBUG: Log da requisição de exportação
+error_log("=== REQUISIÇÃO RELATÓRIO ===");
+error_log("Formato solicitado: " . $formato);
+error_log("Tipo: " . $tipo);
+error_log("POST dados: " . print_r($_POST, true));
+error_log("GET dados: " . print_r($_GET, true));
+
+// IMPORTANTE: Para exportações, inicia buffer de saída para controlar headers
+if ($formato !== 'html') {
+    ob_start();
+    error_log("=== MODO EXPORTAÇÃO: " . strtoupper($formato) . " ===");
+}
+
+// Garante que campos seja um array
+if (!is_array($campos)) {
+    $campos = $campos ? [$campos] : [];
+}
+
+// Parâmetros de paginação (apenas para HTML)
+$paginaAtual = max(1, (int)($_POST['pagina'] ?? $_GET['pagina'] ?? 1));
+$registrosPorPagina = (int)($_POST['por_pagina'] ?? $_GET['por_pagina'] ?? 50);
+$registrosPorPagina = min(max($registrosPorPagina, 10), 500); // Entre 10 e 500 registros
+
 // Validações básicas
 if (empty($tipo) && empty($modeloId)) {
-    die('Tipo de relatório ou modelo não informado.');
+    // Debug dos parâmetros recebidos
+    error_log("=== ERRO RELATÓRIO ===");
+    error_log("POST: " . print_r($_POST, true));
+    error_log("GET: " . print_r($_GET, true));
+    error_log("Tipo: '$tipo'");
+    error_log("Modelo ID: '$modeloId'");
+    
+    die('Erro: Tipo de relatório ou modelo não informado. Verifique se todos os parâmetros foram enviados corretamente.');
 }
 
 if (empty($campos) && empty($modeloId)) {
-    die('Nenhum campo selecionado para o relatório.');
+    error_log("=== ERRO CAMPOS RELATÓRIO ===");
+    error_log("Campos recebidos: " . print_r($campos, true));
+    error_log("Tipo: '$tipo'");
+    
+    die('Erro: Nenhum campo selecionado para o relatório. Selecione pelo menos um campo antes de gerar o relatório.');
 }
 
-// Monta parâmetros/filtros
+// Monta parâmetros/filtros de forma segura
 $parametros = [];
-foreach ($_POST as $key => $value) {
-    if (!in_array($key, ['tipo', 'campos', 'formato', 'salvar_modelo', 'nome_modelo', 'modelo_id'])) {
-        if (!empty($value)) {
-            $parametros[$key] = $value;
-        }
-    }
-}
-foreach ($_GET as $key => $value) {
-    if (!in_array($key, ['tipo', 'campos', 'formato', 'salvar_modelo', 'nome_modelo', 'modelo_id'])) {
-        if (!empty($value)) {
-            $parametros[$key] = $value;
+$parametrosValidos = ['data_inicio', 'data_fim', 'situacao', 'corporacao', 'patente', 'tipo_associado', 'situacaoFinanceira', 'ativo', 'verificado', 'tipo_documento', 'busca'];
+
+foreach (array_merge($_POST, $_GET) as $key => $value) {
+    if (!in_array($key, ['tipo', 'campos', 'formato', 'salvar_modelo', 'nome_modelo', 'modelo_id', 'pagina', 'por_pagina'])) {
+        if (!empty($value) && in_array($key, $parametrosValidos)) {
+            $parametros[$key] = is_string($value) ? trim($value) : $value;
         }
     }
 }
@@ -70,53 +321,142 @@ try {
             'ordenacao' => $_POST['ordenacao'] ?? $_GET['ordenacao'] ?? null
         ];
         
-        $resultado = executarRelatorioTemporario($modeloTemp);
+        // Debug da configuração do relatório
+        error_log("=== DEBUG RELATÓRIO ===");
+        error_log("Configuração: " . print_r($modeloTemp, true));
+        error_log("Página atual: $paginaAtual");
+        error_log("Registros por página: $registrosPorPagina");
+        
+        $resultado = executarRelatorioTemporario($modeloTemp, $formato, $paginaAtual, $registrosPorPagina);
     }
     
     // Processa formato de saída
+    error_log("=== PROCESSANDO FORMATO: " . $formato . " ===");
+    
     switch ($formato) {
         case 'excel':
+            error_log("Gerando arquivo Excel (CSV Simples)...");
+            // Limpa buffer antes de gerar Excel
+            if (ob_get_level()) {
+                ob_end_clean();
+            }
             gerarExcel($resultado);
             break;
             
+        case 'excel_simples':
+            error_log("Gerando arquivo Excel Simples...");
+            if (ob_get_level()) {
+                ob_end_clean();
+            }
+            gerarExcelSimples($resultado);
+            break;
+            
+        case 'excel_csv':
+            error_log("Gerando arquivo Excel CSV...");
+            if (ob_get_level()) {
+                ob_end_clean();
+            }
+            gerarExcelCSV($resultado);
+            break;
+            
         case 'csv':
+            error_log("Gerando arquivo CSV...");
+            // Limpa buffer antes de gerar CSV
+            if (ob_get_level()) {
+                ob_end_clean();
+            }
             gerarCSV($resultado);
             break;
             
         case 'pdf':
+            error_log("Gerando arquivo PDF...");
             gerarPDF($resultado);
             break;
             
         default: // html
+            error_log("Gerando saída HTML...");
+            // Para HTML, mantém o buffer se existir
             gerarHTML($resultado);
             break;
     }
     
 } catch (Exception $e) {
     error_log("Erro ao executar relatório: " . $e->getMessage());
+    error_log("Stack trace: " . $e->getTraceAsString());
+    
+    // Se for uma requisição de exportação que falhou, informa o erro
+    if ($formato !== 'html') {
+        header('Content-Type: text/plain; charset=utf-8');
+        die('ERRO na exportação ' . strtoupper($formato) . ': ' . $e->getMessage());
+    }
+    
     die('Erro ao gerar relatório: ' . $e->getMessage());
+}
+
+// Se chegou até aqui, é um erro - deveria ter saído via exit nas funções de geração
+if ($formato !== 'html') {
+    error_log("ERRO: Script chegou ao final sem gerar exportação para formato: " . $formato);
+    header('Content-Type: text/plain; charset=utf-8');
+    die('ERRO: Falha na geração do arquivo ' . strtoupper($formato) . '. Verifique os logs do servidor.');
 }
 
 /**
  * Executa relatório temporário (sem modelo salvo)
  */
-function executarRelatorioTemporario($config) {
+function executarRelatorioTemporario($config, $formato = 'html', $paginaAtual = 1, $registrosPorPagina = 50) {
     $db = Database::getInstance(DB_NAME_CADASTRO)->getConnection();
     
     // Constrói query baseada na configuração
     $query = construirQuery($config);
     
-    // Executa query
-    $stmt = $db->prepare($query['sql']);
-    $stmt->execute($query['params']);
-    $dados = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    
-    return [
-        'modelo' => $config,
-        'dados' => $dados,
-        'total' => count($dados),
-        'parametros' => $config['filtros'] ?? []
-    ];
+    // Para HTML, implementa paginação
+    if ($formato === 'html') {
+        // Constrói uma query COUNT mais simples e segura
+        $countQuery = construirQueryCount($config);
+        
+        $stmtCount = $db->prepare($countQuery['sql']);
+        $stmtCount->execute($countQuery['params']);
+        $totalRegistros = $stmtCount->fetch(PDO::FETCH_ASSOC)['total'];
+        
+        // Calcula informações de paginação
+        $totalPaginas = ceil($totalRegistros / $registrosPorPagina);
+        $offset = ($paginaAtual - 1) * $registrosPorPagina;
+        
+        // Adiciona LIMIT e OFFSET à query principal
+        $queryPaginada = $query['sql'] . " LIMIT $registrosPorPagina OFFSET $offset";
+        
+        // Executa query paginada
+        $stmt = $db->prepare($queryPaginada);
+        $stmt->execute($query['params']);
+        $dados = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        return [
+            'modelo' => $config,
+            'dados' => $dados,
+            'total' => $totalRegistros,
+            'parametros' => $config['filtros'] ?? [],
+            'paginacao' => [
+                'pagina_atual' => $paginaAtual,
+                'total_paginas' => $totalPaginas,
+                'registros_por_pagina' => $registrosPorPagina,
+                'total_registros' => $totalRegistros,
+                'inicio' => $offset + 1,
+                'fim' => min($offset + $registrosPorPagina, $totalRegistros)
+            ]
+        ];
+    } else {
+        // Para outros formatos, executa sem paginação (todos os dados)
+        $stmt = $db->prepare($query['sql']);
+        $stmt->execute($query['params']);
+        $dados = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        return [
+            'modelo' => $config,
+            'dados' => $dados,
+            'total' => count($dados),
+            'parametros' => $config['filtros'] ?? []
+        ];
+    }
 }
 
 /**
@@ -157,6 +497,12 @@ function construirQuery($config) {
         if ($campoSQL && !in_array($campoSQL, $selectCampos)) {
             $selectCampos[] = $campoSQL;
         }
+    }
+    
+    // Garante que sempre há pelo menos um campo de seleção
+    if (empty($selectCampos)) {
+        $selectCampos[] = 'a.id';
+        $selectCampos[] = 'a.nome';
     }
     
     // Obtém JOINs necessários
@@ -480,7 +826,44 @@ function aplicarFiltros($tipo, $filtros, &$params) {
  * Gera saída HTML
  */
 function gerarHTML($resultado) {
-    global $usuarioLogado;
+    global $usuarioLogado, $tipo, $campos, $parametros, $auth;
+    
+    // Garantir que as variáveis existem
+    $usuarioLogado = $usuarioLogado ?? ['nome' => 'Sistema'];
+    $tipo = $tipo ?? '';
+    $campos = $campos ?? [];
+    
+    // Incluir o header component para relatórios HTML
+    $headerComponent = null;
+    if (file_exists('../pages/components/header.php')) {
+        try {
+            require_once '../pages/components/header.php';
+            $headerComponent = HeaderComponent::create([
+                'usuario' => $usuarioLogado,
+                'isDiretor' => $auth->isDiretor(),
+                'activeTab' => 'relatorios',
+                'notificationCount' => 0,
+                'showSearch' => true
+            ]);
+        } catch (Exception $e) {
+            error_log("Erro ao carregar header component: " . $e->getMessage());
+            $headerComponent = null;
+        }
+    }
+    
+    // Preparar parâmetros seguros para JavaScript
+    $parametrosSegurosPHP = [];
+    if (isset($_GET) && isset($_POST)) {
+        $todoParametros = array_merge($_GET, $_POST);
+        foreach ($todoParametros as $key => $value) {
+            if ($value !== null && $value !== '' && $key !== '') {
+                $parametrosSegurosPHP[htmlspecialchars($key, ENT_QUOTES)] = is_array($value) ? 
+                    array_map(function($v) { return htmlspecialchars($v, ENT_QUOTES); }, $value) : 
+                    htmlspecialchars($value, ENT_QUOTES);
+            }
+        }
+    }
+    
     $modelo = $resultado['modelo'] ?? [];
     $dados = $resultado['dados'] ?? [];
     $total = $resultado['total'] ?? 0;
@@ -505,6 +888,11 @@ function gerarHTML($resultado) {
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
+    <!-- CSS do Header Component (se disponível) -->
+    <?php if ($headerComponent): ?>
+        <?php $headerComponent->renderCSS(); ?>
+    <?php endif; ?>
+    
     <style>
         :root {
             --primary-color: #0056D2;
@@ -525,10 +913,18 @@ function gerarHTML($resultado) {
             --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
+        /* Reset completo para eliminar espaçamentos */
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+        }
+
+        html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+            box-sizing: border-box;
+            height: 100%;
         }
 
         body {
@@ -537,6 +933,23 @@ function gerarHTML($resultado) {
             color: #334155;
             line-height: 1.6;
             min-height: 100vh;
+            /* Header component original gerencia seu próprio posicionamento */
+        }
+
+        .main-wrapper {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            /* Header component original usa position: sticky, não precisa de margin-top */
+        }
+
+        .content-area {
+            flex: 1;
+            padding: 2rem;
+            padding-top: 200px; /* AUMENTADO: Mais espaço para não esconder conteúdo */
+            margin-left: 0;
+            transition: margin-left 0.3s ease;
+            /* Conteúdo flui por baixo do header, mas começa visível */
         }
 
         @media print {
@@ -615,6 +1028,7 @@ function gerarHTML($resultado) {
             box-shadow: var(--shadow-lg);
             position: relative;
             overflow: hidden;
+            z-index: 1; /* Menor que o header principal (z-index: 1000) */
         }
 
         .header-report::before {
@@ -755,6 +1169,7 @@ function gerarHTML($resultado) {
         }
 
         .stat-card {
+            margin-top: 20px;
             background: white;
             padding: 2rem;
             border-radius: var(--border-radius);
@@ -1024,6 +1439,136 @@ function gerarHTML($resultado) {
             z-index: 9999;
             transition: width 0.3s ease;
         }
+
+        /* Paginação */
+        .pagination-container {
+            background: white;
+            padding: 1.5rem;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-md);
+            margin-bottom: 2rem;
+            border: 1px solid var(--border-color);
+        }
+
+        .pagination-info {
+            color: var(--secondary-color);
+            font-weight: 500;
+        }
+
+        .pagination-controls .form-select {
+            width: auto;
+            min-width: 80px;
+        }
+
+        .pagination .page-link {
+            color: var(--primary-color);
+            border: 1px solid #dee2e6;
+            padding: 0.5rem 0.75rem;
+            font-weight: 500;
+            transition: var(--transition);
+        }
+
+        .pagination .page-link:hover {
+            background-color: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+            transform: translateY(-1px);
+        }
+
+        .pagination .page-item.active .page-link {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+            color: white;
+            font-weight: 600;
+        }
+
+        .pagination .page-item.disabled .page-link {
+            color: #6c757d;
+            background-color: #fff;
+            border-color: #dee2e6;
+        }
+
+        .pagination .page-link i {
+            font-size: 0.875rem;
+        }
+
+        /* Loading para paginação */
+        .pagination-loading {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: var(--border-radius);
+            z-index: 1000;
+        }
+
+        .table-footer-pagination {
+            background: #f8fafc;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .table-footer-pagination .pagination-info-footer {
+            color: var(--secondary-color);
+            font-weight: 500;
+        }
+
+        /* CSS adicional para ajustes do header component */
+        
+        /* FORÇA ABSOLUTA: Header no topo da página sem espaços */
+        body > .main-wrapper > .no-print:first-child {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            z-index: 1000 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+        
+        /* Remove qualquer espaçamento do container do header */
+        .no-print {
+            margin: 0 !important;
+            padding: 0 !important;
+            position: relative;
+            top: 0;
+        }
+        
+        /* Força o header a ficar exatamente no topo */
+        .main-header {
+            margin: 0 !important;
+            padding-top: 0 !important;
+            position: sticky !important;
+            top: 0 !important;
+            z-index: 1000;
+            background: white; /* Garante fundo opaco */
+        }
+        
+        .nav-tabs-container {
+            margin: 0 !important;
+            padding-top: 0 !important;
+            position: sticky !important;
+            top: var(--header-height, 70px) !important;
+            background: white; /* Garante fundo opaco */
+            z-index: 999;
+        }
+        
+        /* Remove qualquer espaçamento extra do wrapper principal */
+        .main-wrapper {
+            margin: 0 !important;
+            padding-top: 0 !important;
+        }
+        
+        /* IMPORTANTE: O conteúdo flui por baixo do header */
+        .content-area {
+            /* Remove margin-top - conteúdo passa por baixo */
+            position: relative;
+            z-index: 1; /* Menor que o header */
+        }
     </style>
 </head>
 <body>
@@ -1038,39 +1583,160 @@ function gerarHTML($resultado) {
     <!-- Progress Bar -->
     <div class="table-progress" id="progressBar" style="width: 0%;"></div>
 
-    <div class="container-fluid py-4">
-        <!-- Header -->
-        <div class="header-report no-print fade-in-up">
-            <div class="container-fluid">
-                <div class="header-content">
-                    <div class="row align-items-center">
-                        <div class="col-md-8">
-                            <h1><i class="fas fa-chart-line me-3"></i><?php echo htmlspecialchars($titulo); ?></h1>
-                            <p class="subtitle mb-0">
-                                <i class="fas fa-calendar-alt me-2"></i>
-                                Gerado em <?php echo date('d/m/Y \à\s H:i'); ?>
-                            </p>
-                        </div>
-                        <div class="col-md-4 text-md-end">
-                            <span class="badge fs-6 px-3 py-2">
-                                <i class="fas fa-database me-2"></i>
-                                Sistema ASSEGO
-                            </span>
+    <!-- Main Wrapper -->
+    <div class="main-wrapper">
+        
+        <!-- Header Component (se disponível) -->
+        <?php if ($headerComponent): ?>
+        <div class="no-print">
+            <?php 
+            // CORREÇÃO 2: Usar o header component original, mas modificar as URLs internamente
+            
+            // Primeiro renderiza o CSS do header
+            $headerComponent->renderCSS();
+            
+            // Agora vamos interceptar e modificar as URLs no JavaScript após o render
+            $headerComponent->render();
+            ?>
+            
+            <!-- Script para corrigir URLs do header -->
+            <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                console.log('🔧 Corrigindo URLs do header...');
+                
+                // DEBUG: Verifica espaçamentos do header
+                const header = document.querySelector('.main-header');
+                const noprint = document.querySelector('.no-print');
+                const mainWrapper = document.querySelector('.main-wrapper');
+                const body = document.body;
+                const html = document.documentElement;
+                
+                console.log('📏 === DEBUG POSICIONAMENTO ===');
+                console.log('HTML margin/padding:', getComputedStyle(html).margin, getComputedStyle(html).padding);
+                console.log('BODY margin/padding:', getComputedStyle(body).margin, getComputedStyle(body).padding);
+                
+                if (header) {
+                    console.log('📏 Header offsetTop:', header.offsetTop);
+                    console.log('📏 Header getBoundingClientRect().top:', header.getBoundingClientRect().top);
+                    console.log('📏 Header style.marginTop:', getComputedStyle(header).marginTop);
+                    console.log('📏 Header position:', getComputedStyle(header).position);
+                }
+                if (noprint) {
+                    console.log('📏 No-print offsetTop:', noprint.offsetTop);
+                    console.log('📏 No-print getBoundingClientRect().top:', noprint.getBoundingClientRect().top);
+                    console.log('📏 No-print style.marginTop:', getComputedStyle(noprint).marginTop);
+                    console.log('📏 No-print style.paddingTop:', getComputedStyle(noprint).paddingTop);
+                }
+                console.log('🎯 DESIGN: Conteúdo deve fluir POR BAIXO do header (sem compensação)');
+                console.log('================================');
+                
+                // FORÇA POSICIONAMENTO FIXO NO TOPO (conteúdo passa por baixo)
+                if (noprint) {
+                    noprint.style.position = 'fixed';
+                    noprint.style.top = '0';
+                    noprint.style.left = '0';
+                    noprint.style.right = '0';
+                    noprint.style.zIndex = '1000';
+                    noprint.style.margin = '0';
+                    noprint.style.padding = '0';
+                    console.log('🔧 Header forçado para position: fixed no topo (conteúdo flui por baixo)');
+                }
+                
+                // Remove qualquer espaçamento forçadamente
+                if (header) {
+                    header.style.marginTop = '0';
+                    header.style.paddingTop = '0';
+                    header.style.backgroundColor = 'white'; // Garante fundo opaco
+                }
+                
+                // Mapear URLs corretas
+                const urlCorrections = {
+                    'dashboard.php': '../pages/dashboard.php',
+                    './funcionarios.php': '../pages/funcionarios.php', 
+                    'funcionarios.php': '../pages/funcionarios.php',
+                    'comercial.php': '../pages/comercial.php',
+                    'financeiro.php': '../pages/financeiro.php',
+                    'auditoria.php': '../pages/auditoria.php',
+                    'presidencia.php': '../pages/presidencia.php',
+                    'relatorios.php': '../pages/relatorios.php',
+                    'documentos.php': '../pages/documentos.php',
+                    'perfil.php': '../pages/perfil.php',
+                    'configuracoes.php': '../pages/configuracoes.php',
+                    'logout.php': '../pages/logout.php'
+                };
+                
+                // Corrige todos os links do header//
+                const allLinks = document.querySelectorAll('header a, nav a, .dropdown-menu-custom a');
+                let corrigidos = 0;
+                
+                allLinks.forEach(function(link) {
+                    const href = link.getAttribute('href');
+                    if (href && urlCorrections[href]) {
+                        const urlAntiga = href;
+                        link.setAttribute('href', urlCorrections[href]);
+                        console.log(`✅ Corrigido: ${urlAntiga} → ${urlCorrections[href]}`);
+                        corrigidos++;
+                    }
+                });
+                
+                console.log(`🎯 Total de ${corrigidos} URLs corrigidas no header`);
+                
+                // Força a aba "Relatórios" como ativa
+                const tabRelatorios = document.querySelector('.nav-tab-link[href*="relatorios"]');
+                if (tabRelatorios) {
+                    // Remove active de todas as outras abas
+                    document.querySelectorAll('.nav-tab-link').forEach(tab => {
+                        tab.classList.remove('active');
+                    });
+                    // Adiciona active na aba relatórios
+                    tabRelatorios.classList.add('active');
+                    console.log('📊 Aba Relatórios marcada como ativa');
+                }
+            });
+            </script>
+        </div>
+        <?php 
+        // Renderiza o JavaScript do header component
+        if ($headerComponent) {
+            $headerComponent->renderJS();
+        }
+        ?>
+        <?php endif; ?>
+
+        <!-- Content Area -->
+        <div class="content-area">
+            <!-- Header do Relatório -->
+            <div class="header-report no-print fade-in-up">
+                <div class="container-fluid">
+                    <div class="header-content">
+                        <div class="row align-items-center">
+                            <div class="col-md-8">
+                                <h1><i class="fas fa-chart-line me-3 mt-10"></i><?php echo htmlspecialchars($titulo); ?></h1>
+                                <p class="subtitle mb-0">
+                                    <i class="fas fa-calendar-alt me-2"></i>
+                                    Gerado em <?php echo date('d/m/Y \à\s H:i'); ?>
+                                </p>
+                            </div>
+                            <div class="col-md-4 text-md-end">
+                                <span class="badge fs-6 px-3 py-2">
+                                    <i class="fas fa-database me-2"></i>
+                                    Sistema ASSEGO
+                                </span>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
         
         <!-- Action Bar -->
         <div class="action-bar no-print fade-in-up" style="animation-delay: 0.1s;">
-            <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mt-3">
                 <div class="d-flex flex-wrap gap-2">
                     <button class="btn btn-primary btn-modern" onclick="window.print()" data-bs-toggle="tooltip" title="Imprimir relatório">
                         <i class="fas fa-print"></i>
                         <span>Imprimir</span>
                     </button>
-                    <button class="btn btn-success btn-modern" onclick="exportarExcel()" data-bs-toggle="tooltip" title="Exportar para Excel">
+                    <button class="btn btn-success btn-modern" onclick="exportarExcelCSV()" data-bs-toggle="tooltip" title="Exportar para Excel">
                         <i class="fas fa-file-excel"></i>
                         <span>Excel</span>
                     </button>
@@ -1099,8 +1765,40 @@ function gerarHTML($resultado) {
                     <i class="fas fa-list-ol"></i>
                 </div>
                 <div class="stat-number" id="totalRecords"><?php echo number_format($total, 0, ',', '.'); ?></div>
-                <div class="stat-label">Total de Registros</div>
+                <div class="stat-label">
+                    <?php if (isset($resultado['paginacao'])): ?>
+                        Total de Registros
+                    <?php else: ?>
+                        Registros Encontrados
+                    <?php endif; ?>
+                </div>
             </div>
+            
+            <?php if (isset($resultado['paginacao'])): ?>
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-eye"></i>
+                </div>
+                <div class="stat-number"><?php echo $resultado['paginacao']['registros_por_pagina']; ?></div>
+                <div class="stat-label">Por Página</div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-file-alt"></i>
+                </div>
+                <div class="stat-number"><?php echo $resultado['paginacao']['pagina_atual']; ?></div>
+                <div class="stat-label">Página Atual</div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-files-o"></i>
+                </div>
+                <div class="stat-number"><?php echo $resultado['paginacao']['total_paginas']; ?></div>
+                <div class="stat-label">Total de Páginas</div>
+            </div>
+            <?php else: ?>
             
             <?php if (!empty($resultado['parametros'])): ?>
             <div class="stat-card">
@@ -1132,6 +1830,7 @@ function gerarHTML($resultado) {
                 </div>
                 <div class="stat-label">Gerado por</div>
             </div>
+            <?php endif; ?>
         </div>
         
         <!-- Filters Applied -->
@@ -1151,6 +1850,109 @@ function gerarHTML($resultado) {
                     </span>
                     <?php endif; ?>
                 <?php endforeach; ?>
+            </div>
+        </div>
+        <?php endif; ?>
+        
+        <!-- Paginação e Controles (se aplicável) -->
+        <?php if (isset($resultado['paginacao']) && $resultado['paginacao']['total_paginas'] > 1): ?>
+        <div class="pagination-container fade-in-up" style="animation-delay: 0.35s;">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div class="pagination-info">
+                    <span class="text-muted">
+                        Mostrando <strong><?php echo number_format($resultado['paginacao']['inicio'], 0, ',', '.'); ?></strong> 
+                        a <strong><?php echo number_format($resultado['paginacao']['fim'], 0, ',', '.'); ?></strong> 
+                        de <strong><?php echo number_format($resultado['paginacao']['total_registros'], 0, ',', '.'); ?></strong> registros
+                    </span>
+                </div>
+                
+                <div class="pagination-controls">
+                    <div class="d-flex align-items-center gap-3">
+                        <!-- Seletor de registros por página -->
+                        <div class="d-flex align-items-center">
+                            <label class="text-muted me-2">Por página:</label>
+                            <select class="form-select form-select-sm" id="registrosPorPagina" onchange="alterarRegistrosPorPagina(this.value)">
+                                <option value="25" <?php echo $resultado['paginacao']['registros_por_pagina'] == 25 ? 'selected' : ''; ?>>25</option>
+                                <option value="50" <?php echo $resultado['paginacao']['registros_por_pagina'] == 50 ? 'selected' : ''; ?>>50</option>
+                                <option value="100" <?php echo $resultado['paginacao']['registros_por_pagina'] == 100 ? 'selected' : ''; ?>>100</option>
+                                <option value="200" <?php echo $resultado['paginacao']['registros_por_pagina'] == 200 ? 'selected' : ''; ?>>200</option>
+                                <option value="500" <?php echo $resultado['paginacao']['registros_por_pagina'] == 500 ? 'selected' : ''; ?>>500</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Navegação de páginas -->
+                        <nav aria-label="Navegação de páginas">
+                            <ul class="pagination pagination-sm mb-0">
+                                <?php
+                                $paginaAtual = $resultado['paginacao']['pagina_atual'] ?? 1;
+                                $totalPaginas = $resultado['paginacao']['total_paginas'] ?? 1;
+                                
+                                // Primeira página
+                                if ($paginaAtual > 1): ?>
+                                <li class="page-item">
+                                    <button class="page-link" onclick="navegarPagina(1)" title="Primeira página">
+                                        <i class="fas fa-angle-double-left"></i>
+                                    </button>
+                                </li>
+                                <li class="page-item">
+                                    <button class="page-link" onclick="navegarPagina(<?php echo $paginaAtual - 1; ?>)" title="Página anterior">
+                                        <i class="fas fa-angle-left"></i>
+                                    </button>
+                                </li>
+                                <?php endif; ?>
+                                
+                                <?php
+                                // Cálculo das páginas a mostrar
+                                $inicio = max(1, $paginaAtual - 2);
+                                $fim = min($totalPaginas, $paginaAtual + 2);
+                                
+                                // Reajusta se necessário
+                                if ($fim - $inicio < 4 && $totalPaginas > 5) {
+                                    if ($inicio == 1) {
+                                        $fim = min($totalPaginas, 5);
+                                    } else {
+                                        $inicio = max(1, $totalPaginas - 4);
+                                    }
+                                }
+                                
+                                // Mostra reticências no início se necessário
+                                if ($inicio > 1): ?>
+                                    <li class="page-item disabled">
+                                        <span class="page-link">...</span>
+                                    </li>
+                                <?php endif; ?>
+                                
+                                <?php for ($i = $inicio; $i <= $fim; $i++): ?>
+                                <li class="page-item <?php echo $i == $paginaAtual ? 'active' : ''; ?>">
+                                    <button class="page-link" onclick="navegarPagina(<?php echo $i; ?>)"><?php echo $i; ?></button>
+                                </li>
+                                <?php endfor; ?>
+                                
+                                <?php 
+                                // Mostra reticências no fim se necessário
+                                if ($fim < $totalPaginas): ?>
+                                    <li class="page-item disabled">
+                                        <span class="page-link">...</span>
+                                    </li>
+                                <?php endif; ?>
+                                
+                                <!-- Última página -->
+                                <?php if ($paginaAtual < $totalPaginas): ?>
+                                <li class="page-item">
+                                    <button class="page-link" onclick="navegarPagina(<?php echo $paginaAtual + 1; ?>)" title="Próxima página">
+                                        <i class="fas fa-angle-right"></i>
+                                    </button>
+                                </li>
+                                <li class="page-item">
+                                    <button class="page-link" onclick="navegarPagina(<?php echo $totalPaginas; ?>)" title="Última página">
+                                        <i class="fas fa-angle-double-right"></i>
+                                    </button>
+                                </li>
+                                <?php endif; ?>
+                            </ul>
+                        </nav>
+                    </div>
+                </div>
             </div>
         </div>
         <?php endif; ?>
@@ -1189,6 +1991,55 @@ function gerarHTML($resultado) {
                     </tbody>
                 </table>
             </div>
+            
+            <!-- Paginação Inferior (duplicada para facilitar navegação) -->
+            <?php if (isset($resultado['paginacao']) && $resultado['paginacao']['total_paginas'] > 1): ?>
+            <div class="table-footer-pagination p-3 border-top">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="pagination-info-footer">
+                        <small class="text-muted">
+                            Página <strong><?php echo $resultado['paginacao']['pagina_atual']; ?></strong> 
+                            de <strong><?php echo $resultado['paginacao']['total_paginas']; ?></strong>
+                            (<?php echo number_format($resultado['paginacao']['total_registros'], 0, ',', '.'); ?> total)
+                        </small>
+                    </div>
+                    
+                    <nav aria-label="Navegação de páginas inferior">
+                        <ul class="pagination pagination-sm mb-0">
+                            <?php if ($paginaAtual > 1): ?>
+                            <li class="page-item">
+                                <button class="page-link" onclick="navegarPagina(1)" title="Primeira página">
+                                    <i class="fas fa-angle-double-left"></i>
+                                </button>
+                            </li>
+                            <li class="page-item">
+                                <button class="page-link" onclick="navegarPagina(<?php echo $paginaAtual - 1; ?>)" title="Página anterior">
+                                    <i class="fas fa-angle-left"></i>
+                                </button>
+                            </li>
+                            <?php endif; ?>
+                            
+                            <li class="page-item active">
+                                <span class="page-link"><?php echo $paginaAtual; ?></span>
+                            </li>
+                            
+                            <?php if ($paginaAtual < $totalPaginas): ?>
+                            <li class="page-item">
+                                <button class="page-link" onclick="navegarPagina(<?php echo $paginaAtual + 1; ?>)" title="Próxima página">
+                                    <i class="fas fa-angle-right"></i>
+                                </button>
+                            </li>
+                            <li class="page-item">
+                                <button class="page-link" onclick="navegarPagina(<?php echo $totalPaginas; ?>)" title="Última página">
+                                    <i class="fas fa-angle-double-right"></i>
+                                </button>
+                            </li>
+                            <?php endif; ?>
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+            <?php endif; ?>
         </div>
         <?php else: ?>
         <div class="empty-state fade-in-up" style="animation-delay: 0.4s;">
@@ -1197,6 +2048,17 @@ function gerarHTML($resultado) {
             </div>
             <h3>Nenhum registro encontrado</h3>
             <p>Não foram encontrados registros com os filtros aplicados. Tente ajustar os parâmetros de busca.</p>
+            
+            <?php if (isset($resultado['paginacao']) && $resultado['paginacao']['pagina_atual'] > 1): ?>
+            <div class="alert alert-info mt-3">
+                <i class="fas fa-info-circle me-2"></i>
+                Você está na página <?php echo $resultado['paginacao']['pagina_atual']; ?>. 
+                <button class="btn btn-link p-0" onclick="navegarPagina(1)">
+                    Voltar para a primeira página
+                </button>
+            </div>
+            <?php endif; ?>
+            
             <button class="btn btn-primary btn-modern mt-3" onclick="voltarFormulario()">
                 <i class="fas fa-arrow-left me-2"></i>
                 Voltar ao Formulário
@@ -1217,18 +2079,25 @@ function gerarHTML($resultado) {
                 em <strong><?php echo date('d/m/Y \à\s H:i:s'); ?></strong>
             </p>
         </div>
-    </div>
+        
+        </div> <!-- Fim da content-area -->
+    </div> <!-- Fim da main-wrapper -->
     
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     
     <script>
-        // Loading overlay
-        window.addEventListener('load', function() {
-            setTimeout(function() {
-                document.getElementById('loadingOverlay').style.display = 'none';
-            }, 500);
-        });
+        // Verifica se há erros de sintaxe antes de executar
+        try {
+            // Loading overlay
+            window.addEventListener('load', function() {
+                setTimeout(function() {
+                    const loadingElement = document.getElementById('loadingOverlay');
+                    if (loadingElement) {
+                        loadingElement.style.display = 'none';
+                    }
+                }, 500);
+            });
 
         // Animate elements on scroll
         function animateOnScroll() {
@@ -1268,104 +2137,168 @@ function gerarHTML($resultado) {
 
         // Export functions with loading states
         function exportarExcel() {
+            console.log('🟢 Iniciando exportação Excel...');
             showExportLoading('Excel');
             
             const form = document.createElement('form');
             form.method = 'POST';
             form.action = '<?php echo $_SERVER['PHP_SELF']; ?>';
             
-            // Copy all parameters
+            // Debug dos parâmetros que serão enviados
+            console.log('📋 Parâmetros originais para Excel:', <?php echo json_encode($_POST, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>);
+            
+            // Copia TODOS os parâmetros POST originais
             <?php foreach ($_POST as $key => $value): ?>
                 <?php if (is_array($value)): ?>
-                    <?php foreach ($value as $item): ?>
-                    const input_<?php echo $key; ?>_<?php echo $item; ?> = document.createElement('input');
-                    input_<?php echo $key; ?>_<?php echo $item; ?>.type = 'hidden';
-                    input_<?php echo $key; ?>_<?php echo $item; ?>.name = '<?php echo $key; ?>[]';
-                    input_<?php echo $key; ?>_<?php echo $item; ?>.value = '<?php echo $item; ?>';
-                    form.appendChild(input_<?php echo $key; ?>_<?php echo $item; ?>);
+                    <?php foreach ($value as $index => $item): ?>
+                    const input_<?php echo preg_replace('/[^a-zA-Z0-9_]/', '_', $key . '_' . $index); ?> = document.createElement('input');
+                    input_<?php echo preg_replace('/[^a-zA-Z0-9_]/', '_', $key . '_' . $index); ?>.type = 'hidden';
+                    input_<?php echo preg_replace('/[^a-zA-Z0-9_]/', '_', $key . '_' . $index); ?>.name = '<?php echo htmlspecialchars($key, ENT_QUOTES); ?>[]';
+                    input_<?php echo preg_replace('/[^a-zA-Z0-9_]/', '_', $key . '_' . $index); ?>.value = '<?php echo htmlspecialchars($item, ENT_QUOTES); ?>';
+                    form.appendChild(input_<?php echo preg_replace('/[^a-zA-Z0-9_]/', '_', $key . '_' . $index); ?>);
+                    console.log('📝 Array param:', '<?php echo $key; ?>[]', '=', '<?php echo htmlspecialchars($item, ENT_QUOTES); ?>');
                     <?php endforeach; ?>
                 <?php else: ?>
-                const input_<?php echo $key; ?> = document.createElement('input');
-                input_<?php echo $key; ?>.type = 'hidden';
-                input_<?php echo $key; ?>.name = '<?php echo $key; ?>';
-                input_<?php echo $key; ?>.value = '<?php echo $value; ?>';
-                form.appendChild(input_<?php echo $key; ?>);
+                const input_<?php echo preg_replace('/[^a-zA-Z0-9_]/', '_', $key); ?> = document.createElement('input');
+                input_<?php echo preg_replace('/[^a-zA-Z0-9_]/', '_', $key); ?>.type = 'hidden';
+                input_<?php echo preg_replace('/[^a-zA-Z0-9_]/', '_', $key); ?>.name = '<?php echo htmlspecialchars($key, ENT_QUOTES); ?>';
+                input_<?php echo preg_replace('/[^a-zA-Z0-9_]/', '_', $key); ?>.value = '<?php echo htmlspecialchars($value, ENT_QUOTES); ?>';
+                form.appendChild(input_<?php echo preg_replace('/[^a-zA-Z0-9_]/', '_', $key); ?>);
+                console.log('📝 Simple param:', '<?php echo $key; ?>', '=', '<?php echo htmlspecialchars($value, ENT_QUOTES); ?>');
                 <?php endif; ?>
             <?php endforeach; ?>
             
-            // Change format to Excel
+            // Força formato Excel
             const inputFormato = document.createElement('input');
             inputFormato.type = 'hidden';
             inputFormato.name = 'formato';
             inputFormato.value = 'excel';
             form.appendChild(inputFormato);
+            console.log('📝 Formato definido para: excel');
+            
+            console.log('📤 Enviando formulário para Excel...');
+            document.body.appendChild(form);
+            form.submit();
+            
+            // Remove loading após um tempo
+            setTimeout(hideExportLoading, 3000);
+        }
+
+        function exportarExcelCSV() {
+            console.log('🟢 Iniciando exportação Excel CSV...');
+            showExportLoading('Excel');
+            
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '<?php echo $_SERVER['PHP_SELF']; ?>';
+            
+            // Copia TODOS os parâmetros POST originais
+            <?php foreach ($_POST as $key => $value): ?>
+                <?php if (is_array($value)): ?>
+                    <?php foreach ($value as $index => $item): ?>
+                    const input_excel_<?php echo preg_replace('/[^a-zA-Z0-9_]/', '_', $key . '_' . $index); ?> = document.createElement('input');
+                    input_excel_<?php echo preg_replace('/[^a-zA-Z0-9_]/', '_', $key . '_' . $index); ?>.type = 'hidden';
+                    input_excel_<?php echo preg_replace('/[^a-zA-Z0-9_]/', '_', $key . '_' . $index); ?>.name = '<?php echo htmlspecialchars($key, ENT_QUOTES); ?>[]';
+                    input_excel_<?php echo preg_replace('/[^a-zA-Z0-9_]/', '_', $key . '_' . $index); ?>.value = '<?php echo htmlspecialchars($item, ENT_QUOTES); ?>';
+                    form.appendChild(input_excel_<?php echo preg_replace('/[^a-zA-Z0-9_]/', '_', $key . '_' . $index); ?>);
+                    <?php endforeach; ?>
+                <?php else: ?>
+                const input_excel_<?php echo preg_replace('/[^a-zA-Z0-9_]/', '_', $key); ?> = document.createElement('input');
+                input_excel_<?php echo preg_replace('/[^a-zA-Z0-9_]/', '_', $key); ?>.type = 'hidden';
+                input_excel_<?php echo preg_replace('/[^a-zA-Z0-9_]/', '_', $key); ?>.name = '<?php echo htmlspecialchars($key, ENT_QUOTES); ?>';
+                input_excel_<?php echo preg_replace('/[^a-zA-Z0-9_]/', '_', $key); ?>.value = '<?php echo htmlspecialchars($value, ENT_QUOTES); ?>';
+                form.appendChild(input_excel_<?php echo preg_replace('/[^a-zA-Z0-9_]/', '_', $key); ?>);
+                <?php endif; ?>
+            <?php endforeach; ?>
+            
+            // Força formato excel_csv
+            const inputFormato = document.createElement('input');
+            inputFormato.type = 'hidden';
+            inputFormato.name = 'formato';
+            inputFormato.value = 'excel_csv';
+            form.appendChild(inputFormato);
             
             document.body.appendChild(form);
             form.submit();
             
-            hideExportLoading();
+            setTimeout(hideExportLoading, 3000);
         }
 
         function exportarCSV() {
+            console.log('🟢 Iniciando exportação CSV...');
             showExportLoading('CSV');
             
             const form = document.createElement('form');
             form.method = 'POST';
             form.action = '<?php echo $_SERVER['PHP_SELF']; ?>';
             
-            // Copy all parameters
+            // Debug dos parâmetros que serão enviados
+            console.log('📋 Parâmetros originais para CSV:', <?php echo json_encode($_POST, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>);
+            
+            // Copia TODOS os parâmetros POST originais
             <?php foreach ($_POST as $key => $value): ?>
                 <?php if (is_array($value)): ?>
-                    <?php foreach ($value as $item): ?>
-                    const input_<?php echo $key; ?>_<?php echo $item; ?> = document.createElement('input');
-                    input_<?php echo $key; ?>_<?php echo $item; ?>.type = 'hidden';
-                    input_<?php echo $key; ?>_<?php echo $item; ?>.name = '<?php echo $key; ?>[]';
-                    input_<?php echo $key; ?>_<?php echo $item; ?>.value = '<?php echo $item; ?>';
-                    form.appendChild(input_<?php echo $key; ?>_<?php echo $item; ?>);
+                    <?php foreach ($value as $index => $item): ?>
+                    const input_csv_<?php echo preg_replace('/[^a-zA-Z0-9_]/', '_', $key . '_' . $index); ?> = document.createElement('input');
+                    input_csv_<?php echo preg_replace('/[^a-zA-Z0-9_]/', '_', $key . '_' . $index); ?>.type = 'hidden';
+                    input_csv_<?php echo preg_replace('/[^a-zA-Z0-9_]/', '_', $key . '_' . $index); ?>.name = '<?php echo htmlspecialchars($key, ENT_QUOTES); ?>[]';
+                    input_csv_<?php echo preg_replace('/[^a-zA-Z0-9_]/', '_', $key . '_' . $index); ?>.value = '<?php echo htmlspecialchars($item, ENT_QUOTES); ?>';
+                    form.appendChild(input_csv_<?php echo preg_replace('/[^a-zA-Z0-9_]/', '_', $key . '_' . $index); ?>);
+                    console.log('📝 Array param CSV:', '<?php echo $key; ?>[]', '=', '<?php echo htmlspecialchars($item, ENT_QUOTES); ?>');
                     <?php endforeach; ?>
                 <?php else: ?>
-                const input_<?php echo $key; ?>_csv = document.createElement('input');
-                input_<?php echo $key; ?>_csv.type = 'hidden';
-                input_<?php echo $key; ?>_csv.name = '<?php echo $key; ?>';
-                input_<?php echo $key; ?>_csv.value = '<?php echo $value; ?>';
-                form.appendChild(input_<?php echo $key; ?>_csv);
+                const input_csv_<?php echo preg_replace('/[^a-zA-Z0-9_]/', '_', $key); ?> = document.createElement('input');
+                input_csv_<?php echo preg_replace('/[^a-zA-Z0-9_]/', '_', $key); ?>.type = 'hidden';
+                input_csv_<?php echo preg_replace('/[^a-zA-Z0-9_]/', '_', $key); ?>.name = '<?php echo htmlspecialchars($key, ENT_QUOTES); ?>';
+                input_csv_<?php echo preg_replace('/[^a-zA-Z0-9_]/', '_', $key); ?>.value = '<?php echo htmlspecialchars($value, ENT_QUOTES); ?>';
+                form.appendChild(input_csv_<?php echo preg_replace('/[^a-zA-Z0-9_]/', '_', $key); ?>);
+                console.log('📝 Simple param CSV:', '<?php echo $key; ?>', '=', '<?php echo htmlspecialchars($value, ENT_QUOTES); ?>');
                 <?php endif; ?>
             <?php endforeach; ?>
             
-            // Change format to CSV
+            // Força formato CSV
             const inputFormato = document.createElement('input');
             inputFormato.type = 'hidden';
             inputFormato.name = 'formato';
             inputFormato.value = 'csv';
             form.appendChild(inputFormato);
+            console.log('📝 Formato definido para: csv');
             
+            console.log('📤 Enviando formulário para CSV...');
             document.body.appendChild(form);
             form.submit();
             
-            hideExportLoading();
+            // Remove loading após um tempo
+            setTimeout(hideExportLoading, 3000);
         }
 
         function showExportLoading(format) {
+            console.log(`🔄 Iniciando loading para ${format}...`);
             const exportButtons = document.querySelectorAll('.btn-success, .btn-info');
             exportButtons.forEach(btn => {
                 btn.disabled = true;
                 const originalText = btn.innerHTML;
                 btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Exportando ${format}...`;
                 btn.setAttribute('data-original', originalText);
+                btn.style.opacity = '0.7';
             });
+            
+            // Mostra uma mensagem de status
+            console.log(`📊 Exportação ${format} em andamento...`);
         }
 
         function hideExportLoading() {
-            setTimeout(() => {
-                const exportButtons = document.querySelectorAll('.btn-success, .btn-info');
-                exportButtons.forEach(btn => {
-                    btn.disabled = false;
-                    const originalText = btn.getAttribute('data-original');
-                    if (originalText) {
-                        btn.innerHTML = originalText;
-                    }
-                });
-            }, 2000);
+            console.log('✅ Finalizando loading...');
+            const exportButtons = document.querySelectorAll('.btn-success, .btn-info');
+            exportButtons.forEach(btn => {
+                btn.disabled = false;
+                btn.style.opacity = '1';
+                const originalText = btn.getAttribute('data-original');
+                if (originalText) {
+                    btn.innerHTML = originalText;
+                    btn.removeAttribute('data-original');
+                }
+            });
         }
 
         function voltarFormulario() {
@@ -1408,6 +2341,219 @@ function gerarHTML($resultado) {
         window.addEventListener('afterprint', function() {
             document.body.classList.remove('printing');
         });
+
+        // Funções de Paginação
+        function navegarPagina(pagina) {
+            mostrarLoadingPaginacao();
+            
+            // Constrói URL preservando TODOS os parâmetros originais
+            const form = document.createElement('form');
+            form.method = 'GET';
+            form.action = window.location.pathname;
+            
+            // Parâmetros originais (já definidos no início da função gerarHTML)
+            const parametrosOriginais = <?php echo json_encode($parametrosSegurosPHP, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE); ?> || {};
+            
+            Object.keys(parametrosOriginais).forEach(key => {
+                const value = parametrosOriginais[key];
+                
+                if (Array.isArray(value)) {
+                    // Para arrays (como campos[])
+                    value.forEach(item => {
+                        if (item !== null && item !== '') {
+                            const input = document.createElement('input');
+                            input.type = 'hidden';
+                            input.name = key + '[]';
+                            input.value = item;
+                            form.appendChild(input);
+                        }
+                    });
+                } else if (value !== null && value !== '') {
+                    // Para valores simples
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = key;
+                    input.value = value;
+                    form.appendChild(input);
+                }
+            });
+            
+            // Atualiza página
+            const inputPagina = document.createElement('input');
+            inputPagina.type = 'hidden';
+            inputPagina.name = 'pagina';
+            inputPagina.value = pagina;
+            form.appendChild(inputPagina);
+            
+            document.body.appendChild(form);
+            form.submit();
+        }
+
+        function alterarRegistrosPorPagina(registrosPorPagina) {
+            mostrarLoadingPaginacao();
+            
+            // Constrói URL preservando TODOS os parâmetros originais
+            const form = document.createElement('form');
+            form.method = 'GET';
+            form.action = window.location.pathname;
+            
+            // Usa os mesmos parâmetros seguros definidos anteriormente
+            const parametrosOriginais = <?php echo json_encode($parametrosSegurosPHP ?? [], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE); ?> || {};
+            
+            Object.keys(parametrosOriginais).forEach(key => {
+                // Pula os parâmetros de paginação que serão sobrescritos
+                if (key === 'pagina' || key === 'por_pagina') return;
+                
+                const value = parametrosOriginais[key];
+                
+                if (Array.isArray(value)) {
+                    // Para arrays (como campos[])
+                    value.forEach(item => {
+                        if (item !== null && item !== '') {
+                            const input = document.createElement('input');
+                            input.type = 'hidden';
+                            input.name = key + '[]';
+                            input.value = item;
+                            form.appendChild(input);
+                        }
+                    });
+                } else if (value !== null && value !== '') {
+                    // Para valores simples
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = key;
+                    input.value = value;
+                    form.appendChild(input);
+                }
+            });
+            
+            // Adiciona novos parâmetros de paginação
+            const inputPorPagina = document.createElement('input');
+            inputPorPagina.type = 'hidden';
+            inputPorPagina.name = 'por_pagina';
+            inputPorPagina.value = registrosPorPagina;
+            form.appendChild(inputPorPagina);
+            
+            const inputPagina = document.createElement('input');
+            inputPagina.type = 'hidden';
+            inputPagina.name = 'pagina';
+            inputPagina.value = 1; // Volta para primeira página
+            form.appendChild(inputPagina);
+            
+            document.body.appendChild(form);
+            form.submit();
+        }
+
+        function mostrarLoadingPaginacao() {
+            // Cria overlay de loading sobre a tabela
+            const container = document.querySelector('.table-container, .pagination-container');
+            if (container && !container.querySelector('.pagination-loading')) {
+                const loading = document.createElement('div');
+                loading.className = 'pagination-loading';
+                loading.innerHTML = `
+                    <div class="text-center">
+                        <div class="loading-spinner mb-2"></div>
+                        <small class="text-muted">Carregando página...</small>
+                    </div>
+                `;
+                container.style.position = 'relative';
+                container.appendChild(loading);
+            }
+        }
+
+        // Debug dos parâmetros (apenas em desenvolvimento)
+        try {
+            console.log('=== DEBUG PAGINAÇÃO ===');
+            
+            <?php if (isset($parametrosSegurosPHP) && !empty($parametrosSegurosPHP)): ?>
+            console.log('Parâmetros originais:', <?php echo json_encode($parametrosSegurosPHP, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE); ?>);
+            <?php else: ?>
+            console.log('Nenhum parâmetro original encontrado');
+            <?php endif; ?>
+            
+            <?php if (isset($resultado['paginacao'])): ?>
+            console.log('Paginação atual:', {
+                pagina: <?php echo (int)$resultado['paginacao']['pagina_atual']; ?>,
+                total_paginas: <?php echo (int)$resultado['paginacao']['total_paginas']; ?>,
+                registros_por_pagina: <?php echo (int)$resultado['paginacao']['registros_por_pagina']; ?>,
+                total_registros: <?php echo (int)$resultado['paginacao']['total_registros']; ?>
+            });
+            <?php else: ?>
+            console.log('Sem paginação ativa');
+            <?php endif; ?>
+            
+            <?php if (!empty($tipo)): ?>
+            console.log('Tipo de relatório:', <?php echo json_encode($tipo, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>);
+            <?php endif; ?>
+            
+            <?php if (!empty($campos) && is_array($campos)): ?>
+            console.log('Campos selecionados:', <?php echo json_encode($campos, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>);
+            <?php endif; ?>
+            
+        } catch (debugError) {
+            console.log('Erro no debug:', debugError.message);
+        }
+
+        // Atalhos de teclado para navegação
+        document.addEventListener('keydown', function(e) {
+            // Só funciona se não estiver em um input
+            if (e.target.tagName.toLowerCase() === 'input' || 
+                e.target.tagName.toLowerCase() === 'textarea' ||
+                e.target.tagName.toLowerCase() === 'select') {
+                return;
+            }
+
+            <?php if (isset($resultado['paginacao'])): ?>
+            const paginaAtual = <?php echo $resultado['paginacao']['pagina_atual']; ?>;
+            const totalPaginas = <?php echo $resultado['paginacao']['total_paginas']; ?>;
+            
+            // Seta esquerda ou 'A' - página anterior
+            if ((e.key === 'ArrowLeft' || e.key.toLowerCase() === 'a') && paginaAtual > 1) {
+                e.preventDefault();
+                navegarPagina(paginaAtual - 1);
+            }
+            
+            // Seta direita ou 'D' - próxima página  
+            if ((e.key === 'ArrowRight' || e.key.toLowerCase() === 'd') && paginaAtual < totalPaginas) {
+                e.preventDefault();
+                navegarPagina(paginaAtual + 1);
+            }
+            
+            // Home - primeira página
+            if (e.key === 'Home' && paginaAtual > 1) {
+                e.preventDefault();
+                navegarPagina(1);
+            }
+            
+            // End - última página
+            if (e.key === 'End' && paginaAtual < totalPaginas) {
+                e.preventDefault();
+                navegarPagina(totalPaginas);
+            }
+            <?php endif; ?>
+        });
+
+        // Tooltip para atalhos de navegação
+        <?php if (isset($resultado['paginacao']) && $resultado['paginacao']['total_paginas'] > 1): ?>
+        // Adiciona tooltip com informações de atalhos
+        const paginationContainer = document.querySelector('.pagination-container');
+        if (paginationContainer) {
+            const helpText = document.createElement('small');
+            helpText.className = 'text-muted d-block mt-2';
+            helpText.innerHTML = '<i class="fas fa-keyboard me-1"></i> <strong>Atalhos:</strong> ← → ou A/D para navegar | Home/End para primeira/última página';
+            paginationContainer.appendChild(helpText);
+        }
+        <?php endif; ?>
+        } catch (error) {
+            console.error('Erro no JavaScript da paginação:', error);
+            // Fallback simples se houver erro
+            window.navegarPagina = function(pagina) {
+                window.location.href = window.location.pathname + '?pagina=' + pagina;
+            };
+            window.alterarRegistrosPorPagina = function(registros) {
+                window.location.href = window.location.pathname + '?por_pagina=' + registros + '&pagina=1';
+            };
+        }
     </script>
 </body>
 </html>
@@ -1418,12 +2564,141 @@ function gerarHTML($resultado) {
  * Gera saída CSV
  */
 function gerarCSV($resultado) {
-    $dados = $resultado['dados'] ?? [];
-    $filename = 'relatorio_' . date('Y-m-d_H-i-s') . '.csv';
+    error_log("=== INICIANDO GERAÇÃO CSV ===");
     
-    // Headers
+    // Define modo de exportação para formatação limpa
+    define('EXPORT_MODE', true);
+    
+    $dados = $resultado['dados'] ?? [];
+    $total = count($dados);
+    error_log("Total de dados para CSV: " . $total);
+    
+    if (empty($dados)) {
+        error_log("ERRO: Nenhum dado para exportar em CSV");
+        die('Erro: Nenhum dado disponível para exportação CSV.');
+    }
+    
+    $filename = 'relatorio_' . date('Y-m-d_H-i-s') . '.csv';
+    error_log("Nome do arquivo CSV: " . $filename);
+    
+    // IMPORTANTE: Limpa qualquer output anterior
+    if (ob_get_level()) {
+        ob_end_clean();
+    }
+    
+    // Verifica se headers já foram enviados
+    if (headers_sent($file, $line)) {
+        error_log("ERRO: Headers já foram enviados em $file:$line");
+        die('Erro interno: Headers já enviados. Não é possível gerar CSV.');
+    }
+    
+    // Headers para download do CSV
     header('Content-Type: text/csv; charset=utf-8');
     header('Content-Disposition: attachment; filename="' . $filename . '"');
+    header('Cache-Control: max-age=0');
+    header('Expires: Mon, 26 Jul 1997 05:00:00 GMT');
+    header('Last-Modified: ' . gmdate('D, d M Y H:i:s') . ' GMT');
+    header('Cache-Control: cache, must-revalidate');
+    header('Pragma: public');
+    
+    // BOM para UTF-8 (para Excel reconhecer acentos)
+    echo "\xEF\xBB\xBF";
+    
+    // Abre output
+    $output = fopen('php://output', 'w');
+    
+    if (!$output) {
+        error_log("ERRO: Não foi possível abrir php://output para CSV");
+        die('Erro interno ao gerar CSV.');
+    }
+    
+    try {
+        // Cabeçalhos das colunas
+        $headers = array_map('formatarNomeColuna', array_keys($dados[0]));
+        error_log("Headers CSV: " . implode(', ', $headers));
+        
+        // Escreve headers
+        fputcsv($output, $headers, ';', '"');
+        
+        // Escreve dados
+        $linhasEscritas = 0;
+        foreach ($dados as $linha) {
+            // Usa formatação limpa para CSV (sem HTML)
+            $linhaSemHTML = [];
+            foreach ($linha as $key => $valor) {
+                $valorFormatado = formatarValor($valor, $key);
+                // Remove qualquer HTML que possa ter restado
+                $valorFormatado = is_string($valorFormatado) ? strip_tags($valorFormatado) : $valorFormatado;
+                $valorFormatado = html_entity_decode($valorFormatado, ENT_QUOTES, 'UTF-8');
+                $linhaSemHTML[] = $valorFormatado;
+            }
+            
+            fputcsv($output, $linhaSemHTML, ';', '"');
+            $linhasEscritas++;
+            
+            // Força flush a cada 100 linhas para evitar timeout
+            if ($linhasEscritas % 100 == 0) {
+                flush();
+            }
+        }
+        
+        error_log("Linhas escritas no CSV: " . $linhasEscritas);
+        error_log("=== CSV GERADO COM SUCESSO ===");
+        
+    } catch (Exception $e) {
+        error_log("ERRO ao gerar CSV: " . $e->getMessage());
+        die('Erro ao gerar arquivo CSV: ' . $e->getMessage());
+    } finally {
+        if ($output) {
+            fclose($output);
+        }
+    }
+    
+    // Força flush final e termina
+    flush();
+    exit;
+}
+
+/**
+ * Gera saída Excel (CSV simples com extensão .xlsx)
+ */
+function gerarExcel($resultado) {
+    error_log("=== INICIANDO GERAÇÃO EXCEL (CSV SIMPLES) ===");
+    
+    // Define modo de exportação para formatação limpa
+    if (!defined('EXPORT_MODE')) {
+        define('EXPORT_MODE', true);
+    }
+    
+    $dados = $resultado['dados'] ?? [];
+    $total = count($dados);
+    error_log("Total de dados para Excel: " . $total);
+    
+    if (empty($dados)) {
+        error_log("ERRO: Nenhum dado para exportar em Excel");
+        die('Erro: Nenhum dado disponível para exportação Excel.');
+    }
+    
+    $filename = 'relatorio_' . date('Y-m-d_H-i-s') . '.xlsx';
+    error_log("Nome do arquivo Excel: " . $filename);
+    
+    // IMPORTANTE: Limpa qualquer output anterior
+    if (ob_get_level()) {
+        ob_end_clean();
+    }
+    
+    // Verifica se headers já foram enviados
+    if (headers_sent($file, $line)) {
+        error_log("ERRO: Headers já foram enviados em $file:$line");
+        die('Erro interno: Headers já enviados. Não é possível gerar Excel.');
+    }
+    
+    // Headers para Excel (CSV com extensão xlsx)
+    header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    header('Content-Disposition: attachment; filename="' . $filename . '"');
+    header('Cache-Control: no-cache, must-revalidate');
+    header('Expires: Mon, 26 Jul 1997 05:00:00 GMT');
+    header('Pragma: public');
     
     // BOM para UTF-8
     echo "\xEF\xBB\xBF";
@@ -1431,65 +2706,67 @@ function gerarCSV($resultado) {
     // Abre output
     $output = fopen('php://output', 'w');
     
-    // Cabeçalhos
-    if (!empty($dados)) {
+    if (!$output) {
+        error_log("ERRO: Não foi possível abrir php://output para Excel");
+        die('Erro interno ao gerar Excel.');
+    }
+    
+    try {
+        // Modelo e informações do cabeçalho
+        $modelo = $resultado['modelo'] ?? [];
+        $titulo = 'Relatório de ' . ucfirst($modelo['tipo'] ?? 'Dados');
+        
+        // Linhas de cabeçalho informativo
+        fputcsv($output, [$titulo], ',', '"');
+        fputcsv($output, ['Gerado em: ' . date('d/m/Y H:i:s')], ',', '"');
+        fputcsv($output, ['Total de registros: ' . number_format($total, 0, ',', '.')], ',', '"');
+        fputcsv($output, [''], ',', '"'); // Linha vazia
+        
+        // Cabeçalhos das colunas
         $headers = array_map('formatarNomeColuna', array_keys($dados[0]));
-        fputcsv($output, $headers, ';');
+        fputcsv($output, $headers, ',', '"');
         
-        // Dados
+        // Escreve dados
+        $linhasEscritas = 0;
         foreach ($dados as $linha) {
-            fputcsv($output, $linha, ';');
-        }
-    }
-    
-    fclose($output);
-    exit;
-}
-
-/**
- * Gera saída Excel (simplificado - usando CSV com extensão .xls)
- */
-function gerarExcel($resultado) {
-    $dados = $resultado['dados'] ?? [];
-    $filename = 'relatorio_' . date('Y-m-d_H-i-s') . '.xls';
-    
-    // Headers para Excel
-    header('Content-Type: application/vnd.ms-excel; charset=utf-8');
-    header('Content-Disposition: attachment; filename="' . $filename . '"');
-    
-    // HTML Table para Excel
-    echo '<html xmlns:x="urn:schemas-microsoft-com:office:excel">';
-    echo '<head>';
-    echo '<meta http-equiv="Content-Type" content="text/html; charset=utf-8">';
-    echo '</head>';
-    echo '<body>';
-    echo '<table border="1">';
-    
-    // Cabeçalhos
-    if (!empty($dados)) {
-        echo '<tr>';
-        foreach (array_keys($dados[0]) as $coluna) {
-            echo '<th style="background-color: #0056D2; color: white; font-weight: bold;">';
-            echo htmlspecialchars(formatarNomeColuna($coluna));
-            echo '</th>';
-        }
-        echo '</tr>';
-        
-        // Dados
-        foreach ($dados as $linha) {
-            echo '<tr>';
+            $linhaSemHTML = [];
             foreach ($linha as $key => $valor) {
-                echo '<td>';
-                echo htmlspecialchars(formatarValor($valor, $key));
-                echo '</td>';
+                $valorFormatado = formatarValor($valor, $key);
+                // Remove qualquer HTML que possa ter restado
+                $valorFormatado = is_string($valorFormatado) ? strip_tags($valorFormatado) : $valorFormatado;
+                $valorFormatado = html_entity_decode($valorFormatado, ENT_QUOTES, 'UTF-8');
+                
+                // Para CPF, telefone, CEP, força como texto
+                if (in_array($key, ['cpf', 'telefone', 'cep'])) {
+                    $valorFormatado = "'" . $valorFormatado; // Força como texto no Excel
+                }
+                
+                $linhaSemHTML[] = $valorFormatado;
             }
-            echo '</tr>';
+            
+            fputcsv($output, $linhaSemHTML, ',', '"');
+            $linhasEscritas++;
+            
+            // Força flush a cada 100 linhas para evitar timeout
+            if ($linhasEscritas % 100 == 0) {
+                flush();
+            }
+        }
+        
+        error_log("Linhas escritas no Excel: " . $linhasEscritas);
+        error_log("=== EXCEL GERADO COM SUCESSO ===");
+        
+    } catch (Exception $e) {
+        error_log("ERRO ao gerar Excel: " . $e->getMessage());
+        die('Erro ao gerar arquivo Excel: ' . $e->getMessage());
+    } finally {
+        if ($output) {
+            fclose($output);
         }
     }
     
-    echo '</table>';
-    echo '</body>';
-    echo '</html>';
+    // Força flush final e termina
+    flush();
     exit;
 }
 
@@ -1561,10 +2838,57 @@ function formatarNomeColuna($coluna) {
  */
 function formatarValor($valor, $campo) {
     if ($valor === null || $valor === '') {
-        return '<span class="text-muted">-</span>';
+        return defined('EXPORT_MODE') && EXPORT_MODE === true ? '-' : '<span class="text-muted">-</span>';
     }
     
-    // Formatação por tipo de campo
+    // Para exportação (CSV/Excel), retorna valor limpo sem HTML
+    if (defined('EXPORT_MODE') && EXPORT_MODE === true) {
+        if (strpos($campo, 'data') !== false || strpos($campo, 'Data') !== false) {
+            if ($valor !== '0000-00-00' && $valor !== '0000-00-00 00:00:00') {
+                try {
+                    $data = new DateTime($valor);
+                    return $data->format('d/m/Y');
+                } catch (Exception $e) {
+                    return $valor;
+                }
+            }
+            return '-';
+        }
+        
+        if ($campo === 'cpf') {
+            return formatarCPF($valor);
+        }
+        
+        if ($campo === 'telefone') {
+            return formatarTelefone($valor);
+        }
+        
+        if ($campo === 'cep') {
+            return formatarCEP($valor);
+        }
+        
+        if (strpos($campo, 'valor') !== false || strpos($campo, 'Valor') !== false) {
+            return 'R$ ' . number_format($valor, 2, ',', '.');
+        }
+        
+        if (strpos($campo, 'percentual') !== false) {
+            return number_format($valor, 2, ',', '.') . '%';
+        }
+        
+        if ($campo === 'ativo' || $campo === 'verificado') {
+            return ($valor == 1) ? 'Sim' : 'Não';
+        }
+        
+        if ($campo === 'sexo') {
+            if ($valor === 'M') return 'Masculino';
+            if ($valor === 'F') return 'Feminino';
+            return $valor;
+        }
+        
+        return $valor;
+    }
+    
+    // Formatação original para HTML (com tags)
     if (strpos($campo, 'data') !== false || strpos($campo, 'Data') !== false) {
         if ($valor !== '0000-00-00' && $valor !== '0000-00-00 00:00:00') {
             try {
