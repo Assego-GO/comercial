@@ -1106,9 +1106,7 @@ $headerComponent = HeaderComponent::create([
                                 <p>Importe arquivo CSV do ASAAS para atualizar status de adimplência automaticamente</p>
                             </div>
 
-                            <div class="financeiro-option" onclick="estatisticasFinanceiras()">
-                                <div class="financeiro-option-icon">
-                                    <i class="fas fa-calculator"></i>
+                            
 
                                 <div class="financeiro-option" onclick="gerenciarPeculio()">
                                     <div class="financeiro-option-icon">
@@ -1127,7 +1125,7 @@ $headerComponent = HeaderComponent::create([
 
                                 </div>
                             </div>
-                        </div>
+                        
                     </div>
                 </div>
 
