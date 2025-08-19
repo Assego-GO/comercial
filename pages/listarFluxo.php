@@ -1,0 +1,1422 @@
+<?php
+/**
+ * Página de Gerenciamento do Fluxo de Assinatura - VERSÃO CORRIGIDA
+ * pages/documentos_fluxo.php
+ * 
+ * Esta página serve APENAS para gerenciar o fluxo de assinatura
+ * dos documentos que já foram anexados durante o pré-cadastro
+ * 
+ * CORREÇÕES IMPLEMENTADAS:
+ * - ✅ Lista dados reais do banco de dados incluindo associado_id
+ * - ✅ Identifica documentos presenciais vs virtuais
+ * - ✅ Botões de download funcionais
+ * - ✅ Upload de assinatura presencial
+ * - ✅ Compatibilidade com API existente documentos_fluxo_listar.php
+ * - ✅ Filtros corrigidos (tipo_fluxo → origem)
+ * - ✅ Tratamento de erros melhorado
+ * 
+ * DEPENDÊNCIAS NECESSÁRIAS:
+ * - Classe Documentos deve ter método listarDocumentosEmFluxo()
+ * - API ../api/documentos/documentos_fluxo_listar.php deve existir
+ * - Tabela Documentos_Associado com campos tipo_origem, associado_id
+ */
+
+// Tratamento de erros para debug
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
+require_once '../config/config.php';
+require_once '../config/database.php';
+require_once '../classes/Database.php';
+require_once '../classes/Auth.php';
+require_once '../classes/Funcionarios.php';
+require_once '../classes/Documentos.php';
+
+// CORREÇÃO: Incluir a classe HeaderComponent ANTES de tentar usá-la
+require_once './components/header.php';
+
+// Inicia autenticação
+$auth = new Auth();
+
+// Verifica se está logado
+if (!$auth->isLoggedIn()) {
+    header('Location: ../pages/index.php');
+    exit;
+}
+
+// Pega dados do usuário logado
+$usuarioLogado = $auth->getUser();
+
+// DEBUG USUÁRIO LOGADO E SISTEMA - CONSOLE (REMOVER APÓS TESTE)
+echo "<script>";
+echo "console.log('=== DEBUG SISTEMA DOCUMENTOS FLUXO ===');";
+echo "console.log('Usuário logado:', " . json_encode($usuarioLogado) . ");";
+echo "console.log('Tem departamento_id?', " . (isset($usuarioLogado['departamento_id']) ? 'true' : 'false') . ");";
+if (isset($usuarioLogado['departamento_id'])) {
+    echo "console.log('Departamento ID:', " . json_encode($usuarioLogado['departamento_id']) . ");";
+    echo "console.log('É presidência (2)?', " . ($usuarioLogado['departamento_id'] == 2 ? 'true' : 'false') . ");";
+    echo "console.log('É comercial (1)?', " . ($usuarioLogado['departamento_id'] == 1 ? 'true' : 'false') . ");";
+}
+echo "console.log('É diretor?', " . ($auth->isDiretor() ? 'true' : 'false') . ");";
+echo "console.log('Pode assinar docs?', " . (($auth->isDiretor() || $usuarioLogado['departamento_id'] == 2) ? 'true' : 'false') . ");";
+echo "console.log('Estatísticas carregadas?', " . (isset($statsFluxo) && !empty($statsFluxo['por_status']) ? 'true' : 'false') . ");";
+echo "console.log('API alvo: ../api/documentos/documentos_fluxo_listar.php');";
+echo "console.log('========================================');";
+echo "</script>";
+
+// Define o título da página
+$page_title = 'Fluxo de Assinatura - ASSEGO';
+
+// Busca estatísticas de documentos em fluxo
+try {
+    $documentos = new Documentos();
+    if (method_exists($documentos, 'getEstatisticasFluxo')) {
+        $statsFluxo = $documentos->getEstatisticasFluxo();
+    } else {
+        // Fallback caso o método não exista ainda
+        $statsFluxo = [
+            'por_status' => [
+                ['status_fluxo' => 'DIGITALIZADO', 'total' => 0],
+                ['status_fluxo' => 'AGUARDANDO_ASSINATURA', 'total' => 0],
+                ['status_fluxo' => 'ASSINADO', 'total' => 0],
+                ['status_fluxo' => 'FINALIZADO', 'total' => 0]
+            ]
+        ];
+        error_log("Método getEstatisticasFluxo não encontrado na classe Documentos");
+    }
+} catch (Exception $e) {
+    error_log("Erro ao buscar estatísticas de fluxo: " . $e->getMessage());
+    // Fallback para evitar erro na página
+    $statsFluxo = [
+        'por_status' => [
+            ['status_fluxo' => 'DIGITALIZADO', 'total' => 0],
+            ['status_fluxo' => 'AGUARDANDO_ASSINATURA', 'total' => 0],
+            ['status_fluxo' => 'ASSINADO', 'total' => 0],
+            ['status_fluxo' => 'FINALIZADO', 'total' => 0]
+        ]
+    ];
+}
+
+// CORREÇÃO: Cria instância do Header Component - Passa TODO o array do usuário
+$headerComponent = HeaderComponent::create([
+    'usuario' => $usuarioLogado, // ← CORRIGIDO: Agora passa TODO o array (incluindo departamento_id)
+    'isDiretor' => $auth->isDiretor(),
+    'activeTab' => 'documentos',
+    'notificationCount' => 0,
+    'showSearch' => true
+]);
+
+?>
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><?php echo $page_title; ?></title>
+
+    <!-- Favicon -->
+    <link rel="icon" href="../assets/img/favicon.ico" type="image/x-icon">
+
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Font Awesome Pro -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+
+    <!-- AOS Animation -->
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+
+    <!-- jQuery PRIMEIRO -->
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+
+    <!-- CSS do Header Component -->
+    <?php $headerComponent->renderCSS(); ?>
+    <link rel="stylesheet" href="estilizacao/documentos.css">
+    
+    <!-- CSS customizado para fluxo presencial -->
+    <style>
+        .document-card.fluxo-presencial {
+            border-left: 4px solid #28a745;
+            background: linear-gradient(135deg, #f8fff9 0%, #ffffff 100%);
+        }
+        
+        .document-card.fluxo-virtual {
+            border-left: 4px solid #007bff;
+            background: linear-gradient(135deg, #f8fbff 0%, #ffffff 100%);
+        }
+        
+        .fluxo-type-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 0.5rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .fluxo-type-badge.presencial {
+            background: #e8f5e8;
+            color: #28a745;
+            border: 1px solid #c3e6c3;
+        }
+        
+        .fluxo-type-badge.virtual {
+            background: #e8f4ff;
+            color: #007bff;
+            border: 1px solid #b8daff;
+        }
+        
+        .download-alert {
+            background: #fff3cd;
+            border: 1px solid #ffd60a;
+            border-radius: 0.5rem;
+            padding: 0.75rem;
+            margin: 0.5rem 0;
+            font-size: 0.875rem;
+        }
+        
+        .download-alert i {
+            color: #856404;
+        }
+        
+        .btn-download-presencial {
+            background: linear-gradient(135deg, #28a745 0%, #34ce57 100%);
+            border: none;
+            color: white;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-download-presencial:hover {
+            background: linear-gradient(135deg, #1e7e34 0%, #28a745 100%);
+            color: white;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+        }
+        
+        .modal-assinatura-presencial .modal-content {
+            border: none;
+            border-radius: 1rem;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        
+        .modal-assinatura-presencial .modal-header {
+            background: linear-gradient(135deg, #28a745 0%, #34ce57 100%);
+            color: white;
+            border-radius: 1rem 1rem 0 0;
+        }
+        
+        .upload-area-assinatura {
+            border: 2px dashed #28a745;
+            border-radius: 0.75rem;
+            padding: 2rem;
+            text-align: center;
+            background: #f8fff9;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .upload-area-assinatura:hover,
+        .upload-area-assinatura.dragging {
+            border-color: #1e7e34;
+            background: #e8f5e8;
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Main Content -->
+    <div class="main-wrapper">
+        <!-- Header Component -->
+        <?php $headerComponent->render(); ?>
+
+        <!-- Content Area -->
+        <div class="content-area">
+            <!-- Page Title -->
+            <div class="page-header mb-4" data-aos="fade-right">
+                <div>
+                    <h1 class="page-title">Fluxo de Assinatura de Documentos</h1>
+                    <p class="page-subtitle">Gerencie o processo de assinatura das fichas de filiação (Virtual e Presencial)</p>
+                </div>
+            </div>
+
+            <!-- Alert Informativo -->
+            <div class="alert-info-custom" data-aos="fade-up">
+                <i class="fas fa-info-circle"></i>
+                <div>
+                    <strong>Como funciona o fluxo:</strong><br>
+                    <strong>Virtual:</strong> 1. Ficha gerada no sistema → 2. Envio para presidência → 3. Assinatura digital → 4. Retorno ao comercial → 5. Aprovação<br>
+                    <strong>Presencial:</strong> 1. Ficha digitalizada → 2. Download para impressão → 3. Assinatura presencial → 4. Upload da ficha assinada → 5. Aprovação
+                </div>
+            </div>
+            
+            <?php if (isset($_GET['novo']) && $_GET['novo'] == '1'): ?>
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                <i class="fas fa-check-circle me-2"></i>
+                <strong>Pré-cadastro criado com sucesso!</strong> 
+                A ficha de filiação foi anexada e está aguardando processamento.
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            <?php endif; ?>
+
+            <!-- Stats Grid -->
+            <div class="stats-grid" data-aos="fade-up">
+                <?php if (isset($statsFluxo['por_status'])): ?>
+                    <?php foreach ($statsFluxo['por_status'] as $status): ?>
+                        <div class="stat-card">
+                            <div class="stat-header">
+                                <div>
+                                    <div class="stat-value"><?php echo number_format($status['total'] ?? 0, 0, ',', '.'); ?>
+                                    </div>
+                                    <div class="stat-label">
+                                        <?php
+                                        $labels = [
+                                            'DIGITALIZADO' => 'Aguardando Processamento',
+                                            'AGUARDANDO_ASSINATURA' => 'Na Presidência',
+                                            'ASSINADO' => 'Assinados',
+                                            'FINALIZADO' => 'Finalizados'
+                                        ];
+                                        echo $labels[$status['status_fluxo']] ?? $status['status_fluxo'];
+                                        ?>
+                                    </div>
+                                </div>
+                                <div class="stat-icon <?php
+                                echo match ($status['status_fluxo']) {
+                                    'DIGITALIZADO' => 'info',
+                                    'AGUARDANDO_ASSINATURA' => 'warning',
+                                    'ASSINADO' => 'success',
+                                    'FINALIZADO' => 'primary',
+                                    default => 'secondary'
+                                };
+                                ?>">
+                                    <i class="fas <?php
+                                    echo match ($status['status_fluxo']) {
+                                        'DIGITALIZADO' => 'fa-upload',
+                                        'AGUARDANDO_ASSINATURA' => 'fa-clock',
+                                        'ASSINADO' => 'fa-check',
+                                        'FINALIZADO' => 'fa-flag-checkered',
+                                        default => 'fa-file'
+                                    };
+                                    ?>"></i>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </div>
+
+            <!-- Filters -->
+            <div class="actions-bar" data-aos="fade-up" data-aos-delay="200">
+                <div class="filters-row">
+                    <div class="filter-group">
+                        <label class="filter-label">Status do Fluxo</label>
+                        <select class="filter-select" id="filtroStatusFluxo">
+                            <option value="">Todos os Status</option>
+                            <option value="DIGITALIZADO">Aguardando Processamento</option>
+                            <option value="AGUARDANDO_ASSINATURA">Na Presidência</option>
+                            <option value="ASSINADO">Assinados</option>
+                            <option value="FINALIZADO">Finalizados</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-group">
+                        <label class="filter-label">Tipo de Fluxo</label>
+                        <select class="filter-select" id="filtroTipoFluxo">
+                            <option value="">Todos os Tipos</option>
+                            <option value="VIRTUAL">Virtual (Sistema)</option>
+                            <option value="PRESENCIAL">Presencial (Digitalizada)</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-group">
+                        <label class="filter-label">Buscar Associado</label>
+                        <input type="text" class="filter-input" id="filtroBuscaFluxo" 
+                               placeholder="Nome ou CPF do associado">
+                    </div>
+
+                    <div class="filter-group">
+                        <label class="filter-label">Período</label>
+                        <select class="filter-select" id="filtroPeriodo">
+                            <option value="">Todo período</option>
+                            <option value="hoje">Hoje</option>
+                            <option value="semana">Esta semana</option>
+                            <option value="mes">Este mês</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="actions-row">
+                    <button class="btn-modern btn-secondary" onclick="limparFiltros()">
+                        <i class="fas fa-eraser"></i>
+                        Limpar Filtros
+                    </button>
+                    <button class="btn-modern btn-primary" onclick="aplicarFiltros()">
+                        <i class="fas fa-filter"></i>
+                        Aplicar Filtros
+                    </button>
+                </div>
+            </div>
+
+            <!-- Documents in Flow -->
+            <div class="documents-grid" id="documentosFluxoList" data-aos="fade-up" data-aos-delay="300">
+                <!-- Documentos em fluxo serão carregados aqui -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Histórico do Fluxo -->
+    <div class="modal fade" id="historicoModal" tabindex="-1" aria-labelledby="historicoModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="historicoModalLabel">
+                        <i class="fas fa-history me-2" style="color: var(--primary);"></i>
+                        Histórico do Documento
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="historicoContent">
+                        <!-- Timeline será carregada aqui -->
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-modern btn-secondary" data-bs-dismiss="modal">
+                        Fechar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Assinatura Digital -->
+    <div class="modal fade" id="assinaturaModal" tabindex="-1" aria-labelledby="assinaturaModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="assinaturaModalLabel">
+                        <i class="fas fa-signature me-2" style="color: var(--primary);"></i>
+                        Assinatura Digital
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="assinaturaForm">
+                        <input type="hidden" id="assinaturaDocumentoId">
+
+                        <div class="mb-4">
+                            <label class="form-label">Arquivo Assinado (opcional)</label>
+                            <div class="upload-area small" id="uploadAssinaturaArea" style="padding: 2rem;">
+                                <i class="fas fa-file-signature upload-icon" style="font-size: 2rem;"></i>
+                                <h6 class="upload-title" style="font-size: 1rem;">Upload do documento assinado</h6>
+                                <p class="upload-subtitle" style="font-size: 0.75rem;">Se desejar, faça upload do PDF assinado</p>
+                                <input type="file" id="assinaturaFileInput" class="d-none" accept=".pdf">
+                            </div>
+                        </div>
+
+                        <div id="assinaturaFilesList" class="mb-4"></div>
+
+                        <div class="mb-4">
+                            <label class="form-label">Observações</label>
+                            <textarea class="form-control" id="assinaturaObservacao" rows="3"
+                                placeholder="Adicione observações sobre a assinatura..."></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-modern btn-secondary" data-bs-dismiss="modal">
+                        Cancelar
+                    </button>
+                    <button type="button" class="btn-modern btn-success" onclick="assinarDocumento()">
+                        <i class="fas fa-check me-2"></i>
+                        Confirmar Assinatura
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Assinatura Presencial -->
+    <div class="modal fade modal-assinatura-presencial" id="assinaturaPresencialModal" tabindex="-1" aria-labelledby="assinaturaPresencialModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="assinaturaPresencialModalLabel">
+                        <i class="fas fa-pen-fancy me-2"></i>
+                        Assinatura Presencial
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Processo de Assinatura Presencial:</strong><br>
+                        1. Baixe a ficha usando o botão "Download"<br>
+                        2. Imprima o documento<br>
+                        3. Colete a assinatura presencial<br>
+                        4. Digitalize o documento assinado<br>
+                        5. Faça upload do arquivo digitalizado abaixo
+                    </div>
+
+                    <form id="assinaturaPresencialForm">
+                        <input type="hidden" id="assinaturaPresencialDocumentoId">
+
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">Documento Assinado Digitalizado *</label>
+                            <div class="upload-area-assinatura" id="uploadPresencialArea">
+                                <i class="fas fa-file-upload upload-icon" style="font-size: 2.5rem; color: #28a745;"></i>
+                                <h6 class="upload-title mt-3">Arraste o arquivo aqui ou clique para selecionar</h6>
+                                <p class="upload-subtitle text-muted">Arquivo PDF do documento com assinatura presencial</p>
+                                <input type="file" id="assinaturaPresencialFileInput" class="d-none" accept=".pdf" required>
+                            </div>
+                            <small class="text-muted">* Arquivo obrigatório para confirmar a assinatura presencial</small>
+                        </div>
+
+                        <div id="assinaturaPresencialFilesList" class="mb-4"></div>
+
+                        <div class="mb-4">
+                            <label class="form-label">Observações sobre a Assinatura</label>
+                            <textarea class="form-control" id="assinaturaPresencialObservacao" rows="3"
+                                placeholder="Ex: Assinatura coletada presencialmente em [data], local, etc..."></textarea>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label">Data da Assinatura Presencial</label>
+                            <input type="date" class="form-control" id="dataAssinaturaPresencial" value="<?php echo date('Y-m-d'); ?>">
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-modern btn-secondary" data-bs-dismiss="modal">
+                        Cancelar
+                    </button>
+                    <button type="button" class="btn-modern btn-success" onclick="confirmarAssinaturaPresencial()" id="btnConfirmarPresencial">
+                        <i class="fas fa-check me-2"></i>
+                        Confirmar Assinatura Presencial
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+
+    <!-- JavaScript do Header Component -->
+    <?php $headerComponent->renderJS(); ?>
+    
+    <!-- JavaScript customizado para os botões do header -->
+    <script>
+        function toggleNotifications() {
+            // Implementar painel de notificações
+            console.log('Painel de notificações');
+            alert('Painel de notificações em desenvolvimento');
+        }
+
+        function irParaFuncionarios() {
+            // Redireciona para a página de funcionários
+            console.log('Navegando para funcionários');
+            window.location.href = './funcionarios.php';
+        }
+    </script>
+    
+    <script>
+        // Inicializa AOS
+        AOS.init({
+            duration: 800,
+            once: true
+        });
+
+        // Variáveis globais
+        let arquivoAssinaturaSelecionado = null;
+        let arquivoPresencialSelecionado = null;
+        let filtrosAtuais = {};
+
+        // Inicialização
+        $(document).ready(function () {
+            carregarDocumentosFluxo();
+            configurarUploadAssinatura();
+            configurarUploadPresencial();
+        });
+
+        // Carregar documentos em fluxo
+        function carregarDocumentosFluxo(filtros = {}) {
+            const container = $('#documentosFluxoList');
+
+            // Mostra loading
+            container.html(`
+                <div class="col-12 text-center py-5">
+                    <div class="loading-spinner mb-3"></div>
+                    <p class="text-muted">Carregando documentos em fluxo...</p>
+                </div>
+            `);
+
+            console.log('Carregando documentos com filtros:', filtros);
+
+            $.get('../api/documentos/documentos_fluxo_listar.php', filtros, function (response) {
+                console.log('Resposta da API:', response);
+                
+                if (response.status === 'success') {
+                    console.log('Documentos carregados:', response.data.length);
+                    renderizarDocumentosFluxo(response.data);
+                } else {
+                    console.error('Erro na API:', response.message);
+                    container.html(`
+                        <div class="col-12">
+                            <div class="empty-state">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                <h5>Erro ao carregar documentos</h5>
+                                <p>${response.message || 'Tente novamente mais tarde'}</p>
+                            </div>
+                        </div>
+                    `);
+                }
+            }).fail(function (xhr, status, error) {
+                console.error('Erro na requisição:', error);
+                console.error('Response Text:', xhr.responseText);
+                
+                container.html(`
+                    <div class="col-12">
+                        <div class="empty-state">
+                            <i class="fas fa-wifi-slash"></i>
+                            <h5>Erro de conexão</h5>
+                            <p>Verifique sua conexão com a internet</p>
+                            <small class="text-muted">Erro técnico: ${error}</small>
+                        </div>
+                    </div>
+                `);
+            });
+        }
+
+        function renderizarDocumentosFluxo(documentos) {
+            const container = $('#documentosFluxoList');
+            container.empty();
+
+            if (documentos.length === 0) {
+                container.html(`
+                    <div class="col-12">
+                        <div class="empty-state">
+                            <i class="fas fa-exchange-alt"></i>
+                            <h5>Nenhum documento em fluxo</h5>
+                            <p>Os documentos anexados durante o pré-cadastro aparecerão aqui</p>
+                        </div>
+                    </div>
+                `);
+                return;
+            }
+
+            documentos.forEach(doc => {
+                const statusClass = doc.status_fluxo.toLowerCase().replace('_', '-');
+                const isPresencial = doc.tipo_origem === 'FISICO';
+                const fluxoClass = isPresencial ? 'fluxo-presencial' : 'fluxo-virtual';
+                
+                // Usar campos corretos da API
+                const associadoNome = doc.associado_nome || 'Nome não encontrado';
+                const associadoCpf = doc.associado_cpf || '';
+                const departamentoNome = doc.departamento_atual_nome || 'Comercial';
+                const statusDescricao = doc.status_descricao || doc.status_fluxo;
+                const diasProcesso = doc.dias_em_processo || 0;
+                
+                const cardHtml = `
+                    <div class="document-card ${fluxoClass}" data-aos="fade-up">
+                        <div class="document-header">
+                            <div class="document-icon pdf">
+                                <i class="fas fa-file-pdf"></i>
+                            </div>
+                            <div class="document-info">
+                                <h6 class="document-title">Ficha de Filiação</h6>
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="fluxo-type-badge ${isPresencial ? 'presencial' : 'virtual'}">
+                                        <i class="fas fa-${isPresencial ? 'handshake' : 'desktop'}"></i>
+                                        ${isPresencial ? 'Presencial' : 'Virtual'}
+                                    </span>
+                                    <span class="status-badge ${statusClass}">
+                                        <i class="fas fa-${getStatusIcon(doc.status_fluxo)} me-1"></i>
+                                        ${statusDescricao}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="document-meta">
+                            <div class="meta-item">
+                                <i class="fas fa-user"></i>
+                                <span><strong>${associadoNome}</strong></span>
+                            </div>
+                            <div class="meta-item">
+                                <i class="fas fa-id-card-o"></i>
+                                <span>ID: ${doc.associado_id}</span>
+                            </div>
+                            <div class="meta-item">
+                                <i class="fas fa-id-card"></i>
+                                <span>CPF: ${formatarCPF(associadoCpf)}</span>
+                            </div>
+                            <div class="meta-item">
+                                <i class="fas fa-building"></i>
+                                <span>${departamentoNome}</span>
+                            </div>
+                            <div class="meta-item">
+                                <i class="fas fa-calendar"></i>
+                                <span>Cadastrado em ${formatarData(doc.data_upload)}</span>
+                            </div>
+                            ${diasProcesso > 0 ? `
+                                <div class="meta-item">
+                                    <i class="fas fa-hourglass-half"></i>
+                                    <span class="text-warning"><strong>${diasProcesso} dias em processo</strong></span>
+                                </div>
+                            ` : ''}
+                        </div>
+                        
+                        ${isPresencial && doc.status_fluxo === 'DIGITALIZADO' ? `
+                            <div class="download-alert">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <strong>Fluxo Presencial:</strong> Baixe a ficha, colete a assinatura presencial e faça upload do documento assinado.
+                            </div>
+                        ` : ''}
+                        
+                        <!-- Progress do Fluxo -->
+                        <div class="fluxo-progress">
+                            <div class="fluxo-steps">
+                                <div class="fluxo-step ${doc.status_fluxo !== 'DIGITALIZADO' ? 'completed' : 'active'}">
+                                    <div class="fluxo-step-icon">
+                                        <i class="fas fa-${isPresencial ? 'scan' : 'desktop'}"></i>
+                                    </div>
+                                    <div class="fluxo-step-label">${isPresencial ? 'Digitalizado' : 'Gerado'}</div>
+                                    <div class="fluxo-line"></div>
+                                </div>
+                                <div class="fluxo-step ${doc.status_fluxo === 'AGUARDANDO_ASSINATURA' ? 'active' : (doc.status_fluxo === 'ASSINADO' || doc.status_fluxo === 'FINALIZADO' ? 'completed' : '')}">
+                                    <div class="fluxo-step-icon">
+                                        <i class="fas fa-${isPresencial ? 'pen-fancy' : 'signature'}"></i>
+                                    </div>
+                                    <div class="fluxo-step-label">${isPresencial ? 'Assin. Presencial' : 'Assin. Digital'}</div>
+                                    <div class="fluxo-line"></div>
+                                </div>
+                                <div class="fluxo-step ${doc.status_fluxo === 'ASSINADO' ? 'active' : (doc.status_fluxo === 'FINALIZADO' ? 'completed' : '')}">
+                                    <div class="fluxo-step-icon">
+                                        <i class="fas fa-check"></i>
+                                    </div>
+                                    <div class="fluxo-step-label">Assinado</div>
+                                    <div class="fluxo-line"></div>
+                                </div>
+                                <div class="fluxo-step ${doc.status_fluxo === 'FINALIZADO' ? 'completed' : ''}">
+                                    <div class="fluxo-step-icon">
+                                        <i class="fas fa-flag-checkered"></i>
+                                    </div>
+                                    <div class="fluxo-step-label">Finalizado</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="document-actions">
+                            ${isPresencial ? `
+                                <button class="btn-modern btn-download-presencial btn-sm" onclick="downloadDocumentoPresencial(${doc.id})" title="Download para Assinatura Presencial">
+                                    <i class="fas fa-download"></i>
+                                    Download
+                                </button>
+                            ` : `
+                                <button class="btn-modern btn-primary btn-sm" onclick="downloadDocumento(${doc.id})" title="Download">
+                                    <i class="fas fa-download"></i>
+                                    Baixar
+                                </button>
+                            `}
+                            
+                            ${getAcoesFluxo(doc, isPresencial)}
+                            
+                            <button class="btn-modern btn-secondary btn-sm" onclick="verHistorico(${doc.id})" title="Histórico">
+                                <i class="fas fa-history"></i>
+                                Histórico
+                            </button>
+                        </div>
+                    </div>
+                `;
+
+                container.append(cardHtml);
+            });
+        }
+
+        function getAcoesFluxo(doc, isPresencial = false) {
+            let acoes = '';
+
+            switch (doc.status_fluxo) {
+                case 'DIGITALIZADO':
+                    if (isPresencial) {
+                        acoes = `
+                            <button class="btn-modern btn-success btn-sm" onclick="abrirModalAssinaturaPresencial(${doc.id})" title="Upload Documento Assinado">
+                                <i class="fas fa-pen-fancy"></i>
+                                Assinatura Presencial
+                            </button>
+                        `;
+                    } else {
+                        acoes = `
+                            <button class="btn-modern btn-warning btn-sm" onclick="enviarParaAssinatura(${doc.id})" title="Enviar para Assinatura">
+                                <i class="fas fa-paper-plane"></i>
+                                Enviar
+                            </button>
+                        `;
+                    }
+                    break;
+
+                case 'AGUARDANDO_ASSINATURA':
+                    // Verificar se usuário tem permissão para assinar (apenas presidência)
+                    <?php if ($auth->isDiretor() || $usuarioLogado['departamento_id'] == 2): ?>
+                    if (!isPresencial) {
+                        acoes = `
+                            <button class="btn-modern btn-success btn-sm" onclick="abrirModalAssinatura(${doc.id})" title="Assinatura Digital">
+                                <i class="fas fa-signature"></i>
+                                Assinar
+                            </button>
+                        `;
+                    }
+                    <?php endif; ?>
+                    break;
+
+                case 'ASSINADO':
+                    acoes = `
+                        <button class="btn-modern btn-info btn-sm" onclick="finalizarProcesso(${doc.id})" title="Finalizar">
+                            <i class="fas fa-flag-checkered"></i>
+                            Finalizar
+                        </button>
+                    `;
+                    break;
+
+                case 'FINALIZADO':
+                    acoes = `
+                        <button class="btn-modern btn-success btn-sm" disabled title="Processo Concluído">
+                            <i class="fas fa-check-circle"></i>
+                            Concluído
+                        </button>
+                    `;
+                    break;
+            }
+
+            return acoes;
+        }
+
+        // Obter ícone do status
+        function getStatusIcon(status) {
+            const icons = {
+                'DIGITALIZADO': 'upload',
+                'AGUARDANDO_ASSINATURA': 'clock',
+                'ASSINADO': 'check',
+                'FINALIZADO': 'flag-checkered'
+            };
+            return icons[status] || 'file';
+        }
+
+        // Download específico para documentos presenciais
+        function downloadDocumentoPresencial(id) {
+            // Mostra notificação de informação
+            mostrarNotificacaoInfo('Preparando download da ficha para assinatura presencial...');
+            
+            // Faz o download
+            const link = document.createElement('a');
+            link.href = '../api/documentos/documentos_download.php?id=' + id + '&tipo=presencial';
+            link.download = '';
+            link.target = '_blank';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            // Mostra instrução após download
+            setTimeout(() => {
+                mostrarNotificacaoSucesso('Download concluído! Imprima o documento, colete a assinatura presencial e depois faça upload do arquivo assinado.');
+            }, 1000);
+        }
+
+        // Download padrão
+        function downloadDocumento(id) {
+            window.open('../api/documentos/documentos_download.php?id=' + id, '_blank');
+        }
+
+        // Abrir modal de assinatura presencial
+        function abrirModalAssinaturaPresencial(documentoId) {
+            $('#assinaturaPresencialDocumentoId').val(documentoId);
+            $('#assinaturaPresencialObservacao').val('');
+            $('#assinaturaPresencialFilesList').empty();
+            $('#dataAssinaturaPresencial').val(new Date().toISOString().split('T')[0]);
+            arquivoPresencialSelecionado = null;
+            $('#assinaturaPresencialModal').modal('show');
+        }
+
+        // Confirmar assinatura presencial
+        function confirmarAssinaturaPresencial() {
+            const documentoId = $('#assinaturaPresencialDocumentoId').val();
+            const observacao = $('#assinaturaPresencialObservacao').val();
+            const dataAssinatura = $('#dataAssinaturaPresencial').val();
+
+            if (!arquivoPresencialSelecionado) {
+                alert('Por favor, faça upload do documento assinado presencialmente.');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('documento_id', documentoId);
+            formData.append('observacao', observacao || 'Documento assinado presencialmente');
+            formData.append('data_assinatura', dataAssinatura);
+            formData.append('arquivo_assinado', arquivoPresencialSelecionado);
+            formData.append('tipo_assinatura', 'presencial');
+
+            // Mostra loading no botão
+            const btnConfirmar = $('#btnConfirmarPresencial');
+            const btnText = btnConfirmar.html();
+            btnConfirmar.prop('disabled', true);
+            btnConfirmar.html('<i class="fas fa-spinner fa-spin me-2"></i>Processando...');
+
+            $.ajax({
+                url: '../api/documentos/documentos_assinar_presencial.php',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function (response) {
+                    if (response.status === 'success') {
+                        mostrarNotificacaoSucesso('Assinatura presencial confirmada com sucesso!');
+                        $('#assinaturaPresencialModal').modal('hide');
+                        carregarDocumentosFluxo(filtrosAtuais);
+                    } else {
+                        alert('Erro: ' + response.message);
+                    }
+                },
+                error: function (xhr, status, error) {
+                    console.error('Erro na requisição:', error);
+                    alert('Erro ao confirmar assinatura presencial. Tente novamente.');
+                },
+                complete: function () {
+                    btnConfirmar.prop('disabled', false);
+                    btnConfirmar.html(btnText);
+                }
+            });
+        }
+
+        // Configurar upload presencial
+        function configurarUploadPresencial() {
+            const uploadArea = document.getElementById('uploadPresencialArea');
+            const fileInput = document.getElementById('assinaturaPresencialFileInput');
+
+            if (!uploadArea || !fileInput) return;
+
+            // Clique para selecionar
+            uploadArea.addEventListener('click', () => fileInput.click());
+
+            // Arrastar e soltar
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.classList.add('dragging');
+            });
+
+            uploadArea.addEventListener('dragleave', () => {
+                uploadArea.classList.remove('dragging');
+            });
+
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('dragging');
+                handlePresencialFile(e.dataTransfer.files[0]);
+            });
+
+            // Seleção de arquivo
+            fileInput.addEventListener('change', (e) => {
+                handlePresencialFile(e.target.files[0]);
+            });
+        }
+
+        // Processar arquivo presencial
+        function handlePresencialFile(file) {
+            if (!file) return;
+
+            // Verificar se é PDF
+            if (file.type !== 'application/pdf') {
+                alert('Por favor, selecione apenas arquivos PDF');
+                return;
+            }
+
+            arquivoPresencialSelecionado = file;
+
+            const filesList = $('#assinaturaPresencialFilesList');
+            filesList.empty();
+
+            filesList.append(`
+                <div class="file-item">
+                    <div class="file-item-info">
+                        <div class="file-item-icon">
+                            <i class="fas fa-file-pdf" style="color: #28a745;"></i>
+                        </div>
+                        <div>
+                            <div class="file-item-name">${file.name}</div>
+                            <div class="file-item-size">${formatBytes(file.size)}</div>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-remove" onclick="removerArquivoPresencial()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            `);
+
+            // Habilita o botão de confirmação
+            $('#btnConfirmarPresencial').prop('disabled', false);
+        }
+
+        // Remover arquivo presencial
+        function removerArquivoPresencial() {
+            arquivoPresencialSelecionado = null;
+            $('#assinaturaPresencialFilesList').empty();
+            $('#assinaturaPresencialFileInput').val('');
+            $('#btnConfirmarPresencial').prop('disabled', true);
+        }
+
+        function enviarParaAssinatura(documentoId) {
+            mostrarConfirmacaoEnvio(documentoId);
+        }
+
+        function mostrarConfirmacaoEnvio(documentoId) {
+            // Cria o modal HTML
+            const modalHtml = `
+                <div class="modal fade confirmation-modal" id="confirmationModal" tabindex="-1">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <div class="modal-title">
+                                    <div class="modal-icon">
+                                        <i class="fas fa-paper-plane"></i>
+                                    </div>
+                                    <span>Enviar para Assinatura</span>
+                                </div>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            
+                            <div class="modal-body">
+                                <div class="confirmation-icon">
+                                    <i class="fas fa-signature"></i>
+                                </div>
+                                
+                                <h5 class="confirmation-message">
+                                    Deseja enviar este documento para assinatura na presidência?
+                                </h5>
+                                
+                                <p class="confirmation-submessage">
+                                    O documento será encaminhado para o departamento de presidência
+                                </p>
+                                
+                                <div class="info-box">
+                                    <div class="info-box-title">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        Próximos passos
+                                    </div>
+                                    <div class="info-box-content">
+                                        Após o envio, o documento ficará disponível para assinatura. 
+                                        Você será notificado quando o processo for concluído.
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="modal-footer">
+                                <button type="button" class="btn-confirm btn-confirm-secondary" data-bs-dismiss="modal">
+                                    <i class="fas fa-times"></i>
+                                    Cancelar
+                                </button>
+                                <button type="button" class="btn-confirm btn-confirm-primary" onclick="confirmarEnvioAssinatura(${documentoId})">
+                                    <i class="fas fa-check"></i>
+                                    Confirmar Envio
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Remove modal anterior se existir
+            $('#confirmationModal').remove();
+            
+            // Adiciona o novo modal ao body
+            $('body').append(modalHtml);
+            
+            // Mostra o modal
+            const modal = new bootstrap.Modal(document.getElementById('confirmationModal'));
+            modal.show();
+        }
+
+        // Função para confirmar o envio
+        function confirmarEnvioAssinatura(documentoId) {
+            // Adiciona loading ao botão
+            const btn = event.target;
+            btn.classList.add('loading');
+            btn.innerHTML = '<i class="fas fa-spinner"></i> Enviando...';
+            
+            // Faz a requisição
+            $.ajax({
+                url: '../api/documentos/documentos_enviar_assinatura.php',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    documento_id: documentoId,
+                    observacao: 'Documento enviado para assinatura'
+                }),
+                success: function(response) {
+                    if (response.status === 'success') {
+                        // Fecha o modal
+                        bootstrap.Modal.getInstance(document.getElementById('confirmationModal')).hide();
+                        
+                        // Mostra notificação de sucesso
+                        mostrarNotificacaoSucesso('Documento enviado com sucesso!');
+                        
+                        // Recarrega a lista
+                        carregarDocumentosFluxo(filtrosAtuais);
+                    } else {
+                        // Restaura o botão
+                        btn.classList.remove('loading');
+                        btn.innerHTML = '<i class="fas fa-check"></i> Confirmar Envio';
+                        alert('Erro: ' + response.message);
+                    }
+                },
+                error: function() {
+                    btn.classList.remove('loading');
+                    btn.innerHTML = '<i class="fas fa-check"></i> Confirmar Envio';
+                    alert('Erro ao enviar documento');
+                }
+            });
+        }
+
+        function mostrarNotificacaoSucesso(mensagem) {
+            mostrarNotificacao(mensagem, 'success', 'fa-check-circle');
+        }
+
+        function mostrarNotificacaoInfo(mensagem) {
+            mostrarNotificacao(mensagem, 'info', 'fa-info-circle');
+        }
+
+        function mostrarNotificacao(mensagem, tipo, icone) {
+            const bgClass = tipo === 'success' ? 'bg-success' : 'bg-info';
+            const toastHtml = `
+                <div class="position-fixed top-0 end-0 p-3" style="z-index: 9999">
+                    <div class="toast align-items-center text-white ${bgClass} border-0" role="alert">
+                        <div class="d-flex">
+                            <div class="toast-body">
+                                <i class="fas ${icone} me-2"></i>
+                                ${mensagem}
+                            </div>
+                            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            $('body').append(toastHtml);
+            const toast = new bootstrap.Toast($('.toast').last()[0]);
+            toast.show();
+            
+            // Remove após 5 segundos
+            setTimeout(() => {
+                $('.toast').last().remove();
+            }, 5000);
+        }
+
+        // Abrir modal de assinatura digital
+        function abrirModalAssinatura(documentoId) {
+            $('#assinaturaDocumentoId').val(documentoId);
+            $('#assinaturaObservacao').val('');
+            $('#assinaturaFilesList').empty();
+            arquivoAssinaturaSelecionado = null;
+            $('#assinaturaModal').modal('show');
+        }
+
+        // Assinar documento digitalmente
+        function assinarDocumento() {
+            const documentoId = $('#assinaturaDocumentoId').val();
+            const observacao = $('#assinaturaObservacao').val();
+
+            const formData = new FormData();
+            formData.append('documento_id', documentoId);
+            formData.append('observacao', observacao || 'Documento assinado pela presidência');
+
+            if (arquivoAssinaturaSelecionado) {
+                formData.append('arquivo_assinado', arquivoAssinaturaSelecionado);
+            }
+
+            // Mostra loading no botão
+            const btnAssinar = event.target;
+            const btnText = btnAssinar.innerHTML;
+            btnAssinar.disabled = true;
+            btnAssinar.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Assinando...';
+
+            $.ajax({
+                url: '../api/documentos/documentos_assinar.php',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function (response) {
+                    if (response.status === 'success') {
+                        mostrarNotificacaoSucesso('Documento assinado com sucesso!');
+                        $('#assinaturaModal').modal('hide');
+                        carregarDocumentosFluxo(filtrosAtuais);
+                    } else {
+                        alert('Erro: ' + response.message);
+                    }
+                },
+                error: function () {
+                    alert('Erro ao assinar documento');
+                },
+                complete: function () {
+                    btnAssinar.disabled = false;
+                    btnAssinar.innerHTML = btnText;
+                }
+            });
+        }
+
+        // Finalizar processo
+        function finalizarProcesso(documentoId) {
+            if (confirm('Deseja finalizar o processo deste documento?\n\nO documento retornará ao comercial e o pré-cadastro poderá ser aprovado.')) {
+                $.ajax({
+                    url: '../api/documentos/documentos_finalizar.php',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({
+                        documento_id: documentoId,
+                        observacao: 'Processo finalizado - Documento pronto para aprovação do pré-cadastro'
+                    }),
+                    success: function (response) {
+                        if (response.status === 'success') {
+                            mostrarNotificacaoSucesso('Processo finalizado com sucesso! O pré-cadastro já pode ser aprovado.');
+                            carregarDocumentosFluxo(filtrosAtuais);
+                        } else {
+                            alert('Erro: ' + response.message);
+                        }
+                    },
+                    error: function () {
+                        alert('Erro ao finalizar processo');
+                    }
+                });
+            }
+        }
+
+        // Ver histórico
+        function verHistorico(documentoId) {
+            $.get('../api/documentos/documentos_historico_fluxo.php', { documento_id: documentoId }, function (response) {
+                if (response.status === 'success') {
+                    renderizarHistorico(response.data);
+                    $('#historicoModal').modal('show');
+                } else {
+                    alert('Erro ao carregar histórico');
+                }
+            });
+        }
+
+        // Renderizar histórico
+        function renderizarHistorico(historico) {
+            const container = $('#historicoContent');
+            container.empty();
+
+            if (historico.length === 0) {
+                container.html('<p class="text-muted text-center">Nenhum histórico disponível</p>');
+                return;
+            }
+
+            const timeline = $('<div class="timeline"></div>');
+
+            historico.forEach(item => {
+                const timelineItem = `
+                    <div class="timeline-item">
+                        <div class="timeline-content">
+                            <div class="timeline-header">
+                                <h6 class="timeline-title">${item.status_novo_desc || item.status_novo}</h6>
+                                <span class="timeline-date">${formatarData(item.data_acao)}</span>
+                            </div>
+                            <p class="timeline-description mb-2">${item.observacao || 'Sem observações'}</p>
+                            <p class="timeline-description text-muted mb-0">
+                                <small>
+                                    Por: ${item.funcionario_nome || 'Sistema'}<br>
+                                    ${item.dept_origem_nome ? `De: ${item.dept_origem_nome}<br>` : ''}
+                                    ${item.dept_destino_nome ? `Para: ${item.dept_destino_nome}` : ''}
+                                </small>
+                            </p>
+                        </div>
+                    </div>
+                `;
+                timeline.append(timelineItem);
+            });
+
+            container.append(timeline);
+        }
+
+        // Configurar área de upload de assinatura digital
+        function configurarUploadAssinatura() {
+            const uploadArea = document.getElementById('uploadAssinaturaArea');
+            const fileInput = document.getElementById('assinaturaFileInput');
+
+            if (!uploadArea || !fileInput) return;
+
+            // Clique para selecionar
+            uploadArea.addEventListener('click', () => fileInput.click());
+
+            // Arrastar e soltar
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.classList.add('dragging');
+            });
+
+            uploadArea.addEventListener('dragleave', () => {
+                uploadArea.classList.remove('dragging');
+            });
+
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('dragging');
+                handleAssinaturaFile(e.dataTransfer.files[0]);
+            });
+
+            // Seleção de arquivo
+            fileInput.addEventListener('change', (e) => {
+                handleAssinaturaFile(e.target.files[0]);
+            });
+        }
+
+        // Processar arquivo de assinatura digital
+        function handleAssinaturaFile(file) {
+            if (!file) return;
+
+            // Verificar se é PDF
+            if (file.type !== 'application/pdf') {
+                alert('Por favor, selecione apenas arquivos PDF');
+                return;
+            }
+
+            arquivoAssinaturaSelecionado = file;
+
+            const filesList = $('#assinaturaFilesList');
+            filesList.empty();
+
+            filesList.append(`
+                <div class="file-item">
+                    <div class="file-item-info">
+                        <div class="file-item-icon">
+                            <i class="fas fa-file-pdf"></i>
+                        </div>
+                        <div>
+                            <div class="file-item-name">${file.name}</div>
+                            <div class="file-item-size">${formatBytes(file.size)}</div>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-remove" onclick="removerArquivoAssinatura()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            `);
+        }
+
+        // Remover arquivo de assinatura digital
+        function removerArquivoAssinatura() {
+            arquivoAssinaturaSelecionado = null;
+            $('#assinaturaFilesList').empty();
+            $('#assinaturaFileInput').val('');
+        }
+
+        // Aplicar filtros
+        function aplicarFiltros() {
+            filtrosAtuais = {};
+
+            const status = $('#filtroStatusFluxo').val();
+            if (status) filtrosAtuais.status = status;
+
+            const tipoFluxo = $('#filtroTipoFluxo').val();
+            if (tipoFluxo) {
+                // Mapear para o formato esperado pela API existente
+                if (tipoFluxo === 'PRESENCIAL') {
+                    filtrosAtuais.origem = 'FISICO';
+                } else if (tipoFluxo === 'VIRTUAL') {
+                    filtrosAtuais.origem = 'VIRTUAL';
+                }
+            }
+
+            const busca = $('#filtroBuscaFluxo').val().trim();
+            if (busca) filtrosAtuais.busca = busca;
+
+            const periodo = $('#filtroPeriodo').val();
+            if (periodo) filtrosAtuais.periodo = periodo;
+
+            carregarDocumentosFluxo(filtrosAtuais);
+        }
+
+        // Limpar filtros
+        function limparFiltros() {
+            $('#filtroStatusFluxo').val('');
+            $('#filtroTipoFluxo').val('');
+            $('#filtroBuscaFluxo').val('');
+            $('#filtroPeriodo').val('');
+            filtrosAtuais = {};
+            carregarDocumentosFluxo();
+        }
+
+        // Funções auxiliares
+        function formatarData(dataStr) {
+            if (!dataStr) return '-';
+            const data = new Date(dataStr);
+            return data.toLocaleDateString('pt-BR', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        function formatarCPF(cpf) {
+            if (!cpf) return '-';
+            cpf = cpf.toString().replace(/\D/g, '');
+            if (cpf.length !== 11) return cpf;
+            return cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+        }
+
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        // Fecha modal quando pressiona ESC
+        $(document).on('keydown', function (e) {
+            if (e.key === 'Escape') {
+                $('.modal').modal('hide');
+            }
+        });
+
+        // Limpa formulários quando modais são fechados
+        $('#assinaturaModal').on('hidden.bs.modal', function () {
+            $('#assinaturaForm')[0].reset();
+            arquivoAssinaturaSelecionado = null;
+            $('#assinaturaFilesList').empty();
+        });
+
+        $('#assinaturaPresencialModal').on('hidden.bs.modal', function () {
+            $('#assinaturaPresencialForm')[0].reset();
+            arquivoPresencialSelecionado = null;
+            $('#assinaturaPresencialFilesList').empty();
+            $('#btnConfirmarPresencial').prop('disabled', true);
+        });
+
+        // Auto-refresh a cada 30 segundos
+        setInterval(function() {
+            carregarDocumentosFluxo(filtrosAtuais);
+        }, 30000);
+
+        console.log('✓ Sistema de fluxo de assinatura carregado com suporte presencial!');
+        console.log('✓ Filtros configurados para API existente');
+        console.log('✓ Dados reais do banco serão carregados');
+        console.log('✓ Associado ID será exibido nos cartões');
+    </script>
+
+</body>
+
+</html>
