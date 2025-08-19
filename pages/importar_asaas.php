@@ -730,19 +730,19 @@ $headerComponent = HeaderComponent::create([
                 </h1>
                 <p class="page-subtitle">
                     <i class="fas fa-info-circle me-2"></i>
-                    Importe arquivo CSV do ASAAS com dados de <strong>pagamentos realizados</strong> para atualizar o status de adimplência dos associados do <strong>Exército e Agregados</strong>
+                    Importe arquivo CSV do ASAAS com dados de <strong>pagamentos realizados</strong> para atualizar o status de adimplência de <strong>todos os associados</strong> do sistema
                 </p>
             </div>
 
             <!-- Informações sobre a Nova Lógica -->
             <div class="info-box" data-aos="fade-up" data-aos-delay="100">
-                <h5><i class="fas fa-info-circle me-2"></i>Como Funciona a Nova Importação</h5>
+                <h5><i class="fas fa-info-circle me-2"></i>Como Funciona a Importação</h5>
                 <ul>
-                    <li><strong>Escopo:</strong> Processa apenas associados do <strong>Exército</strong> e <strong>Agregados</strong></li>
+                    <li><strong>Escopo:</strong> Processa <strong>todos os associados</strong> encontrados no arquivo CSV</li>
                     <li><strong>CSV:</strong> Deve conter apenas quem <strong>realizou pagamentos</strong> (não cobranças pendentes)</li>
                     <li><strong>Pagou:</strong> Quem está no CSV será marcado como <strong>ADIMPLENTE</strong></li>
-                    <li><strong>Não pagou:</strong> Quem não está no CSV será apenas <strong>reportado</strong> (status atual mantido)</li>
-                    <li><strong>Outras corporações:</strong> Serão <strong>ignoradas</strong> automaticamente</li>
+                    <li><strong>Não pagou:</strong> Associados do sistema que não estão no CSV serão apenas <strong>reportados</strong></li>
+                    <li><strong>Corporações:</strong> Todos os tipos de corporação são processados e identificados</li>
                 </ul>
             </div>
 
@@ -774,7 +774,7 @@ $headerComponent = HeaderComponent::create([
                             <div class="mt-3">
                                 <small class="text-muted">
                                     <i class="fas fa-info-circle me-1"></i>
-                                    Formato: CSV (separado por ponto e vírgula) | Tamanho máximo: 10MB | Apenas Exército/Agregados
+                                    Formato: CSV (separado por ponto e vírgula) | Tamanho máximo: 10MB | Todas as corporações
                                 </small>
                             </div>
                         </div>
@@ -870,7 +870,7 @@ $headerComponent = HeaderComponent::create([
                         <div class="tab-pane fade" id="nao-encontrados" role="tabpanel">
                             <div class="alert alert-warning">
                                 <i class="fas fa-info-circle me-2"></i>
-                                <strong>Associados do Exército/Agregados que NÃO foram encontrados no arquivo de pagamentos.</strong><br>
+                                <strong>Associados do sistema que NÃO foram encontrados no arquivo de pagamentos.</strong><br>
                                 Estes não tiveram seu status alterado - apenas reportados.
                             </div>
                             <div class="table-container">
@@ -895,8 +895,8 @@ $headerComponent = HeaderComponent::create([
                         <div class="tab-pane fade" id="ignorados" role="tabpanel">
                             <div class="alert alert-info">
                                 <i class="fas fa-info-circle me-2"></i>
-                                <strong>CPFs encontrados no arquivo que NÃO são do Exército ou Agregados.</strong><br>
-                                Foram ignorados automaticamente pois estão fora do escopo.
+                                <strong>CPFs encontrados no arquivo que NÃO existem no sistema de associados.</strong><br>
+                                Foram ignorados automaticamente pois não são associados cadastrados.
                             </div>
                             <div class="table-container">
                                 <table class="table table-hover mb-0">
@@ -1314,7 +1314,7 @@ $headerComponent = HeaderComponent::create([
 
         // Log de inicialização
         console.log('✅ Sistema de Importação ASAAS (Pagamentos) carregado com sucesso!');
-        console.log('📋 Escopo: Apenas Exército e Agregados');
+        console.log('📋 Escopo: Todos os associados do sistema');
         console.log('💰 Função: Processar arquivo de pagamentos realizados');
         console.log('🎨 Design: Moderno e responsivo');
     </script>
