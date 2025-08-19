@@ -23,7 +23,7 @@ if (file_exists($apiPath)) {
 echo "\n2. Testando requisição para a API:\n";
 
 // URL da API (ajuste conforme seu ambiente)
-$baseUrl = 'http://localhost/matheus/comercial'; // AJUSTE ESTA URL
+$baseUrl = 'http://localhost/luis/comercial'; // AJUSTE ESTA URL
 $apiUrl = $baseUrl . '/api/documentos/documentos_gerar_ficha_virtual.php';
 
 echo "   URL da API: $apiUrl\n";
