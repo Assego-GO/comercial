@@ -4,9 +4,13 @@
  * api/financeiro/processar_asaas.php
  * Processa os dados importados do ASAAS e atualiza status de adimplência
  * 
- * VERSÃO CORRIGIDA - Problemas identificados:
- * 1. Registro único não sendo encontrado
- * 2. Valores aparecendo como R$ 0,00
+ * VERSÃO HÍBRIDA - Lógica seletiva:
+ * - PAGANTES: Todas as corporações são processadas
+ * - NÃO ENCONTRADOS: Apenas Exército, Agregados e Pensionista são reportados
+ * Problemas corrigidos:
+ * 1. CPFs com 9-10 dígitos (preenchimento com zeros)
+ * 2. Valores zerados (extração melhorada)
+ * 3. Escopo híbrido conforme solicitação
  */
 
 // ✅ SOLUÇÃO 1: Controlar output desde o início
@@ -119,20 +123,21 @@ try {
     }
 
     // Log de início
-    error_log("=== PROCESSAMENTO ASAAS INICIADO ===");
+    error_log("=== PROCESSAMENTO ASAAS UNIVERSAL INICIADO ===");
     error_log("Usuário: " . $usuarioLogado['nome'] . " (ID: " . $usuarioLogado['id'] . ")");
     error_log("Registros: " . count($dadosCSV));
+    error_log("Escopo: Todos os associados (todas as corporações)");
 
     // Processar dados
     $processador = new ProcessadorAsaas();
     $resultado = $processador->processar($dadosCSV, $usuarioLogado['id']);
 
     // Log de resultado
-    error_log("✅ PROCESSAMENTO CONCLUÍDO:");
-    error_log("- Total: " . $resultado['resumo']['totalProcessados']);
-    error_log("- Pagantes: " . $resultado['resumo']['pagantes']);
-    error_log("- Não encontrados: " . $resultado['resumo']['nao_encontrados']);
-    error_log("- Ignorados: " . $resultado['resumo']['ignorados']);
+    error_log("✅ PROCESSAMENTO UNIVERSAL CONCLUÍDO:");
+    error_log("- Total associados processados: " . $resultado['resumo']['totalProcessados']);
+    error_log("- Pagantes (marcados adimplentes): " . $resultado['resumo']['pagantes']);
+    error_log("- Não encontrados (reportados): " . $resultado['resumo']['nao_encontrados']);
+    error_log("- Ignorados (não são associados): " . $resultado['resumo']['ignorados']);
 
     // ✅ SOLUÇÃO 7: Resposta final limpa
     enviarJSON([
@@ -156,20 +161,23 @@ try {
 }
 
 /**
- * Processador ASAAS - VERSÃO CORRIGIDA
+ * Processador ASAAS - VERSÃO HÍBRIDA
  * 
- * CORREÇÕES:
- * 1. Melhor debug para identificar problemas
- * 2. Detecção automática dos nomes de colunas do CSV
- * 3. Tratamento mais robusto de valores
- * 4. Verificação específica para registros únicos
+ * LÓGICA:
+ * 1. CSV contém apenas quem PAGOU (não mais cobranças pendentes)
+ * 2. PAGANTES: Processa TODOS os associados (todas as corporações)
+ * 3. NÃO ENCONTRADOS: Reporta apenas Exército, Agregados e Pensionista
+ * 4. Quem está no CSV = ADIMPLENTE
+ * 5. Quem não está = apenas reporta se for das 3 corporações específicas
+ * 6. CPFs não encontrados no sistema = ignorados
  */
+
 class ProcessadorAsaas {
     
     private $db;
-    private $associadosExercitoAgregados = [];
+    private $associadosSistema = []; // Todos os associados
     private $cpfsPagantes = [];
-    private $colunasCSV = []; // 🆕 Mapear colunas automaticamente
+    private $colunasCSV = []; // Mapear colunas automaticamente
     
     public function __construct() {
         try {
@@ -180,7 +188,7 @@ class ProcessadorAsaas {
     }
     
     /**
-     * PROCESSAMENTO PRINCIPAL - VERSÃO CORRIGIDA
+     * PROCESSAMENTO PRINCIPAL - VERSÃO UNIVERSAL COM FILTRO NOS NÃO ENCONTRADOS
      */
     public function processar($dadosCSV, $usuarioId) {
         $resultado = [
@@ -206,16 +214,16 @@ class ProcessadorAsaas {
             error_log("🔍 CPFs únicos extraídos do CSV: " . count($this->cpfsPagantes));
             error_log("📋 Lista de CPFs: " . implode(', ', array_slice($this->cpfsPagantes, 0, 5)) . (count($this->cpfsPagantes) > 5 ? '...' : ''));
 
-            // PASSO 2: Buscar TODOS os associados Exército/Agregados do sistema
-            $this->associadosExercitoAgregados = $this->buscarAssociadosExercitoAgregados();
-            error_log("🔍 Associados Exército/Agregados no sistema: " . count($this->associadosExercitoAgregados));
+            // PASSO 2: Buscar TODOS os associados do sistema (todas as corporações)
+            $this->associadosSistema = $this->buscarTodosAssociados();
+            error_log("🔍 Total de associados no sistema: " . count($this->associadosSistema));
 
             // 🆕 DEBUG: Verificar se há intersecção entre CPFs
             $this->debugInterseccaoCPFs();
 
             // PASSO 3: Classificar cada associado
             $processados = 0;
-            foreach ($this->associadosExercitoAgregados as $associado) {
+            foreach ($this->associadosSistema as $associado) {
                 try {
                     $cpf = $this->limparCPF($associado['cpf']);
                     $processados++;
@@ -223,13 +231,15 @@ class ProcessadorAsaas {
                     // Debug apenas para os primeiros ou quando encontra match
                     $isMatch = in_array($cpf, $this->cpfsPagantes);
                     if ($processados <= 10 || $isMatch) {
-                        error_log("🔍 [$processados] Verificando: {$associado['nome']} (CPF: {$cpf}) " . ($isMatch ? "✅ MATCH!" : "❌ Não encontrado"));
+                        error_log("🔍 [$processados] Verificando: {$associado['nome']} ({$associado['corporacao']}) (CPF: {$cpf}) " . ($isMatch ? "✅ MATCH!" : "❌ Não encontrado"));
                     }
                     
                     if ($isMatch) {
                         // ✅ PAGOU - Marcar como adimplente
                         $dadosPagamento = $this->buscarDadosPagamento($cpf, $dadosCSV);
                         
+                        // 🆕 GARANTIR CPF CORRIGIDO NO RESULTADO
+                        $associado['cpf'] = $cpf; // CPF já limpo e com zeros à esquerda
                         $associado['status'] = 'ADIMPLENTE';
                         $associado['motivo'] = 'Encontrado no arquivo de pagamentos';
                         $associado['dados_pagamento'] = $dadosPagamento;
@@ -238,18 +248,30 @@ class ProcessadorAsaas {
                         $resultado['pagantes'][] = $associado;
                         $resultado['resumo']['pagantes']++;
                         
-                        error_log("✅ PAGANTE: {$associado['nome']} - Valor: R$ {$dadosPagamento['valor']}");
+                        error_log("✅ PAGANTE: {$associado['nome']} ({$associado['corporacao']}) - CPF: {$cpf} - Valor: R$ {$dadosPagamento['valor']}");
                     } else {
-                        // ⚠️ NÃO PAGOU - Apenas reportar
-                        $associado['status'] = 'NAO_ENCONTRADO';
-                        $associado['motivo'] = 'Não encontrado no arquivo de pagamentos';
-                        $associado['acao'] = 'Apenas reportado (não marcado inadimplente)';
+                        // ⚠️ NÃO PAGOU - Verificar se deve ser reportado
+                        $corporacao = $associado['corporacao'];
                         
-                        $resultado['nao_encontrados'][] = $associado;
-                        $resultado['resumo']['nao_encontrados']++;
-                        
-                        if ($processados <= 5) { // Log apenas os primeiros não encontrados
-                            error_log("⚠️ NÃO ENCONTRADO: {$associado['nome']}");
+                        // 🆕 FILTRO: Apenas Exército, Agregados e Pensionista na aba "Não Encontrados"
+                        if (in_array($corporacao, ['Exército', 'Agregados', 'Pensionista'])) {
+                            // 🆕 GARANTIR CPF CORRIGIDO NO RESULTADO
+                            $associado['cpf'] = $cpf; // CPF já limpo e com zeros à esquerda
+                            $associado['status'] = 'NAO_ENCONTRADO';
+                            $associado['motivo'] = 'Não encontrado no arquivo de pagamentos';
+                            $associado['acao'] = 'Apenas reportado (não marcado inadimplente)';
+                            
+                            $resultado['nao_encontrados'][] = $associado;
+                            $resultado['resumo']['nao_encontrados']++;
+                            
+                            if ($resultado['resumo']['nao_encontrados'] <= 5) { // Log apenas os primeiros não encontrados
+                                error_log("⚠️ NÃO ENCONTRADO (reportado): {$associado['nome']} ({$associado['corporacao']}) - CPF: {$cpf}");
+                            }
+                        } else {
+                            // Outras corporações não são reportadas na aba "Não Encontrados"
+                            if ($processados <= 3) {
+                                error_log("ℹ️ NÃO ENCONTRADO (não reportado): {$associado['nome']} ({$associado['corporacao']}) - CPF: {$cpf} - Corporação fora do escopo de relatório");
+                            }
                         }
                     }
                     
@@ -261,7 +283,7 @@ class ProcessadorAsaas {
                 }
             }
 
-            // PASSO 4: Verificar CPFs do CSV que não são Exército/Agregados
+            // PASSO 4: Verificar CPFs do CSV que não existem no sistema
             $this->verificarCPFsIgnorados($dadosCSV, $resultado);
 
             // PASSO 5: Atualizar banco APENAS com os pagantes
@@ -272,10 +294,10 @@ class ProcessadorAsaas {
             error_log("🎯 RESUMO FINAL DO PROCESSAMENTO:");
             error_log("  📊 Total de registros no CSV: " . count($dadosCSV));
             error_log("  📊 CPFs únicos extraídos do CSV: " . count($this->cpfsPagantes));
-            error_log("  📊 Associados Exército/Agregados no sistema: " . count($this->associadosExercitoAgregados));
+            error_log("  📊 Associados no sistema: " . count($this->associadosSistema));
             error_log("  ✅ Pagantes encontrados: " . $resultado['resumo']['pagantes']);
-            error_log("  ⚠️ Não encontrados: " . $resultado['resumo']['nao_encontrados']);
-            error_log("  🚫 Ignorados (outras corporações): " . $resultado['resumo']['ignorados']);
+            error_log("  ⚠️ Não encontrados (Exército/Agregados/Pensionista): " . $resultado['resumo']['nao_encontrados']);
+            error_log("  🚫 Ignorados (não são associados): " . $resultado['resumo']['ignorados']);
             error_log("  💾 Registros atualizados no banco: $atualizados");
             error_log("  ❌ Erros: " . $resultado['resumo']['erros']);
 
@@ -382,29 +404,40 @@ class ProcessadorAsaas {
     }
 
     /**
-     * BUSCAR ASSOCIADOS EXÉRCITO/AGREGADOS - VERSÃO MELHORADA
+     * BUSCAR TODOS OS ASSOCIADOS DO SISTEMA - VERSÃO UNIVERSAL
      */
-    private function buscarAssociadosExercitoAgregados() {
+    private function buscarTodosAssociados() {
         $sql = "SELECT DISTINCT
                     a.id,
                     a.nome,
                     a.cpf,
                     a.email,
-                    m.corporacao,
-                    m.patente,
+                    COALESCE(m.corporacao, 'N/A') as corporacao,
+                    COALESCE(m.patente, 'N/A') as patente,
                     f.situacaoFinanceira as situacao_atual
                 FROM Associados a
-                INNER JOIN Militar m ON a.id = m.associado_id
+                LEFT JOIN Militar m ON a.id = m.associado_id
                 LEFT JOIN Financeiro f ON a.id = f.associado_id
                 WHERE a.situacao = 'Filiado'
-                AND m.corporacao IN ('Exército', 'Agregados')
                 ORDER BY a.nome";
         
         $stmt = $this->db->prepare($sql);
         $stmt->execute();
         $associados = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
-        error_log("📋 ASSOCIADOS EXÉRCITO/AGREGADOS ENCONTRADOS:");
+        // Estatísticas por corporação
+        $corporacoes = [];
+        foreach ($associados as $assoc) {
+            $corp = $assoc['corporacao'] ?: 'Não informado';
+            $corporacoes[$corp] = ($corporacoes[$corp] ?? 0) + 1;
+        }
+        
+        error_log("📋 ASSOCIADOS POR CORPORAÇÃO:");
+        foreach ($corporacoes as $corp => $count) {
+            error_log("  - $corp: $count associados");
+        }
+        
+        error_log("📋 PRIMEIROS ASSOCIADOS ENCONTRADOS:");
         foreach (array_slice($associados, 0, 3) as $assoc) {
             error_log("  - {$assoc['nome']} (CPF: {$assoc['cpf']}) - {$assoc['corporacao']}");
         }
@@ -416,11 +449,11 @@ class ProcessadorAsaas {
     }
 
     /**
-     * 🆕 DEBUG: Verificar intersecção entre CPFs - VERSÃO MELHORADA
+     * 🆕 DEBUG: Verificar intersecção entre CPFs - VERSÃO UNIVERSAL
      */
     private function debugInterseccaoCPFs() {
         $cpfsAssociados = [];
-        foreach ($this->associadosExercitoAgregados as $assoc) {
+        foreach ($this->associadosSistema as $assoc) {
             $cpfLimpo = $this->limparCPF($assoc['cpf']);
             if ($cpfLimpo) {
                 $cpfsAssociados[] = $cpfLimpo;
@@ -431,21 +464,21 @@ class ProcessadorAsaas {
         
         error_log("🔍 DEBUG INTERSECÇÃO DETALHADA:");
         error_log("  CPFs no CSV (após limpeza): " . count($this->cpfsPagantes));
-        error_log("  CPFs Exército/Agregados (após limpeza): " . count($cpfsAssociados));
+        error_log("  CPFs de associados no sistema (após limpeza): " . count($cpfsAssociados));
         error_log("  Intersecção (matches): " . count($interseccao));
         
         if (count($interseccao) > 0) {
             error_log("  ✅ Primeiros matches encontrados:");
             foreach (array_slice($interseccao, 0, 5) as $index => $cpf) {
-                // Encontrar nome do associado
-                $nomeAssociado = 'Não encontrado';
-                foreach ($this->associadosExercitoAgregados as $assoc) {
+                // Encontrar nome e corporação do associado
+                $infoAssociado = 'Não encontrado';
+                foreach ($this->associadosSistema as $assoc) {
                     if ($this->limparCPF($assoc['cpf']) === $cpf) {
-                        $nomeAssociado = $assoc['nome'];
+                        $infoAssociado = $assoc['nome'] . ' (' . $assoc['corporacao'] . ')';
                         break;
                     }
                 }
-                error_log("    " . ($index + 1) . ". CPF: $cpf - $nomeAssociado");
+                error_log("    " . ($index + 1) . ". CPF: $cpf - $infoAssociado");
             }
         } else {
             error_log("  ❌ NENHUM MATCH ENCONTRADO!");
@@ -544,30 +577,33 @@ class ProcessadorAsaas {
     }
 
     /**
-     * VERIFICAR CPFs IGNORADOS - MANTIDO
+     * VERIFICAR CPFs QUE NÃO SÃO ASSOCIADOS DO SISTEMA
      */
     private function verificarCPFsIgnorados($dadosCSV, &$resultado) {
-        $cpfsExercitoAgregados = array_map([$this, 'limparCPF'], array_column($this->associadosExercitoAgregados, 'cpf'));
+        $cpfsAssociados = array_map([$this, 'limparCPF'], array_column($this->associadosSistema, 'cpf'));
+        $cpfsAssociados = array_filter($cpfsAssociados); // Remove nulls
         
         foreach ($this->cpfsPagantes as $cpf) {
-            if (!in_array($cpf, $cpfsExercitoAgregados)) {
-                // Buscar dados da pessoa para reportar
+            if (!in_array($cpf, $cpfsAssociados)) {
+                // Buscar dados da pessoa para reportar (pode não estar no sistema)
                 $dadosPessoa = $this->buscarDadosAssociadoPorCPF($cpf);
                 
                 if ($dadosPessoa) {
+                    // Pessoa existe no sistema mas não estava na busca inicial (provavelmente situação != 'Filiado')
                     $resultado['ignorados'][] = [
-                        'cpf' => $cpf,
+                        'cpf' => $cpf, // 🆕 CPF já corrigido com zeros à esquerda
                         'nome' => $dadosPessoa['nome'],
                         'corporacao' => $dadosPessoa['corporacao'] ?? 'N/A',
-                        'motivo' => 'Não é Exército nem Agregados - Ignorado',
-                        'acao' => 'Não processado (fora do escopo)'
+                        'motivo' => 'Situação: ' . ($dadosPessoa['situacao'] ?? 'Desconhecida'),
+                        'acao' => 'Não processado (situação não é Filiado)'
                     ];
                 } else {
+                    // Pessoa não existe no sistema
                     $resultado['ignorados'][] = [
-                        'cpf' => $cpf,
-                        'nome' => 'Não encontrado no sistema',
+                        'cpf' => $cpf, // 🆕 CPF já corrigido com zeros à esquerda
+                        'nome' => 'Não cadastrado no sistema',
                         'corporacao' => 'N/A',
-                        'motivo' => 'CPF não existe no sistema',
+                        'motivo' => 'CPF não existe no sistema de associados',
                         'acao' => 'Não processado'
                     ];
                 }
@@ -578,15 +614,16 @@ class ProcessadorAsaas {
     }
 
     /**
-     * BUSCAR DADOS POR CPF - MANTIDO
+     * BUSCAR DADOS COMPLETOS DE UM ASSOCIADO POR CPF
      */
     private function buscarDadosAssociadoPorCPF($cpf) {
         $sql = "SELECT 
-                    a.id, a.nome, a.cpf, a.email,
-                    m.corporacao, m.patente
+                    a.id, a.nome, a.cpf, a.email, a.situacao,
+                    COALESCE(m.corporacao, 'N/A') as corporacao,
+                    COALESCE(m.patente, 'N/A') as patente
                 FROM Associados a
                 LEFT JOIN Militar m ON a.id = m.associado_id
-                WHERE a.cpf = ? AND a.situacao = 'Filiado'";
+                WHERE a.cpf = ?";
         
         $stmt = $this->db->prepare($sql);
         $stmt->execute([$cpf]);
@@ -647,12 +684,12 @@ class ProcessadorAsaas {
     }
 
     /**
-     * REGISTRAR AUDITORIA - MANTIDO
+     * REGISTRAR AUDITORIA - VERSÃO HÍBRIDA
      */
     private function registrarAuditoria($usuarioId, $resultado) {
         try {
             $sql = "INSERT INTO Auditoria (tabela, acao, funcionario_id, detalhes, ip, user_agent) 
-                    VALUES ('Financeiro', 'IMPORTACAO_ASAAS_PAGANTES', ?, ?, ?, ?)";
+                    VALUES ('Financeiro', 'IMPORTACAO_ASAAS_HIBRIDA', ?, ?, ?, ?)";
             
             $detalhes = json_encode([
                 'total_processados' => $resultado['resumo']['totalProcessados'],
@@ -660,8 +697,9 @@ class ProcessadorAsaas {
                 'nao_encontrados' => $resultado['resumo']['nao_encontrados'],
                 'ignorados' => $resultado['resumo']['ignorados'],
                 'data_importacao' => date('Y-m-d H:i:s'),
-                'escopo' => 'Apenas Exército e Agregados',
-                'versao' => 'CORRIGIDA'
+                'escopo_pagantes' => 'Todas as corporações',
+                'escopo_nao_encontrados' => 'Exército, Agregados e Pensionista',
+                'versao' => 'HIBRIDA'
             ]);
             
             $stmt = $this->db->prepare($sql);
@@ -678,7 +716,7 @@ class ProcessadorAsaas {
     }
 
     /**
-     * REGISTRAR HISTÓRICO - MANTIDO
+     * REGISTRAR HISTÓRICO - VERSÃO HÍBRIDA
      */
     private function registrarHistoricoImportacao($usuarioId, $resultado) {
         try {
@@ -687,7 +725,7 @@ class ProcessadorAsaas {
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
             
             $observacoes = sprintf(
-                "VERSÃO CORRIGIDA: Arquivo de pagantes - Escopo: Exército/Agregados | Pagantes: %d | Não encontrados: %d | Ignorados: %d - %s",
+                "VERSÃO HÍBRIDA: Pagantes de todas corporações | Relatório de não encontrados: Exército/Agregados/Pensionista | Pagantes: %d | Não encontrados: %d | Ignorados: %d - %s",
                 $resultado['resumo']['pagantes'],
                 $resultado['resumo']['nao_encontrados'],
                 $resultado['resumo']['ignorados'],
@@ -706,7 +744,7 @@ class ProcessadorAsaas {
                 $_SERVER['REMOTE_ADDR'] ?? 'unknown'
             ]);
             
-            error_log("✅ Histórico registrado - Versão corrigida");
+            error_log("✅ Histórico registrado - Versão híbrida");
             
         } catch (Exception $e) {
             error_log("Erro ao registrar histórico: " . $e->getMessage());
@@ -732,19 +770,15 @@ class ProcessadorAsaas {
             
             // Log da correção se foi necessária
             if (strlen($cpfLimpo) < 11) {
-                error_log("🔧 CPF corrigido: '$cpfLimpo' ({$this->count($cpfLimpo)} dígitos) → '$cpfCorrigido' (11 dígitos)");
+                error_log("🔧 CPF corrigido: '$cpfLimpo' (" . strlen($cpfLimpo) . " dígitos) → '$cpfCorrigido' (11 dígitos)");
             }
             
             return $cpfCorrigido;
         }
         
         // Se tem mais de 11 ou menos de 9 dígitos, é inválido
-        error_log("❌ CPF inválido: '$cpfLimpo' ({$this->count($cpfLimpo)} dígitos) - fora do range 9-11");
+        error_log("❌ CPF inválido: '$cpfLimpo' (" . strlen($cpfLimpo) . " dígitos) - fora do range 9-11");
         return null;
-    }
-    
-    private function count($str) {
-        return strlen($str);
     }
 }
 ?>
