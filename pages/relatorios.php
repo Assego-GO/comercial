@@ -508,7 +508,16 @@ $headerComponent = HeaderComponent::create([
                         </div>
                     </div>
 
-                    <!-- Relatório de Serviços -->
+                    <div class="report-card" onclick="window.location.href='estatisticas.php'">
+                        <div class="report-icon blue">
+                            <i class="fas fa-chart-bar"></i>
+                        </div>
+                        <h4 class="report-title">Estatísticas Financeiras</h4>
+                        <p class="report-description">
+                            Análise completa dos dados financeiros, relatórios de pagamentos e estatísticas da associação.
+                        </p>
+                    </div>
+                                        <!-- Relatório de Serviços -->
                     <div class="report-card" onclick="executarRelatorioRapido('servicos')">
                         <div class="report-icon purple">
                             <i class="fas fa-concierge-bell"></i>
