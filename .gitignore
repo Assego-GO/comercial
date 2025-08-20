@@ -9,7 +9,7 @@ logs/
 pages/tmp/security/
 temp/
 
-
+.env
 data/
 
 temp/
