@@ -1,6 +1,6 @@
 <?php
 /**
- * Página de Relatórios
+ * Página de Relatórios com Sistema de Permissões por Departamento
  * pages/relatorios.php
  */
 
@@ -30,7 +30,7 @@ if (!$auth->isLoggedIn()) {
 // Pega dados do usuário logado
 $usuarioLogado = $auth->getUser();
 
-// DEBUG USUÁRIO LOGADO - CONSOLE (IGUAL À DASHBOARD)
+// DEBUG USUÁRIO LOGADO - CONSOLE
 echo "<script>";
 echo "console.log('=== DEBUG USUÁRIO LOGADO ===');";
 echo "console.log('Array completo:', " . json_encode($usuarioLogado) . ");";
@@ -38,9 +38,6 @@ echo "console.log('Tem departamento_id?', " . (isset($usuarioLogado['departament
 if (isset($usuarioLogado['departamento_id'])) {
     echo "console.log('Departamento ID valor:', " . json_encode($usuarioLogado['departamento_id']) . ");";
     echo "console.log('Departamento ID tipo:', '" . gettype($usuarioLogado['departamento_id']) . "');";
-    echo "console.log('É igual a 1?', " . ($usuarioLogado['departamento_id'] == 1 ? 'true' : 'false') . ");";
-    echo "console.log('É idêntico a 1?', " . ($usuarioLogado['departamento_id'] === 1 ? 'true' : 'false') . ");";
-    echo "console.log('É idêntico a \"1\"?', " . ($usuarioLogado['departamento_id'] === '1' ? 'true' : 'false') . ");";
 }
 echo "console.log('isDiretor:', " . ($auth->isDiretor() ? 'true' : 'false') . ");";
 echo "console.log('=============================');";
@@ -49,10 +46,46 @@ echo "</script>";
 // Define o título da página
 $page_title = 'Relatórios - ASSEGO';
 
-// Verificar se o usuário tem permissão para acessar relatórios
+// NOVO SISTEMA DE PERMISSÕES POR DEPARTAMENTO
+function getPermissoesDepartamento($departamentoId) {
+    $departamentoId = (int)$departamentoId;
+    
+    $permissoes = [
+        1 => [ // Presidência
+            'nome' => 'Presidência',
+            'acesso_total' => true,
+            'criar_personalizado' => true,
+            'relatorios_permitidos' => [
+                'associados', 'financeiro', 'militar', 'servicos', 'documentos', 'estatisticas'
+            ]
+        ],
+        2 => [ // Financeiro (ID correto: 2)
+            'nome' => 'Financeiro', 
+            'acesso_total' => false,
+            'criar_personalizado' => false,
+            'relatorios_permitidos' => [
+                'financeiro', 'servicos', 'documentos', 'estatisticas'
+            ]
+        ],
+        10 => [ // Comercial (ID correto: 10)
+            'nome' => 'Comercial',
+            'acesso_total' => false,
+            'criar_personalizado' => false,
+            'relatorios_permitidos' => [
+                'associados', 'militar', 'documentos'
+            ]
+        ]
+    ];
+    
+    // Retorna apenas se o departamento estiver mapeado, senão null
+    return $permissoes[$departamentoId] ?? null;
+}
+
+// Verificar permissões do usuário
 $temPermissaoRelatorios = false;
 $motivoNegacao = '';
-$isPresidencia = false; // NOVA FLAG para identificar se é da presidência
+$permissoesDept = null;
+$isPresidencia = false;
 
 // Debug completo ANTES das verificações
 error_log("=== DEBUG DETALHADO PERMISSÕES RELATÓRIOS ===");
@@ -60,43 +93,46 @@ error_log("Usuário: " . $usuarioLogado['nome']);
 error_log("Array completo do usuário: " . print_r($usuarioLogado, true));
 error_log("Departamento ID (valor): " . ($usuarioLogado['departamento_id'] ?? 'NULL'));
 error_log("Departamento ID (tipo): " . gettype($usuarioLogado['departamento_id'] ?? null));
-error_log("É Diretor (método): " . ($auth->isDiretor() ? 'SIM' : 'NÃO'));
 
-// NOVA VALIDAÇÃO: APENAS usuários do departamento da presidência (ID: 1)
 if (isset($usuarioLogado['departamento_id'])) {
-    $deptId = $usuarioLogado['departamento_id'];
+    $deptId = (int)$usuarioLogado['departamento_id'];
+    $permissoesDept = getPermissoesDepartamento($deptId);
     
-    // Debug dos testes de comparação
-    error_log("Testes de comparação:");
-    error_log("  deptId === '1': " . ($deptId === '1' ? 'true' : 'false'));
-    error_log("  deptId === 1: " . ($deptId === 1 ? 'true' : 'false'));
-    error_log("  deptId == 1: " . ($deptId == 1 ? 'true' : 'false'));
-    
-    if ($deptId == 1) { // Comparação flexível para pegar string ou int
+    if ($permissoesDept) {
         $temPermissaoRelatorios = true;
-        $isPresidencia = true; // MARCA como presidência
-        error_log("✅ Permissão concedida: Usuário pertence ao Departamento da Presidência (ID = 1)");
+        $isPresidencia = ($deptId === 1);
+        
+        error_log("✅ Acesso concedido para departamento: " . $permissoesDept['nome']);
+        error_log("Relatórios permitidos: " . implode(', ', $permissoesDept['relatorios_permitidos']));
+        error_log("Pode criar personalizado: " . ($permissoesDept['criar_personalizado'] ? 'SIM' : 'NÃO'));
     } else {
-        $motivoNegacao = 'Acesso restrito ao departamento da Presidência.';
-        error_log("❌ Acesso negado. Departamento: '$deptId' (tipo: " . gettype($deptId) . "). Necessário: Presidência (ID = 1)");
+        $motivoNegacao = 'Seu departamento não tem acesso ao sistema de relatórios.';
+        error_log("❌ Departamento sem permissão: ID = $deptId");
     }
 } else {
-    $motivoNegacao = 'Departamento não identificado. Acesso restrito ao departamento da Presidência.';
+    $motivoNegacao = 'Departamento não identificado.';
     error_log("❌ departamento_id não existe no array do usuário");
+}
+
+// Função para verificar se pode acessar um relatório específico
+function podeAcessarRelatorio($tipo, $permissoesDept) {
+    if (!$permissoesDept) return false;
+    if ($permissoesDept['acesso_total']) return true;
+    return in_array($tipo, $permissoesDept['relatorios_permitidos']);
 }
 
 // Log final do resultado
 if (!$temPermissaoRelatorios) {
     error_log("❌ ACESSO NEGADO: " . $motivoNegacao);
 } else {
-    error_log("✅ ACESSO PERMITIDO - Usuário da Presidência");
+    error_log("✅ ACESSO PERMITIDO - Departamento: " . $permissoesDept['nome'] . " | Relatórios: " . implode(', ', $permissoesDept['relatorios_permitidos']));
 }
 
 // Se não tem permissão, mostra página de erro
 if (!$temPermissaoRelatorios) {
-    // CORREÇÃO: Cria instância do Header Component - Passa TODO o array do usuário (IGUAL À DASHBOARD)
+    // Cria instância do Header Component
     $headerComponent = HeaderComponent::create([
-        'usuario' => $usuarioLogado, // ← CORRIGIDO: Agora passa TODO o array (incluindo departamento_id)
+        'usuario' => $usuarioLogado,
         'isDiretor' => $auth->isDiretor(),
         'activeTab' => 'relatorios',
         'notificationCount' => 0,
@@ -142,12 +178,12 @@ if (!$temPermissaoRelatorios) {
                     <p class="mb-3"><?php echo htmlspecialchars($motivoNegacao); ?></p>
                     
                     <div class="alert alert-info">
-                        <h6><i class="fas fa-info-circle me-2"></i>Como resolver:</h6>
-                        <ol class="mb-0">
-                            <li>Verifique se você está no departamento correto</li>
-                            <li>Confirme se você é diretor no sistema</li>
-                            <li>Entre em contato com o administrador se necessário</li>
-                        </ol>
+                        <h6><i class="fas fa-info-circle me-2"></i>Apenas estes departamentos têm acesso aos relatórios:</h6>
+                        <ul class="mb-0">
+                            <li><strong>Presidência:</strong> Acesso total a todos os relatórios</li>
+                            <li><strong>Comercial:</strong> Associados, Distribuição Militar, Status de Documentos</li>
+                            <li><strong>Financeiro:</strong> Situação Financeira, Adesão aos Serviços, Status de Documentos, Estatísticas</li>
+                        </ul>
                     </div>
                     
                     <div class="row">
@@ -155,8 +191,7 @@ if (!$temPermissaoRelatorios) {
                             <h6>Suas informações atuais:</h6>
                             <ul class="mb-0">
                                 <li><strong>Nome:</strong> <?php echo htmlspecialchars($usuarioLogado['nome']); ?></li>
-                                <li><strong>Cargo:</strong> <?php echo htmlspecialchars($usuarioLogado['cargo'] ?? 'N/A'); ?></li>
-                                </li>
+                                <li><strong>Departamento ID:</strong> <?php echo htmlspecialchars($usuarioLogado['departamento_id'] ?? 'N/A'); ?></li>
                                 <li><strong>É Diretor:</strong> 
                                     <span class="badge bg-<?php echo $auth->isDiretor() ? 'success' : 'danger'; ?>">
                                         <?php echo $auth->isDiretor() ? 'Sim' : 'Não'; ?>
@@ -165,9 +200,11 @@ if (!$temPermissaoRelatorios) {
                             </ul>
                         </div>
                         <div class="col-md-6">
-                            <h6>Requisitos para acesso:</h6>
+                            <h6>Para solicitar acesso:</h6>
                             <ul class="mb-3">
-                                <li>Estar no departamento da Presidência</li>
+                                <li>Entre em contato com a Presidência</li>
+                                <li>Verifique se está no departamento correto</li>
+                                <li>Confirme seu perfil no sistema</li>
                             </ul>
                             
                             <div class="btn-group d-block">
@@ -187,80 +224,10 @@ if (!$temPermissaoRelatorios) {
         <?php $headerComponent->renderJS(); ?>
         
         <script>
-            // Inicializa AOS
             AOS.init({
                 duration: 800,
                 once: true
             });
-            
-            // FUNÇÃO ROBUSTA PARA INICIALIZAR DROPDOWN
-            function initializeUserDropdown() {
-                console.log('🎯 Inicializando dropdown do usuário...');
-                
-                // Diferentes possibilidades de seletores
-                const menuSelectors = [
-                    '#userMenu',
-                    '.user-menu-btn',
-                    '[data-user-menu]',
-                    '.user-profile-btn',
-                    '.user-avatar'
-                ];
-                
-                const dropdownSelectors = [
-                    '#userDropdown',
-                    '.user-dropdown',
-                    '[data-user-dropdown]',
-                    '.user-menu-dropdown'
-                ];
-                
-                let userMenu = null;
-                let userDropdown = null;
-                
-                // Procura pelo botão do menu
-                for (const selector of menuSelectors) {
-                    userMenu = document.querySelector(selector);
-                    if (userMenu) {
-                        console.log('✅ Menu encontrado com seletor:', selector);
-                        break;
-                    }
-                }
-                
-                // Procura pelo dropdown
-                for (const selector of dropdownSelectors) {
-                    userDropdown = document.querySelector(selector);
-                    if (userDropdown) {
-                        console.log('✅ Dropdown encontrado com seletor:', selector);
-                        break;
-                    }
-                }
-                
-                if (userMenu && userDropdown) {
-                    userMenu.addEventListener('click', function(e) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        userDropdown.classList.toggle('show');
-                        console.log('Dropdown toggled:', userDropdown.classList.contains('show'));
-                    });
-
-                    document.addEventListener('click', function(e) {
-                        if (!userMenu.contains(e.target) && !userDropdown.contains(e.target)) {
-                            userDropdown.classList.remove('show');
-                        }
-                    });
-                    
-                    console.log('✅ User dropdown inicializado com sucesso!');
-                } else {
-                    console.warn('⚠️ Elementos do dropdown não encontrados');
-                    console.log('Available elements with ID:', Array.from(document.querySelectorAll('[id]')).map(el => el.id));
-                }
-            }
-            
-            // Inicializa quando DOM carregar
-            document.addEventListener('DOMContentLoaded', initializeUserDropdown);
-            
-            // Também tenta após delays (caso o header seja carregado assincronamente)
-            setTimeout(initializeUserDropdown, 500);
-            setTimeout(initializeUserDropdown, 1000);
         </script>
     </body>
     </html>
@@ -282,9 +249,9 @@ try {
     $estatisticas = $modelosDisponiveis = $historicoRecente = [];
 }
 
-// CORREÇÃO: Cria instância do Header Component - Passa TODO o array do usuário (IGUAL À DASHBOARD)
+// Cria instância do Header Component
 $headerComponent = HeaderComponent::create([
-    'usuario' => $usuarioLogado, // ← CORRIGIDO: Agora passa TODO o array (incluindo departamento_id)
+    'usuario' => $usuarioLogado,
     'isDiretor' => $auth->isDiretor(),
     'activeTab' => 'relatorios',
     'notificationCount' => 0,
@@ -332,7 +299,7 @@ $headerComponent = HeaderComponent::create([
     <!-- Main Content -->
     <div class="main-wrapper">
         
-        <!-- NOVO: Header Component -->
+        <!-- Header Component -->
         <?php $headerComponent->render(); ?>
 
         <!-- Content Area -->
@@ -342,7 +309,14 @@ $headerComponent = HeaderComponent::create([
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <h1 class="page-title">Central de Relatórios</h1>
-                        <p class="page-subtitle">Gere relatórios personalizados e análises detalhadas</p>
+                        <p class="page-subtitle">
+                            Departamento: <strong><?php echo $permissoesDept['nome']; ?></strong>
+                            <?php if (!$permissoesDept['acesso_total']): ?>
+                                <span class="badge bg-primary ms-2">Permissões Específicas</span>
+                            <?php else: ?>
+                                <span class="badge bg-success ms-2">Acesso Total</span>
+                            <?php endif; ?>
+                        </p>
                     </div>
                     
                     <!-- BOTÃO DE FUNCIONÁRIOS - SOMENTE PARA PRESIDÊNCIA -->
@@ -422,18 +396,22 @@ $headerComponent = HeaderComponent::create([
                         <div class="section-icon">
                             <i class="fas fa-file-contract"></i>
                         </div>
-                        Relatórios Rápidos
+                        Relatórios Disponíveis
                     </h3>
                     <div class="section-actions">
+                        <!-- BOTÃO CRIAR PERSONALIZADO - SOMENTE PRESIDÊNCIA -->
+                        <?php if ($permissoesDept['criar_personalizado']): ?>
                         <button class="btn-modern btn-primary" onclick="abrirModalPersonalizado()">
                             <i class="fas fa-magic"></i>
                             Criar Relatório Personalizado
                         </button>
+                        <?php endif; ?>
                     </div>
                 </div>
 
                 <div class="report-grid">
-                    <!-- Relatório de Associados -->
+                    <!-- Relatório de Associados - Presidência e Comercial -->
+                    <?php if (podeAcessarRelatorio('associados', $permissoesDept)): ?>
                     <div class="report-card" onclick="executarRelatorioRapido('associados')">
                         <div class="report-icon blue">
                             <i class="fas fa-users"></i>
@@ -457,8 +435,10 @@ $headerComponent = HeaderComponent::create([
                             </a>
                         </div>
                     </div>
+                    <?php endif; ?>
 
-                    <!-- Relatório Financeiro -->
+                    <!-- Relatório Financeiro - Presidência e Financeiro -->
+                    <?php if (podeAcessarRelatorio('financeiro', $permissoesDept)): ?>
                     <div class="report-card" onclick="executarRelatorioRapido('financeiro')">
                         <div class="report-icon green">
                             <i class="fas fa-dollar-sign"></i>
@@ -482,8 +462,10 @@ $headerComponent = HeaderComponent::create([
                             </a>
                         </div>
                     </div>
+                    <?php endif; ?>
 
-                    <!-- Relatório Militar -->
+                    <!-- Relatório Militar - Presidência e Comercial -->
+                    <?php if (podeAcessarRelatorio('militar', $permissoesDept)): ?>
                     <div class="report-card" onclick="executarRelatorioRapido('militar')">
                         <div class="report-icon orange">
                             <i class="fas fa-shield-alt"></i>
@@ -507,7 +489,10 @@ $headerComponent = HeaderComponent::create([
                             </a>
                         </div>
                     </div>
+                    <?php endif; ?>
 
+                    <!-- Estatísticas Financeiras - Presidência e Financeiro -->
+                    <?php if (podeAcessarRelatorio('estatisticas', $permissoesDept)): ?>
                     <div class="report-card" onclick="window.location.href='estatisticas.php'">
                         <div class="report-icon blue">
                             <i class="fas fa-chart-bar"></i>
@@ -517,7 +502,10 @@ $headerComponent = HeaderComponent::create([
                             Análise completa dos dados financeiros, relatórios de pagamentos e estatísticas da associação.
                         </p>
                     </div>
-                                        <!-- Relatório de Serviços -->
+                    <?php endif; ?>
+
+                    <!-- Relatório de Serviços - Presidência e Financeiro -->
+                    <?php if (podeAcessarRelatorio('servicos', $permissoesDept)): ?>
                     <div class="report-card" onclick="executarRelatorioRapido('servicos')">
                         <div class="report-icon purple">
                             <i class="fas fa-concierge-bell"></i>
@@ -541,8 +529,10 @@ $headerComponent = HeaderComponent::create([
                             </a>
                         </div>
                     </div>
+                    <?php endif; ?>
 
-                    <!-- Relatório de Documentos -->
+                    <!-- Relatório de Documentos - Todos os departamentos -->
+                    <?php if (podeAcessarRelatorio('documentos', $permissoesDept)): ?>
                     <div class="report-card" onclick="executarRelatorioRapido('documentos')">
                         <div class="report-icon red">
                             <i class="fas fa-folder-open"></i>
@@ -566,11 +556,22 @@ $headerComponent = HeaderComponent::create([
                             </a>
                         </div>
                     </div>
+                    <?php endif; ?>
                 </div>
+                
+                <!-- Aviso sobre permissões específicas do departamento -->
+                <?php if (!$permissoesDept['acesso_total']): ?>
+                <div class="alert alert-info mt-3" data-aos="fade-up">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>Acesso por Departamento:</strong> Você está vendo os relatórios disponíveis para o departamento 
+                    <strong><?php echo $permissoesDept['nome']; ?></strong>. 
+                    Diferentes departamentos têm acesso a diferentes tipos de relatórios.
+                </div>
+                <?php endif; ?>
             </div>
 
-            <!-- Saved Models Section -->
-            <?php if (!empty($modelosDisponiveis)): ?>
+            <!-- Saved Models Section - Somente se houver modelos E permissão para criar -->
+            <?php if (!empty($modelosDisponiveis) && $permissoesDept['criar_personalizado']): ?>
             <div class="section-card" data-aos="fade-up" data-aos-delay="150">
                 <div class="section-header">
                     <h3 class="section-title">
@@ -706,7 +707,8 @@ $headerComponent = HeaderComponent::create([
         </div>
     </div>
 
-    <!-- Modal de Relatório Personalizado -->
+    <!-- Modal de Relatório Personalizado - SOMENTE PRESIDÊNCIA -->
+    <?php if ($permissoesDept['criar_personalizado']): ?>
     <div class="modal-custom" id="modalPersonalizado">
         <div class="modal-content-custom large">
             <div class="modal-header-custom">
@@ -842,6 +844,7 @@ $headerComponent = HeaderComponent::create([
             </div>
         </div>
     </div>
+    <?php endif; ?>
 
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -850,12 +853,10 @@ $headerComponent = HeaderComponent::create([
     <!-- JavaScript do Header Component -->
     <?php $headerComponent->renderJS(); ?>
 
-    <!-- JavaScript customizado para os botões do header (IGUAL À DASHBOARD) -->
+    <!-- JavaScript customizado para os botões do header -->
     <script>
         function toggleSearch() {
-            // Implementar funcionalidade de busca global
             console.log('Busca global ativada');
-            // Você pode focar no campo de busca da tabela ou abrir um modal de busca
             const searchInput = document.getElementById('searchInput');
             if (searchInput) {
                 searchInput.focus();
@@ -863,14 +864,13 @@ $headerComponent = HeaderComponent::create([
         }
         
         function toggleNotifications() {
-            // Implementar painel de notificações
             console.log('Painel de notificações');
             alert('Painel de notificações em desenvolvimento');
         }
     </script>
 
     <script>
-        // Configuração inicial (IGUAL À DASHBOARD)
+        // Configuração inicial
         console.log('=== INICIANDO SISTEMA RELATÓRIOS ===');
         console.log('jQuery versão:', jQuery.fn.jquery);
 
@@ -880,13 +880,15 @@ $headerComponent = HeaderComponent::create([
             once: true
         });
 
-        // Variáveis globais
+        // Variáveis globais com permissões
+        let permissoesDepartamento = <?php echo json_encode($permissoesDept); ?>;
+        let isPresidencia = <?php echo $isPresidencia ? 'true' : 'false'; ?>;
+        let temPermissao = <?php echo json_encode($temPermissaoRelatorios); ?>;
+        let isDiretor = <?php echo $auth->isDiretor() ? 'true' : 'false'; ?>;
+        
         let tipoRelatorioAtual = '';
         let camposDisponiveis = {};
         let camposOrdenados = [];
-        let isDiretor = <?php echo $auth->isDiretor() ? 'true' : 'false'; ?>;
-        let isPresidencia = <?php echo $isPresidencia ? 'true' : 'false'; ?>; // Para debug
-        let temPermissao = <?php echo json_encode($temPermissaoRelatorios); ?>;
         let camposBasicos = {
             'associados': ['nome', 'cpf', 'telefone', 'email', 'situacao'],
             'financeiro': ['nome', 'cpf', 'tipoAssociado', 'situacaoFinanceira'],
@@ -895,11 +897,26 @@ $headerComponent = HeaderComponent::create([
             'documentos': ['nome', 'cpf', 'tipo_documento', 'data_upload', 'verificado']
         };
 
+        // Debug das permissões
+        console.log('=== PERMISSÕES DEPARTAMENTO ===');
+        console.log('Departamento:', permissoesDepartamento?.nome || 'Não definido');
+        console.log('Acesso total:', permissoesDepartamento?.acesso_total || false);
+        console.log('Pode criar personalizado:', permissoesDepartamento?.criar_personalizado || false);
+        console.log('Relatórios permitidos:', permissoesDepartamento?.relatorios_permitidos || []);
+        console.log('Tem permissão geral:', temPermissao);
+        console.log('===============================');
+
+        // Função para verificar se pode acessar um relatório
+        function podeAcessarRelatorio(tipo) {
+            if (!permissoesDepartamento) return false;
+            if (permissoesDepartamento.acesso_total) return true;
+            return permissoesDepartamento.relatorios_permitidos.includes(tipo);
+        }
+
         // FUNÇÃO ROBUSTA PARA INICIALIZAR DROPDOWN DO USUÁRIO
         function initializeUserDropdown() {
             console.log('🎯 Inicializando dropdown do usuário...');
             
-            // Diferentes possibilidades de seletores
             const menuSelectors = [
                 '#userMenu',
                 '.user-menu-btn',
@@ -918,7 +935,6 @@ $headerComponent = HeaderComponent::create([
             let userMenu = null;
             let userDropdown = null;
             
-            // Procura pelo botão do menu
             for (const selector of menuSelectors) {
                 userMenu = document.querySelector(selector);
                 if (userMenu) {
@@ -927,7 +943,6 @@ $headerComponent = HeaderComponent::create([
                 }
             }
             
-            // Procura pelo dropdown
             for (const selector of dropdownSelectors) {
                 userDropdown = document.querySelector(selector);
                 if (userDropdown) {
@@ -937,37 +952,30 @@ $headerComponent = HeaderComponent::create([
             }
             
             if (userMenu && userDropdown) {
-                // Remove listeners antigos se existirem
                 userMenu.removeEventListener('click', handleUserMenuClick);
                 document.removeEventListener('click', handleDocumentClick);
                 
-                // Adiciona novos listeners
                 userMenu.addEventListener('click', handleUserMenuClick);
                 document.addEventListener('click', handleDocumentClick);
                 
                 console.log('✅ User dropdown inicializado com sucesso!');
                 
-                // Função para lidar com clique no menu
                 function handleUserMenuClick(e) {
                     e.preventDefault();
                     e.stopPropagation();
                     
                     const isVisible = userDropdown.classList.contains('show');
                     
-                    // Fecha outros dropdowns abertos
                     document.querySelectorAll('.user-dropdown.show').forEach(dropdown => {
                         if (dropdown !== userDropdown) {
                             dropdown.classList.remove('show');
                         }
                     });
                     
-                    // Alterna o dropdown atual
                     userDropdown.classList.toggle('show', !isVisible);
-                    
                     console.log('Dropdown toggled:', !isVisible);
                 }
                 
-                // Função para lidar com cliques no documento
                 function handleDocumentClick(e) {
                     if (!userMenu.contains(e.target) && !userDropdown.contains(e.target)) {
                         userDropdown.classList.remove('show');
@@ -976,10 +984,6 @@ $headerComponent = HeaderComponent::create([
                 
             } else {
                 console.warn('⚠️ Elementos do dropdown não encontrados');
-                console.log('Elementos com ID disponíveis:', 
-                    Array.from(document.querySelectorAll('[id]')).map(el => `#${el.id}`));
-                console.log('Elementos com classes de usuário:', 
-                    Array.from(document.querySelectorAll('[class*="user"]')).map(el => el.className));
             }
         }
 
@@ -987,10 +991,7 @@ $headerComponent = HeaderComponent::create([
         document.addEventListener('DOMContentLoaded', function() {
             console.log('🚀 DOM carregado, inicializando componentes...');
             
-            // INICIALIZA DROPDOWN DO USUÁRIO - VERSÃO ROBUSTA
             initializeUserDropdown();
-            
-            // Tenta novamente após delays (caso elementos sejam carregados assincronamente)
             setTimeout(initializeUserDropdown, 500);
             setTimeout(initializeUserDropdown, 1000);
             setTimeout(initializeUserDropdown, 2000);
@@ -1015,7 +1016,6 @@ $headerComponent = HeaderComponent::create([
                         document.getElementById('secaoCampos').style.display = 'block';
                         document.getElementById('secaoFiltros').style.display = 'block';
                         
-                        // Se mudou o tipo, limpa a ordem anterior pois os campos são diferentes
                         if (this.value !== tipoRelatorioAtual) {
                             camposOrdenados = [];
                         }
@@ -1023,7 +1023,6 @@ $headerComponent = HeaderComponent::create([
                         tipoRelatorioAtual = this.value;
                         carregarCamposPersonalizados(this.value);
                         carregarFiltrosPersonalizados(this.value);
-                        // Reseta para aba de seleção (sem event)
                         alternarTabCampos('selecao', null);
                     } else {
                         document.getElementById('secaoCampos').style.display = 'none';
@@ -1039,20 +1038,7 @@ $headerComponent = HeaderComponent::create([
                 }
             });
 
-            // Debug inicial (igual à dashboard)
-            console.log('=== DEBUG RELATÓRIOS FRONTEND ===');
-            const usuario = <?php echo json_encode($usuarioLogado); ?>;
-            const isDiretorLocal = <?php echo json_encode($auth->isDiretor()); ?>;
-            
-            console.log('👤 Usuário completo:', usuario);
-            console.log('🏢 Departamento ID:', usuario.departamento_id, '(tipo:', typeof usuario.departamento_id, ')');
-            console.log('👔 É diretor:', isDiretorLocal);
-            console.log('🏛️ É Presidência (PHP):', isPresidencia);
-            console.log('🔐 Tem permissão:', temPermissao);
-            console.log('🎯 É Presidência (JS check):', usuario.departamento_id == 1);
-            console.log('🎯 Botão deve aparecer:', <?php echo $isPresidencia ? 'true' : 'false'; ?>);
-            
-            console.log('✅ Sistema de Relatórios iniciado - Dropdown do usuário CORRIGIDO!');
+            console.log('✅ Sistema de Relatórios iniciado com permissões!');
         });
 
         // Loading functions
@@ -1074,28 +1060,30 @@ $headerComponent = HeaderComponent::create([
             }
         }
 
-        // Executa relatório rápido
+        // Executa relatório rápido COM VERIFICAÇÃO DE PERMISSÃO
         function executarRelatorioRapido(tipo, preset = null) {
+            // Verifica permissão antes de executar
+            if (!podeAcessarRelatorio(tipo)) {
+                alert(`Seu departamento (${permissoesDepartamento?.nome || 'Não identificado'}) não tem acesso ao relatório de ${tipo}.`);
+                return;
+            }
+            
             if (preset === 'personalizar') {
-                // Abre modal de filtros
                 abrirModalFiltrosRapidos(tipo);
                 return;
             }
 
             showLoading('Gerando relatório...');
 
-            // Prepara dados baseados no preset
             const dados = {
                 tipo: tipo,
                 campos: getCamposPreset(tipo, preset),
                 formato: 'html'
             };
 
-            // Adiciona filtros baseados no preset
             const filtros = getFiltrosPreset(tipo, preset);
             Object.assign(dados, filtros);
 
-            // Executa relatório
             executarRelatorio(dados);
         }
 
@@ -1163,12 +1151,16 @@ $headerComponent = HeaderComponent::create([
             return filtros[tipo]?.[preset] || {};
         }
 
-        // Abre modal de filtros rápidos
+        // Abre modal de filtros rápidos COM VERIFICAÇÃO DE PERMISSÃO
         function abrirModalFiltrosRapidos(tipo) {
+            if (!podeAcessarRelatorio(tipo)) {
+                alert(`Seu departamento (${permissoesDepartamento?.nome || 'Não identificado'}) não tem acesso ao relatório de ${tipo}.`);
+                return;
+            }
+            
             tipoRelatorioAtual = tipo;
             document.getElementById('tipoRelatorioRapido').value = tipo;
             
-            // Atualiza título
             const titulos = {
                 'associados': 'Filtrar Relatório de Associados',
                 'financeiro': 'Filtrar Relatório Financeiro',
@@ -1178,10 +1170,7 @@ $headerComponent = HeaderComponent::create([
             };
             document.getElementById('modalFiltrosTitle').textContent = titulos[tipo] || 'Filtrar Relatório';
             
-            // Carrega filtros específicos
             carregarFiltrosRapidos(tipo);
-            
-            // Abre modal
             document.getElementById('modalFiltrosRapidos').classList.add('show');
         }
 
@@ -1277,7 +1266,6 @@ $headerComponent = HeaderComponent::create([
                 formato: 'html'
             };
             
-            // Adiciona filtros do formulário
             for (let [key, value] of formData.entries()) {
                 if (key !== 'tipo' && value) {
                     dados[key] = value;
@@ -1289,9 +1277,13 @@ $headerComponent = HeaderComponent::create([
             fecharModal('modalFiltrosRapidos');
         }
 
-        // Abre modal de relatório personalizado
+        // Abre modal de relatório personalizado COM VERIFICAÇÃO DE PERMISSÃO
         function abrirModalPersonalizado() {
-            // Limpa estado anterior apenas se não estiver editando
+            if (!permissoesDepartamento?.criar_personalizado) {
+                alert('Apenas a Presidência pode criar relatórios personalizados.');
+                return;
+            }
+            
             const formPersonalizado = document.getElementById('formPersonalizado');
             if (!formPersonalizado.getAttribute('data-modelo-id')) {
                 camposOrdenados = [];
@@ -1323,7 +1315,6 @@ $headerComponent = HeaderComponent::create([
                     hideLoading();
                     console.error('Erro ao carregar campos:', error);
                     
-                    // Usa campos padrão como fallback
                     const camposPadrao = getCamposPadrao(tipo);
                     renderizarCamposPersonalizados(camposPadrao);
                 }
@@ -1335,22 +1326,18 @@ $headerComponent = HeaderComponent::create([
             const container = document.getElementById('camposPersonalizados');
             container.innerHTML = '';
             
-            // Se já temos uma ordem definida, reorganiza os campos para respeitar
             let camposOrganizados = reorganizarCamposPorOrdem(campos);
             
             for (const categoria in camposOrganizados) {
-                // Adiciona header da categoria
                 const categoryDiv = document.createElement('div');
                 categoryDiv.className = 'w-100';
                 categoryDiv.innerHTML = `<div class="category-header">${categoria}</div>`;
                 container.appendChild(categoryDiv);
                 
-                // Adiciona campos da categoria
                 camposOrganizados[categoria].forEach(campo => {
                     const checkboxItem = document.createElement('div');
                     checkboxItem.className = 'checkbox-item';
                     
-                    // Marca campos básicos por padrão ou campos que estavam selecionados
                     const isBasico = camposBasicos[tipoRelatorioAtual]?.includes(campo.nome_campo);
                     const isSelecionado = camposOrdenados.includes(campo.nome_campo);
                     
@@ -1369,7 +1356,6 @@ $headerComponent = HeaderComponent::create([
                 });
             }
             
-            // Se temos campos ordenados, atualiza a lista
             if (camposOrdenados.length > 0) {
                 setTimeout(() => {
                     atualizarCamposSelecionados();
@@ -1383,7 +1369,6 @@ $headerComponent = HeaderComponent::create([
                 return campos;
             }
             
-            // Cria um mapa de campos para facilitar busca
             let mapaCampos = {};
             for (const categoria in campos) {
                 campos[categoria].forEach(campo => {
@@ -1394,10 +1379,8 @@ $headerComponent = HeaderComponent::create([
                 });
             }
             
-            // Reorganiza baseado na ordem
             let camposReorganizados = {};
             
-            // Primeiro, adiciona campos na ordem definida
             camposOrdenados.forEach(nomeCampo => {
                 if (mapaCampos[nomeCampo]) {
                     const campo = mapaCampos[nomeCampo];
@@ -1407,7 +1390,6 @@ $headerComponent = HeaderComponent::create([
                         camposReorganizados[categoria] = [];
                     }
                     
-                    // Evita duplicatas
                     if (!camposReorganizados[categoria].find(c => c.nome_campo === nomeCampo)) {
                         camposReorganizados[categoria].push({
                             nome_campo: campo.nome_campo,
@@ -1418,7 +1400,6 @@ $headerComponent = HeaderComponent::create([
                 }
             });
             
-            // Depois, adiciona campos que não estão na ordem (novos campos)
             for (const categoria in campos) {
                 campos[categoria].forEach(campo => {
                     if (!camposOrdenados.includes(campo.nome_campo)) {
@@ -1438,7 +1419,6 @@ $headerComponent = HeaderComponent::create([
             const container = document.getElementById('filtrosPersonalizados');
             let html = '';
             
-            // Filtros de data (comuns a todos)
             html += `
                 <div class="date-range-simple mb-3">
                     <input type="date" class="form-control-custom" name="data_inicio" placeholder="Data inicial">
@@ -1447,7 +1427,6 @@ $headerComponent = HeaderComponent::create([
                 </div>
             `;
             
-            // Filtros específicos por tipo
             switch(tipo) {
                 case 'associados':
                     html += `
@@ -1545,7 +1524,6 @@ $headerComponent = HeaderComponent::create([
             const formData = new FormData(e.target);
             const dados = {};
             
-            // Converte FormData para objeto
             for (let [key, value] of formData.entries()) {
                 if (key === 'campos[]') {
                     // Ignora campos[] do FormData, usaremos camposOrdenados
@@ -1554,39 +1532,33 @@ $headerComponent = HeaderComponent::create([
                 }
             }
             
-            // Usa campos na ordem definida pelo usuário
             if (camposOrdenados.length > 0) {
                 dados.campos = camposOrdenados;
             } else {
-                // Se não há ordem definida, pega dos checkboxes
                 dados.campos = [];
                 document.querySelectorAll('#camposPersonalizados input[type="checkbox"]:checked').forEach(cb => {
                     dados.campos.push(cb.value);
                 });
             }
             
-            // Validações
             if (!dados.campos || dados.campos.length === 0) {
                 alert('Selecione ao menos um campo para o relatório');
                 return;
             }
             
-            // Adiciona o ID do modelo se estiver editando
             const modeloIdEditando = document.getElementById('formPersonalizado').getAttribute('data-modelo-id');
             if (modeloIdEditando) {
                 dados.id = modeloIdEditando;
             }
             
-            dados.formato = 'html'; // Padrão
+            dados.formato = 'html';
             
             showLoading('Gerando relatório...');
             
-            // Se deve salvar como modelo
             if (dados.salvar_modelo) {
                 salvarModelo(dados).then(modeloId => {
                     executarRelatorio(dados);
                     fecharModal('modalPersonalizado');
-                    // Recarrega a página para mostrar o modelo atualizado
                     if (modeloIdEditando) {
                         setTimeout(() => location.reload(), 1000);
                     }
@@ -1611,12 +1583,10 @@ $headerComponent = HeaderComponent::create([
                     filtros: {}
                 };
                 
-                // Se tem ID, é atualização
                 if (dados.id) {
                     modeloData.id = dados.id;
                 }
                 
-                // Adiciona apenas filtros que não são vazios
                 const filtrosPossiveis = ['data_inicio', 'data_fim', 'situacao', 'corporacao', 
                                          'patente', 'situacaoFinanceira', 'ativo', 'verificado', 'busca'];
                 
@@ -1626,12 +1596,10 @@ $headerComponent = HeaderComponent::create([
                     }
                 });
                 
-                // Adiciona ordenação se existir
                 if (dados.ordenacao && dados.ordenacao !== '') {
                     modeloData.ordenacao = dados.ordenacao;
                 }
                 
-                // Define método baseado se é criação ou atualização
                 const method = dados.id ? 'PUT' : 'POST';
                 
                 console.log('Enviando modelo:', modeloData);
@@ -1665,13 +1633,11 @@ $headerComponent = HeaderComponent::create([
 
         // Executa relatório
         function executarRelatorio(dados) {
-            // Cria formulário temporário para POST
             const form = document.createElement('form');
             form.method = 'POST';
             form.action = '../api/relatorios_executar.php';
             form.target = '_blank';
             
-            // Adiciona campos
             for (const key in dados) {
                 if (Array.isArray(dados[key])) {
                     dados[key].forEach(value => {
@@ -1712,7 +1678,6 @@ $headerComponent = HeaderComponent::create([
                     if (response.status === 'success') {
                         const modelo = response.modelo;
                         
-                        // Prepara dados para execução
                         const dados = {
                             tipo: modelo.tipo,
                             campos: modelo.campos,
@@ -1720,12 +1685,10 @@ $headerComponent = HeaderComponent::create([
                             modelo_id: modeloId
                         };
                         
-                        // Adiciona filtros
                         if (modelo.filtros) {
                             Object.assign(dados, modelo.filtros);
                         }
                         
-                        // Adiciona ordenação
                         if (modelo.ordenacao) {
                             dados.ordenacao = modelo.ordenacao;
                         }
@@ -1759,30 +1722,23 @@ $headerComponent = HeaderComponent::create([
                     if (response.status === 'success') {
                         const modelo = response.modelo;
                         
-                        // Marca o formulário como edição
                         document.getElementById('formPersonalizado').setAttribute('data-modelo-id', modeloId);
                         
-                        // Preenche o formulário
                         document.getElementById('nomeRelatorio').value = modelo.nome;
                         document.getElementById('descricaoRelatorio').value = modelo.descricao || '';
                         document.getElementById('tipoRelatorio').value = modelo.tipo;
                         
-                        // Dispara mudança para carregar campos
                         document.getElementById('tipoRelatorio').dispatchEvent(new Event('change'));
                         
-                        // Aguarda campos carregarem
                         setTimeout(() => {
-                            // Marca campos do modelo
                             if (modelo.campos && Array.isArray(modelo.campos)) {
                                 document.querySelectorAll('#camposPersonalizados input[type="checkbox"]').forEach(cb => {
                                     cb.checked = modelo.campos.includes(cb.value);
                                 });
-                                // Define a ordem dos campos
                                 camposOrdenados = [...modelo.campos];
                                 atualizarCamposSelecionados();
                             }
                             
-                            // Preenche filtros
                             if (modelo.filtros) {
                                 for (const key in modelo.filtros) {
                                     const input = document.querySelector(`#filtrosPersonalizados [name="${key}"]`);
@@ -1792,7 +1748,6 @@ $headerComponent = HeaderComponent::create([
                                 }
                             }
                             
-                            // Preenche ordenação
                             if (modelo.ordenacao) {
                                 const selectOrdenacao = document.querySelector('[name="ordenacao"]');
                                 if (selectOrdenacao) {
@@ -1800,13 +1755,10 @@ $headerComponent = HeaderComponent::create([
                                 }
                             }
                             
-                            // Marca para salvar
                             document.getElementById('salvarModelo').checked = true;
                             
-                            // Atualiza título do modal
                             document.querySelector('#modalPersonalizado .modal-title-custom').textContent = 'Editar Relatório Personalizado';
                             
-                            // Abre modal
                             abrirModalPersonalizado();
                         }, 1000);
                     } else {
@@ -1826,7 +1778,6 @@ $headerComponent = HeaderComponent::create([
             if (confirm('Deseja duplicar este modelo?')) {
                 showLoading('Duplicando modelo...');
                 
-                // Por simplicidade, carrega o modelo e cria um novo
                 $.ajax({
                     url: '../api/relatorios_carregar_modelo.php',
                     method: 'GET',
@@ -1838,7 +1789,6 @@ $headerComponent = HeaderComponent::create([
                             modelo.nome = modelo.nome + ' (Cópia)';
                             delete modelo.id;
                             
-                            // Salva como novo modelo
                             salvarModelo(modelo).then(novoId => {
                                 hideLoading();
                                 alert('Modelo duplicado com sucesso!');
@@ -1867,11 +1817,9 @@ $headerComponent = HeaderComponent::create([
                 return;
             }
             
-            // Confirmação com nome do modelo
             const mensagem = `Tem certeza que deseja excluir o modelo "${nomeModelo}"?\n\nEsta ação não pode ser desfeita.`;
             
             if (confirm(mensagem)) {
-                // Segunda confirmação para modelos importantes
                 if (confirm('Esta é uma ação permanente. Confirma a exclusão?')) {
                     showLoading('Excluindo modelo...');
                     
@@ -1883,7 +1831,6 @@ $headerComponent = HeaderComponent::create([
                             hideLoading();
                             
                             if (response.status === 'success') {
-                                // Feedback visual
                                 const card = document.querySelector(`[onclick*="executarModelo(${modeloId})"]`);
                                 if (card) {
                                     card.style.transition = 'all 0.3s ease';
@@ -1902,7 +1849,6 @@ $headerComponent = HeaderComponent::create([
                         error: function(xhr, status, error) {
                             hideLoading();
                             
-                            // Tenta obter mensagem de erro do servidor
                             try {
                                 const errorResponse = JSON.parse(xhr.responseText);
                                 alert('Erro ao excluir modelo: ' + errorResponse.message);
@@ -1924,30 +1870,23 @@ $headerComponent = HeaderComponent::create([
                 modal.classList.remove('show');
             }
             
-            // Limpa formulários
             if (modalId === 'modalFiltrosRapidos') {
                 const form = document.getElementById('formFiltrosRapidos');
                 if (form) form.reset();
             } else if (modalId === 'modalPersonalizado') {
-                // Salva o estado atual antes de fechar
                 const form = document.getElementById('formPersonalizado');
                 const modeloIdEditando = form ? form.getAttribute('data-modelo-id') : null;
                 
-                // Se não está editando um modelo existente, limpa tudo
                 if (!modeloIdEditando && form) {
                     form.reset();
                     form.removeAttribute('data-modelo-id');
                     document.getElementById('secaoCampos').style.display = 'none';
                     document.getElementById('secaoFiltros').style.display = 'none';
-                    // Restaura título original
                     const title = document.querySelector('#modalPersonalizado .modal-title-custom');
                     if (title) title.textContent = 'Criar Relatório Personalizado';
-                    // Limpa campos ordenados apenas se não estiver editando
                     camposOrdenados = [];
-                    // Volta para aba de seleção (sem event)
                     alternarTabCampos('selecao', null);
                 }
-                // Se está editando, mantém o estado atual
             }
         }
 
@@ -2017,20 +1956,16 @@ $headerComponent = HeaderComponent::create([
 
         // Alternância entre tabs de campos
         function alternarTabCampos(tab, event) {
-            // Se event não foi passado (chamada programática), não tenta acessar event.target
             if (event && event.target) {
-                // Atualiza botões
                 document.querySelectorAll('.campos-tab').forEach(btn => {
                     btn.classList.remove('active');
                 });
                 event.target.closest('.campos-tab').classList.add('active');
             } else {
-                // Chamada programática - atualiza botões baseado no tab
                 document.querySelectorAll('.campos-tab').forEach(btn => {
                     btn.classList.remove('active');
                 });
                 
-                // Encontra e ativa o botão correto
                 const botaoCorreto = tab === 'selecao' 
                     ? document.querySelector('.campos-tab:first-child')
                     : document.querySelector('.campos-tab:last-child');
@@ -2040,7 +1975,6 @@ $headerComponent = HeaderComponent::create([
                 }
             }
             
-            // Atualiza conteúdo
             document.querySelectorAll('.campos-tab-content').forEach(content => {
                 content.classList.remove('active');
             });
@@ -2065,7 +1999,6 @@ $headerComponent = HeaderComponent::create([
             
             lista.innerHTML = '';
             
-            // Se não há checkboxes marcados
             if (checkboxes.length === 0) {
                 lista.style.display = 'none';
                 empty.style.display = 'block';
@@ -2076,29 +2009,24 @@ $headerComponent = HeaderComponent::create([
             lista.style.display = 'block';
             empty.style.display = 'none';
             
-            // Se já temos uma ordem definida, usa ela
             if (camposOrdenados.length > 0) {
-                // Remove campos que foram desmarcados
                 camposOrdenados = camposOrdenados.filter(campo => {
                     const checkbox = document.querySelector(`#campo_personalizado_${campo}`);
                     return checkbox && checkbox.checked;
                 });
                 
-                // Adiciona novos campos marcados ao final
                 checkboxes.forEach(checkbox => {
                     if (!camposOrdenados.includes(checkbox.value)) {
                         camposOrdenados.push(checkbox.value);
                     }
                 });
             } else {
-                // Se não há ordem definida, cria uma nova
                 camposOrdenados = [];
                 checkboxes.forEach(checkbox => {
                     camposOrdenados.push(checkbox.value);
                 });
             }
             
-            // Renderiza a lista na ordem correta
             camposOrdenados.forEach((campo, index) => {
                 const checkbox = document.querySelector(`#campo_personalizado_${campo}`);
                 if (checkbox && checkbox.checked) {
@@ -2119,7 +2047,6 @@ $headerComponent = HeaderComponent::create([
                         </button>
                     `;
                     
-                    // Event listeners para drag and drop
                     li.addEventListener('dragstart', handleDragStart);
                     li.addEventListener('dragend', handleDragEnd);
                     li.addEventListener('dragover', handleDragOver);
@@ -2154,7 +2081,6 @@ $headerComponent = HeaderComponent::create([
         function handleDragEnd(e) {
             this.classList.remove('dragging');
             
-            // Remove todas as classes de drag-over
             document.querySelectorAll('.campo-selecionado-item').forEach(item => {
                 item.classList.remove('drag-over');
             });
@@ -2193,7 +2119,6 @@ $headerComponent = HeaderComponent::create([
                     this.parentNode.insertBefore(draggedElement, this);
                 }
                 
-                // Atualiza array de campos ordenados
                 atualizarOrdemCampos();
             }
             
@@ -2207,13 +2132,12 @@ $headerComponent = HeaderComponent::create([
             
             items.forEach((item, index) => {
                 camposOrdenados.push(item.dataset.campo);
-                // Atualiza número
                 const numero = item.querySelector('.campo-selecionado-numero');
                 if (numero) numero.textContent = index + 1;
             });
         }
 
-        console.log('✅ Sistema de Relatórios carregado - Dropdown do usuário TOTALMENTE CORRIGIDO!');
+        console.log('✅ Sistema de Relatórios carregado com sistema de permissões completo!');
     </script>
 </body>
 </html>
