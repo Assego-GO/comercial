@@ -1140,7 +1140,7 @@ $headerComponent = HeaderComponent::create([
                                         <p>Gerencie fundos de pecúlio, reservas e benefícios especiais</p>
                                     </div>
                                 </div>
-
+                                <!--
                                 <div class="financeiro-option" onclick="estatisticasFinanceiras()">
                                     <div class="financeiro-option-icon">
                                         <i class="fas fa-calculator"></i>
@@ -1149,7 +1149,7 @@ $headerComponent = HeaderComponent::create([
                                         <h5>Estatísticas Financeiras</h5>
                                         <p>Dashboard completo com indicadores financeiros</p>
                                     </div>
-                                </div>
+                                </div> -->
                             </div>
                         </div>
                     </div>

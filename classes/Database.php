@@ -1,60 +1,45 @@
 <?php
 /**
- * Classe de conexão com banco de dados
+ * Classe Database Simples
  * classes/Database.php
  */
 
 class Database {
     private static $instances = [];
-    private $conn;
+    private $connection;
     
     private function __construct($dbname) {
         try {
-            $this->conn = new PDO(
-                "mysql:host=" . DB_HOST . ";dbname=" . $dbname . ";charset=" . DB_CHARSET,
-                DB_USER,
-                DB_PASS,
-                [
-                    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-                    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-                    PDO::ATTR_EMULATE_PREPARES => false
-                ]
-            );
-        } catch(PDOException $e) {
-            if (DEBUG_MODE) {
-                die("Erro de conexão: " . $e->getMessage());
-            } else {
-                die("Erro ao conectar com o banco de dados.");
-            }
+            $dsn = "mysql:host=" . DB_HOST . ";dbname=" . $dbname . ";charset=" . DB_CHARSET;
+            $this->connection = new PDO($dsn, DB_USER, DB_PASS, [
+                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                PDO::ATTR_EMULATE_PREPARES => false
+            ]);
+            
+            error_log("✅ Conexão Database estabelecida: " . $dbname);
+        } catch (PDOException $e) {
+            error_log("❌ Erro na conexão Database: " . $e->getMessage());
+            throw $e;
         }
     }
     
-    /**
-     * Retorna instância única da conexão (Singleton)
-     */
-    public static function getInstance($dbname = DB_NAME_RELATORIOS) {
+    public static function getInstance($dbname) {
         if (!isset(self::$instances[$dbname])) {
             self::$instances[$dbname] = new self($dbname);
         }
         return self::$instances[$dbname];
     }
     
-    /**
-     * Retorna a conexão PDO
-     */
     public function getConnection() {
-        return $this->conn;
+        return $this->connection;
     }
     
-    /**
-     * Previne clonagem da instância
-     */
+    // Previne clonagem
     private function __clone() {}
     
-    /**
-     * Previne desserialização da instância
-     */
+    // Previne deserialização
     public function __wakeup() {
-        throw new Exception("Não é possível desserializar singleton");
+        throw new Exception("Cannot unserialize singleton");
     }
 }
