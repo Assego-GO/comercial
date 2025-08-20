@@ -1,7 +1,7 @@
 <?php
 /**
  * ARQUIVO: /api/observacoes/salvar.php
- * Endpoint para salvar observações
+ * Endpoint para salvar/editar observações (CORRIGIDO)
  */
 
 // Configurações e includes
@@ -34,11 +34,24 @@ if (!$auth->isLoggedIn()) {
 // Pegar dados do POST
 $input = json_decode(file_get_contents('php://input'), true);
 
-// Validar dados
-if (empty($input['associado_id']) || empty($input['observacao'])) {
-    http_response_code(400);
-    echo json_encode(['status' => 'error', 'message' => 'Dados obrigatórios faltando']);
-    exit;
+// Verificar se é edição ou nova observação
+$isEdicao = !empty($input['id']);
+
+// Validações baseadas na operação
+if ($isEdicao) {
+    // Para edição: só precisa do ID e texto
+    if (empty($input['id']) || empty($input['observacao'])) {
+        http_response_code(400);
+        echo json_encode(['status' => 'error', 'message' => 'ID e observação são obrigatórios para edição']);
+        exit;
+    }
+} else {
+    // Para nova observação: precisa de associado_id e texto
+    if (empty($input['associado_id']) || empty($input['observacao'])) {
+        http_response_code(400);
+        echo json_encode(['status' => 'error', 'message' => 'Associado ID e observação são obrigatórios']);
+        exit;
+    }
 }
 
 try {
@@ -49,26 +62,41 @@ try {
     // Adicionar o ID do funcionário aos dados
     $_SESSION['funcionario_id'] = $usuarioAtual['id'];
     
-    // Preparar dados
-    $dados = [
-        'associado_id' => $input['associado_id'],
-        'observacao' => $input['observacao'],
-        'categoria' => $input['categoria'] ?? 'geral',
-        'prioridade' => $input['prioridade'] ?? 'media',
-        'importante' => $input['importante'] ?? 0
-    ];
-    
-    // Chamar o método para adicionar observação
-    $resultado = $associados->adicionarObservacao($dados);
+    if ($isEdicao) {
+        // ========== EDITAR OBSERVAÇÃO EXISTENTE ==========
+        $dados = [
+            'observacao' => $input['observacao'],
+            'categoria' => $input['categoria'] ?? 'geral',
+            'prioridade' => $input['prioridade'] ?? 'media',
+            'importante' => $input['importante'] ?? 0
+        ];
+        
+        $resultado = $associados->atualizarObservacao($input['id'], $dados);
+        $mensagem = 'Observação atualizada com sucesso';
+        
+    } else {
+        // ========== CRIAR NOVA OBSERVAÇÃO ==========
+        $dados = [
+            'associado_id' => $input['associado_id'],
+            'observacao' => $input['observacao'],
+            'categoria' => $input['categoria'] ?? 'geral',
+            'prioridade' => $input['prioridade'] ?? 'media',
+            'importante' => $input['importante'] ?? 0
+        ];
+        
+        $resultado = $associados->adicionarObservacao($dados);
+        $mensagem = 'Observação criada com sucesso';
+    }
     
     if ($resultado) {
         echo json_encode([
             'status' => 'success',
-            'message' => 'Observação salva com sucesso',
-            'data' => $resultado
+            'message' => $mensagem,
+            'data' => $resultado,
+            'operacao' => $isEdicao ? 'update' : 'insert'
         ], JSON_UNESCAPED_UNICODE);
     } else {
-        throw new Exception('Erro ao salvar observação');
+        throw new Exception('Erro ao processar observação');
     }
     
 } catch (Exception $e) {
