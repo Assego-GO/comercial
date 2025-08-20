@@ -118,7 +118,7 @@ try {
     }
 
     // Cria diretório de upload se não existir
-    $baseDir = '../../uploads/documentos';
+    $baseDir = '../../uploads/anexos';
     $associadoDir = $baseDir . '/' . $associadoId;
     
     if (!is_dir($baseDir)) {
@@ -208,7 +208,7 @@ try {
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ");
 
-    $caminhoRelativo = 'uploads/documentos/' . $associadoId . '/' . $nomeArquivo;
+    $caminhoRelativo = 'uploads/anexos/' . $associadoId . '/' . $nomeArquivo;
 
     $result = $stmt->execute([
         $associadoId,
