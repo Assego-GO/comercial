@@ -239,23 +239,23 @@ $headerComponent = HeaderComponent::create([
 
         .content-area {
             flex: 1;
-            padding: 2rem;
+            padding: 1.5rem;
             margin-left: 0;
             transition: margin-left 0.3s ease;
         }
 
-        /* Page Header */
+        /* Page Header - Mais compacto */
         .page-header {
             background: white;
-            border-radius: 15px;
-            padding: 2rem;
-            margin-bottom: 2rem;
-            box-shadow: 0 4px 20px rgba(44, 90, 160, 0.1);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 10px rgba(44, 90, 160, 0.08);
             border-left: 4px solid var(--primary);
         }
 
         .page-title {
-            font-size: 2rem;
+            font-size: 1.75rem;
             font-weight: 700;
             color: var(--primary);
             margin: 0;
@@ -264,10 +264,10 @@ $headerComponent = HeaderComponent::create([
         }
 
         .page-title-icon {
-            width: 60px;
-            height: 60px;
+            width: 50px;
+            height: 50px;
             background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
-            border-radius: 15px;
+            border-radius: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -276,35 +276,35 @@ $headerComponent = HeaderComponent::create([
 
         .page-title-icon i {
             color: white;
-            font-size: 1.8rem;
+            font-size: 1.5rem;
         }
 
         .page-subtitle {
             color: var(--secondary);
             margin: 0.5rem 0 0;
-            font-size: 1rem;
+            font-size: 0.95rem;
         }
 
-        /* Stats Grid */
+        /* Stats Grid - Mais compacto */
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 2rem;
-            margin-bottom: 2rem;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
         }
 
         .stat-card {
             background: white;
-            border-radius: 15px;
-            padding: 2rem;
-            box-shadow: 0 4px 20px rgba(44, 90, 160, 0.1);
+            border-radius: 12px;
+            padding: 1.25rem;
+            box-shadow: 0 2px 10px rgba(44, 90, 160, 0.08);
             transition: transform 0.3s ease, box-shadow 0.3s ease;
             border-left: 4px solid transparent;
         }
 
         .stat-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 25px rgba(44, 90, 160, 0.15);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(44, 90, 160, 0.12);
         }
 
         .stat-card.primary { border-left-color: var(--primary); }
@@ -319,15 +319,15 @@ $headerComponent = HeaderComponent::create([
         }
 
         .stat-value {
-            font-size: 2.5rem;
+            font-size: 2rem;
             font-weight: 800;
             color: var(--dark);
             line-height: 1;
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.25rem;
         }
 
         .stat-label {
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             font-weight: 600;
             color: var(--secondary);
             text-transform: uppercase;
@@ -335,8 +335,8 @@ $headerComponent = HeaderComponent::create([
         }
 
         .stat-change {
-            font-size: 0.8rem;
-            margin-top: 0.5rem;
+            font-size: 0.75rem;
+            margin-top: 0.25rem;
             display: flex;
             align-items: center;
             gap: 0.25rem;
@@ -366,46 +366,48 @@ $headerComponent = HeaderComponent::create([
         .services-container {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 2rem;
-            margin-bottom: 2rem;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
         }
 
         .service-section {
             background: white;
-            border-radius: 15px;
-            box-shadow: 0 4px 20px rgba(44, 90, 160, 0.1);
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(44, 90, 160, 0.08);
             overflow: hidden;
+            height: fit-content;
         }
 
         .service-header {
             background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
             color: white;
-            padding: 1.5rem 2rem;
+            padding: 1rem 1.5rem;
         }
 
         .service-header h3 {
             margin: 0;
             font-weight: 600;
+            font-size: 1.1rem;
             display: flex;
             align-items: center;
         }
 
         .service-header i {
-            margin-right: 0.75rem;
-            font-size: 1.5rem;
+            margin-right: 0.5rem;
+            font-size: 1.25rem;
         }
 
         .service-content {
-            padding: 2rem;
+            padding: 1.5rem;
         }
 
         /* Seção de Desfiliação */
         .busca-form {
             display: flex;
-            gap: 1rem;
+            gap: 0.75rem;
             align-items: end;
             flex-wrap: wrap;
-            margin-bottom: 2rem;
+            margin-bottom: 1rem;
         }
 
         .busca-input-group {
@@ -416,14 +418,15 @@ $headerComponent = HeaderComponent::create([
         .form-label {
             font-weight: 600;
             color: var(--dark);
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.375rem;
+            font-size: 0.9rem;
         }
 
         .form-control {
-            border-radius: 8px;
+            border-radius: 6px;
             border: 2px solid #e9ecef;
-            padding: 0.75rem 1rem;
-            font-size: 1rem;
+            padding: 0.5rem 0.75rem;
+            font-size: 0.9rem;
             transition: all 0.3s ease;
         }
 
@@ -435,9 +438,10 @@ $headerComponent = HeaderComponent::create([
         .btn-primary {
             background: var(--primary);
             border-color: var(--primary);
-            border-radius: 8px;
-            padding: 0.75rem 2rem;
+            border-radius: 6px;
+            padding: 0.5rem 1rem;
             font-weight: 600;
+            font-size: 0.9rem;
             transition: all 0.3s ease;
         }
 
@@ -449,9 +453,10 @@ $headerComponent = HeaderComponent::create([
         .btn-secondary {
             background: var(--secondary);
             border-color: var(--secondary);
-            border-radius: 8px;
-            padding: 0.75rem 2rem;
+            border-radius: 6px;
+            padding: 0.5rem 1rem;
             font-weight: 600;
+            font-size: 0.9rem;
             transition: all 0.3s ease;
         }
 
@@ -467,9 +472,9 @@ $headerComponent = HeaderComponent::create([
 
         .associado-card {
             border: 2px solid #e9ecef;
-            border-radius: 12px;
-            padding: 1.5rem;
-            margin-bottom: 1rem;
+            border-radius: 10px;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
             cursor: pointer;
             transition: all 0.3s ease;
             background: white;
@@ -477,8 +482,8 @@ $headerComponent = HeaderComponent::create([
 
         .associado-card:hover {
             border-color: var(--primary);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 15px rgba(0, 86, 210, 0.15);
+            transform: translateY(-1px);
+            box-shadow: 0 2px 10px rgba(0, 86, 210, 0.12);
         }
 
         .associado-card.selecionado {
@@ -487,8 +492,8 @@ $headerComponent = HeaderComponent::create([
         }
 
         .associado-foto {
-            width: 80px;
-            height: 80px;
+            width: 60px;
+            height: 60px;
             border-radius: 50%;
             object-fit: cover;
             border: 3px solid #e9ecef;
@@ -548,65 +553,73 @@ $headerComponent = HeaderComponent::create([
             color: #616161;
         }
 
-        /* Seção de Cadastro */
+        /* Seção de Cadastro - Nova estrutura compacta */
         .cadastro-options {
             display: grid;
-            gap: 1.5rem;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1rem;
         }
 
         .cadastro-option {
-            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-            border-radius: 12px;
-            padding: 2rem;
-            border: 2px solid transparent;
+            background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+            border-radius: 10px;
+            padding: 1.25rem;
+            border: 2px solid #e9ecef;
             transition: all 0.3s ease;
             cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            min-height: 80px;
         }
 
         .cadastro-option:hover {
             border-color: var(--primary);
             transform: translateY(-2px);
             background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+            box-shadow: 0 4px 15px rgba(0, 86, 210, 0.15);
         }
 
         .cadastro-option-icon {
-            width: 60px;
-            height: 60px;
+            width: 50px;
+            height: 50px;
             border-radius: 50%;
             background: var(--primary);
             color: white;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.5rem;
-            margin-bottom: 1rem;
+            font-size: 1.25rem;
+            flex-shrink: 0;
         }
 
-        .cadastro-option h5 {
+        .cadastro-option-content h5 {
+            margin: 0 0 0.25rem 0;
+            font-size: 1rem;
             font-weight: 600;
             color: var(--dark);
-            margin-bottom: 0.5rem;
         }
 
-        .cadastro-option p {
-            color: var(--secondary);
+        .cadastro-option-content p {
             margin: 0;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
+            color: var(--secondary);
+            line-height: 1.3;
         }
 
         /* Alert personalizado */
         .alert-custom {
-            border-radius: 12px;
+            border-radius: 10px;
             border: none;
-            padding: 1.5rem;
-            margin-bottom: 2rem;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
             display: flex;
             align-items: center;
         }
 
         .alert-custom i {
-            font-size: 1.5rem;
-            margin-right: 1rem;
+            font-size: 1.25rem;
+            margin-right: 0.75rem;
         }
 
         .alert-info-custom {
@@ -630,36 +643,36 @@ $headerComponent = HeaderComponent::create([
         /* Dados do associado */
         .dados-associado-container {
             background: #f8f9fa;
-            border-radius: 12px;
-            padding: 2rem;
-            margin-top: 2rem;
+            border-radius: 10px;
+            padding: 1.25rem;
+            margin-top: 1rem;
             border: 2px solid #e9ecef;
         }
 
         .dados-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 1rem;
-            margin-bottom: 2rem;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 0.75rem;
+            margin-bottom: 1rem;
         }
 
         .dados-item {
             background: white;
-            border-radius: 8px;
-            padding: 1rem;
-            border-left: 4px solid var(--primary);
+            border-radius: 6px;
+            padding: 0.75rem;
+            border-left: 3px solid var(--primary);
             transition: all 0.3s ease;
         }
 
         .dados-item:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 15px rgba(44, 90, 160, 0.1);
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(44, 90, 160, 0.08);
         }
 
         .dados-label {
             font-weight: 600;
             color: var(--secondary);
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             margin-bottom: 0.25rem;
             text-transform: uppercase;
             letter-spacing: 0.5px;
@@ -667,7 +680,7 @@ $headerComponent = HeaderComponent::create([
 
         .dados-value {
             color: var(--dark);
-            font-size: 1rem;
+            font-size: 0.9rem;
             font-weight: 500;
             word-break: break-word;
         }
@@ -744,20 +757,20 @@ $headerComponent = HeaderComponent::create([
         /* Ficha de Desfiliação */
         .ficha-desfiliacao-container {
             background: white;
-            border-radius: 15px;
-            margin-top: 2rem;
-            box-shadow: 0 4px 20px rgba(44, 90, 160, 0.1);
+            border-radius: 12px;
+            margin-top: 1.5rem;
+            box-shadow: 0 2px 10px rgba(44, 90, 160, 0.08);
             overflow: hidden;
         }
 
         .ficha-header-container {
             background: linear-gradient(135deg, var(--success) 0%, #20c997 100%);
             color: white;
-            padding: 1.5rem 2rem;
+            padding: 1rem 1.5rem;
         }
 
         .ficha-content {
-            padding: 3rem;
+            padding: 2rem;
         }
 
         .ficha-desfiliacao {
@@ -822,7 +835,7 @@ $headerComponent = HeaderComponent::create([
         }
 
         .ficha-actions {
-            padding: 2rem;
+            padding: 1.5rem;
             background: #f8f9fa;
             border-top: 1px solid #dee2e6;
             text-align: center;
@@ -832,10 +845,10 @@ $headerComponent = HeaderComponent::create([
             background: var(--success);
             color: white;
             border: none;
-            border-radius: 8px;
-            padding: 1rem 3rem;
+            border-radius: 6px;
+            padding: 0.75rem 2rem;
             font-weight: 600;
-            font-size: 1.1rem;
+            font-size: 1rem;
             transition: all 0.3s ease;
             margin-right: 1rem;
         }
@@ -849,10 +862,10 @@ $headerComponent = HeaderComponent::create([
             background: var(--danger);
             color: white;
             border: none;
-            border-radius: 8px;
-            padding: 1rem 3rem;
+            border-radius: 6px;
+            padding: 0.75rem 2rem;
             font-weight: 600;
-            font-size: 1.1rem;
+            font-size: 1rem;
             transition: all 0.3s ease;
         }
 
@@ -871,9 +884,38 @@ $headerComponent = HeaderComponent::create([
         }
 
         /* Responsivo */
+        @media (max-width: 1200px) {
+            .cadastro-options {
+                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            }
+        }
+
         @media (max-width: 768px) {
             .services-container {
                 grid-template-columns: 1fr;
+            }
+            
+            .cadastro-options {
+                grid-template-columns: 1fr;
+            }
+            
+            .cadastro-option {
+                flex-direction: column;
+                text-align: center;
+                min-height: auto;
+                padding: 1rem;
+            }
+            
+            .cadastro-option-icon {
+                margin-bottom: 0.5rem;
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            }
+            
+            .content-area {
+                padding: 1rem;
             }
             
             .busca-form {
@@ -886,7 +928,7 @@ $headerComponent = HeaderComponent::create([
             }
             
             .ficha-content {
-                padding: 2rem 1.5rem;
+                padding: 1.5rem;
             }
         }
 
@@ -1067,7 +1109,7 @@ $headerComponent = HeaderComponent::create([
                         </h3>
                     </div>
                     <div class="service-content" style="position: relative;">
-                        <p class="text-muted mb-3">
+                        <p class="text-muted mb-3" style="font-size: 0.9rem;">
                             Busque um associado pelo RG militar ou nome e gere automaticamente a ficha de desfiliação. Sistema preparado para múltiplos RGs de diferentes corporações.
                         </p>
                         
@@ -1085,13 +1127,13 @@ $headerComponent = HeaderComponent::create([
                             </div>
                             <div>
                                 <button type="submit" class="btn btn-primary" id="btnBuscarComercial">
-                                    <i class="fas fa-search me-2"></i>
-                                    Buscar Associado
+                                    <i class="fas fa-search me-1"></i>
+                                    Buscar
                                 </button>
                             </div>
                             <div>
                                 <button type="button" class="btn btn-secondary" onclick="limparBuscaComercial()">
-                                    <i class="fas fa-eraser me-2"></i>
+                                    <i class="fas fa-eraser me-1"></i>
                                     Limpar
                                 </button>
                             </div>
@@ -1143,7 +1185,7 @@ $headerComponent = HeaderComponent::create([
                         </h3>
                     </div>
                     <div class="service-content">
-                        <p class="text-muted mb-4">
+                        <p class="text-muted mb-4" style="font-size: 0.9rem;">
                             Inicie novos cadastros de associados ou gerencie pré-cadastros existentes.
                         </p>
                         
@@ -1152,32 +1194,40 @@ $headerComponent = HeaderComponent::create([
                                 <div class="cadastro-option-icon">
                                     <i class="fas fa-user-plus"></i>
                                 </div>
-                                <h5>Nova Filiação</h5>
-                                <p>Inicie um nova filiação de associado com formulário completo</p>
+                                <div class="cadastro-option-content">
+                                    <h5>Nova Filiação</h5>
+                                    <p>Inicie um nova filiação de associado com formulário completo</p>
+                                </div>
                             </div>
 
                             <div class="cadastro-option" onclick="consultarAssociado()">
                                 <div class="cadastro-option-icon">
                                     <i class="fas fa-search"></i>
                                 </div>
-                                <h5>Consultar Associado</h5>
-                                <p>Busque e consulte dados de associados existentes</p>
+                                <div class="cadastro-option-content">
+                                    <h5>Consultar Associado</h5>
+                                    <p>Busque e consulte dados de associados existentes</p>
+                                </div>
                             </div>
 
                             <div class="cadastro-option" onclick="consultarDependentes18()">
                                 <div class="cadastro-option-icon">
                                     <i class="fas fa-birthday-cake"></i>
                                 </div>
-                                <h5>Dependentes 18+</h5>
-                                <p>Veja os dependentes que já completaram ou estão prestes a completar 18 anos</p>
+                                <div class="cadastro-option-content">
+                                    <h5>Dependentes 18+</h5>
+                                    <p>Veja os dependentes que já completaram ou estão prestes a completar 18 anos</p>
+                                </div>
                             </div>
 
                             <div class="cadastro-option" onclick="relatoriosComerciais()">
                                 <div class="cadastro-option-icon">
                                     <i class="fas fa-chart-bar"></i>
                                 </div>
-                                <h5>Relatórios Comerciais</h5>
-                                <p>Visualize estatísticas e relatórios do setor comercial</p>
+                                <div class="cadastro-option-content">
+                                    <h5>Relatórios Comerciais</h5>
+                                    <p>Visualize estatísticas e relatórios do setor comercial</p>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1385,26 +1435,14 @@ $headerComponent = HeaderComponent::create([
         const isPresidencia = <?php echo json_encode($isPresidencia); ?>;
         const departamentoUsuario = <?php echo json_encode($departamentoUsuario); ?>;
 
-        // ===== IMPORTANTE: API UTILIZADA =====
-        // Este módulo comercial utiliza a API atualizada buscar_por_rg.php que agora possui:
-        // - Suporte a múltiplos RGs de diferentes corporações  
-        // - Retorno de dados completos (pessoais, militares, endereço, financeiros)
-        // - Tratamento de múltiplos resultados com status 'multiple_results'
-        // - Busca por RG, CPF, nome ou ID específico
-        // - Sistema de alertas e dados estruturados
-        // - Compatibilidade total com o sistema de múltiplos associados
-        // 
-        // A API foi atualizada especificamente para suportar essas funcionalidades avançadas.
-
         // ===== INICIALIZAÇÃO =====
         document.addEventListener('DOMContentLoaded', function() {
             AOS.init({ duration: 800, once: true });
 
             if (!temPermissao) {
                 console.log('❌ Usuário sem permissão - funcionalidades restritas, mas estatísticas visíveis');
-                // Note: Estatísticas são sempre visíveis, apenas funcionalidades são restritas
-                configurarEventos(); // Configura eventos básicos mesmo sem permissão
-                preencherDataAtual(); // Preenche data atual sempre
+                configurarEventos();
+                preencherDataAtual();
                 notifications.show('Acesso limitado - apenas visualização de estatísticas!', 'warning', 4000);
                 return;
             }
@@ -1415,7 +1453,6 @@ $headerComponent = HeaderComponent::create([
             configurarFichaDesfiliacao();
             <?php endif; ?>
 
-            // Event listener para Enter no campo de busca
             <?php if ($temPermissaoComercial): ?>
             $('#rgBuscaComercial').on('keypress', function(e) {
                 if (e.key === 'Enter') {
@@ -1424,7 +1461,6 @@ $headerComponent = HeaderComponent::create([
                 }
             });
 
-            // Event listener para o botão de confirmar seleção
             document.getElementById('btnConfirmarSelecaoComercial').addEventListener('click', buscarAssociadoSelecionado);
             <?php endif; ?>
 
@@ -1435,11 +1471,9 @@ $headerComponent = HeaderComponent::create([
 
         // ===== FUNÇÕES DE BUSCA (ATUALIZADAS PARA MÚLTIPLOS ASSOCIADOS) =====
 
-        // Buscar associado por RG - ATUALIZADA para suportar múltiplos resultados
         async function buscarAssociadoPorRG(event) {
             event.preventDefault();
             
-            // Verifica permissão
             if (!temPermissao) {
                 notifications.show('Você não tem permissão para buscar associados', 'error');
                 return;
@@ -1465,24 +1499,15 @@ $headerComponent = HeaderComponent::create([
             esconderAlertaBuscaComercial();
 
             try {
-                // IMPORTANTE: Usando a API atualizada buscar_por_rg.php que agora tem:
-                // - Lógica de múltiplos resultados quando há RGs iguais em diferentes corporações
-                // - Retorno de dados completos do associado (pessoais, militares, endereço, etc.)
-                // - Suporte a busca por RG, nome, CPF ou ID específico
-                // - Sistema de alertas e dados estruturados
-                
-                // Determina se é busca por RG ou nome
                 const parametro = isNaN(busca) ? 'nome' : 'rg';
                 const response = await fetch(`../api/associados/buscar_por_rg.php?${parametro}=${encodeURIComponent(busca)}`);
                 const result = await response.json();
 
                 if (result.status === 'multiple_results') {
-                    // Múltiplos resultados encontrados
                     listaAssociadosMultiplos = result.data;
                     mostrarModalSelecaoComercial(result.data);
                     mostrarAlertaBuscaComercial('Múltiplos associados encontrados. Por favor, selecione o correto.', 'warning');
                 } else if (result.status === 'success') {
-                    // Um único resultado
                     dadosAssociadoAtual = result.data;
                     exibirDadosAssociado(dadosAssociadoAtual);
                     preencherFichaDesfiliacao(dadosAssociadoAtual);
@@ -1492,7 +1517,6 @@ $headerComponent = HeaderComponent::create([
                     
                     mostrarAlertaBuscaComercial('Associado encontrado! Dados carregados e ficha preenchida automaticamente.', 'success');
                     
-                    // Scroll suave até os dados
                     setTimeout(() => {
                         dadosContainer.scrollIntoView({ 
                             behavior: 'smooth',
@@ -1512,7 +1536,6 @@ $headerComponent = HeaderComponent::create([
             }
         }
 
-        // NOVA FUNÇÃO - Mostrar modal de seleção
         function mostrarModalSelecaoComercial(associados) {
             const listaContainer = document.getElementById('listaAssociadosSelecaoComercial');
             listaContainer.innerHTML = '';
@@ -1522,7 +1545,6 @@ $headerComponent = HeaderComponent::create([
                 card.className = 'associado-card d-flex align-items-center';
                 card.dataset.id = assoc.id;
 
-                // Determina a classe do badge baseado na corporação
                 let badgeClass = 'badge-default';
                 let corporacaoIcon = 'fa-shield-alt';
 
@@ -1586,16 +1608,13 @@ $headerComponent = HeaderComponent::create([
                     </div>
                 `;
 
-                // Evento de clique no card
                 card.addEventListener('click', function() {
                     const radio = this.querySelector('input[type="radio"]');
                     radio.checked = true;
 
-                    // Remove seleção anterior
                     document.querySelectorAll('.associado-card').forEach(c => c.classList.remove('selecionado'));
                     this.classList.add('selecionado');
 
-                    // Habilita botão de confirmação
                     document.getElementById('btnConfirmarSelecaoComercial').disabled = false;
                     associadoSelecionadoId = assoc.id;
                 });
@@ -1603,20 +1622,16 @@ $headerComponent = HeaderComponent::create([
                 listaContainer.appendChild(card);
             });
 
-            // Mostra o modal
             const modal = new bootstrap.Modal(document.getElementById('modalSelecaoAssociadoComercial'));
             modal.show();
         }
 
-        // NOVA FUNÇÃO - Buscar associado selecionado
         async function buscarAssociadoSelecionado() {
             if (!associadoSelecionadoId || !temPermissao) return;
 
-            // Fecha o modal
             const modal = bootstrap.Modal.getInstance(document.getElementById('modalSelecaoAssociadoComercial'));
             modal.hide();
 
-            // Busca os dados do associado selecionado
             const loadingOverlay = document.getElementById('loadingBuscaComercial');
             const dadosContainer = document.getElementById('dadosAssociadoContainer');
             const fichaContainer = document.getElementById('fichaDesfiliacao');
@@ -1637,7 +1652,6 @@ $headerComponent = HeaderComponent::create([
                     
                     mostrarAlertaBuscaComercial('Dados carregados e ficha preenchida automaticamente!', 'success');
 
-                    // Scroll suave até os dados
                     setTimeout(() => {
                         dadosContainer.scrollIntoView({
                             behavior: 'smooth',
@@ -1652,13 +1666,11 @@ $headerComponent = HeaderComponent::create([
                 mostrarAlertaBuscaComercial('Erro ao consultar dados do associado.', 'danger');
             } finally {
                 loadingOverlay.style.display = 'none';
-                // Reset seleção
                 associadoSelecionadoId = null;
                 document.getElementById('btnConfirmarSelecaoComercial').disabled = true;
             }
         }
 
-        // Exibir dados do associado - ATUALIZADA
         function exibirDadosAssociado(dados) {
             const grid = document.getElementById('dadosAssociadoGrid');
             const militarContainer = document.getElementById('identificacaoMilitarComercial');
@@ -1667,7 +1679,6 @@ $headerComponent = HeaderComponent::create([
             grid.innerHTML = '';
             militarGrid.innerHTML = '';
 
-            // Exibe dados militares se existirem
             if (dados.dados_militares && dados.dados_militares.corporacao !== 'Não informada') {
                 militarContainer.style.display = 'block';
 
@@ -1693,7 +1704,6 @@ $headerComponent = HeaderComponent::create([
                 militarContainer.style.display = 'none';
             }
 
-            // Função auxiliar para criar item de dados
             function criarDadosItem(label, value, icone = 'fa-info') {
                 if (!value || value === 'null' || value === '') return '';
                 
@@ -1708,7 +1718,6 @@ $headerComponent = HeaderComponent::create([
                 `;
             }
 
-            // Dados pessoais
             const pessoais = dados.dados_pessoais || {};
             grid.innerHTML += criarDadosItem('Nome Completo', pessoais.nome, 'fa-user');
             grid.innerHTML += criarDadosItem('RG Militar', pessoais.rg, 'fa-id-card');
@@ -1717,14 +1726,12 @@ $headerComponent = HeaderComponent::create([
             grid.innerHTML += criarDadosItem('Email', pessoais.email, 'fa-envelope');
             grid.innerHTML += criarDadosItem('Telefone', formatarTelefone(pessoais.telefone), 'fa-phone');
 
-            // Dados militares
             const militares = dados.dados_militares || {};
             grid.innerHTML += criarDadosItem('Corporação', militares.corporacao, 'fa-shield-alt');
             grid.innerHTML += criarDadosItem('Patente', militares.patente, 'fa-medal');
             grid.innerHTML += criarDadosItem('Lotação', militares.lotacao, 'fa-building');
             grid.innerHTML += criarDadosItem('Unidade', militares.unidade, 'fa-map-marker-alt');
 
-            // Endereço
             const endereco = dados.endereco || {};
             if (endereco.endereco) {
                 const enderecoCompleto = [
@@ -1738,16 +1745,13 @@ $headerComponent = HeaderComponent::create([
             }
             grid.innerHTML += criarDadosItem('CEP', formatarCEP(endereco.cep), 'fa-map-pin');
 
-            // Dados financeiros
             const financeiros = dados.dados_financeiros || {};
             grid.innerHTML += criarDadosItem('Tipo Associado', financeiros.tipo_associado, 'fa-user-tag');
             grid.innerHTML += criarDadosItem('Situação Financeira', financeiros.situacao_financeira, 'fa-dollar-sign');
             
-            // Contrato
             const contrato = dados.contrato || {};
             grid.innerHTML += criarDadosItem('Data Filiação', formatarData(contrato.data_filiacao), 'fa-handshake');
             
-            // Status
             const statusBadge = dados.status_cadastro === 'PRE_CADASTRO' 
                 ? '<span class="badge bg-warning">Pré-cadastro</span>'
                 : '<span class="badge bg-success">Cadastro Definitivo</span>';
@@ -1764,7 +1768,6 @@ $headerComponent = HeaderComponent::create([
 
         // ===== FUNÇÕES DE DESFILIAÇÃO =====
 
-        // Preencher data atual
         function preencherDataAtual() {
             const hoje = new Date();
             const dia = hoje.getDate();
@@ -1775,39 +1778,48 @@ $headerComponent = HeaderComponent::create([
             const mes = meses[hoje.getMonth()];
             const ano = hoje.getFullYear();
 
-            document.getElementById('diaAtual').textContent = dia.toString().padStart(2, '0');
-            document.getElementById('mesAtual').textContent = mes;
-            document.getElementById('anoAtual').textContent = ano.toString();
+            const diaEl = document.getElementById('diaAtual');
+            const mesEl = document.getElementById('mesAtual');
+            const anoEl = document.getElementById('anoAtual');
+
+            if (diaEl) diaEl.textContent = dia.toString().padStart(2, '0');
+            if (mesEl) mesEl.textContent = mes;
+            if (anoEl) anoEl.textContent = ano.toString();
         }
 
-        // Preencher ficha de desfiliação
         function preencherFichaDesfiliacao(dados) {
-            // Dados pessoais
             const pessoais = dados.dados_pessoais || {};
-            document.getElementById('nomeCompleto').textContent = pessoais.nome || '';
-            document.getElementById('rgMilitar').textContent = pessoais.rg || '';
-            document.getElementById('telefoneFormatado').textContent = formatarTelefone(pessoais.telefone) || '';
+            const nomeEl = document.getElementById('nomeCompleto');
+            const rgEl = document.getElementById('rgMilitar');
+            const telefoneEl = document.getElementById('telefoneFormatado');
 
-            // Dados militares
+            if (nomeEl) nomeEl.textContent = pessoais.nome || '';
+            if (rgEl) rgEl.textContent = pessoais.rg || '';
+            if (telefoneEl) telefoneEl.textContent = formatarTelefone(pessoais.telefone) || '';
+
             const militares = dados.dados_militares || {};
-            document.getElementById('corporacao').textContent = militares.corporacao || '';
-            document.getElementById('lotacao').textContent = militares.lotacao || '';
+            const corpEl = document.getElementById('corporacao');
+            const lotacaoEl = document.getElementById('lotacao');
 
-            // Endereço
+            if (corpEl) corpEl.textContent = militares.corporacao || '';
+            if (lotacaoEl) lotacaoEl.textContent = militares.lotacao || '';
+
             const endereco = dados.endereco || {};
             const enderecoCompleto = montarEnderecoCompleto(endereco);
             
-            // Divide o endereço em até 3 linhas
             const linhas = quebrarEnderecoEmLinhas(enderecoCompleto);
-            document.getElementById('endereco1').textContent = linhas[0] || '';
-            document.getElementById('endereco2').textContent = linhas[1] || '';
-            document.getElementById('endereco3').textContent = linhas[2] || '';
+            const end1El = document.getElementById('endereco1');
+            const end2El = document.getElementById('endereco2');
+            const end3El = document.getElementById('endereco3');
 
-            // Limpa o motivo para o usuário digitar
-            document.getElementById('motivoDesfiliacao').textContent = '';
+            if (end1El) end1El.textContent = linhas[0] || '';
+            if (end2El) end2El.textContent = linhas[1] || '';
+            if (end3El) end3El.textContent = linhas[2] || '';
+
+            const motivoEl = document.getElementById('motivoDesfiliacao');
+            if (motivoEl) motivoEl.textContent = '';
         }
 
-        // Montar endereço completo
         function montarEnderecoCompleto(endereco) {
             const partes = [];
             
@@ -1831,7 +1843,6 @@ $headerComponent = HeaderComponent::create([
             return partes.join(', ');
         }
 
-        // Quebrar endereço em linhas
         function quebrarEnderecoEmLinhas(enderecoCompleto, maxPorLinha = 60) {
             if (!enderecoCompleto) return ['', '', ''];
             
@@ -1854,7 +1865,6 @@ $headerComponent = HeaderComponent::create([
             
             if (linhaAtual) linhas.push(linhaAtual);
             
-            // Garante 3 linhas
             while (linhas.length < 3) {
                 linhas.push('');
             }
@@ -1862,12 +1872,9 @@ $headerComponent = HeaderComponent::create([
             return linhas.slice(0, 3);
         }
 
-        // Configurar ficha de desfiliação
         function configurarFichaDesfiliacao() {
-            // Só configura se tiver permissão e os elementos existirem
             if (!temPermissao) return;
             
-            // Limpar placeholder do motivo ao clicar
             const motivoArea = document.getElementById('motivoDesfiliacao');
             
             if (motivoArea) {
@@ -1877,7 +1884,6 @@ $headerComponent = HeaderComponent::create([
                     }
                 });
 
-                // Restaurar placeholder se vazio
                 motivoArea.addEventListener('blur', function() {
                     if (this.textContent.trim() === '') {
                         this.textContent = 'Clique aqui para digitar o motivo da desfiliação...';
@@ -1886,22 +1892,28 @@ $headerComponent = HeaderComponent::create([
             }
         }
 
-        // Limpar busca comercial
         function limparBuscaComercial() {
             if (!temPermissao) {
                 notifications.show('Você não tem permissão para esta funcionalidade', 'error');
                 return;
             }
-            document.getElementById('rgBuscaComercial').value = '';
-            document.getElementById('dadosAssociadoContainer').style.display = 'none';
-            document.getElementById('fichaDesfiliacao').style.display = 'none';
-            document.getElementById('dadosAssociadoGrid').innerHTML = '';
-            document.getElementById('identificacaoMilitarComercial').style.display = 'none';
+            
+            const rgInput = document.getElementById('rgBuscaComercial');
+            const dadosContainer = document.getElementById('dadosAssociadoContainer');
+            const fichaContainer = document.getElementById('fichaDesfiliacao');
+            const dadosGrid = document.getElementById('dadosAssociadoGrid');
+            const militarContainer = document.getElementById('identificacaoMilitarComercial');
+
+            if (rgInput) rgInput.value = '';
+            if (dadosContainer) dadosContainer.style.display = 'none';
+            if (fichaContainer) fichaContainer.style.display = 'none';
+            if (dadosGrid) dadosGrid.innerHTML = '';
+            if (militarContainer) militarContainer.style.display = 'none';
+            
             dadosAssociadoAtual = null;
             associadoSelecionadoId = null;
             esconderAlertaBuscaComercial();
 
-            // Limpa campos da ficha
             const campos = [
                 'nomeCompleto', 'rgMilitar', 'corporacao', 'endereco1', 
                 'endereco2', 'endereco3', 'telefoneFormatado', 'lotacao'
@@ -1912,27 +1924,22 @@ $headerComponent = HeaderComponent::create([
                 if (elemento) elemento.textContent = '';
             });
             
-            // Restaura placeholder do motivo
             const motivoArea = document.getElementById('motivoDesfiliacao');
             if (motivoArea) {
                 motivoArea.textContent = 'Clique aqui para digitar o motivo da desfiliação...';
             }
         }
 
-        // Mostrar alerta de busca comercial
         function mostrarAlertaBuscaComercial(mensagem, tipo) {
             const alertDiv = document.getElementById('alertBuscaComercial');
             const alertText = document.getElementById('alertBuscaComercialText');
             
-            // Só mostra se os elementos existirem (ou seja, se tiver permissão)
             if (!alertDiv || !alertText) return;
             
             alertText.textContent = mensagem;
             
-            // Remove classes anteriores
             alertDiv.className = 'alert';
             
-            // Adiciona classe baseada no tipo
             switch (tipo) {
                 case 'success':
                     alertDiv.classList.add('alert-success');
@@ -1950,13 +1957,11 @@ $headerComponent = HeaderComponent::create([
             
             alertDiv.style.display = 'flex';
             
-            // Auto-hide após 5 segundos se for sucesso
             if (tipo === 'success') {
                 setTimeout(esconderAlertaBuscaComercial, 5000);
             }
         }
 
-        // Esconder alerta de busca comercial
         function esconderAlertaBuscaComercial() {
             const alertDiv = document.getElementById('alertBuscaComercial');
             if (alertDiv) {
@@ -1964,17 +1969,19 @@ $headerComponent = HeaderComponent::create([
             }
         }
 
-        // Imprimir ficha
         function imprimirFicha() {
             if (!temPermissao) {
                 notifications.show('Você não tem permissão para esta funcionalidade', 'error');
                 return;
             }
             
-            // Verifica se os campos obrigatórios estão preenchidos
-            const nome = document.getElementById('nomeCompleto')?.textContent?.trim();
-            const rg = document.getElementById('rgMilitar')?.textContent?.trim();
-            const motivo = document.getElementById('motivoDesfiliacao')?.textContent?.trim();
+            const nomeEl = document.getElementById('nomeCompleto');
+            const rgEl = document.getElementById('rgMilitar');
+            const motivoEl = document.getElementById('motivoDesfiliacao');
+            
+            const nome = nomeEl?.textContent?.trim();
+            const rg = rgEl?.textContent?.trim();
+            const motivo = motivoEl?.textContent?.trim();
             
             if (!nome || !rg) {
                 mostrarAlertaBuscaComercial('Por favor, busque um associado antes de imprimir.', 'danger');
@@ -1989,7 +1996,6 @@ $headerComponent = HeaderComponent::create([
             window.print();
         }
 
-        // Gerar PDF
         function gerarPDFFicha() {
             if (!temPermissao) {
                 notifications.show('Você não tem permissão para esta funcionalidade', 'error');
@@ -2000,7 +2006,6 @@ $headerComponent = HeaderComponent::create([
 
         // ===== FUNÇÕES DE CADASTRO =====
 
-        // Novo pré-cadastro
         function novoPreCadastro() {
             if (!temPermissao) {
                 notifications.show('Você não tem permissão para esta funcionalidade', 'error');
@@ -2012,7 +2017,6 @@ $headerComponent = HeaderComponent::create([
             }, 1000);
         }
 
-        // Consultar associado
         function consultarAssociado() {
             if (!temPermissao) {
                 notifications.show('Você não tem permissão para esta funcionalidade', 'error');
@@ -2024,7 +2028,6 @@ $headerComponent = HeaderComponent::create([
             }, 1000);
         }
 
-        // Consultar dependentes com 18 anos
         function consultarDependentes18() {
             if (!temPermissao) {
                 notifications.show('Você não tem permissão para esta funcionalidade', 'error');
@@ -2036,7 +2039,6 @@ $headerComponent = HeaderComponent::create([
             }, 1000);
         }
 
-        // Relatórios comerciais
         function relatoriosComerciais() {
             if (!temPermissao) {
                 notifications.show('Você não tem permissão para esta funcionalidade', 'error');
@@ -2050,12 +2052,10 @@ $headerComponent = HeaderComponent::create([
 
         // ===== FUNÇÕES AUXILIARES =====
 
-        // Configurar eventos
         function configurarEventos() {
             // Outros event listeners se necessário
         }
 
-        // Funções auxiliares de formatação
         function formatarCPF(cpf) {
             if (!cpf) return '';
             cpf = cpf.toString().replace(/\D/g, '');
@@ -2095,7 +2095,6 @@ $headerComponent = HeaderComponent::create([
             }
         }
 
-        // Log de inicialização
         console.log('✓ Sistema de Serviços Comerciais carregado com sucesso!');
         console.log(`🏢 Departamento: ${isComercial ? 'Comercial (ID: 10)' : isPresidencia ? 'Presidência (ID: 1)' : 'Outro'}`);
         console.log(`🔐 Funcionalidades: ${temPermissao ? 'Liberadas' : 'Restritas'}`);

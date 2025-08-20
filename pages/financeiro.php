@@ -66,8 +66,6 @@ if (isset($usuarioLogado['departamento_id'])) {
     error_log("❌ departamento_id não existe no array do usuário");
 }
 
-
-
 // Log final do resultado
 if (!$temPermissaoFinanceiro) {
     error_log("❌ ACESSO NEGADO AOS SERVIÇOS FINANCEIROS: " . $motivoNegacao);
@@ -75,15 +73,10 @@ if (!$temPermissaoFinanceiro) {
     error_log("✅ ACESSO PERMITIDO - Usuário " . ($isFinanceiro ? 'do Financeiro' : 'da Presidência'));
 }
 
-
-// No arquivo financeiro.php, substitua a seção de busca de estatísticas (linhas ~128-165) por:
-
-
 // Busca estatísticas do setor financeiro (apenas se tem permissão)
 if ($temPermissaoFinanceiro) {
     try {
         $db = Database::getInstance(DB_NAME_CADASTRO)->getConnection();
-
 
         // 1. Total de associados ativos (igual ao dashboard)
         $sql = "SELECT COUNT(DISTINCT a.id) as total 
@@ -103,7 +96,6 @@ if ($temPermissaoFinanceiro) {
         $stmt->execute();
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
         $arrecadacaoMes = floatval($result['valor_mes'] ?? 0);
-
 
         error_log("Arrecadação mensal total: R$ " . $arrecadacaoMes);
 
@@ -140,7 +132,6 @@ if ($temPermissaoFinanceiro) {
         error_log("Associados inadimplentes: " . $associadosInadimplentes);
 
         // OPCIONAL: Se quiser calcular a arrecadação REAL do mês (pagamentos efetivos)
-        // Isso seria diferente da arrecadação POTENCIAL calculada acima
         try {
             $sql = "SELECT COALESCE(SUM(valor_pagamento), 0) as valor_mes_real 
                     FROM Pagamentos 
@@ -181,7 +172,6 @@ error_log("Associados Ativos: " . $totalAssociadosAtivos);
 error_log("Arrecadação do Mês: R$ " . $arrecadacaoMes);
 error_log("Pagamentos Hoje: " . $pagamentosHoje);
 error_log("Inadimplentes: " . $associadosInadimplentes);
-
 
 // Cria instância do Header Component
 $headerComponent = HeaderComponent::create([
@@ -251,23 +241,23 @@ $headerComponent = HeaderComponent::create([
 
         .content-area {
             flex: 1;
-            padding: 2rem;
+            padding: 1.5rem;
             margin-left: 0;
             transition: margin-left 0.3s ease;
         }
 
-        /* Page Header */
+        /* Page Header - Mais compacto */
         .page-header {
             background: white;
-            border-radius: 15px;
-            padding: 2rem;
-            margin-bottom: 2rem;
-            box-shadow: 0 4px 20px rgba(44, 90, 160, 0.1);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 10px rgba(44, 90, 160, 0.08);
             border-left: 4px solid var(--primary);
         }
 
         .page-title {
-            font-size: 2rem;
+            font-size: 1.75rem;
             font-weight: 700;
             color: var(--primary);
             margin: 0;
@@ -276,10 +266,10 @@ $headerComponent = HeaderComponent::create([
         }
 
         .page-title-icon {
-            width: 60px;
-            height: 60px;
+            width: 50px;
+            height: 50px;
             background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
-            border-radius: 15px;
+            border-radius: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -288,35 +278,35 @@ $headerComponent = HeaderComponent::create([
 
         .page-title-icon i {
             color: white;
-            font-size: 1.8rem;
+            font-size: 1.5rem;
         }
 
         .page-subtitle {
             color: var(--secondary);
             margin: 0.5rem 0 0;
-            font-size: 1rem;
+            font-size: 0.95rem;
         }
 
-        /* Stats Grid */
+        /* Stats Grid - Mais compacto */
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 2rem;
-            margin-bottom: 2rem;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
         }
 
         .stat-card {
             background: white;
-            border-radius: 15px;
-            padding: 2rem;
-            box-shadow: 0 4px 20px rgba(40, 167, 69, 0.1);
+            border-radius: 12px;
+            padding: 1.25rem;
+            box-shadow: 0 2px 10px rgba(40, 167, 69, 0.08);
             transition: transform 0.3s ease, box-shadow 0.3s ease;
             border-left: 4px solid transparent;
         }
 
         .stat-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 25px rgba(40, 167, 69, 0.15);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(40, 167, 69, 0.12);
         }
 
         .stat-card.primary {
@@ -342,15 +332,15 @@ $headerComponent = HeaderComponent::create([
         }
 
         .stat-value {
-            font-size: 2.5rem;
+            font-size: 2rem;
             font-weight: 800;
             color: var(--dark);
             line-height: 1;
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.25rem;
         }
 
         .stat-label {
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             font-weight: 600;
             color: var(--secondary);
             text-transform: uppercase;
@@ -358,8 +348,8 @@ $headerComponent = HeaderComponent::create([
         }
 
         .stat-change {
-            font-size: 0.8rem;
-            margin-top: 0.5rem;
+            font-size: 0.75rem;
+            margin-top: 0.25rem;
             display: flex;
             align-items: center;
             gap: 0.25rem;
@@ -412,46 +402,48 @@ $headerComponent = HeaderComponent::create([
         .services-container {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 2rem;
-            margin-bottom: 2rem;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
         }
 
         .service-section {
             background: white;
-            border-radius: 15px;
-            box-shadow: 0 4px 20px rgba(40, 167, 69, 0.1);
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(40, 167, 69, 0.08);
             overflow: hidden;
+            height: fit-content;
         }
 
         .service-header {
             background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
             color: white;
-            padding: 1.5rem 2rem;
+            padding: 1rem 1.5rem;
         }
 
         .service-header h3 {
             margin: 0;
             font-weight: 600;
+            font-size: 1.1rem;
             display: flex;
             align-items: center;
         }
 
         .service-header i {
-            margin-right: 0.75rem;
-            font-size: 1.5rem;
+            margin-right: 0.5rem;
+            font-size: 1.25rem;
         }
 
         .service-content {
-            padding: 2rem;
+            padding: 1.5rem;
         }
 
         /* Seção de Gestão Financeira */
         .busca-form {
             display: flex;
-            gap: 1rem;
+            gap: 0.75rem;
             align-items: end;
             flex-wrap: wrap;
-            margin-bottom: 2rem;
+            margin-bottom: 1rem;
         }
 
         .busca-input-group {
@@ -462,14 +454,15 @@ $headerComponent = HeaderComponent::create([
         .form-label {
             font-weight: 600;
             color: var(--dark);
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.375rem;
+            font-size: 0.9rem;
         }
 
         .form-control {
-            border-radius: 8px;
+            border-radius: 6px;
             border: 2px solid #e9ecef;
-            padding: 0.75rem 1rem;
-            font-size: 1rem;
+            padding: 0.5rem 0.75rem;
+            font-size: 0.9rem;
             transition: all 0.3s ease;
         }
 
@@ -481,9 +474,10 @@ $headerComponent = HeaderComponent::create([
         .btn-primary {
             background: var(--primary);
             border-color: var(--primary);
-            border-radius: 8px;
-            padding: 0.75rem 2rem;
+            border-radius: 6px;
+            padding: 0.5rem 1rem;
             font-weight: 600;
+            font-size: 0.9rem;
             transition: all 0.3s ease;
         }
 
@@ -495,25 +489,26 @@ $headerComponent = HeaderComponent::create([
         .btn-secondary {
             background: var(--secondary);
             border-color: var(--secondary);
-            border-radius: 8px;
-            padding: 0.75rem 2rem;
+            border-radius: 6px;
+            padding: 0.5rem 1rem;
             font-weight: 600;
+            font-size: 0.9rem;
             transition: all 0.3s ease;
         }
 
         /* Alert personalizado */
         .alert-custom {
-            border-radius: 12px;
+            border-radius: 10px;
             border: none;
-            padding: 1.5rem;
-            margin-bottom: 2rem;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
             display: flex;
             align-items: center;
         }
 
         .alert-custom i {
-            font-size: 1.5rem;
-            margin-right: 1rem;
+            font-size: 1.25rem;
+            margin-right: 0.75rem;
         }
 
         .alert-info-custom {
@@ -525,36 +520,36 @@ $headerComponent = HeaderComponent::create([
         /* Dados financeiros */
         .dados-financeiros-container {
             background: #f8f9fa;
-            border-radius: 12px;
-            padding: 2rem;
-            margin-top: 2rem;
+            border-radius: 10px;
+            padding: 1.25rem;
+            margin-top: 1rem;
             border: 2px solid #e9ecef;
         }
 
         .dados-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 1rem;
-            margin-bottom: 2rem;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 0.75rem;
+            margin-bottom: 1rem;
         }
 
         .dados-item {
             background: white;
-            border-radius: 8px;
-            padding: 1rem;
-            border-left: 4px solid var(--primary);
+            border-radius: 6px;
+            padding: 0.75rem;
+            border-left: 3px solid var(--primary);
             transition: all 0.3s ease;
         }
 
         .dados-item:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 15px rgba(40, 167, 69, 0.1);
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(40, 167, 69, 0.08);
         }
 
         .dados-label {
             font-weight: 600;
             color: var(--secondary);
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             margin-bottom: 0.25rem;
             text-transform: uppercase;
             letter-spacing: 0.5px;
@@ -562,7 +557,7 @@ $headerComponent = HeaderComponent::create([
 
         .dados-value {
             color: var(--dark);
-            font-size: 1rem;
+            font-size: 0.9rem;
             font-weight: 500;
             word-break: break-word;
         }
@@ -574,9 +569,9 @@ $headerComponent = HeaderComponent::create([
 
         .associado-card {
             border: 2px solid #e9ecef;
-            border-radius: 12px;
-            padding: 1.5rem;
-            margin-bottom: 1rem;
+            border-radius: 10px;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
             cursor: pointer;
             transition: all 0.3s ease;
             background: white;
@@ -584,8 +579,8 @@ $headerComponent = HeaderComponent::create([
 
         .associado-card:hover {
             border-color: var(--primary);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 15px rgba(0, 86, 210, 0.15);
+            transform: translateY(-1px);
+            box-shadow: 0 2px 10px rgba(0, 86, 210, 0.12);
         }
 
         .associado-card.selecionado {
@@ -594,8 +589,8 @@ $headerComponent = HeaderComponent::create([
         }
 
         .associado-foto {
-            width: 80px;
-            height: 80px;
+            width: 60px;
+            height: 60px;
             border-radius: 50%;
             object-fit: cover;
             border: 3px solid #e9ecef;
@@ -734,38 +729,58 @@ $headerComponent = HeaderComponent::create([
             z-index: 9999;
         }
 
-        /* Financeiro options */
+        /* Financeiro options - NOVA estrutura para botões menores */
         .financeiro-options {
             display: grid;
-            gap: 1.5rem;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1rem;
         }
 
         .financeiro-option {
-            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-            border-radius: 12px;
-            padding: 2rem;
-            border: 2px solid transparent;
+            background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+            border-radius: 10px;
+            padding: 1.25rem;
+            border: 2px solid #e9ecef;
             transition: all 0.3s ease;
             cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            min-height: 80px;
         }
 
         .financeiro-option:hover {
             border-color: var(--primary);
             transform: translateY(-2px);
             background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+            box-shadow: 0 4px 15px rgba(0, 86, 210, 0.15);
         }
 
         .financeiro-option-icon {
-            width: 60px;
-            height: 60px;
+            width: 50px;
+            height: 50px;
             border-radius: 50%;
             background: var(--primary);
             color: white;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.5rem;
-            margin-bottom: 1rem;
+            font-size: 1.25rem;
+            flex-shrink: 0;
+        }
+
+        .financeiro-option-content h5 {
+            margin: 0 0 0.25rem 0;
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        .financeiro-option-content p {
+            margin: 0;
+            font-size: 0.85rem;
+            color: var(--secondary);
+            line-height: 1.3;
         }
 
         /* Valores */
@@ -797,9 +812,38 @@ $headerComponent = HeaderComponent::create([
         }
 
         /* Responsivo */
+        @media (max-width: 1200px) {
+            .financeiro-options {
+                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            }
+        }
+
         @media (max-width: 768px) {
             .services-container {
                 grid-template-columns: 1fr;
+            }
+
+            .financeiro-options {
+                grid-template-columns: 1fr;
+            }
+
+            .financeiro-option {
+                flex-direction: column;
+                text-align: center;
+                min-height: auto;
+                padding: 1rem;
+            }
+
+            .financeiro-option-icon {
+                margin-bottom: 0.5rem;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            }
+
+            .content-area {
+                padding: 1rem;
             }
 
             .busca-form {
@@ -956,7 +1000,7 @@ $headerComponent = HeaderComponent::create([
                             </h3>
                         </div>
                         <div class="service-content" style="position: relative;">
-                            <p class="text-muted mb-3">
+                            <p class="text-muted mb-3" style="font-size: 0.9rem;">
                                 Consulte associados em débito. Sistema preparado para múltiplos RGs de diferentes corporações (PM, BM, PC, etc).
                             </p>
 
@@ -974,13 +1018,13 @@ $headerComponent = HeaderComponent::create([
                                 </div>
                                 <div>
                                     <button type="submit" class="btn btn-primary" id="btnBuscarFinanceiro">
-                                        <i class="fas fa-search me-2"></i>
-                                        Buscar Associado
+                                        <i class="fas fa-search me-1"></i>
+                                        Buscar
                                     </button>
                                 </div>
                                 <div>
                                     <button type="button" class="btn btn-secondary" onclick="limparBuscaFinanceiro()">
-                                        <i class="fas fa-eraser me-2"></i>
+                                        <i class="fas fa-eraser me-1"></i>
                                         Limpar
                                     </button>
                                 </div>
@@ -1032,100 +1076,82 @@ $headerComponent = HeaderComponent::create([
                             </h3>
                         </div>
                         <div class="service-content">
-                            <p class="text-muted mb-4">
+                            <p class="text-muted mb-4" style="font-size: 0.9rem;">
                                 Acesse relatórios de arrecadação, inadimplência e estatísticas financeiras.
                             </p>
-
-
-
-
-                            <script>
-                                // ===== FUNÇÃO PARA GESTÃO DE PECÚLIO =====
-                                // Adicionar esta função junto com as outras funções de relatórios (após linha 890)
-
-
-
-
-                                // Gestão de Pecúlio
-                                function gerenciarPeculio() {
-                                    notifications.show('Carregando gestão de pecúlio...', 'info');
-                                    setTimeout(() => {
-                                        window.location.href = '../pages/gestao_peculio.php';
-                                    }, 1000);
-                                }
-                            </script>
-
-                            <?php
-                            // ===== CÓDIGO COMPLETO PARA INSERIR =====
-                            // Aqui está a seção completa atualizada da div financeiro-options:
-                            ?>
-
-
 
                             <div class="financeiro-options">
                                 <div class="financeiro-option" onclick="relatorioArrecadacao()">
                                     <div class="financeiro-option-icon">
                                         <i class="fas fa-chart-bar"></i>
                                     </div>
-                                    <h5>Relatório de Arrecadação</h5>
-                                    <p>Visualize a evolução da arrecadação mensal e anual</p>
+                                    <div class="financeiro-option-content">
+                                        <h5>Relatório de Arrecadação</h5>
+                                        <p>Visualize a evolução da arrecadação mensal e anual</p>
+                                    </div>
                                 </div>
-
-
 
                                 <div class="financeiro-option" onclick="listarInadimplentes()">
                                     <div class="financeiro-option-icon">
                                         <i class="fas fa-list-ul"></i>
                                     </div>
-                                    <h5>Lista de Inadimplentes</h5>
-                                    <p>Consulte e gerencie associados com pendências financeiras</p>
+                                    <div class="financeiro-option-content">
+                                        <h5>Lista de Inadimplentes</h5>
+                                        <p>Consulte e gerencie associados com pendências financeiras</p>
+                                    </div>
                                 </div>
 
                                 <div class="financeiro-option" onclick="gerarRecorrencia()">
                                     <div class="financeiro-option-icon">
                                         <i class="fas fa-file-download"></i>
                                     </div>
-                                    <h5>Optantes NeoConsig</h5>
-                                    <p>Gere arquivos TXT para inclusões, cancelamentos e alterações</p>
+                                    <div class="financeiro-option-content">
+                                        <h5>Optantes NeoConsig</h5>
+                                        <p>Gere arquivos TXT para inclusões, cancelamentos e alterações</p>
+                                    </div>
                                 </div>
 
                                 <div class="financeiro-option" onclick="extratoFinanceiro()">
                                     <div class="financeiro-option-icon">
                                         <i class="fas fa-file-invoice-dollar"></i>
                                     </div>
-                                    <h5>Extrato Financeiro</h5>
-                                    <p>Acompanhe entradas, saídas e saldo atual da associação</p>
+                                    <div class="financeiro-option-content">
+                                        <h5>Extrato Financeiro</h5>
+                                        <p>Acompanhe entradas, saídas e saldo atual da associação</p>
+                                    </div>
                                 </div>
 
-
-                            <div class="financeiro-option" onclick="importarAsaas()">
-                                <div class="financeiro-option-icon">
-                                    <i class="fas fa-file-import"></i>
+                                <div class="financeiro-option" onclick="importarAsaas()">
+                                    <div class="financeiro-option-icon">
+                                        <i class="fas fa-file-import"></i>
+                                    </div>
+                                    <div class="financeiro-option-content">
+                                        <h5>Importar CSV ASAAS</h5>
+                                        <p>Importe arquivo CSV do ASAAS para atualizar status de adimplência automaticamente</p>
+                                    </div>
                                 </div>
-                                <h5>Importar CSV ASAAS</h5>
-                                <p>Importe arquivo CSV do ASAAS para atualizar status de adimplência automaticamente</p>
-                            </div>
-
-                            
 
                                 <div class="financeiro-option" onclick="gerenciarPeculio()">
                                     <div class="financeiro-option-icon">
                                         <i class="fas fa-piggy-bank"></i>
                                     </div>
-                                    <h5>Gestão de Pecúlio</h5>
-                                    <p>Gerencie fundos de pecúlio, reservas e benefícios especiais</p>
+                                    <div class="financeiro-option-content">
+                                        <h5>Gestão de Pecúlio</h5>
+                                        <p>Gerencie fundos de pecúlio, reservas e benefícios especiais</p>
+                                    </div>
                                 </div>
 
                                 <div class="financeiro-option" onclick="estatisticasFinanceiras()">
                                     <div class="financeiro-option-icon">
                                         <i class="fas fa-calculator"></i>
                                     </div>
-                                    <h5>Estatísticas Financeiras</h5>
-                                    <p>Dashboard completo com indicadores financeiros</p>
-
+                                    <div class="financeiro-option-content">
+                                        <h5>Estatísticas Financeiras</h5>
+                                        <p>Dashboard completo com indicadores financeiros</p>
+                                    </div>
                                 </div>
                             </div>
-                        
+                        </div>
                     </div>
                 </div>
 
@@ -1647,11 +1673,18 @@ $headerComponent = HeaderComponent::create([
             }, 1000);
         }
 
-
         function importarAsaas() {
             notifications.show('Redirecionando para importação ASAAS...', 'info');
             setTimeout(() => {
                 window.location.href = 'importar_asaas.php';
+            }, 1000);
+        }
+
+        // Gestão de Pecúlio
+        function gerenciarPeculio() {
+            notifications.show('Carregando gestão de pecúlio...', 'info');
+            setTimeout(() => {
+                window.location.href = '../pages/gestao_peculio.php';
             }, 1000);
         }
 
