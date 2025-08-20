@@ -436,7 +436,7 @@ $headerComponent = HeaderComponent::create([
 
         .filter-row {
             display: flex;
-            gap: 1rem;
+            gap: 2rem;
             align-items: center;
             flex-wrap: wrap;
             margin-bottom: 1rem;
@@ -452,6 +452,7 @@ $headerComponent = HeaderComponent::create([
             gap: 0.5rem;
             min-width: 200px;
             flex: 1;
+            margin-right: 1.5rem;
         }
 
         .filter-label {
