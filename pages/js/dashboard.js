@@ -2668,7 +2668,7 @@ function criarCardObservacao(obs) {
             ${obs.editado == '1' ? `
                 <div class="observacao-edited" style="font-size: 0.625rem; color: var(--gray-500); font-style: italic; margin-top: 0.5rem;">
                     <i class="fas fa-edit"></i>
-                    Editado em ${formatarDataHoraObs(obs.data_edicao)}
+                    Editado em ${obs.data_edicao_formatada || 'Data não disponível'}
                 </div>
             ` : ''}
         </div>
@@ -2748,7 +2748,7 @@ function atualizarContadorObservacoes() {
     }
 }
 
-// Função para salvar observação
+// Função para salvar observação (CORRIGIDA)
 function salvarObservacao() {
     const texto = document.getElementById('observacaoTexto')?.value.trim();
     const categoria = document.getElementById('observacaoCategoria')?.value;
@@ -2760,6 +2760,10 @@ function salvarObservacao() {
         return;
     }
 
+    // VERIFICAR SE É EDIÇÃO OU NOVA OBSERVAÇÃO
+    const editId = document.getElementById('formNovaObservacao').dataset.editId;
+    const isEdicao = editId && editId !== '';
+
     // Dados para enviar
     const dados = {
         associado_id: currentAssociadoIdObs,
@@ -2769,10 +2773,15 @@ function salvarObservacao() {
         importante: importante ? 1 : 0
     };
 
+    // Se for edição, adicionar o ID (CORREÇÃO PRINCIPAL)
+    if (isEdicao) {
+        dados.id = editId;
+    }
+
     // Mostrar loading no botão
     const btnSalvar = document.querySelector('#modalNovaObservacao button[onclick="salvarObservacao()"]');
     const textoOriginal = btnSalvar.innerHTML;
-    btnSalvar.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Salvando...';
+    btnSalvar.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> ' + (isEdicao ? 'Atualizando...' : 'Salvando...');
     btnSalvar.disabled = true;
 
     // Fazer requisição
@@ -2790,18 +2799,20 @@ function salvarObservacao() {
 
                 // Limpar formulário
                 document.getElementById('formNovaObservacao').reset();
+                delete document.getElementById('formNovaObservacao').dataset.editId;
 
                 // Recarregar observações
                 carregarObservacoes(currentAssociadoIdObs);
 
                 // Mostrar mensagem de sucesso
-                mostrarNotificacaoObs('Observação salva com sucesso!', 'success');
+                mostrarNotificacaoObs(response.message || 'Operação realizada com sucesso!', 'success');
             } else {
-                alert('Erro ao salvar observação: ' + (response.message || 'Erro desconhecido'));
+                alert('Erro: ' + (response.message || 'Erro desconhecido'));
             }
         },
         error: function () {
-            alert('Erro ao salvar observação. Tente novamente.');
+            const operacao = isEdicao ? 'atualizar' : 'salvar';
+            alert(`Erro ao ${operacao} observação. Tente novamente.`);
         },
         complete: function () {
             btnSalvar.innerHTML = textoOriginal;
