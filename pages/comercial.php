@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Página de Serviços Comerciais - Sistema ASSEGO
  * pages/servicos_comercial.php
@@ -48,7 +49,7 @@ error_log("É Diretor: " . ($auth->isDiretor() ? 'SIM' : 'NÃO'));
 if (isset($usuarioLogado['departamento_id'])) {
     $deptId = $usuarioLogado['departamento_id'];
     $departamentoUsuario = $deptId;
-    
+
     if ($deptId == 10) { // Comercial
         $temPermissaoComercial = true;
         $isComercial = true;
@@ -76,13 +77,13 @@ if (!$temPermissaoComercial) {
 // Busca estatísticas do setor comercial (SEMPRE VISÍVEIS - são apenas números gerais)
 try {
     $db = Database::getInstance(DB_NAME_CADASTRO)->getConnection();
-    
+
     // Total de associados ativos (SEMPRE VISÍVEL)
     $sql = "SELECT COUNT(*) as total FROM Associados WHERE situacao = 'Filiado'";
     $stmt = $db->prepare($sql);
     $stmt->execute();
     $totalAssociadosAtivos = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
-    
+
     // Novos cadastros hoje (SEMPRE VISÍVEL) 
     // Baseado na estrutura real da tabela: usa data_aprovacao ou data_pre_cadastro
     try {
@@ -91,7 +92,7 @@ try {
         $stmt = $db->prepare($sql);
         $stmt->execute();
         $cadastrosHoje = $stmt->fetch(PDO::FETCH_ASSOC)['hoje'];
-        
+
         // Se não houver aprovações hoje, conta os pré-cadastros de hoje
         if ($cadastrosHoje == 0) {
             $sql = "SELECT COUNT(*) as hoje FROM Associados WHERE DATE(data_pre_cadastro) = CURDATE()";
@@ -99,14 +100,13 @@ try {
             $stmt->execute();
             $cadastrosHoje = $stmt->fetch(PDO::FETCH_ASSOC)['hoje'];
         }
-        
+
         error_log("Cadastros hoje encontrados: " . $cadastrosHoje);
-        
     } catch (Exception $e) {
         error_log("Erro ao buscar cadastros hoje: " . $e->getMessage());
         $cadastrosHoje = 0;
     }
-    
+
     // Pré-cadastros pendentes (SEMPRE VISÍVEL)
     // Baseado na estrutura real: pre_cadastro = 1 são pré-cadastros
     try {
@@ -115,50 +115,65 @@ try {
         $stmt = $db->prepare($sql);
         $stmt->execute();
         $preCadastrosPendentes = $stmt->fetch(PDO::FETCH_ASSOC)['pendentes'];
-        
+
         error_log("Pré-cadastros pendentes encontrados: " . $preCadastrosPendentes);
-        
     } catch (Exception $e) {
         error_log("Erro ao buscar pré-cadastros pendentes: " . $e->getMessage());
         $preCadastrosPendentes = 0;
     }
+
+    // Solicitações de desfiliação (último mês) - APENAS NOVAS DESFILIAÇÕES
+try {
+    // Busca APENAS desfiliações que aconteceram nos últimos 30 dias
+    // (associados antigos com data_desfiliacao = NULL não contam)
+    $sql = "SELECT COUNT(*) as desfiliacao FROM Associados 
+            WHERE situacao IN ('DESFILIADO', 'Desfiliado', 'desfiliado')
+            AND data_desfiliacao IS NOT NULL
+            AND data_desfiliacao >= DATE_SUB(NOW(), INTERVAL 30 DAY)";
+    $stmt = $db->prepare($sql);
+    $stmt->execute();
+    $desfiliacoesRecentes = $stmt->fetch(PDO::FETCH_ASSOC)['desfiliacao'] ?? 0;
     
-    // Solicitações de desfiliação (último mês) - SEMPRE VISÍVEL
-    try {
-        // Verifica se a tabela Auditoria existe
-        $sql = "SHOW TABLES LIKE 'Auditoria'";
+    error_log("✅ Desfiliações NOVAS (últimos 30 dias): " . $desfiliacoesRecentes);
+    
+    // Debug - mostra total de desfiliados vs. desfiliações recentes
+    $sql = "SELECT 
+                COUNT(*) as total_desfiliados,
+                SUM(CASE WHEN data_desfiliacao IS NOT NULL THEN 1 ELSE 0 END) as com_data,
+                SUM(CASE WHEN data_desfiliacao IS NULL THEN 1 ELSE 0 END) as sem_data
+            FROM Associados 
+            WHERE situacao IN ('DESFILIADO', 'Desfiliado', 'desfiliado')";
+    $stmt = $db->prepare($sql);
+    $stmt->execute();
+    $debug = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    error_log("📊 Debug desfiliações:");
+    error_log("   Total desfiliados: " . ($debug['total_desfiliados'] ?? 0));
+    error_log("   Com data (novos): " . ($debug['com_data'] ?? 0));
+    error_log("   Sem data (antigos): " . ($debug['sem_data'] ?? 0));
+    
+    // Mostra detalhes das desfiliações recentes (se houver)
+    if ($desfiliacoesRecentes > 0) {
+        $sql = "SELECT nome, data_desfiliacao FROM Associados 
+                WHERE situacao IN ('DESFILIADO', 'Desfiliado', 'desfiliado')
+                AND data_desfiliacao IS NOT NULL
+                AND data_desfiliacao >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+                ORDER BY data_desfiliacao DESC
+                LIMIT 5";
         $stmt = $db->prepare($sql);
         $stmt->execute();
+        $detalhes = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
-        if ($stmt->rowCount() > 0) {
-            // Tabela existe, busca desfiliações
-            $sql = "SELECT COUNT(*) as desfiliacao FROM Auditoria 
-                    WHERE acao = 'UPDATE' 
-                    AND tabela = 'Associados'
-                    AND JSON_EXTRACT(valores_novos, '$.situacao') = 'DESFILIADO'
-                    AND data_hora >= DATE_SUB(NOW(), INTERVAL 30 DAY)";
-            $stmt = $db->prepare($sql);
-            $stmt->execute();
-            $desfiliacoesRecentes = $stmt->fetch(PDO::FETCH_ASSOC)['desfiliacao'];
-            
-            error_log("Desfiliações recentes (com Auditoria): " . $desfiliacoesRecentes);
-        } else {
-            // Tabela não existe, tenta contar diretamente por situação
-            $sql = "SELECT COUNT(*) as desfiliacao FROM Associados 
-                    WHERE situacao = 'DESFILIADO' 
-                    AND data_aprovacao >= DATE_SUB(NOW(), INTERVAL 30 DAY)";
-            $stmt = $db->prepare($sql);
-            $stmt->execute();
-            $desfiliacoesRecentes = $stmt->fetch(PDO::FETCH_ASSOC)['desfiliacao'];
-            
-            error_log("Desfiliações recentes (sem Auditoria): " . $desfiliacoesRecentes);
+        error_log("📋 Desfiliações recentes:");
+        foreach ($detalhes as $i => $detalhe) {
+            error_log("   " . ($i+1) . ". " . $detalhe['nome'] . " - " . $detalhe['data_desfiliacao']);
         }
-        
-    } catch (Exception $e) {
-        error_log("Erro ao buscar desfiliações: " . $e->getMessage());
-        $desfiliacoesRecentes = 0;
     }
 
+} catch (Exception $e) {
+    error_log("❌ Erro ao buscar desfiliações: " . $e->getMessage());
+    $desfiliacoesRecentes = 0;
+}
 } catch (Exception $e) {
     error_log("Erro ao buscar estatísticas comerciais: " . $e->getMessage());
     $totalAssociadosAtivos = $cadastrosHoje = $preCadastrosPendentes = $desfiliacoesRecentes = 0;
@@ -208,7 +223,7 @@ $headerComponent = HeaderComponent::create([
 
     <!-- CSS do Header Component -->
     <?php $headerComponent->renderCSS(); ?>
-    
+
     <style>
         /* Variáveis CSS */
         :root {
@@ -307,10 +322,21 @@ $headerComponent = HeaderComponent::create([
             box-shadow: 0 4px 15px rgba(44, 90, 160, 0.12);
         }
 
-        .stat-card.primary { border-left-color: var(--primary); }
-        .stat-card.success { border-left-color: var(--success); }
-        .stat-card.warning { border-left-color: var(--warning); }
-        .stat-card.info { border-left-color: var(--info); }
+        .stat-card.primary {
+            border-left-color: var(--primary);
+        }
+
+        .stat-card.success {
+            border-left-color: var(--success);
+        }
+
+        .stat-card.warning {
+            border-left-color: var(--warning);
+        }
+
+        .stat-card.info {
+            border-left-color: var(--info);
+        }
 
         .stat-header {
             display: flex;
@@ -342,9 +368,17 @@ $headerComponent = HeaderComponent::create([
             gap: 0.25rem;
         }
 
-        .stat-change.positive { color: var(--success); }
-        .stat-change.negative { color: var(--danger); }
-        .stat-change.neutral { color: var(--info); }
+        .stat-change.positive {
+            color: var(--success);
+        }
+
+        .stat-change.negative {
+            color: var(--danger);
+        }
+
+        .stat-change.neutral {
+            color: var(--info);
+        }
 
         .stat-icon {
             width: 80px;
@@ -357,10 +391,25 @@ $headerComponent = HeaderComponent::create([
             opacity: 0.1;
         }
 
-        .stat-icon.primary { background: var(--primary); color: var(--primary); }
-        .stat-icon.success { background: var(--success); color: var(--success); }
-        .stat-icon.warning { background: var(--warning); color: var(--warning); }
-        .stat-icon.info { background: var(--info); color: var(--info); }
+        .stat-icon.primary {
+            background: var(--primary);
+            color: var(--primary);
+        }
+
+        .stat-icon.success {
+            background: var(--success);
+            color: var(--success);
+        }
+
+        .stat-icon.warning {
+            background: var(--warning);
+            color: var(--warning);
+        }
+
+        .stat-icon.info {
+            background: var(--info);
+            color: var(--info);
+        }
 
         /* Seções de Serviços */
         .services-container {
@@ -735,8 +784,13 @@ $headerComponent = HeaderComponent::create([
         }
 
         @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
         }
 
         .loading-overlay {
@@ -894,59 +948,49 @@ $headerComponent = HeaderComponent::create([
             .services-container {
                 grid-template-columns: 1fr;
             }
-            
+
             .cadastro-options {
                 grid-template-columns: 1fr;
             }
-            
+
             .cadastro-option {
                 flex-direction: column;
                 text-align: center;
                 min-height: auto;
                 padding: 1rem;
             }
-            
+
             .cadastro-option-icon {
                 margin-bottom: 0.5rem;
             }
-            
+
             .stats-grid {
                 grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             }
-            
+
             .content-area {
                 padding: 1rem;
             }
-            
+
             .busca-form {
                 flex-direction: column;
                 align-items: stretch;
             }
-            
+
             .dados-grid {
                 grid-template-columns: 1fr;
             }
-            
+
             .ficha-content {
                 padding: 1.5rem;
             }
         }
 
-        /* Modo impressão */
-        @media print {
-            .no-print {
-                display: none !important;
-            }
-            
-            .ficha-desfiliacao-container {
-                box-shadow: none;
-                border: 2px solid #000;
-            }
-            
-            .ficha-content {
-                padding: 2rem;
-            }
-        }
+
+        /* Modo impressão - VERSÃO OTIMIZADA PARA 1 PÁGINA */
+@media print {
+    
+}
 
         /* Animações */
         .fade-in {
@@ -954,8 +998,15 @@ $headerComponent = HeaderComponent::create([
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
     </style>
 </head>
@@ -972,368 +1023,368 @@ $headerComponent = HeaderComponent::create([
         <!-- Content Area -->
         <div class="content-area">
             <?php if (!$temPermissaoComercial): ?>
-            <!-- Sem Permissão -->
-            <div class="alert alert-danger" data-aos="fade-up">
-                <h4><i class="fas fa-ban me-2"></i>Acesso Negado aos Serviços Comerciais</h4>
-                <p class="mb-3"><?php echo htmlspecialchars($motivoNegacao); ?></p>
-                
-                <a href="../pages/dashboard.php" class="btn btn-secondary">
-                    <i class="fas fa-arrow-left me-1"></i>
-                    Voltar ao Dashboard
-                </a>
-            </div>
-            
-            <?php else: ?>
-            <!-- Com Permissão - Conteúdo Normal -->
-            
-            <!-- Page Header -->
-            <div class="page-header" data-aos="fade-right">
-                <h1 class="page-title">
-                    <div class="page-title-icon">
-                        <i class="fas fa-handshake"></i>
-                    </div>
-                    Serviços Comerciais
-                    <?php if ($isComercial): ?>
-                        <small class="text-muted">- Setor Comercial</small>
-                    <?php elseif ($isPresidencia): ?>
-                        <small class="text-muted">- Presidência</small>
-                    <?php endif; ?>
-                </h1>
-                <p class="page-subtitle">
-                    Gerencie desfiliações, cadastros de novos associados e demais serviços comerciais. Sistema preparado para múltiplos RGs de diferentes corporações.
-                </p>
-            </div>
+                <!-- Sem Permissão -->
+                <div class="alert alert-danger" data-aos="fade-up">
+                    <h4><i class="fas fa-ban me-2"></i>Acesso Negado aos Serviços Comerciais</h4>
+                    <p class="mb-3"><?php echo htmlspecialchars($motivoNegacao); ?></p>
 
-            <!-- Estatísticas Comerciais - SEMPRE VISÍVEIS (independente de permissões) -->
-            <div class="stats-grid" data-aos="fade-up">
-                <div class="stat-card primary">
-                    <div class="stat-header">
-                        <div>
-                            <div class="stat-value"><?php echo number_format($totalAssociadosAtivos, 0, ',', '.'); ?></div>
-                            <div class="stat-label">Associados Ativos</div>
-                            <div class="stat-change neutral">
+                    <a href="../pages/dashboard.php" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left me-1"></i>
+                        Voltar ao Dashboard
+                    </a>
+                </div>
+
+            <?php else: ?>
+                <!-- Com Permissão - Conteúdo Normal -->
+
+                <!-- Page Header -->
+                <div class="page-header" data-aos="fade-right">
+                    <h1 class="page-title">
+                        <div class="page-title-icon">
+                            <i class="fas fa-handshake"></i>
+                        </div>
+                        Serviços Comerciais
+                        <?php if ($isComercial): ?>
+                            <small class="text-muted">- Setor Comercial</small>
+                        <?php elseif ($isPresidencia): ?>
+                            <small class="text-muted">- Presidência</small>
+                        <?php endif; ?>
+                    </h1>
+                    <p class="page-subtitle">
+                        Gerencie desfiliações, cadastros de novos associados e demais serviços comerciais. Sistema preparado para múltiplos RGs de diferentes corporações.
+                    </p>
+                </div>
+
+                <!-- Estatísticas Comerciais - SEMPRE VISÍVEIS (independente de permissões) -->
+                <div class="stats-grid" data-aos="fade-up">
+                    <div class="stat-card primary">
+                        <div class="stat-header">
+                            <div>
+                                <div class="stat-value"><?php echo number_format($totalAssociadosAtivos, 0, ',', '.'); ?></div>
+                                <div class="stat-label">Associados Ativos</div>
+                                <div class="stat-change neutral">
+                                    <i class="fas fa-users"></i>
+                                    Base atual
+                                </div>
+                            </div>
+                            <div class="stat-icon primary">
                                 <i class="fas fa-users"></i>
-                                Base atual
                             </div>
                         </div>
-                        <div class="stat-icon primary">
-                            <i class="fas fa-users"></i>
-                        </div>
                     </div>
-                </div>
 
-                <div class="stat-card success">
-                    <div class="stat-header">
-                        <div>
-                            <div class="stat-value"><?php echo number_format($cadastrosHoje, 0, ',', '.'); ?></div>
-                            <div class="stat-label">Cadastros Hoje</div>
-                            <div class="stat-change positive">
-                                <i class="fas fa-arrow-up"></i>
-                                Novos cadastros
+                    <div class="stat-card success">
+                        <div class="stat-header">
+                            <div>
+                                <div class="stat-value"><?php echo number_format($cadastrosHoje, 0, ',', '.'); ?></div>
+                                <div class="stat-label">Cadastros Hoje</div>
+                                <div class="stat-change positive">
+                                    <i class="fas fa-arrow-up"></i>
+                                    Novos cadastros
+                                </div>
+                            </div>
+                            <div class="stat-icon success">
+                                <i class="fas fa-user-plus"></i>
                             </div>
                         </div>
-                        <div class="stat-icon success">
-                            <i class="fas fa-user-plus"></i>
-                        </div>
                     </div>
-                </div>
 
-                <div class="stat-card warning">
-                    <div class="stat-header">
-                        <div>
-                            <div class="stat-value"><?php echo number_format($preCadastrosPendentes, 0, ',', '.'); ?></div>
-                            <div class="stat-label">Pré-cadastros Pendentes</div>
-                            <div class="stat-change neutral">
+                    <div class="stat-card warning">
+                        <div class="stat-header">
+                            <div>
+                                <div class="stat-value"><?php echo number_format($preCadastrosPendentes, 0, ',', '.'); ?></div>
+                                <div class="stat-label">Pré-cadastros Pendentes</div>
+                                <div class="stat-change neutral">
+                                    <i class="fas fa-clock"></i>
+                                    Aguardando análise
+                                </div>
+                            </div>
+                            <div class="stat-icon warning">
                                 <i class="fas fa-clock"></i>
-                                Aguardando análise
                             </div>
                         </div>
-                        <div class="stat-icon warning">
-                            <i class="fas fa-clock"></i>
-                        </div>
                     </div>
-                </div>
 
-                <div class="stat-card info">
-                    <div class="stat-header">
-                        <div>
-                            <div class="stat-value"><?php echo number_format($desfiliacoesRecentes, 0, ',', '.'); ?></div>
-                            <div class="stat-label">Desfiliações (30 dias)</div>
-                            <div class="stat-change negative">
+                    <div class="stat-card info">
+                        <div class="stat-header">
+                            <div>
+                                <div class="stat-value"><?php echo number_format($desfiliacoesRecentes, 0, ',', '.'); ?></div>
+                                <div class="stat-label">Desfiliações (30 dias)</div>
+                                <div class="stat-change negative">
+                                    <i class="fas fa-user-times"></i>
+                                    Último mês
+                                </div>
+                            </div>
+                            <div class="stat-icon info">
                                 <i class="fas fa-user-times"></i>
-                                Último mês
                             </div>
-                        </div>
-                        <div class="stat-icon info">
-                            <i class="fas fa-user-times"></i>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- Alert informativo sobre o nível de acesso -->
-            <div class="alert-custom alert-info-custom" data-aos="fade-up">
-                <div>
-                    <i class="fas fa-<?php echo $isComercial ? 'handshake' : 'crown'; ?>"></i>
-                </div>
-                <div>
-                    <h6 class="mb-1">
-                        <?php if ($isComercial): ?>
-                            <i class="fas fa-handshake text-primary"></i> Setor Comercial
-                        <?php elseif ($isPresidencia): ?>
-                            <i class="fas fa-crown text-warning"></i> Presidência
-                        <?php endif; ?>
-                    </h6>
-                    <small>
-                        <?php if ($isComercial): ?>
-                            Você tem acesso completo aos serviços comerciais: estatísticas, desfiliações, cadastros e atendimento.
-                        <?php elseif ($isPresidencia): ?>
-                            Você tem acesso administrativo aos serviços comerciais como membro da presidência.
-                        <?php else: ?>
-                            Você pode visualizar as estatísticas, mas funcionalidades avançadas requerem permissão específica.
-                        <?php endif; ?>
-                        Sistema preparado para múltiplos RGs de diferentes corporações.
-                    </small>
-                </div>
-            </div>
-
-            <!-- Seções de Serviços -->
-            <div class="services-container" data-aos="fade-up" data-aos-delay="200">
-                
-                <!-- Seção de Desfiliação -->
-                <div class="service-section">
-                    <div class="service-header">
-                        <h3>
-                            <i class="fas fa-user-times"></i>
-                            Solicitação de Desfiliação
-                        </h3>
+                <!-- Alert informativo sobre o nível de acesso -->
+                <div class="alert-custom alert-info-custom" data-aos="fade-up">
+                    <div>
+                        <i class="fas fa-<?php echo $isComercial ? 'handshake' : 'crown'; ?>"></i>
                     </div>
-                    <div class="service-content" style="position: relative;">
-                        <p class="text-muted mb-3" style="font-size: 0.9rem;">
-                            Busque um associado pelo RG militar ou nome e gere automaticamente a ficha de desfiliação. Sistema preparado para múltiplos RGs de diferentes corporações.
-                        </p>
-                        
-                        <form class="busca-form" onsubmit="buscarAssociadoPorRG(event)">
-                            <div class="busca-input-group">
-                                <label class="form-label" for="rgBuscaComercial">
-                                    <i class="fas fa-id-card me-1"></i>
-                                    RG Militar ou Nome
-                                </label>
-                                <input type="text" class="form-control" id="rgBuscaComercial" 
-                                       placeholder="Digite o RG militar ou nome..." required>
-                                <small class="text-muted">
-                                    Se houver múltiplos registros com o mesmo RG, você poderá escolher a corporação correta
-                                </small>
-                            </div>
-                            <div>
-                                <button type="submit" class="btn btn-primary" id="btnBuscarComercial">
-                                    <i class="fas fa-search me-1"></i>
-                                    Buscar
-                                </button>
-                            </div>
-                            <div>
-                                <button type="button" class="btn btn-secondary" onclick="limparBuscaComercial()">
-                                    <i class="fas fa-eraser me-1"></i>
-                                    Limpar
-                                </button>
-                            </div>
-                        </form>
+                    <div>
+                        <h6 class="mb-1">
+                            <?php if ($isComercial): ?>
+                                <i class="fas fa-handshake text-primary"></i> Setor Comercial
+                            <?php elseif ($isPresidencia): ?>
+                                <i class="fas fa-crown text-warning"></i> Presidência
+                            <?php endif; ?>
+                        </h6>
+                        <small>
+                            <?php if ($isComercial): ?>
+                                Você tem acesso completo aos serviços comerciais: estatísticas, desfiliações, cadastros e atendimento.
+                            <?php elseif ($isPresidencia): ?>
+                                Você tem acesso administrativo aos serviços comerciais como membro da presidência.
+                            <?php else: ?>
+                                Você pode visualizar as estatísticas, mas funcionalidades avançadas requerem permissão específica.
+                            <?php endif; ?>
+                            Sistema preparado para múltiplos RGs de diferentes corporações.
+                        </small>
+                    </div>
+                </div>
 
-                        <!-- Alert para mensagens de busca -->
-                        <div id="alertBuscaComercial" class="alert" style="display: none;">
-                            <i class="fas fa-info-circle me-2"></i>
-                            <span id="alertBuscaComercialText"></span>
+                <!-- Seções de Serviços -->
+                <div class="services-container" data-aos="fade-up" data-aos-delay="200">
+
+                    <!-- Seção de Desfiliação -->
+                    <div class="service-section">
+                        <div class="service-header">
+                            <h3>
+                                <i class="fas fa-user-times"></i>
+                                Solicitação de Desfiliação
+                            </h3>
                         </div>
+                        <div class="service-content" style="position: relative;">
+                            <p class="text-muted mb-3" style="font-size: 0.9rem;">
+                                Busque um associado pelo RG militar ou nome e gere automaticamente a ficha de desfiliação. Sistema preparado para múltiplos RGs de diferentes corporações.
+                            </p>
 
-                        <!-- Container para dados do associado -->
-                        <div id="dadosAssociadoContainer" class="dados-associado-container fade-in" style="display: none;">
-                            <h6 class="mb-3">
-                                <i class="fas fa-user me-2" style="color: var(--primary);"></i>
-                                Dados do Associado Encontrado
-                            </h6>
-                            
-                            <!-- Identificação Militar -->
-                            <div id="identificacaoMilitarComercial" class="identificacao-militar" style="display: none;">
-                                <h6>
-                                    <i class="fas fa-shield-alt me-2"></i>
-                                    Identificação Militar
+                            <form class="busca-form" onsubmit="buscarAssociadoPorRG(event)">
+                                <div class="busca-input-group">
+                                    <label class="form-label" for="rgBuscaComercial">
+                                        <i class="fas fa-id-card me-1"></i>
+                                        RG Militar ou Nome
+                                    </label>
+                                    <input type="text" class="form-control" id="rgBuscaComercial"
+                                        placeholder="Digite o RG militar ou nome..." required>
+                                    <small class="text-muted">
+                                        Se houver múltiplos registros com o mesmo RG, você poderá escolher a corporação correta
+                                    </small>
+                                </div>
+                                <div>
+                                    <button type="submit" class="btn btn-primary" id="btnBuscarComercial">
+                                        <i class="fas fa-search me-1"></i>
+                                        Buscar
+                                    </button>
+                                </div>
+                                <div>
+                                    <button type="button" class="btn btn-secondary" onclick="limparBuscaComercial()">
+                                        <i class="fas fa-eraser me-1"></i>
+                                        Limpar
+                                    </button>
+                                </div>
+                            </form>
+
+                            <!-- Alert para mensagens de busca -->
+                            <div id="alertBuscaComercial" class="alert" style="display: none;">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <span id="alertBuscaComercialText"></span>
+                            </div>
+
+                            <!-- Container para dados do associado -->
+                            <div id="dadosAssociadoContainer" class="dados-associado-container fade-in" style="display: none;">
+                                <h6 class="mb-3">
+                                    <i class="fas fa-user me-2" style="color: var(--primary);"></i>
+                                    Dados do Associado Encontrado
                                 </h6>
-                                <div class="militar-info-grid" id="militarInfoGridComercial">
-                                    <!-- Dados militares serão inseridos aqui -->
-                                </div>
-                            </div>
-                            
-                            <div class="dados-grid" id="dadosAssociadoGrid">
-                                <!-- Dados serão inseridos aqui dinamicamente -->
-                            </div>
-                        </div>
 
-                        <!-- Loading overlay -->
-                        <div id="loadingBuscaComercial" class="loading-overlay" style="display: none;">
-                            <div class="loading-spinner mb-3"></div>
-                            <p class="text-muted">Buscando dados do associado...</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Seção de Cadastro de Associados -->
-                <div class="service-section">
-                    <div class="service-header">
-                        <h3>
-                            <i class="fas fa-user-plus"></i>
-                            Cadastro de Associados
-                        </h3>
-                    </div>
-                    <div class="service-content">
-                        <p class="text-muted mb-4" style="font-size: 0.9rem;">
-                            Inicie novos cadastros de associados ou gerencie pré-cadastros existentes.
-                        </p>
-                        
-                        <div class="cadastro-options">
-                            <div class="cadastro-option" onclick="novoPreCadastro()">
-                                <div class="cadastro-option-icon">
-                                    <i class="fas fa-user-plus"></i>
+                                <!-- Identificação Militar -->
+                                <div id="identificacaoMilitarComercial" class="identificacao-militar" style="display: none;">
+                                    <h6>
+                                        <i class="fas fa-shield-alt me-2"></i>
+                                        Identificação Militar
+                                    </h6>
+                                    <div class="militar-info-grid" id="militarInfoGridComercial">
+                                        <!-- Dados militares serão inseridos aqui -->
+                                    </div>
                                 </div>
-                                <div class="cadastro-option-content">
-                                    <h5>Nova Filiação</h5>
-                                    <p>Inicie um nova filiação de associado com formulário completo</p>
+
+                                <div class="dados-grid" id="dadosAssociadoGrid">
+                                    <!-- Dados serão inseridos aqui dinamicamente -->
                                 </div>
                             </div>
 
-                            <div class="cadastro-option" onclick="consultarAssociado()">
-                                <div class="cadastro-option-icon">
-                                    <i class="fas fa-search"></i>
-                                </div>
-                                <div class="cadastro-option-content">
-                                    <h5>Consultar Associado</h5>
-                                    <p>Busque e consulte dados de associados existentes</p>
-                                </div>
-                            </div>
-
-                            <div class="cadastro-option" onclick="consultarDependentes18()">
-                                <div class="cadastro-option-icon">
-                                    <i class="fas fa-birthday-cake"></i>
-                                </div>
-                                <div class="cadastro-option-content">
-                                    <h5>Dependentes 18+</h5>
-                                    <p>Veja os dependentes que já completaram ou estão prestes a completar 18 anos</p>
-                                </div>
-                            </div>
-
-                            <div class="cadastro-option" onclick="relatoriosComerciais()">
-                                <div class="cadastro-option-icon">
-                                    <i class="fas fa-chart-bar"></i>
-                                </div>
-                                <div class="cadastro-option-content">
-                                    <h5>Relatórios Comerciais</h5>
-                                    <p>Visualize estatísticas e relatórios do setor comercial</p>
-                                </div>
+                            <!-- Loading overlay -->
+                            <div id="loadingBuscaComercial" class="loading-overlay" style="display: none;">
+                                <div class="loading-spinner mb-3"></div>
+                                <p class="text-muted">Buscando dados do associado...</p>
                             </div>
                         </div>
                     </div>
-                </div>
-            </div>
 
-            <!-- Container para ficha de desfiliação (apenas com permissão) -->
-            <?php if ($temPermissaoComercial): ?>
-            <div id="fichaDesfiliacao" class="ficha-desfiliacao-container fade-in" style="display: none;" data-aos="fade-up">
-                <div class="ficha-header-container no-print">
-                    <h4>
-                        <i class="fas fa-file-alt me-2"></i>
-                        Ficha de Desfiliação - ASSEGO
-                    </h4>
-                    <p class="mb-0">Documento oficial preenchido automaticamente</p>
-                </div>
-
-                <div class="ficha-content">
-                    <div class="ficha-desfiliacao">
-                        <div class="ficha-title">
-                            SOLICITAÇÃO DE DESFILIAÇÃO<br>
-                            ASSEGO
+                    <!-- Seção de Cadastro de Associados -->
+                    <div class="service-section">
+                        <div class="service-header">
+                            <h3>
+                                <i class="fas fa-user-plus"></i>
+                                Cadastro de Associados
+                            </h3>
                         </div>
+                        <div class="service-content">
+                            <p class="text-muted mb-4" style="font-size: 0.9rem;">
+                                Inicie novos cadastros de associados ou gerencie pré-cadastros existentes.
+                            </p>
 
-                        <p>
-                            Goiânia, <span class="campo-preenchimento" id="diaAtual"></span> de 
-                            <span class="campo-preenchimento" id="mesAtual"></span> de 
-                            <span class="campo-preenchimento" id="anoAtual"></span>
-                        </p>
+                            <div class="cadastro-options">
+                                <div class="cadastro-option" onclick="novoPreCadastro()">
+                                    <div class="cadastro-option-icon">
+                                        <i class="fas fa-user-plus"></i>
+                                    </div>
+                                    <div class="cadastro-option-content">
+                                        <h5>Nova Filiação</h5>
+                                        <p>Inicie um nova filiação de associado com formulário completo</p>
+                                    </div>
+                                </div>
 
-                        <br>
+                                <div class="cadastro-option" onclick="consultarAssociado()">
+                                    <div class="cadastro-option-icon">
+                                        <i class="fas fa-search"></i>
+                                    </div>
+                                    <div class="cadastro-option-content">
+                                        <h5>Consultar Associado</h5>
+                                        <p>Busque e consulte dados de associados existentes</p>
+                                    </div>
+                                </div>
 
-                        <p><strong>Prezado Sr. Presidente,</strong></p>
+                                <div class="cadastro-option" onclick="consultarDependentes18()">
+                                    <div class="cadastro-option-icon">
+                                        <i class="fas fa-birthday-cake"></i>
+                                    </div>
+                                    <div class="cadastro-option-content">
+                                        <h5>Dependentes 18+</h5>
+                                        <p>Veja os dependentes que já completaram ou estão prestes a completar 18 anos</p>
+                                    </div>
+                                </div>
 
-                        <br>
-
-                        <p>
-                            Eu, <span class="campo-preenchimento largo" id="nomeCompleto" contenteditable="true"></span>,
-                            portador do RG militar: <span class="campo-preenchimento" id="rgMilitar" contenteditable="true"></span>, 
-                            Instituição: <span class="campo-preenchimento medio" id="corporacao" contenteditable="true"></span>,
-                            residente e domiciliado: 
-                            <span class="campo-preenchimento largo" id="endereco1" contenteditable="true"></span>
-                        </p>
-
-                        <p>
-                            <span class="campo-preenchimento largo" id="endereco2" contenteditable="true"></span>
-                        </p>
-
-                        <p>
-                            <span class="campo-preenchimento largo" id="endereco3" contenteditable="true"></span>,
-                            telefone <span class="campo-preenchimento" id="telefoneFormatado" contenteditable="true"></span>, 
-                            Lotação: <span class="campo-preenchimento medio" id="lotacao" contenteditable="true"></span>,
-                            solicito minha desfiliação total da Associação dos Subtenentes e Sargentos do Estado
-                            de Goiás – ASSEGO, pelo motivo:
-                        </p>
-
-                        <div class="motivo-area" contenteditable="true" id="motivoDesfiliacao">
-                            Clique aqui para digitar o motivo da desfiliação...
-                        </div>
-
-                        <br>
-
-                        <p>
-                            Me coloco à disposição, através do telefone informado acima para informações
-                            adicionais necessárias à conclusão deste processo e, desde já, <strong>DECLARO ESTAR 
-                            CIENTE QUE O PROCESSO INTERNO TEM UM PRAZO DE ATÉ 30 DIAS, A CONTAR DA 
-                            DATA DE SOLICITAÇÃO, PARA SER CONCLUÍDO.</strong>
-                        </p>
-
-                        <br>
-
-                        <p><strong>Respeitosamente,</strong></p>
-
-                        <div class="assinatura-area">
-                            <div class="linha-assinatura">
-                                Assinatura do requerente
+                                <div class="cadastro-option" onclick="relatoriosComerciais()">
+                                    <div class="cadastro-option-icon">
+                                        <i class="fas fa-chart-bar"></i>
+                                    </div>
+                                    <div class="cadastro-option-content">
+                                        <h5>Relatórios Comerciais</h5>
+                                        <p>Visualize estatísticas e relatórios do setor comercial</p>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Botões de ação -->
-                <div class="ficha-actions no-print">
-                    <button class="btn-imprimir" onclick="imprimirFicha()">
-                        <i class="fas fa-print me-2"></i>
-                        Imprimir Ficha
-                    </button>
-                    <button class="btn-gerar-pdf" onclick="gerarPDFFicha()">
-                        <i class="fas fa-file-pdf me-2"></i>
-                        Gerar PDF
-                    </button>
-                </div>
-            </div>
+                <!-- Container para ficha de desfiliação (apenas com permissão) -->
+                <?php if ($temPermissaoComercial): ?>
+                    <div id="fichaDesfiliacao" class="ficha-desfiliacao-container fade-in" style="display: none;" data-aos="fade-up">
+                        <div class="ficha-header-container no-print">
+                            <h4>
+                                <i class="fas fa-file-alt me-2"></i>
+                                Ficha de Desfiliação - ASSEGO
+                            </h4>
+                            <p class="mb-0">Documento oficial preenchido automaticamente</p>
+                        </div>
 
-            <?php else: ?>
-            <!-- Sem permissão - Apenas estatísticas visíveis -->
-            <div class="alert alert-warning" data-aos="fade-up">
-                <h5><i class="fas fa-lock me-2"></i>Funcionalidades Restritas</h5>
-                <p class="mb-2">
-                    Você pode visualizar as estatísticas comerciais, mas não tem permissão para acessar as funcionalidades avançadas.
-                </p>
-                <small class="text-muted">
-                    <strong>Para acesso completo:</strong> Entre em contato com o administrador para obter permissões do setor comercial ou presidência.
-                </small>
-            </div>
-            <?php endif; ?>
+                        <div class="ficha-content">
+                            <div class="ficha-desfiliacao">
+                                <div class="ficha-title">
+                                    SOLICITAÇÃO DE DESFILIAÇÃO<br>
+                                    ASSEGO
+                                </div>
+
+                                <p>
+                                    Goiânia, <span class="campo-preenchimento" id="diaAtual"></span> de
+                                    <span class="campo-preenchimento" id="mesAtual"></span> de
+                                    <span class="campo-preenchimento" id="anoAtual"></span>
+                                </p>
+
+                                <br>
+
+                                <p><strong>Prezado Sr. Presidente,</strong></p>
+
+                                <br>
+
+                                <p>
+                                    Eu, <span class="campo-preenchimento largo" id="nomeCompleto" contenteditable="true"></span>,
+                                    portador do RG militar: <span class="campo-preenchimento" id="rgMilitar" contenteditable="true"></span>,
+                                    Instituição: <span class="campo-preenchimento medio" id="corporacao" contenteditable="true"></span>,
+                                    residente e domiciliado:
+                                    <span class="campo-preenchimento largo" id="endereco1" contenteditable="true"></span>
+                                </p>
+
+                                <p>
+                                    <span class="campo-preenchimento largo" id="endereco2" contenteditable="true"></span>
+                                </p>
+
+                                <p>
+                                    <span class="campo-preenchimento largo" id="endereco3" contenteditable="true"></span>,
+                                    telefone <span class="campo-preenchimento" id="telefoneFormatado" contenteditable="true"></span>,
+                                    Lotação: <span class="campo-preenchimento medio" id="lotacao" contenteditable="true"></span>,
+                                    solicito minha desfiliação total da Associação dos Subtenentes e Sargentos do Estado
+                                    de Goiás – ASSEGO, pelo motivo:
+                                </p>
+
+                                <div class="motivo-area" contenteditable="true" id="motivoDesfiliacao">
+                                    Clique aqui para digitar o motivo da desfiliação...
+                                </div>
+
+                                <br>
+
+                                <p>
+                                    Me coloco à disposição, através do telefone informado acima para informações
+                                    adicionais necessárias à conclusão deste processo e, desde já, <strong>DECLARO ESTAR
+                                        CIENTE QUE O PROCESSO INTERNO TEM UM PRAZO DE ATÉ 30 DIAS, A CONTAR DA
+                                        DATA DE SOLICITAÇÃO, PARA SER CONCLUÍDO.</strong>
+                                </p>
+
+                                <br>
+
+                                <p><strong>Respeitosamente,</strong></p>
+
+                                <div class="assinatura-area">
+                                    <div class="linha-assinatura">
+                                        Assinatura do requerente
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Botões de ação -->
+                        <div class="ficha-actions no-print">
+                            <button class="btn-imprimir" onclick="imprimirFicha()">
+                                <i class="fas fa-print me-2"></i>
+                                Imprimir Ficha
+                            </button>
+                            <button class="btn-gerar-pdf" onclick="gerarPDFFicha()">
+                                <i class="fas fa-file-pdf me-2"></i>
+                                Gerar PDF
+                            </button>
+                        </div>
+                    </div>
+
+                <?php else: ?>
+                    <!-- Sem permissão - Apenas estatísticas visíveis -->
+                    <div class="alert alert-warning" data-aos="fade-up">
+                        <h5><i class="fas fa-lock me-2"></i>Funcionalidades Restritas</h5>
+                        <p class="mb-2">
+                            Você pode visualizar as estatísticas comerciais, mas não tem permissão para acessar as funcionalidades avançadas.
+                        </p>
+                        <small class="text-muted">
+                            <strong>Para acesso completo:</strong> Entre em contato com o administrador para obter permissões do setor comercial ou presidência.
+                        </small>
+                    </div>
+                <?php endif; ?>
 
             <?php endif; ?>
         </div>
@@ -1341,39 +1392,39 @@ $headerComponent = HeaderComponent::create([
 
     <!-- Modal de Seleção de Associado (apenas com permissão) -->
     <?php if ($temPermissaoComercial): ?>
-    <div class="modal fade modal-selecao-associado" id="modalSelecaoAssociadoComercial" tabindex="-1">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header bg-primary text-white">
-                    <h5 class="modal-title">
-                        <i class="fas fa-users me-2"></i>
-                        Múltiplos Associados Encontrados
-                    </h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="alert alert-info">
-                        <i class="fas fa-info-circle me-2"></i>
-                        <strong>Atenção:</strong> Foram encontrados múltiplos associados com o mesmo RG em diferentes corporações.
-                        Selecione o associado correto para visualizar os dados e gerar a ficha de desfiliação.
+        <div class="modal fade modal-selecao-associado" id="modalSelecaoAssociadoComercial" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header bg-primary text-white">
+                        <h5 class="modal-title">
+                            <i class="fas fa-users me-2"></i>
+                            Múltiplos Associados Encontrados
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                     </div>
-                    <div id="listaAssociadosSelecaoComercial">
-                        <!-- Lista de associados será inserida aqui -->
+                    <div class="modal-body">
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>Atenção:</strong> Foram encontrados múltiplos associados com o mesmo RG em diferentes corporações.
+                            Selecione o associado correto para visualizar os dados e gerar a ficha de desfiliação.
+                        </div>
+                        <div id="listaAssociadosSelecaoComercial">
+                            <!-- Lista de associados será inserida aqui -->
+                        </div>
                     </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                        <i class="fas fa-times me-2"></i>
-                        Cancelar
-                    </button>
-                    <button type="button" class="btn btn-primary" id="btnConfirmarSelecaoComercial" disabled>
-                        <i class="fas fa-check me-2"></i>
-                        Confirmar Seleção
-                    </button>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            <i class="fas fa-times me-2"></i>
+                            Cancelar
+                        </button>
+                        <button type="button" class="btn btn-primary" id="btnConfirmarSelecaoComercial" disabled>
+                            <i class="fas fa-check me-2"></i>
+                            Confirmar Seleção
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
     <?php endif; ?>
 
     <!-- Scripts -->
@@ -1389,12 +1440,12 @@ $headerComponent = HeaderComponent::create([
             constructor() {
                 this.container = document.getElementById('toastContainer');
             }
-            
+
             show(message, type = 'success', duration = 5000) {
                 const toast = document.createElement('div');
                 toast.className = `toast align-items-center text-white bg-${type} border-0`;
                 toast.setAttribute('role', 'alert');
-                
+
                 toast.innerHTML = `
                     <div class="d-flex">
                         <div class="toast-body">
@@ -1404,16 +1455,18 @@ $headerComponent = HeaderComponent::create([
                         <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
                     </div>
                 `;
-                
+
                 this.container.appendChild(toast);
-                const bsToast = new bootstrap.Toast(toast, { delay: duration });
+                const bsToast = new bootstrap.Toast(toast, {
+                    delay: duration
+                });
                 bsToast.show();
-                
+
                 toast.addEventListener('hidden.bs.toast', () => {
                     toast.remove();
                 });
             }
-            
+
             getIcon(type) {
                 const icons = {
                     success: 'check-circle',
@@ -1437,7 +1490,10 @@ $headerComponent = HeaderComponent::create([
 
         // ===== INICIALIZAÇÃO =====
         document.addEventListener('DOMContentLoaded', function() {
-            AOS.init({ duration: 800, once: true });
+            AOS.init({
+                duration: 800,
+                once: true
+            });
 
             if (!temPermissao) {
                 console.log('❌ Usuário sem permissão - funcionalidades restritas, mas estatísticas visíveis');
@@ -1450,18 +1506,18 @@ $headerComponent = HeaderComponent::create([
             preencherDataAtual();
             configurarEventos();
             <?php if ($temPermissaoComercial): ?>
-            configurarFichaDesfiliacao();
+                configurarFichaDesfiliacao();
             <?php endif; ?>
 
             <?php if ($temPermissaoComercial): ?>
-            $('#rgBuscaComercial').on('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    buscarAssociadoPorRG(e);
-                }
-            });
+                $('#rgBuscaComercial').on('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        buscarAssociadoPorRG(e);
+                    }
+                });
 
-            document.getElementById('btnConfirmarSelecaoComercial').addEventListener('click', buscarAssociadoSelecionado);
+                document.getElementById('btnConfirmarSelecaoComercial').addEventListener('click', buscarAssociadoSelecionado);
             <?php endif; ?>
 
             const departamentoNome = isComercial ? 'Comercial' : isPresidencia ? 'Presidência' : 'Outro';
@@ -1473,19 +1529,19 @@ $headerComponent = HeaderComponent::create([
 
         async function buscarAssociadoPorRG(event) {
             event.preventDefault();
-            
+
             if (!temPermissao) {
                 notifications.show('Você não tem permissão para buscar associados', 'error');
                 return;
             }
-            
+
             const rgInput = document.getElementById('rgBuscaComercial');
             const busca = rgInput.value.trim();
             const btnBuscar = document.getElementById('btnBuscarComercial');
             const loadingOverlay = document.getElementById('loadingBuscaComercial');
             const dadosContainer = document.getElementById('dadosAssociadoContainer');
             const fichaContainer = document.getElementById('fichaDesfiliacao');
-            
+
             if (!busca) {
                 mostrarAlertaBuscaComercial('Por favor, digite um RG ou nome para buscar.', 'danger');
                 return;
@@ -1511,16 +1567,16 @@ $headerComponent = HeaderComponent::create([
                     dadosAssociadoAtual = result.data;
                     exibirDadosAssociado(dadosAssociadoAtual);
                     preencherFichaDesfiliacao(dadosAssociadoAtual);
-                    
+
                     dadosContainer.style.display = 'block';
                     fichaContainer.style.display = 'block';
-                    
+
                     mostrarAlertaBuscaComercial('Associado encontrado! Dados carregados e ficha preenchida automaticamente.', 'success');
-                    
+
                     setTimeout(() => {
-                        dadosContainer.scrollIntoView({ 
+                        dadosContainer.scrollIntoView({
                             behavior: 'smooth',
-                            block: 'start' 
+                            block: 'start'
                         });
                     }, 300);
                 } else {
@@ -1646,10 +1702,10 @@ $headerComponent = HeaderComponent::create([
                     dadosAssociadoAtual = result.data;
                     exibirDadosAssociado(result.data);
                     preencherFichaDesfiliacao(result.data);
-                    
+
                     dadosContainer.style.display = 'block';
                     fichaContainer.style.display = 'block';
-                    
+
                     mostrarAlertaBuscaComercial('Dados carregados e ficha preenchida automaticamente!', 'success');
 
                     setTimeout(() => {
@@ -1706,7 +1762,7 @@ $headerComponent = HeaderComponent::create([
 
             function criarDadosItem(label, value, icone = 'fa-info') {
                 if (!value || value === 'null' || value === '') return '';
-                
+
                 return `
                     <div class="dados-item">
                         <div class="dados-label">
@@ -1740,7 +1796,7 @@ $headerComponent = HeaderComponent::create([
                     endereco.bairro,
                     endereco.cidade
                 ].filter(Boolean).join(', ');
-                
+
                 grid.innerHTML += criarDadosItem('Endereço', enderecoCompleto, 'fa-home');
             }
             grid.innerHTML += criarDadosItem('CEP', formatarCEP(endereco.cep), 'fa-map-pin');
@@ -1748,13 +1804,13 @@ $headerComponent = HeaderComponent::create([
             const financeiros = dados.dados_financeiros || {};
             grid.innerHTML += criarDadosItem('Tipo Associado', financeiros.tipo_associado, 'fa-user-tag');
             grid.innerHTML += criarDadosItem('Situação Financeira', financeiros.situacao_financeira, 'fa-dollar-sign');
-            
+
             const contrato = dados.contrato || {};
             grid.innerHTML += criarDadosItem('Data Filiação', formatarData(contrato.data_filiacao), 'fa-handshake');
-            
-            const statusBadge = dados.status_cadastro === 'PRE_CADASTRO' 
-                ? '<span class="badge bg-warning">Pré-cadastro</span>'
-                : '<span class="badge bg-success">Cadastro Definitivo</span>';
+
+            const statusBadge = dados.status_cadastro === 'PRE_CADASTRO' ?
+                '<span class="badge bg-warning">Pré-cadastro</span>' :
+                '<span class="badge bg-success">Cadastro Definitivo</span>';
             grid.innerHTML += `
                 <div class="dados-item">
                     <div class="dados-label">
@@ -1806,7 +1862,7 @@ $headerComponent = HeaderComponent::create([
 
             const endereco = dados.endereco || {};
             const enderecoCompleto = montarEnderecoCompleto(endereco);
-            
+
             const linhas = quebrarEnderecoEmLinhas(enderecoCompleto);
             const end1El = document.getElementById('endereco1');
             const end2El = document.getElementById('endereco2');
@@ -1822,34 +1878,34 @@ $headerComponent = HeaderComponent::create([
 
         function montarEnderecoCompleto(endereco) {
             const partes = [];
-            
+
             if (endereco.endereco) {
                 let linha = endereco.endereco;
                 if (endereco.numero) linha += `, nº ${endereco.numero}`;
                 if (endereco.complemento) linha += `, ${endereco.complemento}`;
                 partes.push(linha);
             }
-            
+
             if (endereco.bairro) {
                 partes.push(`Bairro: ${endereco.bairro}`);
             }
-            
+
             if (endereco.cidade) {
                 let cidade = endereco.cidade;
                 if (endereco.cep) cidade += ` - CEP: ${formatarCEP(endereco.cep)}`;
                 partes.push(cidade);
             }
-            
+
             return partes.join(', ');
         }
 
         function quebrarEnderecoEmLinhas(enderecoCompleto, maxPorLinha = 60) {
             if (!enderecoCompleto) return ['', '', ''];
-            
+
             const palavras = enderecoCompleto.split(' ');
             const linhas = [];
             let linhaAtual = '';
-            
+
             for (const palavra of palavras) {
                 if ((linhaAtual + ' ' + palavra).length <= maxPorLinha) {
                     linhaAtual += (linhaAtual ? ' ' : '') + palavra;
@@ -1862,21 +1918,21 @@ $headerComponent = HeaderComponent::create([
                     }
                 }
             }
-            
+
             if (linhaAtual) linhas.push(linhaAtual);
-            
+
             while (linhas.length < 3) {
                 linhas.push('');
             }
-            
+
             return linhas.slice(0, 3);
         }
 
         function configurarFichaDesfiliacao() {
             if (!temPermissao) return;
-            
+
             const motivoArea = document.getElementById('motivoDesfiliacao');
-            
+
             if (motivoArea) {
                 motivoArea.addEventListener('focus', function() {
                     if (this.textContent === 'Clique aqui para digitar o motivo da desfiliação...') {
@@ -1897,7 +1953,7 @@ $headerComponent = HeaderComponent::create([
                 notifications.show('Você não tem permissão para esta funcionalidade', 'error');
                 return;
             }
-            
+
             const rgInput = document.getElementById('rgBuscaComercial');
             const dadosContainer = document.getElementById('dadosAssociadoContainer');
             const fichaContainer = document.getElementById('fichaDesfiliacao');
@@ -1909,21 +1965,21 @@ $headerComponent = HeaderComponent::create([
             if (fichaContainer) fichaContainer.style.display = 'none';
             if (dadosGrid) dadosGrid.innerHTML = '';
             if (militarContainer) militarContainer.style.display = 'none';
-            
+
             dadosAssociadoAtual = null;
             associadoSelecionadoId = null;
             esconderAlertaBuscaComercial();
 
             const campos = [
-                'nomeCompleto', 'rgMilitar', 'corporacao', 'endereco1', 
+                'nomeCompleto', 'rgMilitar', 'corporacao', 'endereco1',
                 'endereco2', 'endereco3', 'telefoneFormatado', 'lotacao'
             ];
-            
+
             campos.forEach(campo => {
                 const elemento = document.getElementById(campo);
                 if (elemento) elemento.textContent = '';
             });
-            
+
             const motivoArea = document.getElementById('motivoDesfiliacao');
             if (motivoArea) {
                 motivoArea.textContent = 'Clique aqui para digitar o motivo da desfiliação...';
@@ -1933,13 +1989,13 @@ $headerComponent = HeaderComponent::create([
         function mostrarAlertaBuscaComercial(mensagem, tipo) {
             const alertDiv = document.getElementById('alertBuscaComercial');
             const alertText = document.getElementById('alertBuscaComercialText');
-            
+
             if (!alertDiv || !alertText) return;
-            
+
             alertText.textContent = mensagem;
-            
+
             alertDiv.className = 'alert';
-            
+
             switch (tipo) {
                 case 'success':
                     alertDiv.classList.add('alert-success');
@@ -1954,9 +2010,9 @@ $headerComponent = HeaderComponent::create([
                     alertDiv.classList.add('alert-warning');
                     break;
             }
-            
+
             alertDiv.style.display = 'flex';
-            
+
             if (tipo === 'success') {
                 setTimeout(esconderAlertaBuscaComercial, 5000);
             }
@@ -1970,31 +2026,139 @@ $headerComponent = HeaderComponent::create([
         }
 
         function imprimirFicha() {
-            if (!temPermissao) {
-                notifications.show('Você não tem permissão para esta funcionalidade', 'error');
-                return;
-            }
-            
-            const nomeEl = document.getElementById('nomeCompleto');
-            const rgEl = document.getElementById('rgMilitar');
-            const motivoEl = document.getElementById('motivoDesfiliacao');
-            
-            const nome = nomeEl?.textContent?.trim();
-            const rg = rgEl?.textContent?.trim();
-            const motivo = motivoEl?.textContent?.trim();
-            
-            if (!nome || !rg) {
-                mostrarAlertaBuscaComercial('Por favor, busque um associado antes de imprimir.', 'danger');
-                return;
-            }
-            
-            if (!motivo || motivo === 'Clique aqui para digitar o motivo da desfiliação...') {
-                mostrarAlertaBuscaComercial('Por favor, informe o motivo da desfiliação antes de imprimir.', 'danger');
-                return;
-            }
-            
-            window.print();
-        }
+    if (!temPermissao) {
+        notifications.show('Você não tem permissão para esta funcionalidade', 'error');
+        return;
+    }
+    
+    const nomeEl = document.getElementById('nomeCompleto');
+    const rgEl = document.getElementById('rgMilitar');
+    const motivoEl = document.getElementById('motivoDesfiliacao');
+    
+    const nome = nomeEl?.textContent?.trim();
+    const rg = rgEl?.textContent?.trim();
+    const motivo = motivoEl?.textContent?.trim();
+    
+    if (!nome || !rg) {
+        mostrarAlertaBuscaComercial('Por favor, busque um associado antes de imprimir.', 'danger');
+        return;
+    }
+    
+    if (!motivo || motivo === 'Clique aqui para digitar o motivo da desfiliação...') {
+        mostrarAlertaBuscaComercial('Por favor, informe o motivo da desfiliação antes de imprimir.', 'danger');
+        return;
+    }
+    
+    // Pega APENAS o conteúdo da ficha
+    const fichaContent = document.querySelector('#fichaDesfiliacao .ficha-desfiliacao');
+    if (!fichaContent) {
+        mostrarAlertaBuscaComercial('Conteúdo da ficha não encontrado.', 'danger');
+        return;
+    }
+    
+    // Cria uma nova janela com APENAS a ficha
+    const janelaImpressao = window.open('', '_blank', 'width=800,height=600');
+    
+    janelaImpressao.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>Solicitação de Desfiliação - ${nome}</title>
+            <style>
+                @page {
+                    size: A4;
+                    margin: 1.5cm;
+                }
+                
+                body {
+                    font-family: 'Times New Roman', serif;
+                    font-size: 12pt;
+                    line-height: 1.4;
+                    color: #000;
+                    margin: 0;
+                    padding: 0;
+                    background: white;
+                }
+                
+                .ficha-title {
+                    text-align: center;
+                    font-size: 16pt;
+                    font-weight: bold;
+                    margin-bottom: 1.5rem;
+                    padding-bottom: 0.5rem;
+                    border-bottom: 2pt solid #000;
+                }
+                
+                p {
+                    margin: 0.4rem 0;
+                    text-align: justify;
+                }
+                
+                .campo-preenchimento {
+                    border-bottom: 1pt solid #000;
+                    padding: 0 3pt;
+                    font-weight: bold;
+                    display: inline-block;
+                    min-width: 100px;
+                    background: transparent;
+                }
+                
+                .campo-preenchimento.largo {
+                    min-width: 300px;
+                }
+                
+                .campo-preenchimento.medio {
+                    min-width: 200px;
+                }
+                
+                .motivo-area {
+                    border: 1pt solid #000;
+                    min-height: 80pt;
+                    padding: 10pt;
+                    margin: 1rem 0;
+                    background: transparent;
+                }
+                
+                .assinatura-area {
+                    text-align: center;
+                    margin-top: 2rem;
+                }
+                
+                .linha-assinatura {
+                    border-top: 1pt solid #000;
+                    width: 300pt;
+                    margin: 2rem auto 0.5rem;
+                    padding-top: 0.5rem;
+                    font-weight: bold;
+                }
+                
+                @media print {
+                    body { 
+                        margin: 0; 
+                        padding: 0; 
+                    }
+                }
+            </style>
+        </head>
+        <body>
+            ${fichaContent.outerHTML}
+        </body>
+        </html>
+    `);
+    
+    janelaImpressao.document.close();
+    
+    // Aguarda carregar e imprime
+    janelaImpressao.onload = function() {
+        setTimeout(() => {
+            janelaImpressao.print();
+            janelaImpressao.close();
+        }, 500);
+    };
+    
+    notifications.show('Abrindo ficha para impressão...', 'success', 2000);
+}
 
         function gerarPDFFicha() {
             if (!temPermissao) {
