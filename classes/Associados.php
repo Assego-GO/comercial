@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Classe para gerenciamento de associados - VERSÃO COM PRÉ-CADASTRO E NOVOS CAMPOS
  * classes/Associados.php
@@ -74,7 +75,6 @@ class Associados
             $associado['historico_fluxo'] = $this->getHistoricoFluxo($id);
 
             return $associado;
-
         } catch (PDOException $e) {
             error_log("Erro ao buscar associado: " . $e->getMessage());
             return false;
@@ -194,7 +194,6 @@ class Associados
             $stmt->execute($params);
 
             return $stmt->fetchAll();
-
         } catch (PDOException $e) {
             error_log("Erro ao listar associados: " . $e->getMessage());
             return [];
@@ -370,7 +369,6 @@ class Associados
 
             $this->db->commit();
             return $associadoId;
-
         } catch (Exception $e) {
             $this->db->rollBack();
             error_log("Erro ao criar associado: " . $e->getMessage());
@@ -484,7 +482,6 @@ class Associados
 
                 error_log("✓ Pré-cadastro {$associadoId} marcado como ENVIADO_PRESIDENCIA");
                 return true;
-
             } catch (Exception $e) {
                 // Rollback apenas se iniciamos a transação
                 if ($transactionStarted && $this->db->inTransaction()) {
@@ -492,7 +489,6 @@ class Associados
                 }
                 throw $e;
             }
-
         } catch (Exception $e) {
             error_log("Erro em enviarParaPresidencia: " . $e->getMessage());
             throw $e;
@@ -577,7 +573,6 @@ class Associados
 
             $this->db->commit();
             return true;
-
         } catch (Exception $e) {
             $this->db->rollBack();
             error_log("Erro ao aprovar pré-cadastro: " . $e->getMessage());
@@ -639,7 +634,6 @@ class Associados
 
             $this->db->commit();
             return true;
-
         } catch (Exception $e) {
             $this->db->rollBack();
             error_log("Erro ao rejeitar pré-cadastro: " . $e->getMessage());
@@ -790,7 +784,6 @@ class Associados
             $stats['por_patente'] = $stmt->fetchAll();
 
             return $stats;
-
         } catch (PDOException $e) {
             error_log("Erro ao buscar estatísticas: " . $e->getMessage());
             return [];
@@ -881,7 +874,6 @@ class Associados
 
             $this->db->commit();
             return true;
-
         } catch (Exception $e) {
             $this->db->rollBack();
             error_log("Erro ao atualizar associado: " . $e->getMessage());
@@ -934,7 +926,6 @@ class Associados
 
             $this->db->commit();
             return true;
-
         } catch (Exception $e) {
             $this->db->rollBack();
             error_log("Erro ao excluir associado: " . $e->getMessage());
@@ -982,7 +973,6 @@ class Associados
             ]);
 
             return $this->db->lastInsertId();
-
         } catch (PDOException $e) {
             error_log("Erro ao adicionar dependente: " . $e->getMessage());
             throw $e;
@@ -1409,7 +1399,6 @@ class Associados
                     ]);
                 }
             }
-
         } catch (PDOException $e) {
             error_log("Erro ao registrar auditoria: " . $e->getMessage());
         }
@@ -1434,7 +1423,8 @@ class Associados
                 f.nome as criado_por_nome,
                 f.cargo as criado_por_cargo,
                 f.foto as criado_por_foto,
-                DATE_FORMAT(o.data_criacao, '%d/%m/%Y às %H:%i') as data_formatada,
+                DATE_FORMAT(CONVERT_TZ(o.data_criacao, '+00:00', '-03:00'), '%d/%m/%Y às %H:%i') as data_formatada,
+                DATE_FORMAT(CONVERT_TZ(o.data_edicao, '+00:00', '-03:00'), '%d/%m/%Y às %H:%i') as data_edicao_formatada,
                 CASE 
                     WHEN o.data_criacao >= DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 
                     ELSE 0 
@@ -1454,7 +1444,6 @@ class Associados
             }
 
             return $observacoes;
-
         } catch (PDOException $e) {
             error_log("Erro ao buscar observações: " . $e->getMessage());
             return [];
@@ -1527,7 +1516,6 @@ class Associados
 
             // Retornar dados da observação criada
             return ['id' => $observacaoId];
-
         } catch (Exception $e) {
             if ($this->db->inTransaction()) {
                 $this->db->rollBack();
@@ -1596,7 +1584,6 @@ class Associados
             $this->db->commit();
 
             return $this->getObservacaoById($id);
-
         } catch (Exception $e) {
             $this->db->rollBack();
             error_log("Erro ao atualizar observação: " . $e->getMessage());
@@ -1680,7 +1667,6 @@ class Associados
 
             error_log("✓ Observação $id excluída com sucesso");
             return true;
-
         } catch (Exception $e) {
             if ($this->db->inTransaction()) {
                 $this->db->rollBack();
@@ -1722,7 +1708,6 @@ class Associados
             $this->db->commit();
 
             return ['importante' => $novoEstado];
-
         } catch (Exception $e) {
             $this->db->rollBack();
             error_log("Erro ao alternar importância: " . $e->getMessage());
@@ -1749,7 +1734,6 @@ class Associados
 
             $stmt->execute([$id]);
             return $stmt->fetch();
-
         } catch (PDOException $e) {
             error_log("Erro ao buscar observação por ID: " . $e->getMessage());
             return null;
@@ -1775,7 +1759,6 @@ class Associados
 
             $stmt->execute([$associadoId]);
             return $stmt->fetch();
-
         } catch (PDOException $e) {
             error_log("Erro ao buscar estatísticas de observações: " . $e->getMessage());
             return [
@@ -1858,7 +1841,6 @@ class Associados
                 $_SERVER['HTTP_USER_AGENT'] ?? null,
                 session_id()
             ]);
-
         } catch (PDOException $e) {
             error_log("Erro ao registrar auditoria de observação: " . $e->getMessage());
         }
@@ -1927,7 +1909,6 @@ class Associados
             $result = $stmt->fetch();
 
             return $result['total'] ?? 0;
-
         } catch (PDOException $e) {
             error_log("Erro ao contar observações: " . $e->getMessage());
             return 0;
