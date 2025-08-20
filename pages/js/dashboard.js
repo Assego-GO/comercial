@@ -2844,30 +2844,177 @@ function editarObservacao(id) {
     modal.show();
 }
 
-// Função para excluir observação
-function excluirObservacao(id) {
-    if (!confirm('Tem certeza que deseja excluir esta observação?')) {
+function criarModalConfirmacaoExclusao() {
+    // Verificar se já existe
+    if (document.getElementById('modalConfirmarExclusao')) {
         return;
     }
 
-    $.ajax({
-        url: '../api/observacoes/excluir.php',
-        method: 'POST',
-        data: JSON.stringify({ id: id }),
-        contentType: 'application/json',
-        dataType: 'json',
-        success: function (response) {
-            if (response.status === 'success') {
-                carregarObservacoes(currentAssociadoIdObs);
-                mostrarNotificacaoObs('Observação excluída com sucesso!', 'success');
-            } else {
-                alert('Erro ao excluir observação: ' + (response.message || 'Erro desconhecido'));
-            }
-        },
-        error: function () {
-            alert('Erro ao excluir observação. Tente novamente.');
+    // Criar o modal HTML
+    const modalHTML = `
+        <div class="modal fade" id="modalConfirmarExclusao" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content" style="border: none; box-shadow: 0 20px 60px rgba(0,0,0,0.3); border-radius: 16px;">
+                    
+                    <!-- Header com ícone de alerta -->
+                    <div class="modal-header" style="background: linear-gradient(135deg, #dc3545, #c82333); color: white; border-radius: 16px 16px 0 0; border: none; padding: 2rem 2rem 1rem 2rem;">
+                        <div style="width: 100%; text-align: center;">
+                            <div style="width: 80px; height: 80px; background: rgba(255,255,255,0.2); border-radius: 50%; margin: 0 auto 1rem; display: flex; align-items: center; justify-content: center;">
+                                <i class="fas fa-exclamation-triangle" style="font-size: 2.5rem; color: white;"></i>
+                            </div>
+                            <h4 style="margin: 0; font-weight: 700; font-size: 1.5rem;">⚠️ ATENÇÃO - Ação Irreversível</h4>
+                        </div>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close" style="position: absolute; top: 15px; right: 15px;"></button>
+                    </div>
+
+                    <!-- Corpo com aviso -->
+                    <div class="modal-body" style="padding: 2rem; text-align: center;">
+                        <div style="background: #fff3cd; border: 2px solid #ffeaa7; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem;">
+                            <h5 style="color: #856404; margin: 0 0 1rem 0; font-weight: 600;">
+                                🗂️ Você está prestes a excluir uma observação
+                            </h5>
+                            <p style="color: #856404; margin: 0; font-size: 1rem; line-height: 1.5;">
+                                <strong>As observações contêm o histórico completo do associado na ASSEGO.</strong><br>
+                                Esta informação pode ser crucial para atendimentos futuros.
+                            </p>
+                        </div>
+
+                        <div style="background: #f8d7da; border: 2px solid #f5c6cb; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem;">
+                            <h6 style="color: #721c24; margin: 0 0 0.5rem 0; font-weight: 600;">
+                                ❌ Esta ação NÃO pode ser desfeita
+                            </h6>
+                            <p style="color: #721c24; margin: 0; font-size: 0.9rem;">
+                                Uma vez excluída, a observação será perdida permanentemente.
+                            </p>
+                        </div>
+
+                        <div style="font-size: 1.1rem; color: #495057; font-weight: 500; margin-bottom: 1rem;">
+                            Tem <strong>absoluta certeza</strong> que deseja continuar?
+                        </div>
+                    </div>
+
+                    <!-- Footer com botões estilizados -->
+                    <div class="modal-footer" style="border: none; padding: 0 2rem 2rem 2rem; gap: 1rem;">
+                        <button type="button" 
+                                class="btn btn-cancelar-exclusao" 
+                                data-bs-dismiss="modal" 
+                                style="background: #6c757d; color: white; border: none; padding: 0.75rem 2rem; border-radius: 8px; font-weight: 600; flex: 1; transition: all 0.3s ease;">
+                            <i class="fas fa-shield-alt me-2"></i>
+                            Cancelar (Recomendado)
+                        </button>
+                        
+                        <button type="button" 
+                                id="btnConfirmarExclusaoFinal"
+                                class="btn btn-confirmar-exclusao" 
+                                style="background: #dc3545; color: white; border: none; padding: 0.75rem 2rem; border-radius: 8px; font-weight: 600; flex: 1; transition: all 0.3s ease;">
+                            <i class="fas fa-trash-alt me-2"></i>
+                            Sim, Excluir Definitivamente
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Adicionar CSS
+    const style = document.createElement('style');
+    style.textContent = `
+        /* Animação suave para o modal */
+        #modalConfirmarExclusao .modal-content {
+            animation: modalAppear 0.3s ease-out;
         }
+
+        @keyframes modalAppear {
+            from {
+                opacity: 0;
+                transform: scale(0.7) translateY(-50px);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        /* Efeitos hover nos botões */
+        .btn-cancelar-exclusao:hover {
+            background: #5a6268 !important;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2) !important;
+        }
+
+        .btn-confirmar-exclusao:hover {
+            background: #c82333 !important;
+            transform: scale(1.02) !important;
+            box-shadow: 0 4px 15px rgba(220, 53, 69, 0.4) !important;
+        }
+
+        #modalConfirmarExclusao button {
+            transition: all 0.3s ease !important;
+        }
+    `;
+
+    // Adicionar ao DOM
+    document.head.appendChild(style);
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+    // Event listener para o botão de confirmação
+    document.getElementById('btnConfirmarExclusaoFinal').addEventListener('click', function() {
+        const id = window.observacaoParaExcluir;
+        
+        if (!id) {
+            alert('Erro: ID da observação não encontrado');
+            return;
+        }
+        
+        // Fechar modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('modalConfirmarExclusao'));
+        modal.hide();
+        
+        // Mostrar loading no botão
+        const textoOriginal = this.innerHTML;
+        this.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Excluindo...';
+        this.disabled = true;
+        
+        // Fazer requisição de exclusão
+        $.ajax({
+            url: '../api/observacoes/excluir.php',
+            method: 'POST',
+            data: JSON.stringify({ id: id }),
+            contentType: 'application/json',
+            dataType: 'json',
+            success: function (response) {
+                if (response.status === 'success') {
+                    carregarObservacoes(currentAssociadoIdObs);
+                    mostrarNotificacaoObs('📋 Observação excluída com sucesso!', 'success');
+                } else {
+                    alert('❌ Erro ao excluir observação: ' + (response.message || 'Erro desconhecido'));
+                }
+            },
+            error: function () {
+                alert('❌ Erro de conexão ao excluir observação. Tente novamente.');
+            },
+            complete: function() {
+                // Restaurar botão
+                document.getElementById('btnConfirmarExclusaoFinal').innerHTML = textoOriginal;
+                document.getElementById('btnConfirmarExclusaoFinal').disabled = false;
+                
+                // Limpar ID armazenado
+                window.observacaoParaExcluir = null;
+            }
+        });
     });
+}
+
+// Função para excluir observação (VERSÃO FINAL)
+function excluirObservacao(id) {
+    // Criar modal se não existir
+    criarModalConfirmacaoExclusao();
+    
+    // Armazenar ID globalmente
+    window.observacaoParaExcluir = id;
+    
+    // Abrir modal
+    const modal = new bootstrap.Modal(document.getElementById('modalConfirmarExclusao'));
+    modal.show();
 }
 
 // Função para alternar importância
