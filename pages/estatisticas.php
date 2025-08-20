@@ -2,7 +2,7 @@
 /**
  * Página de Relatórios Financeiros - Sistema ASSEGO
  * pages/relatorio_financeiro.php
- * VERSÃO COM DADOS REAIS DO BANCO
+ * VERSÃO CORRIGIDA COM DADOS ASAAS + NEOCONSIG
  */
 
 // Tratamento de erros para debug
@@ -63,7 +63,7 @@ function buscarDadosRelatorio($db, $filtros = []) {
         $stmtStats->execute($paramsStats);
         $dados['estatisticas_gerais'] = $stmtStats->fetch(PDO::FETCH_ASSOC);
         
-        // 2. VALORES A RECEBER (da tabela Servicos_Associado - valores contratados/pendentes)
+        // 2. VALORES A RECEBER (da tabela Servicos_Associado - valores contratados)
         $whereAReceber = ["sa.ativo = 1"];
         $paramsAReceber = [];
         
@@ -89,43 +89,101 @@ function buscarDadosRelatorio($db, $filtros = []) {
         $stmtAReceber->execute($paramsAReceber);
         $dados['valores_a_receber'] = $stmtAReceber->fetch(PDO::FETCH_ASSOC);
         
-        // 3. VALORES JÁ PAGOS (da tabela Pagamentos_Associado - valores efetivamente recebidos)
-        $wherePagos = ["pa.status_pagamento = 'CONFIRMADO'"];
-        $paramsPagos = [];
+        // 3. VALORES PAGOS VIA ASAAS (da tabela Pagamentos_Associado)
+        $wherePagosAsaas = ["pa.status_pagamento = 'CONFIRMADO'"];
+        $paramsPagosAsaas = [];
         
         // Aplicar filtro de período nos pagamentos
         if (!empty($filtros['periodo'])) {
             $filtroPagamentos = aplicarFiltroPeriodoPagamentos($filtros['periodo']);
             if ($filtroPagamentos['condicao']) {
-                $wherePagos[] = $filtroPagamentos['condicao'];
-                $paramsPagos = array_merge($paramsPagos, $filtroPagamentos['params']);
+                $wherePagosAsaas[] = $filtroPagamentos['condicao'];
+                $paramsPagosAsaas = array_merge($paramsPagosAsaas, $filtroPagamentos['params']);
             }
         } else {
-            $wherePagos[] = "YEAR(pa.mes_referencia) = YEAR(CURDATE())";
+            $wherePagosAsaas[] = "YEAR(pa.mes_referencia) = YEAR(CURDATE())";
         }
         
-        $sqlPagos = "SELECT 
-            COALESCE(SUM(pa.valor_pago), 0) as total_pago,
-            COUNT(*) as total_pagamentos,
-            COUNT(DISTINCT pa.associado_id) as associados_pagantes,
-            COALESCE(AVG(pa.valor_pago), 0) as valor_medio_pago
+        $sqlPagosAsaas = "SELECT 
+            COALESCE(SUM(pa.valor_pago), 0) as total_pago_asaas,
+            COUNT(*) as total_pagamentos_asaas,
+            COUNT(DISTINCT pa.associado_id) as associados_pagantes_asaas,
+            COALESCE(AVG(pa.valor_pago), 0) as valor_medio_pago_asaas
         FROM Pagamentos_Associado pa
-        WHERE " . implode(" AND ", $wherePagos);
+        WHERE " . implode(" AND ", $wherePagosAsaas);
         
-        $stmtPagos = $db->prepare($sqlPagos);
-        $stmtPagos->execute($paramsPagos);
-        $dados['valores_pagos'] = $stmtPagos->fetch(PDO::FETCH_ASSOC);
+        $stmtPagosAsaas = $db->prepare($sqlPagosAsaas);
+        $stmtPagosAsaas->execute($paramsPagosAsaas);
+        $dados['valores_pagos_asaas'] = $stmtPagosAsaas->fetch(PDO::FETCH_ASSOC);
         
-        // 4. INADIMPLÊNCIA (comparação entre o que deveria ter sido pago vs o que foi pago)
+        // 4. VALORES PAGOS VIA NEOCONSIG (da tabela Financeiro - estimativa baseada na situação)
+        $whereNeoconsig = ["f.id_neoconsig IS NOT NULL", "f.id_neoconsig != ''", "a.situacao = 'Filiado'"];
+        $paramsNeoconsig = [];
+        
+        // Para NEOCONSIG, consideramos que estão pagando se não estão em situação ruim
+        $sqlNeoconsig = "SELECT 
+            COUNT(DISTINCT f.associado_id) as total_associados_neoconsig,
+            COUNT(DISTINCT CASE 
+                WHEN f.situacaoFinanceira IN ('Adimplente', 'Em dia', 'Regular') 
+                   OR f.situacaoFinanceira IS NULL 
+                   OR f.valor_em_aberto_asaas = 0 
+                   OR f.valor_em_aberto_asaas IS NULL 
+                THEN f.associado_id 
+            END) as associados_pagantes_neoconsig,
+            COUNT(DISTINCT CASE 
+                WHEN f.situacaoFinanceira IN ('Inadimplente', 'Atraso', 'Pendente') 
+                   AND f.valor_em_aberto_asaas > 0 
+                THEN f.associado_id 
+            END) as associados_inadimplentes_neoconsig,
+            COALESCE(SUM(CASE 
+                WHEN f.situacaoFinanceira IN ('Adimplente', 'Em dia', 'Regular') 
+                   OR f.situacaoFinanceira IS NULL 
+                   OR f.valor_em_aberto_asaas = 0 
+                   OR f.valor_em_aberto_asaas IS NULL 
+                THEN sa.valor_aplicado 
+            END), 0) as valor_estimado_pago_neoconsig,
+            COALESCE(SUM(sa.valor_aplicado), 0) as valor_total_contratado_neoconsig
+        FROM Financeiro f
+        JOIN Associados a ON f.associado_id = a.id
+        JOIN Servicos_Associado sa ON a.id = sa.associado_id AND sa.ativo = 1
+        WHERE " . implode(" AND ", $whereNeoconsig);
+        
+        $stmtNeoconsig = $db->prepare($sqlNeoconsig);
+        $stmtNeoconsig->execute($paramsNeoconsig);
+        $dados['valores_pagos_neoconsig'] = $stmtNeoconsig->fetch(PDO::FETCH_ASSOC);
+        
+        // 5. CONSOLIDAÇÃO DOS VALORES PAGOS (ASAAS + NEOCONSIG)
+        $dados['valores_pagos'] = [
+            'total_pago' => $dados['valores_pagos_asaas']['total_pago_asaas'] + $dados['valores_pagos_neoconsig']['valor_estimado_pago_neoconsig'],
+            'total_pagamentos' => $dados['valores_pagos_asaas']['total_pagamentos_asaas'] + $dados['valores_pagos_neoconsig']['associados_pagantes_neoconsig'],
+            'associados_pagantes' => $dados['valores_pagos_asaas']['associados_pagantes_asaas'] + $dados['valores_pagos_neoconsig']['associados_pagantes_neoconsig'],
+            'valor_medio_pago' => ($dados['valores_pagos_asaas']['total_pago_asaas'] + $dados['valores_pagos_neoconsig']['valor_estimado_pago_neoconsig']) / 
+                                max(1, $dados['valores_pagos_asaas']['associados_pagantes_asaas'] + $dados['valores_pagos_neoconsig']['associados_pagantes_neoconsig'])
+        ];
+        
+        // 6. ANÁLISE DE FORMAS DE PAGAMENTO
+        $dados['analise_formas_pagamento'] = [
+            'total_asaas' => $dados['valores_pagos_asaas']['total_pago_asaas'],
+            'total_neoconsig' => $dados['valores_pagos_neoconsig']['valor_estimado_pago_neoconsig'],
+            'associados_asaas' => $dados['valores_pagos_asaas']['associados_pagantes_asaas'],
+            'associados_neoconsig' => $dados['valores_pagos_neoconsig']['associados_pagantes_neoconsig'],
+            'percentual_asaas' => ($dados['valores_pagos_asaas']['total_pago_asaas'] / max(1, $dados['valores_pagos']['total_pago'])) * 100,
+            'percentual_neoconsig' => ($dados['valores_pagos_neoconsig']['valor_estimado_pago_neoconsig'] / max(1, $dados['valores_pagos']['total_pago'])) * 100
+        ];
+        
+        // 7. INADIMPLÊNCIA CORRIGIDA (considerando ASAAS + NEOCONSIG)
         $dados['inadimplencia'] = [
             'valor_esperado' => $dados['valores_a_receber']['total_a_receber'],
             'valor_recebido' => $dados['valores_pagos']['total_pago'],
             'valor_pendente' => $dados['valores_a_receber']['total_a_receber'] - $dados['valores_pagos']['total_pago'],
             'percentual_recebido' => $dados['valores_a_receber']['total_a_receber'] > 0 ? 
-                ($dados['valores_pagos']['total_pago'] / $dados['valores_a_receber']['total_a_receber']) * 100 : 0
+                ($dados['valores_pagos']['total_pago'] / $dados['valores_a_receber']['total_a_receber']) * 100 : 0,
+            'inadimplentes_asaas_real' => $dados['valores_pagos_asaas']['total_pagamentos_asaas'] > 0 ? 
+                ($dados['valores_a_receber']['total_a_receber'] - $dados['valores_pagos_asaas']['total_pago_asaas']) : 0,
+            'inadimplentes_neoconsig' => $dados['valores_pagos_neoconsig']['associados_inadimplentes_neoconsig'] ?? 0
         ];
         
-        // 5. SERVIÇOS MAIS POPULARES (baseado em contratos ativos)
+        // 8. SERVIÇOS MAIS POPULARES (baseado em contratos ativos)
         $whereServicos = ["s.ativo = 1"];
         $paramsServicos = [];
         
@@ -163,7 +221,7 @@ function buscarDadosRelatorio($db, $filtros = []) {
         $stmtServicos->execute($paramsServicos);
         $dados['servicos_populares'] = $stmtServicos->fetchAll(PDO::FETCH_ASSOC);
         
-        // 6. DISTRIBUIÇÃO POR TIPO DE ASSOCIADO (valores contratados)
+        // 9. DISTRIBUIÇÃO POR TIPO DE ASSOCIADO (valores contratados)
         $whereTipos = ["sa.ativo = 1", "a.situacao = 'Filiado'"];
         $paramsTipos = [];
         
@@ -192,7 +250,7 @@ function buscarDadosRelatorio($db, $filtros = []) {
         $stmtTipos->execute($paramsTipos);
         $dados['tipo_associado'] = $stmtTipos->fetchAll(PDO::FETCH_ASSOC);
         
-        // 7. MAIORES CONTRIBUINTES (valores contratados)
+        // 10. MAIORES CONTRIBUINTES (valores contratados)
         $whereContrib = ["sa.ativo = 1", "a.situacao = 'Filiado'"];
         $paramsContrib = [];
         
@@ -220,10 +278,17 @@ function buscarDadosRelatorio($db, $filtros = []) {
             MAX(a.situacao) as situacao,
             MAX(a.email) as email,
             COALESCE(MAX(m.patente), 'Não informado') as patente,
-            COALESCE(MAX(m.corporacao), 'Não informado') as corporacao
+            COALESCE(MAX(m.corporacao), 'Não informado') as corporacao,
+            CASE 
+                WHEN MAX(f.id_neoconsig) IS NOT NULL AND MAX(f.id_neoconsig) != '' 
+                THEN 'NEOCONSIG' 
+                ELSE 'ASAAS' 
+            END as forma_pagamento,
+            MAX(f.situacaoFinanceira) as situacao_financeira
         FROM Associados a
         JOIN Servicos_Associado sa ON a.id = sa.associado_id
         LEFT JOIN Militar m ON a.id = m.associado_id
+        LEFT JOIN Financeiro f ON a.id = f.associado_id
         WHERE " . implode(" AND ", $whereContrib) . "
         GROUP BY a.id
         ORDER BY valor_total_contratado DESC
@@ -233,7 +298,7 @@ function buscarDadosRelatorio($db, $filtros = []) {
         $stmtContrib->execute($paramsContrib);
         $dados['maiores_contribuintes'] = $stmtContrib->fetchAll(PDO::FETCH_ASSOC);
         
-        // 8. GRÁFICO MENSAL DE PAGAMENTOS REAIS (da tabela Pagamentos_Associado)
+        // 11. GRÁFICO MENSAL CONSOLIDADO (ASAAS + NEOCONSIG estimado)
         $dados['grafico_pagamentos_mensais'] = [];
         
         if (!empty($filtros['periodo'])) {
@@ -249,26 +314,54 @@ function buscarDadosRelatorio($db, $filtros = []) {
             $mesAno = date('Y-m', strtotime("-$i months"));
             $mesFormatado = date('m/Y', strtotime("-$i months"));
             
-            $sqlMes = "SELECT 
-                COALESCE(SUM(CASE WHEN pa.status_pagamento = 'CONFIRMADO' THEN pa.valor_pago END), 0) as valor_pago,
-                COUNT(CASE WHEN pa.status_pagamento = 'CONFIRMADO' THEN 1 END) as pagamentos_confirmados,
-                COUNT(CASE WHEN pa.status_pagamento != 'CONFIRMADO' THEN 1 END) as pagamentos_pendentes
+            // Pagamentos ASAAS
+            $sqlMesAsaas = "SELECT 
+                COALESCE(SUM(CASE WHEN pa.status_pagamento = 'CONFIRMADO' THEN pa.valor_pago END), 0) as valor_pago_asaas,
+                COUNT(CASE WHEN pa.status_pagamento = 'CONFIRMADO' THEN 1 END) as pagamentos_confirmados_asaas
             FROM Pagamentos_Associado pa
             WHERE DATE_FORMAT(pa.mes_referencia, '%Y-%m') = ?";
             
-            $stmtMes = $db->prepare($sqlMes);
-            $stmtMes->execute([$mesAno]);
-            $resultMes = $stmtMes->fetch(PDO::FETCH_ASSOC);
+            $stmtMesAsaas = $db->prepare($sqlMesAsaas);
+            $stmtMesAsaas->execute([$mesAno]);
+            $resultMesAsaas = $stmtMesAsaas->fetch(PDO::FETCH_ASSOC);
+            
+            // Estimativa NEOCONSIG (baseado na média mensal dos contratos ativos)
+            $sqlMesNeoconsig = "SELECT 
+                COALESCE(SUM(CASE 
+                    WHEN f.situacaoFinanceira IN ('Adimplente', 'Em dia', 'Regular') 
+                       OR f.situacaoFinanceira IS NULL 
+                       OR f.valor_em_aberto_asaas = 0 
+                       OR f.valor_em_aberto_asaas IS NULL 
+                    THEN sa.valor_aplicado 
+                END), 0) as valor_estimado_neoconsig,
+                COUNT(CASE 
+                    WHEN f.id_neoconsig IS NOT NULL AND f.id_neoconsig != ''
+                       AND (f.situacaoFinanceira IN ('Adimplente', 'Em dia', 'Regular') 
+                            OR f.situacaoFinanceira IS NULL 
+                            OR f.valor_em_aberto_asaas = 0 
+                            OR f.valor_em_aberto_asaas IS NULL)
+                    THEN 1 
+                END) as pagamentos_estimados_neoconsig
+            FROM Financeiro f
+            JOIN Associados a ON f.associado_id = a.id
+            JOIN Servicos_Associado sa ON a.id = sa.associado_id AND sa.ativo = 1
+            WHERE a.situacao = 'Filiado'";
+            
+            $stmtMesNeoconsig = $db->prepare($sqlMesNeoconsig);
+            $stmtMesNeoconsig->execute();
+            $resultMesNeoconsig = $stmtMesNeoconsig->fetch(PDO::FETCH_ASSOC);
             
             $dados['grafico_pagamentos_mensais'][] = [
                 'mes' => $mesFormatado,
-                'valor_pago' => floatval($resultMes['valor_pago']),
-                'pagamentos_confirmados' => intval($resultMes['pagamentos_confirmados']),
-                'pagamentos_pendentes' => intval($resultMes['pagamentos_pendentes'])
+                'valor_pago_asaas' => floatval($resultMesAsaas['valor_pago_asaas']),
+                'valor_estimado_neoconsig' => floatval($resultMesNeoconsig['valor_estimado_neoconsig']),
+                'valor_total' => floatval($resultMesAsaas['valor_pago_asaas']) + floatval($resultMesNeoconsig['valor_estimado_neoconsig']),
+                'pagamentos_confirmados_asaas' => intval($resultMesAsaas['pagamentos_confirmados_asaas']),
+                'pagamentos_estimados_neoconsig' => intval($resultMesNeoconsig['pagamentos_estimados_neoconsig'])
             ];
         }
         
-        // 9. DEMOGRAFIA DOS ASSOCIADOS
+        // 12. DEMOGRAFIA DOS ASSOCIADOS
         $whereDemografia = [];
         $paramsDemografia = [];
         
@@ -543,11 +636,34 @@ if ($temPermissaoFinanceiro) {
                 'associados_pagantes' => 0,
                 'valor_medio_pago' => 0
             ],
+            'valores_pagos_asaas' => [
+                'total_pago_asaas' => 0,
+                'total_pagamentos_asaas' => 0,
+                'associados_pagantes_asaas' => 0,
+                'valor_medio_pago_asaas' => 0
+            ],
+            'valores_pagos_neoconsig' => [
+                'total_associados_neoconsig' => 0,
+                'associados_pagantes_neoconsig' => 0,
+                'associados_inadimplentes_neoconsig' => 0,
+                'valor_estimado_pago_neoconsig' => 0,
+                'valor_total_contratado_neoconsig' => 0
+            ],
+            'analise_formas_pagamento' => [
+                'total_asaas' => 0,
+                'total_neoconsig' => 0,
+                'associados_asaas' => 0,
+                'associados_neoconsig' => 0,
+                'percentual_asaas' => 0,
+                'percentual_neoconsig' => 0
+            ],
             'inadimplencia' => [
                 'valor_esperado' => 0,
                 'valor_recebido' => 0,
                 'valor_pendente' => 0,
-                'percentual_recebido' => 0
+                'percentual_recebido' => 0,
+                'inadimplentes_asaas_real' => 0,
+                'inadimplentes_neoconsig' => 0
             ],
             'servicos_populares' => [],
             'tipo_associado' => [],
@@ -620,6 +736,8 @@ $headerComponent = HeaderComponent::create([
             --light: #f9fafb;
             --dark: #111827;
             --border: #e5e7eb;
+            --neoconsig: #8b5cf6;
+            --asaas: #06b6d4;
         }
 
         .main-wrapper {
@@ -723,6 +841,8 @@ $headerComponent = HeaderComponent::create([
         .stat-icon.warning { background: var(--warning); }
         .stat-icon.danger { background: var(--danger); }
         .stat-icon.info { background: var(--info); }
+        .stat-icon.neoconsig { background: var(--neoconsig); }
+        .stat-icon.asaas { background: var(--asaas); }
 
         /* Actions Bar */
         .actions-bar {
@@ -966,6 +1086,8 @@ $headerComponent = HeaderComponent::create([
         .bg-success { background: var(--success); color: white; }
         .bg-warning { background: var(--warning); color: white; }
         .bg-info { background: var(--info); color: white; }
+        .bg-neoconsig { background: var(--neoconsig); color: white; }
+        .bg-asaas { background: var(--asaas); color: white; }
 
         /* Error Alert */
         .alert-error {
@@ -1045,8 +1167,8 @@ $headerComponent = HeaderComponent::create([
                 <!-- Page Title -->
                 <div class="page-header" data-aos="fade-right">
                     <div>
-                        <h1 class="page-title">Relatórios Financeiros</h1>
-                        <p class="page-subtitle">Sistema de análise financeira com dados reais da ASSEGO</p>
+                        <h1 class="page-title">Relatórios Financeiros Consolidados</h1>
+                        <p class="page-subtitle">Sistema de análise financeira com dados ASAAS + NEOCONSIG - ASSEGO</p>
                     </div>
                 </div>
 
@@ -1061,9 +1183,10 @@ $headerComponent = HeaderComponent::create([
                 </div>
                 <?php else: ?>
                 <div class="alert alert-success">
-                    <h6><i class="fas fa-check-circle me-2"></i>Dados Reais Carregados</h6>
+                    <h6><i class="fas fa-check-circle me-2"></i>Dados Consolidados Carregados</h6>
                     <p class="mb-0">
-                        <strong><?php echo $statusConexao; ?></strong>
+                        <strong><?php echo $statusConexao; ?></strong><br>
+                        <small>Incluindo dados de ASAAS e NEOCONSIG (desconto em folha)</small>
                     </p>
                 </div>
                 <?php endif; ?>
@@ -1074,9 +1197,8 @@ $headerComponent = HeaderComponent::create([
                     <span id="filterStatusText">Filtros aplicados</span>
                 </div>
 
-                <!-- Stats Grid -->
+                <!-- Stats Grid - Dados Gerais -->
                 <div class="stats-grid" data-aos="fade-up" id="statsGrid">
-                    <!-- SEÇÃO: DADOS GERAIS DOS ASSOCIADOS -->
                     <div class="stat-card">
                         <div class="stat-header">
                             <div>
@@ -1114,14 +1236,75 @@ $headerComponent = HeaderComponent::create([
                     </div>
                 </div>
 
-                <!-- SEÇÃO: VALORES A RECEBER (Contratos) -->
+                <!-- SEÇÃO: ANÁLISE DE FORMAS DE PAGAMENTO -->
+                <div class="page-header" data-aos="fade-right">
+                    <div>
+                        <h2 style="font-size: 1.5rem; color: #8b5cf6; margin: 0;">
+                            <i class="fas fa-exchange-alt me-2"></i>
+                            Análise por Forma de Pagamento
+                        </h2>
+                        <p class="page-subtitle">Separação entre pagamentos via ASAAS vs NEOCONSIG (desconto em folha)</p>
+                    </div>
+                </div>
+
+                <div class="stats-grid" data-aos="fade-up">
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div>
+                                <div class="stat-value" style="color: #06b6d4;">R$ <?php echo number_format($dadosRelatorio['analise_formas_pagamento']['total_asaas'] ?? 0, 2, ',', '.'); ?></div>
+                                <div class="stat-label">Total ASAAS</div>
+                            </div>
+                            <div class="stat-icon asaas">
+                                <i class="fas fa-credit-card"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div>
+                                <div class="stat-value" style="color: #8b5cf6;">R$ <?php echo number_format($dadosRelatorio['analise_formas_pagamento']['total_neoconsig'] ?? 0, 2, ',', '.'); ?></div>
+                                <div class="stat-label">Total NEOCONSIG</div>
+                            </div>
+                            <div class="stat-icon neoconsig">
+                                <i class="fas fa-building"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div>
+                                <div class="stat-value"><?php echo number_format($dadosRelatorio['analise_formas_pagamento']['associados_asaas'] ?? 0, 0, ',', '.'); ?></div>
+                                <div class="stat-label">Associados ASAAS</div>
+                            </div>
+                            <div class="stat-icon asaas">
+                                <i class="fas fa-user-check"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div>
+                                <div class="stat-value"><?php echo number_format($dadosRelatorio['analise_formas_pagamento']['associados_neoconsig'] ?? 0, 0, ',', '.'); ?></div>
+                                <div class="stat-label">Associados NEOCONSIG</div>
+                            </div>
+                            <div class="stat-icon neoconsig">
+                                <i class="fas fa-user-tie"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SEÇÃO: VALORES A RECEBER -->
                 <div class="page-header" data-aos="fade-right">
                     <div>
                         <h2 style="font-size: 1.5rem; color: #2563eb; margin: 0;">
                             <i class="fas fa-file-contract me-2"></i>
                             Valores a Receber (Contratos Ativos)
                         </h2>
-                        <p class="page-subtitle">Valores contratados na tabela Servicos_Associado - valores que deveriam ser recebidos</p>
+                        <p class="page-subtitle">Valores contratados - o que deveria ser recebido</p>
                     </div>
                 </div>
 
@@ -1163,14 +1346,14 @@ $headerComponent = HeaderComponent::create([
                     </div>
                 </div>
 
-                <!-- SEÇÃO: VALORES PAGOS (Pagamentos Confirmados) -->
+                <!-- SEÇÃO: VALORES PAGOS CONSOLIDADOS -->
                 <div class="page-header" data-aos="fade-right">
                     <div>
                         <h2 style="font-size: 1.5rem; color: #10b981; margin: 0;">
                             <i class="fas fa-money-bill-wave me-2"></i>
-                            Valores Pagos (Pagamentos Confirmados)
+                            Valores Pagos Consolidados (ASAAS + NEOCONSIG)
                         </h2>
-                        <p class="page-subtitle">Valores da tabela Pagamentos_Associado - valores efetivamente recebidos</p>
+                        <p class="page-subtitle">Valores efetivamente recebidos via todas as formas de pagamento</p>
                     </div>
                 </div>
 
@@ -1179,7 +1362,7 @@ $headerComponent = HeaderComponent::create([
                         <div class="stat-header">
                             <div>
                                 <div class="stat-value" id="stat-total-pago">R$ <?php echo number_format($dadosRelatorio['valores_pagos']['total_pago'] ?? 0, 2, ',', '.'); ?></div>
-                                <div class="stat-label">Total Efetivamente Pago</div>
+                                <div class="stat-label">Total Recebido</div>
                             </div>
                             <div class="stat-icon success">
                                 <i class="fas fa-dollar-sign"></i>
@@ -1202,6 +1385,18 @@ $headerComponent = HeaderComponent::create([
                     <div class="stat-card">
                         <div class="stat-header">
                             <div>
+                                <div class="stat-value" id="stat-associados-pagantes"><?php echo number_format($dadosRelatorio['valores_pagos']['associados_pagantes'] ?? 0, 0, ',', '.'); ?></div>
+                                <div class="stat-label">Associados Pagantes</div>
+                            </div>
+                            <div class="stat-icon success">
+                                <i class="fas fa-user-check"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div>
                                 <div class="stat-value" id="stat-valor-medio-pago">R$ <?php echo number_format($dadosRelatorio['valores_pagos']['valor_medio_pago'] ?? 0, 2, ',', '.'); ?></div>
                                 <div class="stat-label">Valor Médio dos Pagamentos</div>
                             </div>
@@ -1210,29 +1405,17 @@ $headerComponent = HeaderComponent::create([
                             </div>
                         </div>
                     </div>
-
-                    <div class="stat-card">
-                        <div class="stat-header">
-                            <div>
-                                <div class="stat-value" id="stat-associados-pagantes"><?php echo number_format($dadosRelatorio['valores_pagos']['associados_pagantes'] ?? 0, 0, ',', '.'); ?></div>
-                                <div class="stat-label">Associados que Pagaram</div>
-                            </div>
-                            <div class="stat-icon success">
-                                <i class="fas fa-user-check"></i>
-                            </div>
-                        </div>
-                    </div>
                 </div>
 
-                <!-- SEÇÃO: ANÁLISE DE INADIMPLÊNCIA -->
+                <!-- SEÇÃO: INADIMPLÊNCIA CORRIGIDA -->
                 <?php if (isset($dadosRelatorio['inadimplencia'])): ?>
                 <div class="page-header" data-aos="fade-right">
                     <div>
                         <h2 style="font-size: 1.5rem; color: #ef4444; margin: 0;">
                             <i class="fas fa-chart-pie me-2"></i>
-                            Análise de Inadimplência
+                            Análise de Inadimplência Corrigida
                         </h2>
-                        <p class="page-subtitle">Comparação entre valores contratados vs valores efetivamente pagos</p>
+                        <p class="page-subtitle">Considerando pagamentos via ASAAS + NEOCONSIG</p>
                     </div>
                 </div>
 
@@ -1241,7 +1424,7 @@ $headerComponent = HeaderComponent::create([
                         <div class="stat-header">
                             <div>
                                 <div class="stat-value" style="color: #ef4444;">R$ <?php echo number_format($dadosRelatorio['inadimplencia']['valor_pendente'] ?? 0, 2, ',', '.'); ?></div>
-                                <div class="stat-label">Valor em Aberto</div>
+                                <div class="stat-label">Valor Real em Aberto</div>
                             </div>
                             <div class="stat-icon danger">
                                 <i class="fas fa-exclamation-triangle"></i>
@@ -1253,7 +1436,7 @@ $headerComponent = HeaderComponent::create([
                         <div class="stat-header">
                             <div>
                                 <div class="stat-value" style="color: #10b981;"><?php echo number_format($dadosRelatorio['inadimplencia']['percentual_recebido'] ?? 0, 1, ',', '.'); ?>%</div>
-                                <div class="stat-label">Percentual Recebido</div>
+                                <div class="stat-label">Percentual Real Recebido</div>
                             </div>
                             <div class="stat-icon" style="background: <?php echo ($dadosRelatorio['inadimplencia']['percentual_recebido'] ?? 0) > 80 ? '#10b981' : '#ef4444'; ?>">
                                 <i class="fas fa-percentage"></i>
@@ -1277,7 +1460,7 @@ $headerComponent = HeaderComponent::create([
                         <div class="stat-header">
                             <div>
                                 <div class="stat-value" style="color: #10b981;">R$ <?php echo number_format($dadosRelatorio['inadimplencia']['valor_recebido'] ?? 0, 2, ',', '.'); ?></div>
-                                <div class="stat-label">Valor Recebido Total</div>
+                                <div class="stat-label">Valor Real Recebido</div>
                             </div>
                             <div class="stat-icon success">
                                 <i class="fas fa-check-circle"></i>
@@ -1287,6 +1470,7 @@ $headerComponent = HeaderComponent::create([
                 </div>
                 <?php endif; ?>
 
+                <!-- Demografia -->
                 <?php if (isset($dadosRelatorio['demografia_associados'])): ?>
                 <div class="stats-grid" data-aos="fade-up">
                     <div class="stat-card">
@@ -1377,12 +1561,12 @@ $headerComponent = HeaderComponent::create([
                     </div>
                 </div>
                 
-                <!-- Gráfico de Pagamentos Mensais -->
+                <!-- Gráfico Consolidado -->
                 <div class="chart-container" data-aos="fade-up" data-aos-delay="300">
                     <div class="chart-header">
                         <h5 class="chart-title">
                             <i class="fas fa-chart-area"></i>
-                            Pagamentos Mensais Confirmados (Valores Reais Recebidos)
+                            Pagamentos Mensais Consolidados (ASAAS + NEOCONSIG)
                         </h5>
                         <div>
                             <button class="btn-modern btn-secondary btn-sm" onclick="alternarTipoGrafico()">
@@ -1433,17 +1617,19 @@ $headerComponent = HeaderComponent::create([
                             <div class="chart-header">
                                 <h5 class="chart-title">
                                     <i class="fas fa-chart-doughnut"></i>
-                                    Distribuição por Tipo
+                                    Distribuição ASAAS vs NEOCONSIG
                                 </h5>
                             </div>
                             <div class="chart-content">
-                                <?php if (!empty($dadosRelatorio['tipo_associado'])): ?>
-                                    <canvas id="graficoTipos"></canvas>
+                                <?php if (isset($dadosRelatorio['analise_formas_pagamento']) && 
+                                         ($dadosRelatorio['analise_formas_pagamento']['total_asaas'] > 0 || 
+                                          $dadosRelatorio['analise_formas_pagamento']['total_neoconsig'] > 0)): ?>
+                                    <canvas id="graficoFormasPagamento"></canvas>
                                 <?php else: ?>
                                     <div class="empty-state">
                                         <i class="fas fa-chart-doughnut"></i>
-                                        <h5>Nenhum tipo encontrado</h5>
-                                        <p>Não há tipos de associados para exibir.</p>
+                                        <h5>Nenhum dado encontrado</h5>
+                                        <p>Não há dados de formas de pagamento para exibir.</p>
                                     </div>
                                 <?php endif; ?>
                             </div>
@@ -1456,10 +1642,10 @@ $headerComponent = HeaderComponent::create([
                     <div class="table-header">
                         <h5 class="table-title">
                             <i class="fas fa-trophy"></i>
-                            Top 5 Maiores Contribuintes (Valores Contratados)
+                            Top 5 Maiores Contribuintes (Todas as Formas de Pagamento)
                         </h5>
                         <p style="font-size: 0.875rem; color: #6b7280; margin: 0.5rem 0 0;">
-                            Baseado nos valores contratados na tabela Servicos_Associado
+                            Incluindo identificação da forma de pagamento (ASAAS vs NEOCONSIG)
                         </p>
                     </div>
                     <div class="table-responsive">
@@ -1472,7 +1658,8 @@ $headerComponent = HeaderComponent::create([
                                     <th>Email</th>
                                     <th>Patente</th>
                                     <th>Corporação</th>
-                                    <th>Situação</th>
+                                    <th>Forma Pagamento</th>
+                                    <th>Situação Financeira</th>
                                     <th>Valor Contratado</th>
                                     <th>Serviços</th>
                                 </tr>
@@ -1492,7 +1679,12 @@ $headerComponent = HeaderComponent::create([
                                             </td>
                                             <td><?php echo htmlspecialchars($contrib['corporacao']); ?></td>
                                             <td>
-                                                <span class="badge bg-success"><?php echo htmlspecialchars($contrib['situacao']); ?></span>
+                                                <span class="badge <?php echo $contrib['forma_pagamento'] == 'NEOCONSIG' ? 'bg-neoconsig' : 'bg-asaas'; ?>">
+                                                    <?php echo htmlspecialchars($contrib['forma_pagamento'] ?? 'ASAAS'); ?>
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-success"><?php echo htmlspecialchars($contrib['situacao_financeira'] ?? 'N/A'); ?></span>
                                             </td>
                                             <td class="valor-monetario">
                                                 R$ <?php echo number_format($contrib['valor_total_contratado'], 2, ',', '.'); ?>
@@ -1502,7 +1694,7 @@ $headerComponent = HeaderComponent::create([
                                     <?php endforeach; ?>
                                 <?php else: ?>
                                     <tr>
-                                        <td colspan="9" class="text-center text-muted">
+                                        <td colspan="10" class="text-center text-muted">
                                             <i class="fas fa-info-circle me-2"></i>
                                             Nenhum contribuinte encontrado
                                         </td>
@@ -1513,96 +1705,65 @@ $headerComponent = HeaderComponent::create([
                     </div>
                 </div>
 
-                <!-- Tabela de Análise por Tipo -->
+                <!-- Análise Detalhada por Forma de Pagamento -->
                 <div class="table-container" data-aos="fade-up" data-aos-delay="600">
                     <div class="table-header">
                         <h5 class="table-title">
-                            <i class="fas fa-users"></i>
-                            Análise por Tipo de Associado (Valores Contratados)
+                            <i class="fas fa-exchange-alt"></i>
+                            Análise Detalhada por Forma de Pagamento
                         </h5>
                         <p style="font-size: 0.875rem; color: #6b7280; margin: 0.5rem 0 0;">
-                            Baseado nos valores contratados na tabela Servicos_Associado
+                            Comparação entre ASAAS e NEOCONSIG
                         </p>
                     </div>
                     <div class="table-responsive">
                         <table class="table table-hover">
                             <thead>
                                 <tr>
-                                    <th>Tipo de Associado</th>
-                                    <th>Total de Associados</th>
-                                    <th>Valor Total Contratado</th>
-                                    <th>Valor Médio Contratado</th>
+                                    <th>Forma de Pagamento</th>
+                                    <th>Total Recebido</th>
+                                    <th>Número de Associados</th>
+                                    <th>Percentual do Total</th>
+                                    <th>Valor Médio</th>
                                 </tr>
                             </thead>
-                            <tbody id="tabelaTipos">
-                                <?php if (!empty($dadosRelatorio['tipo_associado'])): ?>
-                                    <?php foreach ($dadosRelatorio['tipo_associado'] as $tipo): ?>
-                                        <tr>
-                                            <td class="valor-destaque">
-                                                <?php echo htmlspecialchars($tipo['tipo_associado']); ?>
-                                            </td>
-                                            <td><?php echo number_format($tipo['total_associados'], 0, ',', '.'); ?></td>
-                                            <td class="valor-monetario">
-                                                R$ <?php echo number_format($tipo['valor_total_contratado'] ?? 0, 2, ',', '.'); ?>
-                                            </td>
-                                            <td>
-                                                R$ <?php echo number_format($tipo['valor_medio'] ?? 0, 2, ',', '.'); ?>
-                                            </td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                <?php else: ?>
-                                    <tr>
-                                        <td colspan="4" class="text-center text-muted">
-                                            <i class="fas fa-info-circle me-2"></i>
-                                            Nenhum tipo de associado encontrado
-                                        </td>
-                                    </tr>
-                                <?php endif; ?>
+                            <tbody>
+                                <tr>
+                                    <td>
+                                        <span class="badge bg-asaas">ASAAS</span>
+                                    </td>
+                                    <td class="valor-monetario">
+                                        R$ <?php echo number_format($dadosRelatorio['analise_formas_pagamento']['total_asaas'] ?? 0, 2, ',', '.'); ?>
+                                    </td>
+                                    <td><?php echo number_format($dadosRelatorio['analise_formas_pagamento']['associados_asaas'] ?? 0, 0, ',', '.'); ?></td>
+                                    <td><?php echo number_format($dadosRelatorio['analise_formas_pagamento']['percentual_asaas'] ?? 0, 1, ',', '.'); ?>%</td>
+                                    <td>
+                                        R$ <?php echo number_format(
+                                            ($dadosRelatorio['analise_formas_pagamento']['associados_asaas'] ?? 0) > 0 ? 
+                                            ($dadosRelatorio['analise_formas_pagamento']['total_asaas'] ?? 0) / $dadosRelatorio['analise_formas_pagamento']['associados_asaas'] : 0, 
+                                            2, ',', '.'); ?>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <span class="badge bg-neoconsig">NEOCONSIG</span>
+                                    </td>
+                                    <td class="valor-monetario">
+                                        R$ <?php echo number_format($dadosRelatorio['analise_formas_pagamento']['total_neoconsig'] ?? 0, 2, ',', '.'); ?>
+                                    </td>
+                                    <td><?php echo number_format($dadosRelatorio['analise_formas_pagamento']['associados_neoconsig'] ?? 0, 0, ',', '.'); ?></td>
+                                    <td><?php echo number_format($dadosRelatorio['analise_formas_pagamento']['percentual_neoconsig'] ?? 0, 1, ',', '.'); ?>%</td>
+                                    <td>
+                                        R$ <?php echo number_format(
+                                            ($dadosRelatorio['analise_formas_pagamento']['associados_neoconsig'] ?? 0) > 0 ? 
+                                            ($dadosRelatorio['analise_formas_pagamento']['total_neoconsig'] ?? 0) / $dadosRelatorio['analise_formas_pagamento']['associados_neoconsig'] : 0, 
+                                            2, ',', '.'); ?>
+                                    </td>
+                                </tr>
                             </tbody>
                         </table>
                     </div>
                 </div>
-
-                <!-- Estatísticas de Pagamentos -->
-                <?php if (isset($dadosRelatorio['valores_pagos']) && $dadosRelatorio['valores_pagos']['total_pagamentos'] > 0): ?>
-                <div class="chart-container" data-aos="fade-up" data-aos-delay="700">
-                    <div class="chart-header">
-                        <h5 class="chart-title">
-                            <i class="fas fa-credit-card"></i>
-                            Resumo de Pagamentos Confirmados (<?php echo date('Y'); ?>)
-                        </h5>
-                        <p style="font-size: 0.875rem; color: #6b7280; margin: 0.5rem 0 0;">
-                            Valores efetivamente recebidos da tabela Pagamentos_Associado
-                        </p>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-4">
-                            <div class="text-center">
-                                <h3 class="valor-monetario">
-                                    R$ <?php echo number_format($dadosRelatorio['valores_pagos']['total_pago'], 2, ',', '.'); ?>
-                                </h3>
-                                <p class="text-muted">Total Efetivamente Pago</p>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="text-center">
-                                <h3 class="valor-destaque">
-                                    <?php echo number_format($dadosRelatorio['valores_pagos']['total_pagamentos'], 0, ',', '.'); ?>
-                                </h3>
-                                <p class="text-muted">Total de Pagamentos</p>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="text-center">
-                                <h3 class="valor-monetario">
-                                    R$ <?php echo number_format($dadosRelatorio['valores_pagos']['valor_medio_pago'], 2, ',', '.'); ?>
-                                </h3>
-                                <p class="text-muted">Valor Médio por Pagamento</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <?php endif; ?>
 
             <?php endif; ?>
         </div>
@@ -1627,7 +1788,7 @@ $headerComponent = HeaderComponent::create([
         const totalRegistros = <?php echo $totalRegistros; ?>;
         const erroCarregamento = <?php echo $erroCarregamento ? 'true' : 'false'; ?>;
 
-        console.log('🔍 Dados do relatório:', dadosRelatorio);
+        console.log('🔍 Dados do relatório consolidado:', dadosRelatorio);
         console.log('📊 Total de registros:', totalRegistros);
         console.log('❌ Erro no carregamento:', erroCarregamento);
 
@@ -1638,7 +1799,7 @@ $headerComponent = HeaderComponent::create([
             if (!erroCarregamento) {
                 initGraficos();
             }
-            console.log('✅ Relatórios inicializados', erroCarregamento ? 'com erro' : 'com dados reais');
+            console.log('✅ Relatórios consolidados inicializados', erroCarregamento ? 'com erro' : 'com dados reais');
         });
 
         function initGraficos() {
@@ -1646,56 +1807,68 @@ $headerComponent = HeaderComponent::create([
             Chart.defaults.font.size = 12;
             Chart.defaults.color = '#6b7280';
 
-            criarGraficoArrecadacao();
+            criarGraficoPagamentosConsolidado();
             criarGraficoServicos();
-            criarGraficoTipos();
+            criarGraficoFormasPagamento();
 
-            console.log('📊 Gráficos criados com sucesso!');
+            console.log('📊 Gráficos consolidados criados com sucesso!');
         }
 
-        function criarGraficoArrecadacao() {
-            const ctx = document.getElementById('graficoArrecadacao');
+        function criarGraficoPagamentosConsolidado() {
+            const ctx = document.getElementById('graficoPagamentosMensais');
             if (!ctx) return;
 
-            const dados = dadosRelatorio.grafico_mensal || [];
+            const dados = dadosRelatorio.grafico_pagamentos_mensais || [];
             
             if (dados.length === 0) {
                 return;
             }
             
             // Destroi gráfico existente se houver
-            if (graficos.arrecadacao) {
-                graficos.arrecadacao.destroy();
+            if (graficos.pagamentosConsolidado) {
+                graficos.pagamentosConsolidado.destroy();
             }
             
-            graficos.arrecadacao = new Chart(ctx, {
+            graficos.pagamentosConsolidado = new Chart(ctx, {
                 type: 'line',
                 data: {
                     labels: dados.map(d => d.mes),
                     datasets: [{
-                        label: 'Arrecadação (R$)',
-                        data: dados.map(d => d.arrecadacao),
-                        borderColor: '#2563eb',
-                        backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                        label: 'ASAAS (R$)',
+                        data: dados.map(d => d.valor_pago_asaas),
+                        borderColor: '#06b6d4',
+                        backgroundColor: 'rgba(6, 182, 212, 0.1)',
                         borderWidth: 2,
                         fill: true,
                         tension: 0.3,
-                        pointBackgroundColor: '#2563eb',
+                        pointBackgroundColor: '#06b6d4',
                         pointBorderColor: '#ffffff',
                         pointBorderWidth: 2,
                         pointRadius: 4
                     }, {
-                        label: 'Cancelamentos',
-                        data: dados.map(d => d.cancelamentos),
-                        borderColor: '#ef4444',
-                        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                        label: 'NEOCONSIG Estimado (R$)',
+                        data: dados.map(d => d.valor_estimado_neoconsig),
+                        borderColor: '#8b5cf6',
+                        backgroundColor: 'rgba(139, 92, 246, 0.1)',
                         borderWidth: 2,
-                        fill: false,
+                        fill: true,
                         tension: 0.3,
-                        pointBackgroundColor: '#ef4444',
+                        pointBackgroundColor: '#8b5cf6',
                         pointBorderColor: '#ffffff',
                         pointBorderWidth: 2,
                         pointRadius: 4
+                    }, {
+                        label: 'Total Consolidado (R$)',
+                        data: dados.map(d => d.valor_total),
+                        borderColor: '#10b981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        borderWidth: 3,
+                        fill: false,
+                        tension: 0.3,
+                        pointBackgroundColor: '#10b981',
+                        pointBorderColor: '#ffffff',
+                        pointBorderWidth: 2,
+                        pointRadius: 5
                     }]
                 },
                 options: {
@@ -1713,14 +1886,10 @@ $headerComponent = HeaderComponent::create([
                             cornerRadius: 6,
                             callbacks: {
                                 label: function(context) {
-                                    if (context.datasetIndex === 0) {
-                                        return 'Arrecadação: R$ ' + context.parsed.y.toLocaleString('pt-BR', {
-                                            minimumFractionDigits: 2,
-                                            maximumFractionDigits: 2
-                                        });
-                                    } else {
-                                        return 'Cancelamentos: ' + context.parsed.y;
-                                    }
+                                    return context.dataset.label + ': R$ ' + context.parsed.y.toLocaleString('pt-BR', {
+                                        minimumFractionDigits: 2,
+                                        maximumFractionDigits: 2
+                                    });
                                 }
                             }
                         }
@@ -1728,7 +1897,12 @@ $headerComponent = HeaderComponent::create([
                     scales: {
                         y: {
                             beginAtZero: true,
-                            grid: { color: 'rgba(0, 0, 0, 0.05)' }
+                            grid: { color: 'rgba(0, 0, 0, 0.05)' },
+                            ticks: {
+                                callback: function(value) {
+                                    return 'R$ ' + value.toLocaleString('pt-BR');
+                                }
+                            }
                         },
                         x: { grid: { display: false } }
                     }
@@ -1778,30 +1952,28 @@ $headerComponent = HeaderComponent::create([
             });
         }
 
-        function criarGraficoTipos() {
-            const ctx = document.getElementById('graficoTipos');
+        function criarGraficoFormasPagamento() {
+            const ctx = document.getElementById('graficoFormasPagamento');
             if (!ctx) return;
 
-            const dados = dadosRelatorio.tipo_associado || [];
-
-            if (dados.length === 0) {
+            const dadosFormas = dadosRelatorio.analise_formas_pagamento || {};
+            
+            if (!dadosFormas.total_asaas && !dadosFormas.total_neoconsig) {
                 return;
             }
 
             // Destroi gráfico existente se houver
-            if (graficos.tipos) {
-                graficos.tipos.destroy();
+            if (graficos.formasPagamento) {
+                graficos.formasPagamento.destroy();
             }
 
-            const cores = ['#2563eb', '#10b981', '#f59e0b', '#ef4444'];
-
-            graficos.tipos = new Chart(ctx, {
+            graficos.formasPagamento = new Chart(ctx, {
                 type: 'pie',
                 data: {
-                    labels: dados.map(t => t.tipo_associado),
+                    labels: ['ASAAS', 'NEOCONSIG'],
                     datasets: [{
-                        data: dados.map(t => t.total_associados),
-                        backgroundColor: cores,
+                        data: [dadosFormas.total_asaas || 0, dadosFormas.total_neoconsig || 0],
+                        backgroundColor: ['#06b6d4', '#8b5cf6'],
                         borderWidth: 2,
                         borderColor: '#ffffff'
                     }]
@@ -1816,11 +1988,14 @@ $headerComponent = HeaderComponent::create([
                         },
                         tooltip: {
                             callbacks: {
-                                afterLabel: function(context) {
-                                    const dados = context.dataset.data;
-                                    const total = dados.reduce((a, b) => a + b, 0);
-                                    const porcentagem = ((context.parsed / total) * 100).toFixed(1);
-                                    return porcentagem + '%';
+                                label: function(context) {
+                                    const valor = context.parsed;
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const porcentagem = ((valor / total) * 100).toFixed(1);
+                                    return context.label + ': R$ ' + valor.toLocaleString('pt-BR', {
+                                        minimumFractionDigits: 2,
+                                        maximumFractionDigits: 2
+                                    }) + ' (' + porcentagem + '%)';
                                 }
                             }
                         }
@@ -1830,8 +2005,8 @@ $headerComponent = HeaderComponent::create([
         }
 
         function alternarTipoGrafico() {
-            if (graficos.arrecadacao) {
-                const grafico = graficos.arrecadacao;
+            if (graficos.pagamentosConsolidado) {
+                const grafico = graficos.pagamentosConsolidado;
                 const novoTipo = grafico.config.type === 'line' ? 'bar' : 'line';
                 
                 grafico.config.type = novoTipo;
@@ -1875,7 +2050,7 @@ $headerComponent = HeaderComponent::create([
                         filtrosAtivos = true;
                         
                         // Atualiza interface
-                        atualizarEstatisticas(response.data.estatisticas_gerais);
+                        atualizarEstatisticas(response.data);
                         atualizarTabelas(response.data);
                         atualizarGraficos(response.data);
                         
@@ -1900,14 +2075,33 @@ $headerComponent = HeaderComponent::create([
             });
         }
 
-        function atualizarEstatisticas(stats) {
-            document.getElementById('stat-associados-ativos').textContent = new Intl.NumberFormat('pt-BR').format(stats.associados_ativos);
-            document.getElementById('stat-arrecadacao').textContent = 'R$ ' + new Intl.NumberFormat('pt-BR', {
+        function atualizarEstatisticas(dados) {
+            document.getElementById('stat-associados-ativos').textContent = new Intl.NumberFormat('pt-BR').format(dados.estatisticas_gerais.associados_ativos);
+            document.getElementById('stat-servicos').textContent = new Intl.NumberFormat('pt-BR').format(dados.estatisticas_gerais.total_servicos_diferentes);
+            document.getElementById('stat-cancelamentos').textContent = new Intl.NumberFormat('pt-BR').format(dados.estatisticas_gerais.cancelamentos);
+            
+            document.getElementById('stat-total-a-receber').textContent = 'R$ ' + new Intl.NumberFormat('pt-BR', {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2
-            }).format(stats.arrecadacao_potencial);
-            document.getElementById('stat-servicos').textContent = new Intl.NumberFormat('pt-BR').format(stats.total_servicos_diferentes);
-            document.getElementById('stat-cancelamentos').textContent = new Intl.NumberFormat('pt-BR').format(stats.cancelamentos);
+            }).format(dados.valores_a_receber.total_a_receber);
+            
+            document.getElementById('stat-total-pago').textContent = 'R$ ' + new Intl.NumberFormat('pt-BR', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            }).format(dados.valores_pagos.total_pago);
+            
+            document.getElementById('stat-associados-com-servicos').textContent = new Intl.NumberFormat('pt-BR').format(dados.valores_a_receber.associados_com_servicos_ativos);
+            document.getElementById('stat-valor-medio-servico').textContent = 'R$ ' + new Intl.NumberFormat('pt-BR', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            }).format(dados.valores_a_receber.valor_medio_servico);
+            
+            document.getElementById('stat-total-pagamentos').textContent = new Intl.NumberFormat('pt-BR').format(dados.valores_pagos.total_pagamentos);
+            document.getElementById('stat-associados-pagantes').textContent = new Intl.NumberFormat('pt-BR').format(dados.valores_pagos.associados_pagantes);
+            document.getElementById('stat-valor-medio-pago').textContent = 'R$ ' + new Intl.NumberFormat('pt-BR', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            }).format(dados.valores_pagos.valor_medio_pago);
         }
 
         function atualizarTabelas(dados) {
@@ -1922,39 +2116,18 @@ $headerComponent = HeaderComponent::create([
                         <td>${contrib.email || 'N/A'}</td>
                         <td><span class="badge bg-info">${contrib.patente || 'N/A'}</span></td>
                         <td>${contrib.corporacao || 'N/A'}</td>
-                        <td><span class="badge bg-success">${contrib.situacao || 'N/A'}</span></td>
-                        <td class="valor-monetario">R$ ${new Intl.NumberFormat('pt-BR', {minimumFractionDigits: 2}).format(contrib.valor_total)}</td>
+                        <td><span class="badge ${contrib.forma_pagamento === 'NEOCONSIG' ? 'bg-neoconsig' : 'bg-asaas'}">${contrib.forma_pagamento || 'ASAAS'}</span></td>
+                        <td><span class="badge bg-success">${contrib.situacao_financeira || 'N/A'}</span></td>
+                        <td class="valor-monetario">R$ ${new Intl.NumberFormat('pt-BR', {minimumFractionDigits: 2}).format(contrib.valor_total_contratado)}</td>
                         <td>${contrib.total_servicos}</td>
                     </tr>
                 `).join('');
             } else {
                 tabelaContribuintes.innerHTML = `
                     <tr>
-                        <td colspan="9" class="text-center text-muted">
+                        <td colspan="10" class="text-center text-muted">
                             <i class="fas fa-info-circle me-2"></i>
                             Nenhum contribuinte encontrado com os filtros aplicados
-                        </td>
-                    </tr>
-                `;
-            }
-
-            // Atualiza tabela de tipos
-            const tabelaTipos = document.getElementById('tabelaTipos');
-            if (dados.tipo_associado.length > 0) {
-                tabelaTipos.innerHTML = dados.tipo_associado.map(tipo => `
-                    <tr>
-                        <td class="valor-destaque">${tipo.tipo_associado}</td>
-                        <td>${new Intl.NumberFormat('pt-BR').format(tipo.total_associados)}</td>
-                        <td class="valor-monetario">R$ ${new Intl.NumberFormat('pt-BR', {minimumFractionDigits: 2}).format(tipo.valor_total || 0)}</td>
-                        <td>R$ ${new Intl.NumberFormat('pt-BR', {minimumFractionDigits: 2}).format(tipo.valor_medio || 0)}</td>
-                    </tr>
-                `).join('');
-            } else {
-                tabelaTipos.innerHTML = `
-                    <tr>
-                        <td colspan="4" class="text-center text-muted">
-                            <i class="fas fa-info-circle me-2"></i>
-                            Nenhum tipo encontrado com os filtros aplicados
                         </td>
                     </tr>
                 `;
@@ -1963,9 +2136,9 @@ $headerComponent = HeaderComponent::create([
 
         function atualizarGraficos(dados) {
             // Recria todos os gráficos com os novos dados
-            criarGraficoArrecadacao();
+            criarGraficoPagamentosConsolidado();
             criarGraficoServicos();
-            criarGraficoTipos();
+            criarGraficoFormasPagamento();
         }
 
         function mostrarStatusFiltros(filtros) {
@@ -2021,7 +2194,7 @@ $headerComponent = HeaderComponent::create([
         }
 
         function exportarRelatorio() {
-            console.log('📥 Exportando relatório...');
+            console.log('📥 Exportando relatório consolidado...');
             
             // Dados atuais (com filtros aplicados se houver)
             const dadosExport = {
@@ -2031,6 +2204,13 @@ $headerComponent = HeaderComponent::create([
                 // Valores Separados
                 valores_a_receber: dadosRelatorio.valores_a_receber,
                 valores_pagos: dadosRelatorio.valores_pagos,
+                valores_pagos_asaas: dadosRelatorio.valores_pagos_asaas,
+                valores_pagos_neoconsig: dadosRelatorio.valores_pagos_neoconsig,
+                
+                // Análise de Formas de Pagamento
+                analise_formas_pagamento: dadosRelatorio.analise_formas_pagamento,
+                
+                // Inadimplência Corrigida
                 inadimplencia: dadosRelatorio.inadimplencia,
                 
                 // Análises
@@ -2038,7 +2218,7 @@ $headerComponent = HeaderComponent::create([
                 tipos_associados: dadosRelatorio.tipo_associado,
                 maiores_contribuintes: dadosRelatorio.maiores_contribuintes,
                 
-                // Gráficos e Demografía
+                // Gráficos e Demografia
                 grafico_pagamentos_mensais: dadosRelatorio.grafico_pagamentos_mensais,
                 demografia_associados: dadosRelatorio.demografia_associados,
                 
@@ -2050,10 +2230,12 @@ $headerComponent = HeaderComponent::create([
                 
                 // Explicações
                 explicacoes: {
-                    valores_a_receber: "Valores contratados na tabela Servicos_Associado - o que deveria ser recebido",
-                    valores_pagos: "Valores da tabela Pagamentos_Associado - o que foi efetivamente pago",
-                    inadimplencia: "Comparação entre valores contratados vs valores pagos",
-                    grafico_pagamentos_mensais: "Pagamentos confirmados por mês da tabela Pagamentos_Associado"
+                    valores_a_receber: "Valores contratados - o que deveria ser recebido",
+                    valores_pagos_asaas: "Valores efetivamente pagos via ASAAS",
+                    valores_pagos_neoconsig: "Valores estimados como pagos via NEOCONSIG (desconto em folha)",
+                    valores_pagos: "Consolidação ASAAS + NEOCONSIG",
+                    inadimplencia: "Inadimplência real considerando ambas as formas de pagamento",
+                    analise_formas_pagamento: "Separação detalhada entre ASAAS e NEOCONSIG"
                 }
             };
             
@@ -2064,24 +2246,27 @@ $headerComponent = HeaderComponent::create([
             
             const a = document.createElement('a');
             a.href = url;
-            a.download = `relatorio_financeiro_separado_${new Date().toISOString().split('T')[0]}.json`;
+            a.download = `relatorio_financeiro_consolidado_${new Date().toISOString().split('T')[0]}.json`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
             
-            console.log('✅ Relatório exportado com separação de valores!');
+            console.log('✅ Relatório consolidado exportado!');
         }
 
-        console.log('✅ Sistema de Relatórios Financeiros funcionando!');
-        console.log('💡 Modo:', erroCarregamento ? 'Erro no carregamento' : 'Produção com dados reais');
+        console.log('✅ Sistema de Relatórios Financeiros Consolidados funcionando!');
+        console.log('💡 Modo:', erroCarregamento ? 'Erro no carregamento' : 'Produção com dados reais ASAAS + NEOCONSIG');
         console.log('🔧 Filtros implementados e funcionais');
         console.log('📊 Gráficos e tabelas operacionais');
         console.log('🎯 Tipos de associado disponíveis:', <?php echo json_encode($tiposAssociados); ?>);
-        console.log('💰 VALORES SEPARADOS:');
-        console.log('  📈 Valores a Receber (Servicos_Associado):', dadosRelatorio.valores_a_receber);
-        console.log('  💵 Valores Pagos (Pagamentos_Associado):', dadosRelatorio.valores_pagos);
-        console.log('  ⚠️ Análise de Inadimplência:', dadosRelatorio.inadimplencia);
+        console.log('💰 VALORES CONSOLIDADOS:');
+        console.log('  📈 Valores a Receber (Contratos):', dadosRelatorio.valores_a_receber);
+        console.log('  💵 Valores Pagos ASAAS:', dadosRelatorio.valores_pagos_asaas);
+        console.log('  🏢 Valores Pagos NEOCONSIG:', dadosRelatorio.valores_pagos_neoconsig);
+        console.log('  📊 Valores Pagos Consolidados:', dadosRelatorio.valores_pagos);
+        console.log('  ⚠️ Análise de Inadimplência Corrigida:', dadosRelatorio.inadimplencia);
+        console.log('  🔄 Análise de Formas de Pagamento:', dadosRelatorio.analise_formas_pagamento);
         
         // Debug de filtros
         window.debugFiltros = function() {
@@ -2095,17 +2280,21 @@ $headerComponent = HeaderComponent::create([
             return filtros;
         };
         
-        // Debug de valores
-        window.debugValores = function() {
-            console.log('💰 RESUMO FINANCEIRO:');
+        // Debug de valores consolidados
+        window.debugValoresConsolidados = function() {
+            console.log('💰 RESUMO FINANCEIRO CONSOLIDADO:');
             console.log('├─ 📋 Valores Contratados (a receber):', dadosRelatorio.valores_a_receber);
-            console.log('├─ ✅ Valores Pagos (confirmados):', dadosRelatorio.valores_pagos);
-            console.log('└─ 📊 Inadimplência:', dadosRelatorio.inadimplencia);
+            console.log('├─ 💳 Valores ASAAS (confirmados):', dadosRelatorio.valores_pagos_asaas);
+            console.log('├─ 🏢 Valores NEOCONSIG (estimados):', dadosRelatorio.valores_pagos_neoconsig);
+            console.log('├─ ✅ Valores Consolidados:', dadosRelatorio.valores_pagos);
+            console.log('├─ 📊 Inadimplência Corrigida:', dadosRelatorio.inadimplencia);
+            console.log('└─ 🔄 Análise de Formas:', dadosRelatorio.analise_formas_pagamento);
         };
         
         console.log('💡 Para debug dos filtros, use: debugFiltros()');
-        console.log('💡 Para debug dos valores, use: debugValores()');
-        console.log('🎉 VALORES AGORA SEPARADOS: Pagos vs A Receber!');
+        console.log('💡 Para debug dos valores consolidados, use: debugValoresConsolidados()');
+        console.log('🎉 VALORES AGORA CONSOLIDADOS: ASAAS + NEOCONSIG!');
+        console.log('✨ Inadimplência corrigida considerando desconto em folha!');
     </script>
 
 </body>
