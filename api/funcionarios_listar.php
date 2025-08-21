@@ -132,19 +132,56 @@ if ($departamentoUsuario === 9 && $escopoVisualizacao !== 'TODOS') {
 try {
     $funcionarios = new Funcionarios();
     
-    // Filtros opcionais vindos da requisição
+    // 🔧 CORREÇÃO 1: PAGINAÇÃO - CONVERSÃO DE PÁGINA PARA OFFSET
+    $pagina = isset($_GET['pagina']) ? intval($_GET['pagina']) : 1;
+    $limite = isset($_GET['limite']) ? intval($_GET['limite']) : 10;
+
+    // Validar parâmetros
+    if ($pagina < 1) $pagina = 1;
+    if ($limite < 1 || $limite > 100) $limite = 10;
+
+    // CALCULAR OFFSET CORRETAMENTE - AQUI ESTAVA O BUG!
+    $offset = ($pagina - 1) * $limite;
+
+    // Log para debug
+    error_log("=== PAGINAÇÃO API CORRIGIDA ===");
+    error_log("Página recebida: " . ($_GET['pagina'] ?? 'null'));
+    error_log("Limite recebido: " . ($_GET['limite'] ?? 'null'));
+    error_log("Página processada: {$pagina}");
+    error_log("Limite processado: {$limite}");
+    error_log("OFFSET calculado: {$offset}");
+    
+    // 🔧 CORREÇÃO 2: FILTROS - MAPEAMENTO CORRETO
     $filtros = [];
-    if (isset($_GET['ativo'])) {
-        $filtros['ativo'] = $_GET['ativo'];
+    
+    // ✅ FILTRO DE STATUS (frontend envia 'status', convertemos para 'ativo')
+    if (isset($_GET['status']) && $_GET['status'] !== '') {
+    // Frontend envia "1" para ativo e "0" para inativo
+    if ($_GET['status'] === '1') {
+        $filtros['ativo'] = 1;
+        error_log("🔍 Filtro de status aplicado: Ativo (1)");
+    } elseif ($_GET['status'] === '0') {
+        $filtros['ativo'] = 0;
+        error_log("🔍 Filtro de status aplicado: Inativo (0)");
     }
-    if (isset($_GET['departamento_id'])) {
-        $filtros['departamento_id'] = $_GET['departamento_id'];
+}
+
+    // ✅ FILTRO DE DEPARTAMENTO (frontend envia 'departamento', convertemos para 'departamento_id')
+    if (isset($_GET['departamento']) && !empty($_GET['departamento'])) {
+        $filtros['departamento_id'] = $_GET['departamento'];
+        error_log("🔍 Filtro de departamento aplicado: " . $_GET['departamento']);
     }
-    if (isset($_GET['cargo'])) {
+
+    // ✅ FILTRO DE CARGO (já estava correto)
+    if (isset($_GET['cargo']) && !empty($_GET['cargo'])) {
         $filtros['cargo'] = $_GET['cargo'];
+        error_log("🔍 Filtro de cargo aplicado: " . $_GET['cargo']);
     }
-    if (isset($_GET['busca'])) {
+
+    // ✅ FILTRO DE BUSCA (já estava correto)
+    if (isset($_GET['busca']) && !empty($_GET['busca'])) {
         $filtros['busca'] = $_GET['busca'];
+        error_log("🔍 Filtro de busca aplicado: " . $_GET['busca']);
     }
     
     error_log("=== APLICANDO FILTROS NA API ===");
@@ -184,13 +221,9 @@ try {
         }
     }
     
-    // Paginação
-    if (isset($_GET['limite'])) {
-        $filtros['limite'] = intval($_GET['limite']);
-    }
-    if (isset($_GET['offset'])) {
-        $filtros['offset'] = intval($_GET['offset']);
-    }
+    // Aplicar paginação aos filtros
+    $filtros['limite'] = $limite;
+    $filtros['offset'] = $offset;
     
     // Ordenação
     if (isset($_GET['ordenar_por'])) {
