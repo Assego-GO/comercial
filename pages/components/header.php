@@ -1,84 +1,50 @@
 <?php
+
 /**
  * Componente Header Premium do Sistema ASSEGO
  * components/Header.php
- * Versão com cores oficiais ASSEGO: Azul Royal (#003C8F) e Dourado (#FFB800)
- * Detecção automática de página ativa
+ * Versão com design moderno e melhorias de UX/UI
  */
 
-class HeaderComponent {
+class HeaderComponent
+{
     private $usuario;
     private $isDiretor;
     private $activePage;
     private $notificationCount;
 
-    public function __construct($config = []) {
+    public function __construct($config = [])
+    {
         $this->usuario = $config['usuario'] ?? ['nome' => 'Usuário', 'cargo' => 'Funcionário'];
         $this->isDiretor = $config['isDiretor'] ?? false;
+        $this->activePage = $config['activePage'] ?? 'dashboard';
         $this->notificationCount = $config['notificationCount'] ?? 0;
-        
-        // Detecta automaticamente a página ativa se não foi especificada
-        if (isset($config['activePage'])) {
-            $this->activePage = $config['activePage'];
-        } else {
-            $this->activePage = $this->detectActivePage();
-        }
-    }
-    
-    /**
-     * Detecta automaticamente qual é a página ativa baseada no arquivo atual
-     */
-    private function detectActivePage() {
-        $currentFile = basename($_SERVER['PHP_SELF']);
-        
-        // Mapeamento de arquivos para IDs de página
-        $pageMap = [
-            'dashboard.php' => 'associados',
-            'index.php' => 'associados',
-            'associados.php' => 'associados',
-            'funcionarios.php' => 'funcionarios',
-            'comercial.php' => 'comercial',
-            'financeiro.php' => 'financeiro',
-            'auditoria.php' => 'auditoria',
-            'presidencia.php' => 'presidencia',
-            'relatorios.php' => 'relatorios',
-            'documentos.php' => 'documentos'
-        ];
-        
-        return $pageMap[$currentFile] ?? 'associados';
     }
 
     /**
      * Renderiza o CSS do componente
      */
-    public function renderCSS() {
-        ?>
+    public function renderCSS()
+    {
+?>
         <style>
             @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
-            
+
             :root {
-                /* Cores ASSEGO Oficiais */
-                --assego-blue: #003C8F;
-                --assego-blue-dark: #002A66;
-                --assego-blue-light: #E6F0FF;
-                --assego-gold: #FFB800;
-                --assego-gold-dark: #E5A200;
-                --assego-gold-light: #FFF4E0;
-                
                 /* Cores Principais */
-                --primary: var(--assego-blue);
-                --primary-dark: var(--assego-blue-dark);
-                --primary-light: var(--assego-blue-light);
-                --primary-gradient: linear-gradient(135deg, var(--assego-blue) 0%, var(--assego-blue-dark) 100%);
-                
+                --primary: #2563EB;
+                --primary-dark: #1E40AF;
+                --primary-light: #DBEAFE;
+                --primary-gradient: linear-gradient(135deg, #667EEA 0%, #764BA2 100%);
+
                 /* Cores Secundárias */
-                --secondary: var(--assego-gold);
-                --accent: var(--assego-gold);
-                --danger: #DC2626;
-                --success: #16A34A;
-                --warning: var(--assego-gold);
-                --info: #0EA5E9;
-                
+                --secondary: #10B981;
+                --accent: #F59E0B;
+                --danger: #EF4444;
+                --success: #10B981;
+                --warning: #F59E0B;
+                --info: #3B82F6;
+
                 /* Tons de Cinza */
                 --gray-50: #F9FAFB;
                 --gray-100: #F3F4F6;
@@ -91,23 +57,25 @@ class HeaderComponent {
                 --gray-800: #1F2937;
                 --gray-900: #111827;
                 --white: #FFFFFF;
-                
+
                 /* Configurações */
                 --header-height: 72px;
-                --header-bg: rgba(255, 255, 255, 0.98);
+                --header-bg: rgba(255, 255, 255, 0.95);
                 --backdrop-blur: blur(20px);
-                
+
                 /* Sombras */
                 --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
                 --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.06);
                 --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
                 --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
                 --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
-                
+                --shadow-glow: 0 0 20px rgba(37, 99, 235, 0.15);
+
                 /* Transições */
                 --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
                 --transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
                 --transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+                --transition-slower: 500ms cubic-bezier(0.4, 0, 0.2, 1);
             }
 
             * {
@@ -120,7 +88,6 @@ class HeaderComponent {
                 font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
                 -webkit-font-smoothing: antialiased;
                 -moz-osx-font-smoothing: grayscale;
-                background-color: #FAFBFC;
             }
 
             /* Adiciona padding ao body */
@@ -135,29 +102,23 @@ class HeaderComponent {
                 -webkit-backdrop-filter: var(--backdrop-blur);
                 height: var(--header-height);
                 border-bottom: 1px solid rgba(229, 231, 235, 0.8);
-                border-top: 3px solid var(--assego-gold);
                 position: fixed;
                 top: 0;
                 left: 0;
                 right: 0;
                 z-index: 1000;
                 transition: all var(--transition-base);
-                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
             }
-            
+
             .header-container::before {
                 content: '';
                 position: absolute;
-                top: 3px;
+                top: 0;
                 left: 0;
                 right: 0;
-                height: 1px;
-                background: linear-gradient(90deg, 
-                    transparent, 
-                    var(--assego-gold), 
-                    var(--assego-gold), 
-                    transparent);
-                opacity: 0.3;
+                height: 100%;
+                background: linear-gradient(90deg, rgba(37, 99, 235, 0.02) 0%, rgba(147, 51, 234, 0.02) 100%);
+                pointer-events: none;
             }
 
             .header-content {
@@ -178,41 +139,37 @@ class HeaderComponent {
                 flex: 1;
             }
 
-            /* Logo */
+            /* Logo Animado */
             .logo-container {
                 display: flex;
                 align-items: center;
-                gap: 12px;
+                gap: 14px;
                 text-decoration: none;
                 cursor: pointer;
                 transition: transform var(--transition-base);
+                padding: 8px 0;
             }
 
             .logo-container:hover {
                 transform: scale(1.02);
             }
-            
-            .logo-container:hover .logo-icon {
-                box-shadow: 0 6px 20px rgba(0, 60, 143, 0.3),
-                           0 0 0 2px rgba(255, 184, 0, 0.2);
-            }
 
             .logo-icon {
-                width: 42px;
-                height: 42px;
-                background: var(--assego-blue);
-                border-radius: 12px;
+                width: 44px;
+                height: 44px;
+                background: linear-gradient(135deg, #667EEA 0%, #764BA2 100%);
+                border-radius: 14px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                color: var(--assego-gold);
+                color: white;
                 font-weight: 900;
                 font-size: 20px;
-                box-shadow: 0 4px 12px rgba(0, 60, 143, 0.2);
+                box-shadow: 0 4px 14px 0 rgba(102, 126, 234, 0.25);
                 position: relative;
                 overflow: hidden;
             }
-            
+
             .logo-icon::after {
                 content: '';
                 position: absolute;
@@ -220,16 +177,30 @@ class HeaderComponent {
                 left: -50%;
                 width: 200%;
                 height: 200%;
-                background: linear-gradient(45deg, 
-                    transparent, 
-                    rgba(255, 184, 0, 0.4), 
-                    transparent);
-                transform: rotate(45deg) translateX(-100%);
-                transition: transform 0.6s;
+                background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+                transform: rotate(45deg);
+                transition: all 0.5s;
+                opacity: 0;
             }
-            
+
             .logo-container:hover .logo-icon::after {
-                transform: rotate(45deg) translateX(100%);
+                animation: shine 0.5s ease-in-out;
+            }
+
+            @keyframes shine {
+                0% {
+                    transform: translateX(-100%) translateY(-100%) rotate(45deg);
+                    opacity: 0;
+                }
+
+                50% {
+                    opacity: 1;
+                }
+
+                100% {
+                    transform: translateX(100%) translateY(100%) rotate(45deg);
+                    opacity: 0;
+                }
             }
 
             .logo-text-container {
@@ -238,17 +209,11 @@ class HeaderComponent {
             }
 
             .logo-text {
-                color: var(--assego-blue);
+                color: var(--gray-900);
                 font-size: 19px;
                 font-weight: 800;
                 letter-spacing: -0.025em;
                 line-height: 1;
-                transition: all var(--transition-base);
-            }
-            
-            .logo-container:hover .logo-text {
-                color: var(--assego-blue-dark);
-                text-shadow: 0 0 20px rgba(255, 184, 0, 0.3);
             }
 
             .logo-subtitle {
@@ -257,47 +222,19 @@ class HeaderComponent {
                 font-weight: 500;
                 margin-top: 3px;
                 letter-spacing: 0.025em;
-                transition: all var(--transition-base);
-            }
-            
-            .logo-container:hover .logo-subtitle {
-                color: var(--assego-gold-dark);
             }
 
             /* Menu de Navegação */
             .nav-menu {
                 display: flex;
                 align-items: center;
-                gap: 4px;
+                gap: 6px;
                 flex: 1;
                 padding: 0 20px;
-                height: 100%;
             }
 
             .nav-item {
                 position: relative;
-                height: 100%;
-                display: flex;
-                align-items: center;
-            }
-
-            /* Linha inferior para aba ativa */
-            .nav-item::after {
-                content: '';
-                position: absolute;
-                bottom: 0;
-                left: 50%;
-                transform: translateX(-50%) scaleX(0);
-                width: calc(100% - 16px);
-                height: 3px;
-                background: var(--assego-gold);
-                border-radius: 3px 3px 0 0;
-                transition: transform var(--transition-base);
-                box-shadow: 0 2px 4px rgba(255, 184, 0, 0.3);
-            }
-
-            .nav-item.active::after {
-                transform: translateX(-50%) scaleX(1);
             }
 
             .nav-link {
@@ -312,60 +249,67 @@ class HeaderComponent {
                 border-radius: 10px;
                 transition: all var(--transition-base);
                 position: relative;
+                overflow: hidden;
                 border: 1px solid transparent;
             }
 
-            .nav-link:hover {
-                color: var(--assego-blue);
-                background: linear-gradient(135deg, var(--assego-blue-light) 0%, rgba(255, 184, 0, 0.05) 100%);
-                transform: translateY(-1px);
-                box-shadow: 0 2px 8px rgba(0, 60, 143, 0.1);
+            .nav-link::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: var(--primary);
+                opacity: 0;
+                transition: opacity var(--transition-base);
+                border-radius: 10px;
             }
 
-            /* Estado Ativo */
+            .nav-link:hover {
+                color: var(--primary);
+                background: rgba(37, 99, 235, 0.08);
+                transform: translateY(-1px);
+            }
+
             .nav-link.active {
-                color: var(--assego-blue);
-                background: var(--assego-blue-light);
-                border-color: var(--assego-gold);
+                color: var(--white);
+                background: linear-gradient(135deg, #667EEA 0%, #764BA2 100%);
+                box-shadow: 0 4px 12px 0 rgba(102, 126, 234, 0.25);
                 font-weight: 600;
             }
 
-            .nav-link.active i {
-                color: var(--assego-blue);
-                transform: scale(1.1);
-            }
-
-            .nav-link.active span {
-                color: var(--assego-blue);
-                font-weight: 700;
-            }
-
-            /* Indicador de ativo */
             .nav-link.active::before {
-                content: '';
-                position: absolute;
-                top: 6px;
-                right: 6px;
-                width: 5px;
-                height: 5px;
-                background: var(--assego-gold);
-                border-radius: 50%;
-                animation: pulse 2s infinite;
-            }
-
-            @keyframes pulse {
-                0% { box-shadow: 0 0 0 0 rgba(255, 184, 0, 0.7); }
-                70% { box-shadow: 0 0 0 5px rgba(255, 184, 0, 0); }
-                100% { box-shadow: 0 0 0 0 rgba(255, 184, 0, 0); }
+                opacity: 1;
             }
 
             .nav-link i {
                 font-size: 16px;
-                transition: all var(--transition-base);
+                transition: transform var(--transition-base);
             }
 
             .nav-link:hover i {
                 transform: scale(1.1);
+            }
+
+            .nav-link span {
+                position: relative;
+                z-index: 1;
+            }
+
+            /* Badge de Novo */
+            .nav-badge {
+                position: absolute;
+                top: 6px;
+                right: 6px;
+                background: var(--danger);
+                color: white;
+                font-size: 9px;
+                font-weight: 700;
+                padding: 2px 4px;
+                border-radius: 4px;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
             }
 
             /* Seção Direita */
@@ -379,8 +323,8 @@ class HeaderComponent {
             /* Botão de Notificações */
             .notification-btn {
                 position: relative;
-                width: 42px;
-                height: 42px;
+                width: 44px;
+                height: 44px;
                 border: 1px solid var(--gray-200);
                 background: var(--white);
                 border-radius: 12px;
@@ -393,22 +337,48 @@ class HeaderComponent {
             }
 
             .notification-btn:hover {
-                background: var(--assego-blue-light);
-                border-color: var(--assego-blue);
-                color: var(--assego-blue);
+                background: var(--gray-50);
+                border-color: var(--primary);
+                color: var(--primary);
                 transform: translateY(-2px);
                 box-shadow: var(--shadow-md);
+            }
+
+            .notification-btn i {
+                font-size: 18px;
+                transition: transform var(--transition-base);
+            }
+
+            .notification-btn:hover i {
+                transform: scale(1.1);
+                animation: bell-ring 0.5s ease-in-out;
+            }
+
+            @keyframes bell-ring {
+
+                0%,
+                100% {
+                    transform: rotate(0deg) scale(1.1);
+                }
+
+                25% {
+                    transform: rotate(-10deg) scale(1.1);
+                }
+
+                75% {
+                    transform: rotate(10deg) scale(1.1);
+                }
             }
 
             .notification-badge {
                 position: absolute;
                 top: -4px;
                 right: -4px;
-                min-width: 18px;
-                height: 18px;
-                background: var(--assego-gold);
-                color: var(--assego-blue-dark);
-                border-radius: 9px;
+                min-width: 20px;
+                height: 20px;
+                background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+                color: white;
+                border-radius: 10px;
                 font-size: 11px;
                 font-weight: 700;
                 display: flex;
@@ -416,7 +386,22 @@ class HeaderComponent {
                 justify-content: center;
                 padding: 0 5px;
                 border: 2px solid var(--white);
-                box-shadow: 0 2px 4px rgba(255, 184, 0, 0.3);
+                box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);
+                animation: pulse-badge 2s infinite;
+            }
+
+            @keyframes pulse-badge {
+                0% {
+                    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+                }
+
+                70% {
+                    box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+                }
+
+                100% {
+                    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+                }
             }
 
             /* Menu do Usuário */
@@ -437,8 +422,8 @@ class HeaderComponent {
             }
 
             .user-menu-trigger:hover {
-                background: var(--assego-blue-light);
-                border-color: var(--assego-blue);
+                background: var(--gray-50);
+                border-color: var(--primary);
                 transform: translateY(-2px);
                 box-shadow: var(--shadow-md);
             }
@@ -465,17 +450,17 @@ class HeaderComponent {
             .user-avatar {
                 width: 38px;
                 height: 38px;
-                background: var(--assego-blue);
-                color: var(--assego-gold);
+                background: linear-gradient(135deg, #667EEA 0%, #764BA2 100%);
+                color: white;
                 border-radius: 10px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                font-weight: 700;
+                font-weight: 600;
                 font-size: 14px;
                 overflow: hidden;
+                box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
                 position: relative;
-                box-shadow: 0 2px 8px rgba(0, 60, 143, 0.2);
             }
 
             .user-avatar img {
@@ -488,11 +473,12 @@ class HeaderComponent {
                 position: absolute;
                 bottom: -2px;
                 right: -2px;
-                width: 10px;
-                height: 10px;
+                width: 12px;
+                height: 12px;
                 background: var(--success);
                 border: 2px solid var(--white);
                 border-radius: 50%;
+                box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
             }
 
             /* Dropdown do Usuário */
@@ -502,8 +488,8 @@ class HeaderComponent {
                 right: 0;
                 background: var(--white);
                 border-radius: 16px;
-                box-shadow: 0 10px 40px rgba(0, 60, 143, 0.15);
-                min-width: 260px;
+                box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12);
+                min-width: 280px;
                 padding: 8px;
                 opacity: 0;
                 visibility: hidden;
@@ -511,7 +497,6 @@ class HeaderComponent {
                 transition: all var(--transition-slow);
                 z-index: 1001;
                 border: 1px solid var(--gray-100);
-                border-top: 2px solid var(--assego-gold);
             }
 
             .user-dropdown.show {
@@ -522,21 +507,27 @@ class HeaderComponent {
 
             .user-dropdown-header {
                 padding: 16px;
-                background: linear-gradient(135deg, var(--assego-blue-light) 0%, #FFF4E0 100%);
+                background: var(--gray-50);
                 border-radius: 12px;
                 margin-bottom: 8px;
-                border: 1px solid rgba(0, 60, 143, 0.1);
+            }
+
+            .user-dropdown-avatar {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                margin-bottom: 12px;
             }
 
             .user-dropdown-name {
                 font-weight: 700;
-                color: var(--assego-blue);
+                color: var(--gray-900);
                 font-size: 15px;
             }
 
             .user-dropdown-email {
                 font-size: 13px;
-                color: var(--gray-600);
+                color: var(--gray-500);
                 margin-top: 2px;
             }
 
@@ -552,6 +543,7 @@ class HeaderComponent {
                 border-radius: 10px;
                 transition: all var(--transition-base);
                 position: relative;
+                overflow: hidden;
             }
 
             .dropdown-item::before {
@@ -561,14 +553,14 @@ class HeaderComponent {
                 top: 0;
                 bottom: 0;
                 width: 3px;
-                background: var(--assego-gold);
+                background: var(--primary);
                 transform: translateX(-100%);
                 transition: transform var(--transition-base);
             }
 
             .dropdown-item:hover {
-                background: var(--assego-blue-light);
-                color: var(--assego-blue);
+                background: var(--gray-50);
+                color: var(--primary);
                 padding-left: 18px;
             }
 
@@ -580,7 +572,6 @@ class HeaderComponent {
                 font-size: 16px;
                 width: 20px;
                 text-align: center;
-                color: var(--assego-blue);
             }
 
             .dropdown-divider {
@@ -592,8 +583,8 @@ class HeaderComponent {
             /* Mobile Menu Toggle */
             .mobile-menu-toggle {
                 display: none;
-                width: 42px;
-                height: 42px;
+                width: 44px;
+                height: 44px;
                 border: 1px solid var(--gray-200);
                 background: var(--white);
                 border-radius: 12px;
@@ -605,9 +596,9 @@ class HeaderComponent {
             }
 
             .mobile-menu-toggle:hover {
-                background: var(--assego-blue-light);
-                border-color: var(--assego-blue);
-                color: var(--assego-blue);
+                background: var(--gray-50);
+                border-color: var(--primary);
+                color: var(--primary);
             }
 
             /* Responsive Design */
@@ -616,7 +607,7 @@ class HeaderComponent {
                     padding: 10px 12px;
                     font-size: 13px;
                 }
-                
+
                 .nav-link i {
                     font-size: 15px;
                 }
@@ -690,38 +681,36 @@ class HeaderComponent {
                 transition: all var(--transition-base);
                 margin-bottom: 6px;
                 position: relative;
-                border-left: 3px solid transparent;
+            }
+
+            .mobile-nav-item::before {
+                content: '';
+                position: absolute;
+                left: 0;
+                top: 0;
+                bottom: 0;
+                width: 3px;
+                background: var(--primary);
+                transform: scaleY(0);
+                transition: transform var(--transition-base);
+                border-radius: 0 3px 3px 0;
             }
 
             .mobile-nav-item:hover {
-                background: var(--assego-blue-light);
-                color: var(--assego-blue);
+                background: var(--gray-50);
+                color: var(--primary);
                 padding-left: 20px;
-                border-left-color: var(--assego-gold);
+            }
+
+            .mobile-nav-item:hover::before {
+                transform: scaleY(1);
             }
 
             .mobile-nav-item.active {
-                background: var(--assego-blue-light);
-                color: var(--assego-blue);
-                font-weight: 700;
-                border-left-color: var(--assego-gold);
-                padding-left: 20px;
-            }
-
-            .mobile-nav-item.active::after {
-                content: '';
-                position: absolute;
-                top: 50%;
-                right: 16px;
-                transform: translateY(-50%);
-                width: 6px;
-                height: 6px;
-                background: var(--assego-gold);
-                border-radius: 50%;
-            }
-
-            .mobile-nav-item.active i {
-                color: var(--assego-blue);
+                background: linear-gradient(135deg, #667EEA 0%, #764BA2 100%);
+                color: var(--white);
+                font-weight: 600;
+                box-shadow: 0 4px 12px 0 rgba(102, 126, 234, 0.25);
             }
 
             .mobile-nav-item i {
@@ -754,6 +743,23 @@ class HeaderComponent {
                 visibility: visible;
             }
 
+            /* Animações de Entrada */
+            @keyframes slideDown {
+                from {
+                    opacity: 0;
+                    transform: translateY(-20px);
+                }
+
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+
+            .header-container {
+                animation: slideDown 0.5s ease-out;
+            }
+
             /* Scrollbar Customizada */
             .mobile-nav::-webkit-scrollbar {
                 width: 6px;
@@ -772,16 +778,31 @@ class HeaderComponent {
             .mobile-nav::-webkit-scrollbar-thumb:hover {
                 background: var(--gray-500);
             }
+            .logo-icon {
+    width: 40px !important;
+    height: 40px !important;
+    background: white !important; /* Fundo branco para garantir */
+    border-radius: 8px !important;
+    padding: 2px !important;
+}
+
+.logo-icon img {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: contain !important;
+    filter: none !important;
+}
         </style>
-        <?php
+    <?php
     }
 
     /**
      * Gera os itens de navegação baseado em permissões
      */
-    private function getNavigationItems() {
+    private function getNavigationItems()
+    {
         $items = [];
-        
+
         // Verifica permissões
         $ehDaPresidencia = isset($this->usuario['departamento_id']) && $this->usuario['departamento_id'] == 1;
         $ehDoFinanceiro = isset($this->usuario['departamento_id']) && $this->usuario['departamento_id'] == 2;
@@ -868,7 +889,8 @@ class HeaderComponent {
     /**
      * Gera as iniciais do usuário
      */
-    private function getUserInitials($nome) {
+    private function getUserInitials($nome)
+    {
         if (empty($nome)) return '?';
         $parts = explode(' ', trim($nome));
         if (count($parts) >= 2) {
@@ -878,22 +900,16 @@ class HeaderComponent {
     }
 
     /**
-     * Verifica se um item está ativo
-     */
-    private function isItemActive($itemId) {
-        return $this->activePage === $itemId;
-    }
-
-    /**
      * Renderiza o JavaScript
      */
-    public function renderJS() {
-        ?>
+    public function renderJS()
+    {
+    ?>
         <script>
             document.addEventListener('DOMContentLoaded', function() {
                 // Adiciona classe ao body para garantir padding
                 document.body.classList.add('has-header');
-                
+
                 // User Dropdown
                 const userMenuTrigger = document.getElementById('userMenuTrigger');
                 const userDropdown = document.getElementById('userDropdown');
@@ -923,7 +939,7 @@ class HeaderComponent {
                     mobileMenuToggle.addEventListener('click', function() {
                         mobileNav.classList.toggle('show');
                         mobileNavOverlay.classList.toggle('show');
-                        
+
                         // Anima o ícone do menu
                         const icon = this.querySelector('i');
                         if (mobileNav.classList.contains('show')) {
@@ -940,7 +956,7 @@ class HeaderComponent {
                     mobileNavOverlay.addEventListener('click', function() {
                         mobileNav.classList.remove('show');
                         mobileNavOverlay.classList.remove('show');
-                        
+
                         const icon = mobileMenuToggle.querySelector('i');
                         icon.classList.remove('fa-times');
                         icon.classList.add('fa-bars');
@@ -951,6 +967,7 @@ class HeaderComponent {
                 const notificationBtn = document.getElementById('notificationBtn');
                 if (notificationBtn) {
                     notificationBtn.addEventListener('click', function() {
+                        // Implementar lógica de notificações
                         console.log('Notificações clicadas');
                     });
                 }
@@ -958,19 +975,35 @@ class HeaderComponent {
                 // Header scroll effect
                 let lastScroll = 0;
                 const header = document.querySelector('.header-container');
-                
+
                 window.addEventListener('scroll', function() {
                     const currentScroll = window.pageYOffset;
-                    
+
                     if (currentScroll > 100) {
-                        header.style.boxShadow = '0 4px 20px rgba(0, 60, 143, 0.1)';
-                        header.style.borderTopColor = 'var(--assego-gold-dark)';
+                        header.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.08)';
                     } else {
-                        header.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.05)';
-                        header.style.borderTopColor = 'var(--assego-gold)';
+                        header.style.boxShadow = 'none';
                     }
-                    
+
                     lastScroll = currentScroll;
+                });
+
+                // Tooltips nos ícones (opcional)
+                const navLinks = document.querySelectorAll('.nav-link');
+                navLinks.forEach(link => {
+                    link.addEventListener('mouseenter', function() {
+                        const icon = this.querySelector('i');
+                        if (icon) {
+                            icon.style.transform = 'scale(1.1) rotate(5deg)';
+                        }
+                    });
+
+                    link.addEventListener('mouseleave', function() {
+                        const icon = this.querySelector('i');
+                        if (icon) {
+                            icon.style.transform = 'scale(1) rotate(0deg)';
+                        }
+                    });
                 });
             });
 
@@ -982,21 +1015,32 @@ class HeaderComponent {
                     document.body.style.paddingTop = headerHeight + 'px';
                 }
             });
+
+            // Adiciona efeitos de micro-interação
+            document.querySelectorAll('button, a').forEach(element => {
+                element.addEventListener('click', function(e) {
+                    const ripple = document.createElement('span');
+                    ripple.classList.add('ripple-effect');
+                    this.appendChild(ripple);
+
+                    setTimeout(() => {
+                        ripple.remove();
+                    }, 600);
+                });
+            });
         </script>
-        <?php
+    <?php
     }
 
     /**
      * Renderiza o componente
      */
-    public function render() {
+    public function render()
+    {
         $navigationItems = $this->getNavigationItems();
         $userInitials = $this->getUserInitials($this->usuario['nome']);
-        
-        // Debug para verificar página ativa
-        echo "<!-- Página Ativa: " . $this->activePage . " -->";
-        ?>
-        
+    ?>
+
         <header class="header-container">
             <div class="header-content">
                 <!-- Left Section -->
@@ -1008,20 +1052,20 @@ class HeaderComponent {
 
                     <!-- Logo -->
                     <a href="dashboard.php" class="logo-container">
-                        <div class="logo-icon">A</div>
+                        <div class="logo-icon">
+                            <img src="img/logoassego.png" alt="Logo ASSEGO" class="logo-img">
+                        </div>
                         <div class="logo-text-container">
                             <span class="logo-text">ASSEGO</span>
-                            <span class="logo-subtitle">Sistema de Gestão</span>
                         </div>
                     </a>
 
                     <!-- Desktop Navigation -->
                     <nav class="nav-menu">
                         <?php foreach ($navigationItems as $item): ?>
-                            <?php $isActive = $this->isItemActive($item['id']); ?>
-                            <div class="nav-item <?php echo $isActive ? 'active' : ''; ?>">
-                                <a href="<?php echo htmlspecialchars($item['href']); ?>" 
-                                   class="nav-link <?php echo $isActive ? 'active' : ''; ?>">
+                            <div class="nav-item">
+                                <a href="<?php echo htmlspecialchars($item['href']); ?>"
+                                    class="nav-link <?php echo ($this->activePage === $item['id']) ? 'active' : ''; ?>">
                                     <i class="<?php echo htmlspecialchars($item['icon']); ?>"></i>
                                     <span><?php echo htmlspecialchars($item['label']); ?></span>
                                 </a>
@@ -1051,8 +1095,8 @@ class HeaderComponent {
                             </div>
                             <div class="user-avatar">
                                 <?php if (isset($this->usuario['avatar']) && !empty($this->usuario['avatar'])): ?>
-                                    <img src="<?php echo htmlspecialchars($this->usuario['avatar']); ?>" 
-                                         alt="<?php echo htmlspecialchars($this->usuario['nome']); ?>">
+                                    <img src="<?php echo htmlspecialchars($this->usuario['avatar']); ?>"
+                                        alt="<?php echo htmlspecialchars($this->usuario['nome']); ?>">
                                 <?php else: ?>
                                     <?php echo $userInitials; ?>
                                 <?php endif; ?>
@@ -1063,27 +1107,34 @@ class HeaderComponent {
                         <!-- User Dropdown -->
                         <div class="user-dropdown" id="userDropdown">
                             <div class="user-dropdown-header">
-                                <div class="user-dropdown-name"><?php echo htmlspecialchars($this->usuario['nome']); ?></div>
-                                <div class="user-dropdown-email"><?php echo htmlspecialchars($this->usuario['email'] ?? 'usuario@assego.com.br'); ?></div>
+                                <div class="user-dropdown-avatar">
+                                    <div class="user-avatar">
+                                        <?php echo $userInitials; ?>
+                                    </div>
+                                    <div>
+                                        <div class="user-dropdown-name"><?php echo htmlspecialchars($this->usuario['nome']); ?></div>
+                                        <div class="user-dropdown-email"><?php echo htmlspecialchars($this->usuario['email'] ?? 'usuario@assego.com.br'); ?></div>
+                                    </div>
+                                </div>
                             </div>
-                            
+
                             <a href="perfil.php" class="dropdown-item">
                                 <i class="fas fa-user-circle"></i>
                                 <span>Meu Perfil</span>
                             </a>
-                            
+
                             <a href="configuracoes.php" class="dropdown-item">
                                 <i class="fas fa-cog"></i>
                                 <span>Configurações</span>
                             </a>
-                            
+
                             <a href="ajuda.php" class="dropdown-item">
                                 <i class="fas fa-question-circle"></i>
                                 <span>Ajuda</span>
                             </a>
-                            
+
                             <div class="dropdown-divider"></div>
-                            
+
                             <a href="logout.php" class="dropdown-item">
                                 <i class="fas fa-sign-out-alt"></i>
                                 <span>Sair</span>
@@ -1097,53 +1148,60 @@ class HeaderComponent {
         <!-- Mobile Navigation -->
         <nav class="mobile-nav" id="mobileNav">
             <div class="mobile-nav-header">
-                <div class="user-dropdown-name"><?php echo htmlspecialchars($this->usuario['nome']); ?></div>
-                <div class="user-dropdown-email"><?php echo htmlspecialchars($this->usuario['cargo'] ?? 'Funcionário'); ?></div>
+                <div class="user-dropdown-avatar">
+                    <div class="user-avatar">
+                        <?php echo $userInitials; ?>
+                    </div>
+                    <div>
+                        <div class="user-dropdown-name"><?php echo htmlspecialchars($this->usuario['nome']); ?></div>
+                        <div class="user-dropdown-email"><?php echo htmlspecialchars($this->usuario['cargo'] ?? 'Funcionário'); ?></div>
+                    </div>
+                </div>
             </div>
-            
+
             <?php foreach ($navigationItems as $item): ?>
-                <?php $isActive = $this->isItemActive($item['id']); ?>
-                <a href="<?php echo htmlspecialchars($item['href']); ?>" 
-                   class="mobile-nav-item <?php echo $isActive ? 'active' : ''; ?>">
+                <a href="<?php echo htmlspecialchars($item['href']); ?>"
+                    class="mobile-nav-item <?php echo ($this->activePage === $item['id']) ? 'active' : ''; ?>">
                     <i class="<?php echo htmlspecialchars($item['icon']); ?>"></i>
                     <span><?php echo htmlspecialchars($item['label']); ?></span>
                 </a>
             <?php endforeach; ?>
-            
+
             <div class="mobile-nav-divider"></div>
-            
+
             <a href="perfil.php" class="mobile-nav-item">
                 <i class="fas fa-user-circle"></i>
                 <span>Meu Perfil</span>
             </a>
-            
+
             <a href="configuracoes.php" class="mobile-nav-item">
                 <i class="fas fa-cog"></i>
                 <span>Configurações</span>
             </a>
-            
+
             <a href="ajuda.php" class="mobile-nav-item">
                 <i class="fas fa-question-circle"></i>
                 <span>Ajuda</span>
             </a>
-            
+
             <div class="mobile-nav-divider"></div>
-            
+
             <a href="logout.php" class="mobile-nav-item">
                 <i class="fas fa-sign-out-alt"></i>
                 <span>Sair</span>
             </a>
         </nav>
-        
+
         <div class="mobile-nav-overlay" id="mobileNavOverlay"></div>
-        
-        <?php
+
+    <?php
     }
 
     /**
      * Método estático para uso rápido
      */
-    public static function create($config = []) {
+    public static function create($config = [])
+    {
         $header = new self($config);
         return $header;
     }
@@ -1152,60 +1210,20 @@ class HeaderComponent {
 /**
  * Função helper para renderização rápida
  */
-function renderHeader($config = []) {
+function renderHeader($config = [])
+{
     $header = new HeaderComponent($config);
     $header->renderCSS();
     $header->render();
     $header->renderJS();
 }
 
-// EXEMPLO DE USO EM SUAS PÁGINAS:
-// ================================
-/*
-
-// Em dashboard.php ou index.php:
-<?php
-require_once 'components/Header.php';
-
-renderHeader([
-    'usuario' => $usuarioLogado,
-    'isDiretor' => $isDiretor,
-    'activePage' => 'associados', // Opcional - detecta automaticamente
-    'notificationCount' => 3
-]);
-?>
-
-// Em financeiro.php:
-<?php
-require_once 'components/Header.php';
-
-renderHeader([
-    'usuario' => $usuarioLogado,
-    'isDiretor' => $isDiretor,
-    'activePage' => 'financeiro', // Opcional - detecta automaticamente
-    'notificationCount' => 5
-]);
-?>
-
-// Em funcionarios.php:
-<?php
-require_once 'components/Header.php';
-
-renderHeader([
-    'usuario' => $usuarioLogado,
-    'isDiretor' => $isDiretor,
-    'activePage' => 'funcionarios', // Opcional - detecta automaticamente
-    'notificationCount' => 2
-]);
-?>
-
-*/
-
-// Exemplo de teste quando acessado diretamente
+// Exemplo de uso quando acessado diretamente
 if (basename(__FILE__) == basename($_SERVER['SCRIPT_NAME'])) {
     ?>
     <!DOCTYPE html>
     <html lang="pt-BR">
+
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -1215,178 +1233,152 @@ if (basename(__FILE__) == basename($_SERVER['SCRIPT_NAME'])) {
             body {
                 margin: 0;
                 padding: 0;
-                background: linear-gradient(135deg, #E6F0FF 0%, #FFF4E0 100%);
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
                 min-height: 100vh;
             }
-            
+
             .demo-content {
                 padding: 40px;
                 max-width: 1400px;
                 margin: 0 auto;
             }
-            
+
             .demo-card {
                 background: white;
-                border-radius: 16px;
+                border-radius: 20px;
                 padding: 32px;
-                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+                box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
                 margin-bottom: 24px;
-                border-top: 4px solid #FFB800;
             }
-            
+
             .demo-title {
-                font-size: 24px;
-                font-weight: 700;
-                color: #003C8F;
-                margin-bottom: 16px;
+                font-size: 28px;
+                font-weight: 800;
+                color: #111827;
+                margin-bottom: 8px;
             }
-            
-            .code-example {
-                background: #003C8F;
-                color: #10B981;
+
+            .demo-subtitle {
+                font-size: 16px;
+                color: #6B7280;
+                margin-bottom: 24px;
+            }
+
+            .features-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+                gap: 20px;
+                margin-top: 24px;
+            }
+
+            .feature-card {
                 padding: 20px;
+                background: #F9FAFB;
                 border-radius: 12px;
-                font-family: 'Courier New', monospace;
-                font-size: 14px;
-                overflow-x: auto;
-                margin-top: 20px;
+                border: 1px solid #E5E7EB;
             }
-            
-            .highlight {
-                color: #FFB800;
-            }
-            
-            .test-buttons {
+
+            .feature-icon {
+                width: 40px;
+                height: 40px;
+                background: linear-gradient(135deg, #667EEA 0%, #764BA2 100%);
+                border-radius: 10px;
                 display: flex;
-                gap: 12px;
-                margin-top: 20px;
-                flex-wrap: wrap;
-            }
-            
-            .test-btn {
-                padding: 10px 20px;
-                border: none;
-                border-radius: 8px;
-                background: #003C8F;
+                align-items: center;
+                justify-content: center;
                 color: white;
+                margin-bottom: 12px;
+            }
+
+            .feature-title {
                 font-weight: 600;
-                cursor: pointer;
-                transition: all 0.2s;
-                border: 2px solid transparent;
+                color: #111827;
+                margin-bottom: 4px;
             }
-            
-            .test-btn:hover {
-                background: #002A66;
-                transform: translateY(-2px);
-                border-color: #FFB800;
-            }
-            
-            .success-box {
-                margin-top: 20px;
-                padding: 16px;
-                background: #E6F0FF;
-                border-left: 4px solid #003C8F;
-                border-radius: 8px;
-            }
-            
-            .badge-assego {
-                background: #FFB800;
-                color: #003C8F;
-                padding: 4px 12px;
-                border-radius: 6px;
-                font-weight: 700;
-                display: inline-block;
+
+            .feature-desc {
+                font-size: 14px;
+                color: #6B7280;
             }
         </style>
     </head>
+
     <body>
         <?php
-        // Simula diferentes páginas para teste
-        $testPage = $_GET['page'] ?? 'financeiro';
-        
-        // Renderiza o header com a página ativa baseada no parâmetro
+        // Renderiza o header com configurações de exemplo
         renderHeader([
             'usuario' => [
-                'nome' => 'João Silva',
+                'nome' => 'Lydia de Souza Pauluci Ferreira',
                 'cargo' => 'Contador',
-                'email' => 'joao@assego.com.br',
+                'email' => 'lydia@assego.com.br',
                 'departamento_id' => 2, // Financeiro
                 'avatar' => null
             ],
             'isDiretor' => false,
-            'activePage' => $testPage, // Usa o parâmetro GET para testar diferentes páginas
+            'activePage' => 'financeiro',
             'notificationCount' => 3
         ]);
         ?>
-        
+
         <div class="demo-content">
             <div class="demo-card">
-                <h1 class="demo-title">🛡️ Header ASSEGO - Padrão Oficial</h1>
-                <p>Header com as cores oficiais do ASSEGO: <span class="badge-assego">Azul Royal + Dourado</span></p>
-                
-                <h3 style="color: #003C8F; margin-top: 24px;">🎨 Cores Aplicadas:</h3>
-                <ul style="color: #4B5563; line-height: 1.8;">
-                    <li><strong>Azul ASSEGO:</strong> #003C8F (Principal)</li>
-                    <li><strong>Dourado ASSEGO:</strong> #FFB800 (Destaques)</li>
-                    <li><strong>Linha superior:</strong> Barra dourada no topo</li>
-                    <li><strong>Aba ativa:</strong> Fundo azul claro com indicador dourado</li>
-                    <li><strong>Notificações:</strong> Badge dourado</li>
-                    <li><strong>Avatar:</strong> Fundo azul com letras douradas</li>
-                </ul>
-                
-                <h3>🎯 Como Funciona:</h3>
-                <ol>
-                    <li><strong>Detecção Automática:</strong> O componente detecta o arquivo PHP atual</li>
-                    <li><strong>Visual Destacado:</strong> A aba ativa tem visual diferenciado</li>
-                    <li><strong>Linha Inferior:</strong> Indicador colorido embaixo da aba</li>
-                    <li><strong>Texto Gradiente:</strong> O texto fica com gradiente colorido</li>
-                    <li><strong>Ponto Verde:</strong> Indicador pulsante no canto</li>
-                </ol>
-                
-                <div class="code-example">
-                    <span class="highlight">&lt;?php</span><br>
-                    require_once 'components/Header.php';<br><br>
-                    
-                    <span class="highlight">// Modo 1: Detecção Automática (RECOMENDADO)</span><br>
-                    renderHeader([<br>
-                    &nbsp;&nbsp;&nbsp;&nbsp;'usuario' => $usuarioLogado,<br>
-                    &nbsp;&nbsp;&nbsp;&nbsp;'isDiretor' => $isDiretor,<br>
-                    &nbsp;&nbsp;&nbsp;&nbsp;<span class="highlight">// NÃO precisa passar 'activePage' - detecta sozinho!</span><br>
-                    &nbsp;&nbsp;&nbsp;&nbsp;'notificationCount' => 3<br>
-                    ]);<br><br>
-                    
-                    <span class="highlight">// Modo 2: Manual (se necessário)</span><br>
-                    renderHeader([<br>
-                    &nbsp;&nbsp;&nbsp;&nbsp;'usuario' => $usuarioLogado,<br>
-                    &nbsp;&nbsp;&nbsp;&nbsp;'isDiretor' => $isDiretor,<br>
-                    &nbsp;&nbsp;&nbsp;&nbsp;'activePage' => 'financeiro', <span class="highlight">// Força página específica</span><br>
-                    &nbsp;&nbsp;&nbsp;&nbsp;'notificationCount' => 3<br>
-                    ]);<br>
-                    <span class="highlight">?&gt;</span>
+                <h1 class="demo-title">🎨 Header Premium ASSEGO</h1>
+                <p class="demo-subtitle">Design moderno com foco em UX/UI e micro-interações</p>
+
+                <div class="features-grid">
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-paint-brush"></i>
+                        </div>
+                        <div class="feature-title">Design Moderno</div>
+                        <div class="feature-desc">Interface limpa com gradientes e sombras suaves</div>
+                    </div>
+
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-magic"></i>
+                        </div>
+                        <div class="feature-title">Animações Fluidas</div>
+                        <div class="feature-desc">Transições suaves e micro-interações elegantes</div>
+                    </div>
+
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-mobile-alt"></i>
+                        </div>
+                        <div class="feature-title">100% Responsivo</div>
+                        <div class="feature-desc">Adaptável a todos os tamanhos de tela</div>
+                    </div>
+
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-shield-alt"></i>
+                        </div>
+                        <div class="feature-title">Sistema de Permissões</div>
+                        <div class="feature-desc">Controle de acesso por departamento</div>
+                    </div>
+
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-bell"></i>
+                        </div>
+                        <div class="feature-title">Notificações Animadas</div>
+                        <div class="feature-desc">Badge com efeito pulse e contador</div>
+                    </div>
+
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-user-circle"></i>
+                        </div>
+                        <div class="feature-title">Menu de Usuário</div>
+                        <div class="feature-desc">Dropdown elegante com avatar e status</div>
+                    </div>
                 </div>
-                
-                <h3 style="margin-top: 30px;">🧪 Teste as Abas:</h3>
-                <p>Clique nos botões abaixo para simular diferentes páginas ativas:</p>
-                
-                <div class="test-buttons">
-                    <button class="test-btn" onclick="window.location.href='?page=associados'">Associados</button>
-                    <button class="test-btn" onclick="window.location.href='?page=funcionarios'">Funcionários</button>
-                    <button class="test-btn" onclick="window.location.href='?page=comercial'">Comercial</button>
-                    <button class="test-btn" onclick="window.location.href='?page=financeiro'">Financeiro</button>
-                    <button class="test-btn" onclick="window.location.href='?page=relatorios'">Relatórios</button>
-                    <button class="test-btn" onclick="window.location.href='?page=documentos'">Documentos</button>
-                </div>
-                
-                <p class="success-box">
-                    <strong>✅ Página Ativa:</strong> 
-                    <span class="badge-assego"><?php echo strtoupper($testPage); ?></span>
-                    <br><br>
-                    As cores estão no padrão oficial ASSEGO: Azul Royal (#003C8F) e Dourado (#FFB800)
-                </p>
             </div>
         </div>
     </body>
+
     </html>
-    <?php
+<?php
 }
 ?>
