@@ -6,22 +6,25 @@
 
 session_start();
 
-class Auth {
+class Auth
+{
     private $db;
-    
-    public function __construct() {
+
+    public function __construct()
+    {
         $this->db = Database::getInstance(DB_NAME_CADASTRO)->getConnection();
     }
-    
+
     /**
      * Realiza login do usuário
      */
-    public function login($email, $senha) {
+    public function login($email, $senha)
+    {
         // Verificar tentativas de login
         if ($this->verificarBloqueio($email)) {
             return ['success' => false, 'message' => 'Usuário bloqueado temporariamente.'];
         }
-        
+
         $stmt = $this->db->prepare("
             SELECT f.*, d.nome as departamento_nome 
             FROM Funcionarios f
@@ -30,25 +33,26 @@ class Auth {
         ");
         $stmt->execute([$email]);
         $funcionario = $stmt->fetch();
-        
+
         if ($funcionario && password_verify($senha, $funcionario['senha'])) {
             // Login bem-sucedido
             $this->criarSessao($funcionario);
             $this->limparTentativas($email);
             $this->registrarLogin($funcionario['id']);
-            
+
             return ['success' => true];
         }
-        
+
         // Login falhou
         $this->registrarTentativaFalha($email);
         return ['success' => false, 'message' => 'Email ou senha inválidos!'];
     }
-    
+
     /**
      * Cria sessão do usuário
      */
-    private function criarSessao($funcionario) {
+    private function criarSessao($funcionario)
+    {
         $_SESSION['funcionario_id'] = $funcionario['id'];
         $_SESSION['funcionario_nome'] = $funcionario['nome'];
         $_SESSION['funcionario_email'] = $funcionario['email'];
@@ -58,28 +62,30 @@ class Auth {
         $_SESSION['is_diretor'] = ($funcionario['cargo'] == 'Diretor');
         $_SESSION['login_time'] = time();
         $_SESSION['last_activity'] = time();
-        
+
         // Regenerar ID da sessão por segurança
         session_regenerate_id(true);
     }
-    
+
     /**
      * Realiza logout
      */
-    public function logout() {
+    public function logout()
+    {
         session_destroy();
         header('Location: ' . BASE_URL . 'pages/index.php');
         exit;
     }
-    
+
     /**
      * Verifica se usuário está logado
      */
-    public function isLoggedIn() {
+    public function isLoggedIn()
+    {
         if (!isset($_SESSION['funcionario_id'])) {
             return false;
         }
-        
+
         // Verificar tempo de inatividade
         if (isset($_SESSION['last_activity'])) {
             $inativo = time() - $_SESSION['last_activity'];
@@ -88,74 +94,80 @@ class Auth {
                 return false;
             }
         }
-        
+
         $_SESSION['last_activity'] = time();
         return true;
     }
-    
+
     /**
      * Verifica se é diretor
      */
-    public function isDiretor() {
+    public function isDiretor()
+    {
         return isset($_SESSION['is_diretor']) && $_SESSION['is_diretor'];
     }
-    
+
     /**
      * Verifica se é do mesmo departamento
      */
-    public function isDepartamento($departamento_id) {
+    public function isDepartamento($departamento_id)
+    {
         return isset($_SESSION['departamento_id']) && $_SESSION['departamento_id'] == $departamento_id;
     }
-    
+
     /**
      * Força verificação de autenticação
      */
-    public function checkAuth() {
+    public function checkAuth()
+    {
         if (!$this->isLoggedIn()) {
             header('Location: ' . BASE_URL . '/index.php?redirect=' . urlencode($_SERVER['REQUEST_URI']));
             exit;
         }
     }
-    
+
     /**
      * Verifica permissão de diretor
      */
-    public function checkDiretor() {
+    public function checkDiretor()
+    {
         $this->checkAuth();
         if (!$this->isDiretor()) {
             header('Location: ' . BASE_URL . '/pages/dashboard.php');
             exit;
         }
     }
-    
+
     /**
      * Registra tentativa de login falha
      */
-    private function registrarTentativaFalha($email) {
+    private function registrarTentativaFalha($email)
+    {
         $ip = $_SERVER['REMOTE_ADDR'];
         $key = "login_attempts_" . md5($email . $ip);
-        
+
         if (!isset($_SESSION[$key])) {
             $_SESSION[$key] = ['count' => 0, 'first_attempt' => time()];
         }
-        
+
         $_SESSION[$key]['count']++;
         $_SESSION[$key]['last_attempt'] = time();
     }
-    
+
     /**
      * Verifica se usuário está bloqueado
      */
-    private function verificarBloqueio($email) {
+    private function verificarBloqueio($email)
+    {
         $ip = $_SERVER['REMOTE_ADDR'];
         $key = "login_attempts_" . md5($email . $ip);
-        
+
         if (!isset($_SESSION[$key])) {
             return false;
         }
-        
+
         $attempts = $_SESSION[$key];
-        
+
         // Verificar se passou o tempo de bloqueio
         if ($attempts['count'] >= MAX_TENTATIVAS_LOGIN) {
             $tempoDecorrido = time() - $attempts['last_attempt'];
@@ -166,31 +178,34 @@ class Auth {
                 unset($_SESSION[$key]);
             }
         }
-        
+
         return false;
     }
-    
+
     /**
      * Limpa tentativas de login
      */
-    private function limparTentativas($email) {
+    private function limparTentativas($email)
+    {
         $ip = $_SERVER['REMOTE_ADDR'];
         $key = "login_attempts_" . md5($email . $ip);
         unset($_SESSION[$key]);
     }
-    
+
     /**
      * Registra login bem-sucedido (para auditoria futura)
      */
-    private function registrarLogin($funcionario_id) {
+    private function registrarLogin($funcionario_id)
+    {
         // Pode ser implementado log em banco de dados futuramente
         error_log("Login bem-sucedido - Funcionário ID: $funcionario_id - IP: " . $_SERVER['REMOTE_ADDR']);
     }
-    
+
     /**
      * Retorna dados do usuário logado
      */
-    public function getUser() {
+    public function getUser()
+    {
         if ($this->isLoggedIn()) {
             return [
                 'id' => $_SESSION['funcionario_id'],
@@ -203,5 +218,51 @@ class Auth {
             ];
         }
         return null;
+    }
+
+    /**
+     * Verifica se o usuário está usando a senha padrão
+     * Adicionar este método na classe Auth após o método getUser()
+     */
+    public function isUsingSenhaDefault()
+    {
+        if (!$this->isLoggedIn()) {
+            return false;
+        }
+
+        try {
+            $stmt = $this->db->prepare("SELECT senha FROM Funcionarios WHERE id = ?");
+            $stmt->execute([$_SESSION['funcionario_id']]);
+            $funcionario = $stmt->fetch();
+
+            if ($funcionario) {
+                // Verifica se a senha atual é a senha padrão
+                $senha_padrao = 'Assego@123';
+                return password_verify($senha_padrao, $funcionario['senha']);
+            }
+
+            return false;
+        } catch (PDOException $e) {
+            error_log("Erro ao verificar senha padrão: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Marca que o usuário foi notificado sobre a senha padrão (para esta sessão)
+     * Adicionar este método na classe Auth após o método anterior
+     */
+    public function setNotificadoSenhaPadrao()
+    {
+        $_SESSION['notificado_senha_padrao'] = true;
+    }
+
+    /**
+     * Verifica se já foi notificado nesta sessão
+     * Adicionar este método na classe Auth após o método anterior
+     */
+    public function foiNotificadoSenhaPadrao()
+    {
+        return isset($_SESSION['notificado_senha_padrao']) && $_SESSION['notificado_senha_padrao'];
     }
 }
