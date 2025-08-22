@@ -3078,6 +3078,86 @@ function mostrarNotificacaoObs(mensagem, tipo = 'info') {
     }, 3000);
 }
 
+
+// Função para remover documento (ESTAVA FALTANDO)
+function removerDocumento(documentoId) {
+    // Mostrar loading no botão
+    const botaoRemover = document.querySelector(`button[onclick*="removerDocumento(${documentoId})"]`);
+    if (botaoRemover) {
+        const textoOriginal = botaoRemover.innerHTML;
+        botaoRemover.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Removendo...';
+        botaoRemover.disabled = true;
+        
+        // Restaurar botão em caso de erro
+        const restaurarBotao = () => {
+            botaoRemover.innerHTML = textoOriginal;
+            botaoRemover.disabled = false;
+        };
+    }
+
+    // Fazer requisição AJAX para remover
+    $.ajax({
+        url: '../api/documentos/upload_documentos_remover.php',
+        method: 'POST',
+        data: JSON.stringify({ id: documentoId }),
+        contentType: 'application/json',
+        dataType: 'json',
+        success: function(response) {
+            if (response.status === 'success') {
+                // Mostrar mensagem de sucesso
+                mostrarNotificacaoDoc('Documento removido com sucesso!', 'success');
+                
+                // Recarregar a aba de documentos
+                const associadoId = document.getElementById('modalId').textContent.replace('Matrícula: ', '').trim();
+                const associado = todosAssociados.find(a => a.id == associadoId);
+                if (associado) {
+                    preencherTabDocumentos(associado);
+                }
+            } else {
+                alert('Erro ao remover documento: ' + (response.message || 'Erro desconhecido'));
+                if (botaoRemover) restaurarBotao();
+            }
+        },
+        error: function(xhr, status, error) {
+            console.error('Erro ao remover documento:', error);
+            
+            let mensagem = 'Erro ao remover documento';
+            if (xhr.status === 404) {
+                mensagem = 'Documento não encontrado';
+            } else if (xhr.status === 403) {
+                mensagem = 'Sem permissão para remover documento';
+            } else if (xhr.status === 500) {
+                mensagem = 'Erro interno do servidor';
+            }
+            
+            alert(mensagem + '. Tente novamente.');
+            if (botaoRemover) restaurarBotao();
+        }
+    });
+}
+
+// Função auxiliar para mostrar notificações de documentos
+function mostrarNotificacaoDoc(mensagem, tipo = 'info') {
+    // Criar elemento de notificação
+    const notificacao = document.createElement('div');
+    notificacao.className = `alert alert-${tipo} alert-dismissible fade show position-fixed`;
+    notificacao.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);';
+    notificacao.innerHTML = `
+        <i class="fas fa-${tipo === 'success' ? 'check-circle' : tipo === 'error' ? 'times-circle' : 'info-circle'} me-2"></i>
+        ${mensagem}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+
+    document.body.appendChild(notificacao);
+
+    // Remover após 4 segundos
+    setTimeout(() => {
+        if (notificacao && notificacao.parentNode) {
+            notificacao.remove();
+        }
+    }, 4000);
+}
+
 // Função para mostrar erro nas observações
 function mostrarErroObservacoes(mensagem) {
     const container = document.getElementById('observacoesContainer');

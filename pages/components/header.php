@@ -198,20 +198,36 @@ class HeaderComponent {
                            0 0 0 2px rgba(255, 184, 0, 0.2);
             }
 
+            /* Estilo da logo com imagem */
             .logo-icon {
-                width: 42px;
-                height: 42px;
-                background: var(--assego-blue);
-                border-radius: 12px;
+                width: 42px !important;
+                height: 42px !important;
+                background: white !important;
+                border-radius: 12px !important;
+                padding: 4px !important;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                color: var(--assego-gold);
-                font-weight: 900;
-                font-size: 20px;
                 box-shadow: 0 4px 12px rgba(0, 60, 143, 0.2);
                 position: relative;
                 overflow: hidden;
+                transition: all var(--transition-base);
+            }
+
+            .logo-icon img {
+                width: 100% !important;
+                height: 100% !important;
+                object-fit: contain !important;
+                filter: none !important;
+            }
+            
+            /* Fallback quando não tem imagem */
+            .logo-icon.logo-letter {
+                background: var(--assego-blue) !important;
+                color: var(--assego-gold);
+                font-weight: 900;
+                font-size: 20px;
+                padding: 0 !important;
             }
             
             .logo-icon::after {
@@ -1359,7 +1375,17 @@ class HeaderComponent {
 
                     <!-- Logo -->
                     <a href="dashboard.php" class="logo-container">
-                        <div class="logo-icon">A</div>
+                        <?php 
+                        // Verifica se existe a imagem da logo
+                        $logoPath = 'img/logoassego.png';
+                        if (file_exists($logoPath)): 
+                        ?>
+                            <div class="logo-icon">
+                                <img src="<?php echo $logoPath; ?>" alt="Logo ASSEGO" class="logo-img">
+                            </div>
+                        <?php else: ?>
+                            <div class="logo-icon logo-letter">A</div>
+                        <?php endif; ?>
                         <div class="logo-text-container">
                             <span class="logo-text">ASSEGO</span>
                             <span class="logo-subtitle">Sistema de Gestão</span>
