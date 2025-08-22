@@ -2,9 +2,9 @@
 /**
  * Componente Header Premium do Sistema ASSEGO
  * components/Header.php
- * VERSÃO ATUALIZADA COM SISTEMA DE NOTIFICAÇÃO DE SENHA PADRÃO
+ * VERSÃO ATUALIZADA COM SISTEMA DE NOTIFICAÇÕES INTEGRADO
  * Versão com cores oficiais ASSEGO: Azul Royal (#003C8F) e Dourado (#FFB800)
- * Detecção automática de página ativa + Alerta de senha padrão
+ * Detecção automática de página ativa + Alerta de senha padrão + Sistema de Notificações
  */
 
 class HeaderComponent {
@@ -417,6 +417,24 @@ class HeaderComponent {
                 box-shadow: var(--shadow-md);
             }
 
+            /* Estados especiais do botão de notificação */
+            .notification-btn.has-notifications {
+                animation: gentleGlow 3s ease-in-out infinite;
+            }
+
+            @keyframes gentleGlow {
+                0%, 100% { box-shadow: 0 2px 8px rgba(0, 60, 143, 0.1); }
+                50% { box-shadow: 0 2px 8px rgba(255, 184, 0, 0.4); }
+            }
+
+            .notification-btn.active {
+                background: var(--assego-blue-light) !important;
+                border-color: var(--assego-blue) !important;
+                color: var(--assego-blue) !important;
+                transform: translateY(-2px);
+                box-shadow: var(--shadow-md) !important;
+            }
+
             .notification-badge {
                 position: absolute;
                 top: -4px;
@@ -434,6 +452,63 @@ class HeaderComponent {
                 padding: 0 5px;
                 border: 2px solid var(--white);
                 box-shadow: 0 2px 4px rgba(255, 184, 0, 0.3);
+                animation: fadeInBounce 0.5s ease-out;
+            }
+
+            @keyframes fadeInBounce {
+                0% { opacity: 0; transform: scale(0.3); }
+                50% { transform: scale(1.1); }
+                100% { opacity: 1; transform: scale(1); }
+            }
+
+            .notification-badge.pulse {
+                animation: badgePulse 0.6s ease-out;
+            }
+
+            @keyframes badgePulse {
+                0% { transform: scale(1); }
+                50% { transform: scale(1.3); }
+                100% { transform: scale(1); }
+            }
+
+            /* Tooltip para o botão de notificação */
+            .notification-btn::before {
+                content: 'Notificações (Ctrl+N)';
+                position: absolute;
+                bottom: -40px;
+                right: 0;
+                background: var(--gray-900);
+                color: var(--white);
+                padding: 8px 12px;
+                border-radius: 6px;
+                font-size: 12px;
+                white-space: nowrap;
+                opacity: 0;
+                visibility: hidden;
+                transform: translateY(-10px);
+                transition: all 0.3s ease;
+                z-index: 1001;
+                pointer-events: none;
+            }
+
+            .notification-btn::after {
+                content: '';
+                position: absolute;
+                bottom: -30px;
+                right: 10px;
+                border: 5px solid transparent;
+                border-bottom-color: var(--gray-900);
+                opacity: 0;
+                visibility: hidden;
+                transition: all 0.3s ease;
+                pointer-events: none;
+            }
+
+            .notification-btn:hover::before,
+            .notification-btn:hover::after {
+                opacity: 1;
+                visibility: visible;
+                transform: translateY(0);
             }
 
             /* Menu do Usuário */
@@ -650,6 +725,13 @@ class HeaderComponent {
 
                 .header-left {
                     gap: 16px;
+                }
+            }
+
+            @media (max-width: 768px) {
+                .notification-btn::before,
+                .notification-btn::after {
+                    display: none;
                 }
             }
 
@@ -1047,6 +1129,546 @@ class HeaderComponent {
                     font-size: 24px;
                 }
             }
+
+            /* ===== SISTEMA DE NOTIFICAÇÕES - CSS INTEGRADO ===== */
+
+            /* Painel principal */
+            .painel-notificacoes {
+                position: fixed;
+                width: 380px;
+                max-height: 600px;
+                background: var(--white);
+                border-radius: 16px;
+                box-shadow: 0 20px 60px rgba(0, 60, 143, 0.15),
+                            0 0 0 1px rgba(0, 60, 143, 0.05);
+                border-top: 3px solid var(--assego-gold);
+                z-index: 2000;
+                
+                opacity: 0;
+                visibility: hidden;
+                transform: translateY(-20px) scale(0.95);
+                transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+                
+                backdrop-filter: blur(20px);
+                -webkit-backdrop-filter: blur(20px);
+            }
+
+            .painel-notificacoes.show {
+                opacity: 1;
+                visibility: visible;
+                transform: translateY(0) scale(1);
+            }
+
+            /* Header do painel */
+            .painel-header {
+                padding: 20px 24px 16px;
+                border-bottom: 1px solid var(--gray-100);
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                background: linear-gradient(135deg, var(--assego-blue-light) 0%, #FFF4E0 100%);
+                border-radius: 16px 16px 0 0;
+            }
+
+            .painel-titulo {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                font-weight: 700;
+                color: var(--assego-blue);
+                font-size: 16px;
+            }
+
+            .painel-titulo i {
+                font-size: 18px;
+                color: var(--assego-gold);
+            }
+
+            .badge-contador {
+                background: var(--assego-gold);
+                color: var(--assego-blue-dark);
+                font-size: 12px;
+                font-weight: 700;
+                padding: 4px 8px;
+                border-radius: 12px;
+                min-width: 24px;
+                text-align: center;
+                box-shadow: 0 2px 8px rgba(255, 184, 0, 0.3);
+            }
+
+            .painel-acoes {
+                display: flex;
+                gap: 8px;
+            }
+
+            .btn-painel-acao {
+                width: 32px;
+                height: 32px;
+                border: none;
+                background: var(--white);
+                border-radius: 8px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                color: var(--gray-600);
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            }
+
+            .btn-painel-acao:hover {
+                background: var(--assego-blue);
+                color: var(--white);
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(0, 60, 143, 0.3);
+            }
+
+            /* Filtros */
+            .painel-filtros {
+                padding: 16px 24px;
+                display: flex;
+                gap: 8px;
+                border-bottom: 1px solid var(--gray-100);
+                background: var(--gray-50);
+            }
+
+            .filtro-btn {
+                padding: 8px 16px;
+                border: none;
+                background: var(--white);
+                border-radius: 20px;
+                font-size: 13px;
+                font-weight: 500;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                color: var(--gray-600);
+                border: 1px solid var(--gray-200);
+                flex: 1;
+                text-align: center;
+            }
+
+            .filtro-btn:hover {
+                background: var(--assego-blue-light);
+                border-color: var(--assego-blue);
+                color: var(--assego-blue);
+            }
+
+            .filtro-btn.active {
+                background: var(--assego-blue);
+                color: var(--white);
+                border-color: var(--assego-blue);
+                box-shadow: 0 2px 8px rgba(0, 60, 143, 0.3);
+            }
+
+            /* Conteúdo do painel */
+            .painel-conteudo {
+                max-height: 400px;
+                overflow-y: auto;
+                scrollbar-width: thin;
+                scrollbar-color: var(--gray-300) transparent;
+            }
+
+            .painel-conteudo::-webkit-scrollbar {
+                width: 6px;
+            }
+
+            .painel-conteudo::-webkit-scrollbar-track {
+                background: transparent;
+            }
+
+            .painel-conteudo::-webkit-scrollbar-thumb {
+                background: var(--gray-300);
+                border-radius: 3px;
+            }
+
+            .painel-conteudo::-webkit-scrollbar-thumb:hover {
+                background: var(--gray-400);
+            }
+
+            /* Itens de notificação */
+            .notificacao-item {
+                display: flex;
+                align-items: flex-start;
+                gap: 16px;
+                padding: 16px 24px;
+                border-bottom: 1px solid var(--gray-100);
+                cursor: pointer;
+                transition: all 0.2s ease;
+                position: relative;
+                min-height: 80px;
+                animation: slideInNotification 0.3s ease-out;
+            }
+
+            @keyframes slideInNotification {
+                from { opacity: 0; transform: translateX(-20px); }
+                to { opacity: 1; transform: translateX(0); }
+            }
+
+            .notificacao-item:last-child {
+                border-bottom: none;
+            }
+
+            .notificacao-item:hover {
+                background: var(--gray-50);
+                transform: translateX(4px);
+            }
+
+            .notificacao-item.nao-lida {
+                background: linear-gradient(90deg, 
+                    rgba(255, 184, 0, 0.02) 0%, 
+                    rgba(255, 255, 255, 1) 8%);
+                border-left: 3px solid var(--assego-gold);
+            }
+
+            .notificacao-item.nao-lida .notif-titulo {
+                font-weight: 700;
+            }
+
+            .notificacao-item.lida {
+                opacity: 0.7;
+            }
+
+            .notificacao-item.lida .notif-titulo {
+                font-weight: 500;
+            }
+
+            .notificacao-item.priority-high {
+                border-left: 3px solid #fd7e14;
+            }
+
+            .notificacao-item.priority-urgent {
+                border-left: 3px solid #dc3545;
+                animation: urgentPulse 2s infinite;
+            }
+
+            @keyframes urgentPulse {
+                0%, 100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.3); }
+                50% { box-shadow: 0 0 0 4px rgba(220, 53, 69, 0); }
+            }
+
+            /* Ícone da notificação */
+            .notif-icon {
+                width: 40px;
+                height: 40px;
+                border-radius: 12px;
+                background: var(--gray-100);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 16px;
+                flex-shrink: 0;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            }
+
+            /* Conteúdo da notificação */
+            .notif-content {
+                flex: 1;
+                min-width: 0;
+            }
+
+            .notif-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-start;
+                margin-bottom: 6px;
+                gap: 12px;
+            }
+
+            .notif-titulo {
+                font-size: 14px;
+                color: var(--gray-900);
+                line-height: 1.3;
+                flex: 1;
+            }
+
+            .notif-tempo {
+                font-size: 11px;
+                color: var(--gray-500);
+                font-weight: 500;
+                white-space: nowrap;
+                flex-shrink: 0;
+            }
+
+            .notif-mensagem {
+                font-size: 13px;
+                color: var(--gray-700);
+                line-height: 1.4;
+                margin-bottom: 8px;
+                display: -webkit-box;
+                -webkit-line-clamp: 3;
+                -webkit-box-orient: vertical;
+                overflow: hidden;
+            }
+
+            .notif-associado,
+            .notif-autor {
+                font-size: 12px;
+                color: var(--gray-600);
+                margin-bottom: 4px;
+                display: flex;
+                align-items: center;
+                gap: 6px;
+            }
+
+            .notif-associado i,
+            .notif-autor i {
+                font-size: 10px;
+                color: var(--assego-blue);
+                width: 12px;
+            }
+
+            .notif-prioridade {
+                display: inline-flex;
+                align-items: center;
+                gap: 4px;
+                padding: 2px 6px;
+                border-radius: 4px;
+                font-size: 10px;
+                font-weight: 600;
+                text-transform: uppercase;
+                margin-top: 4px;
+            }
+
+            .notif-prioridade.alta {
+                background: rgba(253, 126, 20, 0.1);
+                color: #fd7e14;
+            }
+
+            .notif-prioridade.urgente {
+                background: rgba(220, 53, 69, 0.1);
+                color: #dc3545;
+            }
+
+            /* Indicador de não lida */
+            .notif-indicator {
+                position: absolute;
+                top: 20px;
+                right: 20px;
+                width: 8px;
+                height: 8px;
+                background: var(--assego-gold);
+                border-radius: 50%;
+                box-shadow: 0 0 0 2px var(--white),
+                            0 2px 4px rgba(255, 184, 0, 0.4);
+                animation: pulse 2s infinite;
+            }
+
+            /* Footer do painel */
+            .painel-footer {
+                padding: 16px 24px;
+                border-top: 1px solid var(--gray-100);
+                background: var(--gray-50);
+                border-radius: 0 0 16px 16px;
+            }
+
+            .btn-ver-todas {
+                width: 100%;
+                padding: 12px 20px;
+                background: linear-gradient(135deg, var(--assego-blue) 0%, var(--assego-blue-dark) 100%);
+                color: var(--white);
+                border: none;
+                border-radius: 10px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 8px;
+                font-size: 14px;
+            }
+
+            .btn-ver-todas:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 6px 20px rgba(0, 60, 143, 0.4);
+            }
+
+            /* Estados especiais */
+            .loading-notificacoes {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                padding: 40px 20px;
+                color: var(--gray-600);
+                gap: 16px;
+            }
+
+            .spinner-notificacoes {
+                width: 32px;
+                height: 32px;
+                border: 3px solid var(--gray-200);
+                border-top: 3px solid var(--assego-blue);
+                border-radius: 50%;
+                animation: spin 1s linear infinite;
+            }
+
+            @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+            }
+
+            .notificacoes-vazio {
+                text-align: center;
+                padding: 40px 20px;
+                color: var(--gray-600);
+            }
+
+            .vazio-icon {
+                width: 60px;
+                height: 60px;
+                margin: 0 auto 16px;
+                background: var(--gray-100);
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 24px;
+                color: var(--gray-400);
+            }
+
+            .notificacoes-vazio h4 {
+                font-size: 16px;
+                margin-bottom: 8px;
+                color: var(--gray-700);
+            }
+
+            .notificacoes-vazio p {
+                font-size: 14px;
+                margin: 0;
+            }
+
+            .notificacoes-erro {
+                text-align: center;
+                padding: 40px 20px;
+                color: var(--gray-600);
+            }
+
+            .erro-icon {
+                width: 60px;
+                height: 60px;
+                margin: 0 auto 16px;
+                background: rgba(220, 53, 69, 0.1);
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 24px;
+                color: #dc3545;
+            }
+
+            .btn-tentar-novamente {
+                margin-top: 16px;
+                padding: 8px 16px;
+                background: var(--assego-blue);
+                color: var(--white);
+                border: none;
+                border-radius: 6px;
+                cursor: pointer;
+                font-size: 12px;
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                transition: all 0.2s ease;
+            }
+
+            .btn-tentar-novamente:hover {
+                background: var(--assego-blue-dark);
+                transform: translateY(-1px);
+            }
+
+            /* Toast de feedback */
+            .toast-notificacao {
+                position: fixed;
+                top: 100px;
+                right: 30px;
+                background: var(--white);
+                padding: 16px 20px;
+                border-radius: 12px;
+                box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+                border-left: 4px solid var(--info);
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                font-size: 14px;
+                font-weight: 500;
+                z-index: 3000;
+                
+                opacity: 0;
+                transform: translateX(100%);
+                transition: all 0.3s ease;
+            }
+
+            .toast-notificacao.show {
+                opacity: 1;
+                transform: translateX(0);
+            }
+
+            .toast-notificacao.toast-success {
+                border-left-color: var(--success);
+                color: var(--success);
+            }
+
+            .toast-notificacao.toast-error {
+                border-left-color: var(--danger);
+                color: var(--danger);
+            }
+
+            .toast-notificacao.toast-info {
+                border-left-color: var(--info);
+                color: var(--info);
+            }
+
+            /* Responsivo para notificações */
+            @media (max-width: 768px) {
+                .painel-notificacoes {
+                    width: calc(100vw - 40px);
+                    max-width: 380px;
+                    left: 20px !important;
+                    right: 20px;
+                    margin: 0 auto;
+                }
+                
+                .notificacao-item {
+                    padding: 12px 16px;
+                    gap: 12px;
+                }
+                
+                .notif-icon {
+                    width: 36px;
+                    height: 36px;
+                    font-size: 14px;
+                }
+                
+                .painel-header,
+                .painel-filtros,
+                .painel-footer {
+                    padding-left: 16px;
+                    padding-right: 16px;
+                }
+                
+                .toast-notificacao {
+                    right: 20px;
+                    left: 20px;
+                    width: auto;
+                }
+            }
+
+            @media (max-width: 480px) {
+                .painel-notificacoes {
+                    width: calc(100vw - 20px);
+                    left: 10px !important;
+                    right: 10px;
+                }
+                
+                .filtro-btn {
+                    font-size: 12px;
+                    padding: 6px 12px;
+                }
+                
+                .notif-mensagem {
+                    -webkit-line-clamp: 2;
+                }
+            }
         </style>
         <?php
     }
@@ -1225,14 +1847,6 @@ class HeaderComponent {
                     });
                 }
 
-                // Notifications
-                const notificationBtn = document.getElementById('notificationBtn');
-                if (notificationBtn) {
-                    notificationBtn.addEventListener('click', function() {
-                        console.log('Notificações clicadas');
-                    });
-                }
-
                 // Header scroll effect
                 let lastScroll = 0;
                 const header = document.querySelector('.header-container');
@@ -1271,6 +1885,14 @@ class HeaderComponent {
                         }
                     }, 10000);
                 }
+
+                // ===== SISTEMA DE NOTIFICAÇÕES =====
+                console.log('🔔 Iniciando Sistema de Notificações ASSEGO...');
+                
+                // Aguarda um pouco para garantir que tudo foi carregado
+                setTimeout(() => {
+                    window.notificacaoSystem = new NotificacaoSystem();
+                }, 500);
             });
 
             // Função para garantir que o conteúdo não fique sob o header
@@ -1299,6 +1921,554 @@ class HeaderComponent {
             function irParaPerfil() {
                 window.location.href = 'perfil.php';
             }
+
+            // ===== SISTEMA DE NOTIFICAÇÕES - CLASSE PRINCIPAL =====
+            class NotificacaoSystem {
+                constructor() {
+                    this.isInitialized = false;
+                    this.updateInterval = null;
+                    this.refreshRate = 60000; // 1 minuto
+                    this.panelAberto = false;
+                    this.notificacoes = [];
+                    this.totalNaoLidas = 0;
+                    
+                    this.init();
+                }
+                
+                init() {
+                    if (this.isInitialized) return;
+                    
+                    console.log('🔔 Iniciando Sistema de Notificações ASSEGO...');
+                    
+                    // Verifica se os elementos existem
+                    this.botaoNotificacao = document.getElementById('notificationBtn');
+                    this.badgeNotificacao = this.botaoNotificacao?.querySelector('.notification-badge');
+                    
+                    if (!this.botaoNotificacao) {
+                        console.log('⚠️ Botão de notificação não encontrado. Sistema desabilitado.');
+                        return;
+                    }
+                    
+                    this.criarPainelNotificacoes();
+                    this.configurarEventos();
+                    this.buscarNotificacoes();
+                    this.iniciarAtualizacaoAutomatica();
+                    
+                    this.isInitialized = true;
+                    console.log('✅ Sistema de Notificações inicializado com sucesso!');
+                }
+                
+                criarPainelNotificacoes() {
+                    // Remove painel existente se houver
+                    const painelExistente = document.getElementById('painelNotificacoes');
+                    if (painelExistente) {
+                        painelExistente.remove();
+                    }
+                    
+                    // Cria o painel
+                    const painel = document.createElement('div');
+                    painel.id = 'painelNotificacoes';
+                    painel.className = 'painel-notificacoes';
+                    painel.innerHTML = `
+                        <div class="painel-header">
+                            <div class="painel-titulo">
+                                <i class="fas fa-bell"></i>
+                                <span>Notificações</span>
+                                <span class="badge-contador" id="badgeContador">0</span>
+                            </div>
+                            <div class="painel-acoes">
+                                <button class="btn-painel-acao" onclick="notificacaoSystem.marcarTodasLidas()" title="Marcar todas como lidas">
+                                    <i class="fas fa-check-double"></i>
+                                </button>
+                                <button class="btn-painel-acao" onclick="notificacaoSystem.atualizarNotificacoes()" title="Atualizar">
+                                    <i class="fas fa-sync-alt"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="painel-filtros">
+                            <button class="filtro-btn active" data-filtro="todas">Todas</button>
+                            <button class="filtro-btn" data-filtro="financeiro">Financeiro</button>
+                            <button class="filtro-btn" data-filtro="observacoes">Observações</button>
+                        </div>
+                        
+                        <div class="painel-conteudo" id="painelConteudo">
+                            <div class="loading-notificacoes">
+                                <div class="spinner-notificacoes"></div>
+                                <span>Carregando notificações...</span>
+                            </div>
+                        </div>
+                        
+                        <div class="painel-footer">
+                            <button class="btn-ver-todas" onclick="window.location.href='notificacoes.php'">
+                                Ver todas as notificações
+                                <i class="fas fa-arrow-right"></i>
+                            </button>
+                        </div>
+                    `;
+                    
+                    // Adiciona o painel ao body
+                    document.body.appendChild(painel);
+                    
+                    // Configura filtros
+                    this.configurarFiltros();
+                }
+                
+                configurarEventos() {
+                    // Click no botão de notificação
+                    this.botaoNotificacao.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        this.togglePainel();
+                    });
+                    
+                    // Fecha painel ao clicar fora
+                    document.addEventListener('click', (e) => {
+                        const painel = document.getElementById('painelNotificacoes');
+                        if (painel && !painel.contains(e.target) && !this.botaoNotificacao.contains(e.target)) {
+                            this.fecharPainel();
+                        }
+                    });
+                    
+                    // Previne fechamento ao clicar dentro do painel
+                    document.addEventListener('click', (e) => {
+                        if (e.target.closest('#painelNotificacoes')) {
+                            e.stopPropagation();
+                        }
+                    });
+                    
+                    // Atalho de teclado (Ctrl + N)
+                    document.addEventListener('keydown', (e) => {
+                        if (e.ctrlKey && e.key === 'n') {
+                            e.preventDefault();
+                            this.togglePainel();
+                        }
+                    });
+                    
+                    // Visibilidade da página para pausar/retomar atualizações
+                    document.addEventListener('visibilitychange', () => {
+                        if (document.hidden) {
+                            this.pararAtualizacaoAutomatica();
+                        } else {
+                            this.iniciarAtualizacaoAutomatica();
+                            this.buscarNotificacoes(); // Atualiza imediatamente
+                        }
+                    });
+                }
+                
+                configurarFiltros() {
+                    const filtros = document.querySelectorAll('.filtro-btn');
+                    filtros.forEach(filtro => {
+                        filtro.addEventListener('click', () => {
+                            // Remove active de todos
+                            filtros.forEach(f => f.classList.remove('active'));
+                            // Adiciona active no clicado
+                            filtro.classList.add('active');
+                            
+                            const tipoFiltro = filtro.dataset.filtro;
+                            this.filtrarNotificacoes(tipoFiltro);
+                        });
+                    });
+                }
+                
+                togglePainel() {
+                    if (this.panelAberto) {
+                        this.fecharPainel();
+                    } else {
+                        this.abrirPainel();
+                    }
+                }
+                
+                abrirPainel() {
+                    const painel = document.getElementById('painelNotificacoes');
+                    if (!painel) return;
+                    
+                    // Posiciona o painel
+                    this.posicionarPainel();
+                    
+                    // Mostra o painel
+                    painel.classList.add('show');
+                    this.botaoNotificacao.classList.add('active');
+                    this.panelAberto = true;
+                    
+                    // Busca notificações atualizadas
+                    this.buscarNotificacoes();
+                    
+                    console.log('📱 Painel de notificações aberto');
+                }
+                
+                fecharPainel() {
+                    const painel = document.getElementById('painelNotificacoes');
+                    if (!painel) return;
+                    
+                    painel.classList.remove('show');
+                    this.botaoNotificacao.classList.remove('active');
+                    this.panelAberto = false;
+                    
+                    console.log('📱 Painel de notificações fechado');
+                }
+                
+                posicionarPainel() {
+                    const painel = document.getElementById('painelNotificacoes');
+                    const botao = this.botaoNotificacao;
+                    
+                    if (!painel || !botao) return;
+                    
+                    const rect = botao.getBoundingClientRect();
+                    const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+                    const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
+                    
+                    // Posição inicial (canto inferior direito do botão)
+                    let top = rect.bottom + scrollTop + 8;
+                    let left = rect.right + scrollLeft - 380; // 380px é a largura do painel
+                    
+                    // Verifica se não sai da tela
+                    if (left < 20) left = 20;
+                    if (left + 380 > window.innerWidth - 20) {
+                        left = window.innerWidth - 400;
+                    }
+                    
+                    painel.style.top = top + 'px';
+                    painel.style.left = left + 'px';
+                }
+                
+                async buscarNotificacoes() {
+                    try {
+                        const response = await fetch('../api/notificacoes.php?acao=buscar&limite=20');
+                        const data = await response.json();
+                        
+                        if (data.status === 'success') {
+                            this.notificacoes = data.data;
+                            this.atualizarPainel();
+                            
+                            // Busca contagem separadamente para maior precisão
+                            this.buscarContagem();
+                            
+                            console.log(`📊 ${this.notificacoes.length} notificações carregadas`);
+                        } else {
+                            console.error('❌ Erro ao buscar notificações:', data.message);
+                            this.mostrarErro('Erro ao carregar notificações');
+                        }
+                    } catch (error) {
+                        console.error('❌ Erro de rede ao buscar notificações:', error);
+                        this.mostrarErro('Erro de conexão');
+                    }
+                }
+                
+                async buscarContagem() {
+                    try {
+                        const response = await fetch('../api/notificacoes.php?acao=contar');
+                        const data = await response.json();
+                        
+                        if (data.status === 'success') {
+                            this.totalNaoLidas = data.total;
+                            this.atualizarBadge();
+                        }
+                    } catch (error) {
+                        console.error('❌ Erro ao buscar contagem:', error);
+                    }
+                }
+                
+                atualizarBadge() {
+                    if (!this.badgeNotificacao) {
+                        // Cria o badge se não existir
+                        this.badgeNotificacao = document.createElement('span');
+                        this.badgeNotificacao.className = 'notification-badge';
+                        this.botaoNotificacao.appendChild(this.badgeNotificacao);
+                    }
+                    
+                    if (this.totalNaoLidas > 0) {
+                        this.badgeNotificacao.textContent = this.totalNaoLidas > 9 ? '9+' : this.totalNaoLidas;
+                        this.badgeNotificacao.style.display = 'flex';
+                        
+                        // Adiciona classe visual
+                        this.botaoNotificacao.classList.add('has-notifications');
+                        
+                        // Adiciona animação de pulse
+                        this.badgeNotificacao.classList.add('pulse');
+                        setTimeout(() => {
+                            this.badgeNotificacao?.classList.remove('pulse');
+                        }, 1000);
+                    } else {
+                        this.badgeNotificacao.style.display = 'none';
+                        this.botaoNotificacao.classList.remove('has-notifications');
+                    }
+                    
+                    // Atualiza contador no painel
+                    const badgeContador = document.getElementById('badgeContador');
+                    if (badgeContador) {
+                        badgeContador.textContent = this.totalNaoLidas;
+                    }
+                }
+                
+                atualizarPainel() {
+                    const conteudo = document.getElementById('painelConteudo');
+                    if (!conteudo) return;
+                    
+                    if (this.notificacoes.length === 0) {
+                        conteudo.innerHTML = `
+                            <div class="notificacoes-vazio">
+                                <div class="vazio-icon">
+                                    <i class="fas fa-bell-slash"></i>
+                                </div>
+                                <h4>Nenhuma notificação</h4>
+                                <p>Você está em dia! Não há notificações pendentes.</p>
+                            </div>
+                        `;
+                        return;
+                    }
+                    
+                    const html = this.notificacoes.map(notif => this.criarItemNotificacao(notif)).join('');
+                    conteudo.innerHTML = html;
+                }
+                
+                criarItemNotificacao(notif) {
+                    const prioridadeClass = notif.prioridade === 'ALTA' ? 'priority-high' : 
+                                           notif.prioridade === 'URGENTE' ? 'priority-urgent' : '';
+                    
+                    return `
+                        <div class="notificacao-item ${notif.lida ? 'lida' : 'nao-lida'} ${prioridadeClass}" 
+                             data-id="${notif.id}" 
+                             data-tipo="${notif.tipo}"
+                             onclick="notificacaoSystem.marcarComoLida(${notif.id})">
+                            
+                            <div class="notif-icon" style="color: ${notif.cor}">
+                                <i class="${notif.icone}"></i>
+                            </div>
+                            
+                            <div class="notif-content">
+                                <div class="notif-header">
+                                    <span class="notif-titulo">${notif.titulo}</span>
+                                    <span class="notif-tempo">${notif.tempo_atras}</span>
+                                </div>
+                                
+                                <div class="notif-mensagem">${notif.mensagem}</div>
+                                
+                                ${notif.associado_nome ? `
+                                    <div class="notif-associado">
+                                        <i class="fas fa-user"></i>
+                                        ${notif.associado_nome} ${notif.associado_cpf ? `(${notif.associado_cpf})` : ''}
+                                    </div>
+                                ` : ''}
+                                
+                                ${notif.criado_por_nome ? `
+                                    <div class="notif-autor">
+                                        <i class="fas fa-user-edit"></i>
+                                        Por: ${notif.criado_por_nome}
+                                    </div>
+                                ` : ''}
+                                
+                                ${notif.prioridade === 'ALTA' || notif.prioridade === 'URGENTE' ? `
+                                    <div class="notif-prioridade ${notif.prioridade.toLowerCase()}">
+                                        <i class="fas fa-exclamation-triangle"></i>
+                                        ${notif.prioridade}
+                                    </div>
+                                ` : ''}
+                            </div>
+                            
+                            ${!notif.lida ? '<div class="notif-indicator"></div>' : ''}
+                        </div>
+                    `;
+                }
+                
+                async marcarComoLida(notificacaoId) {
+                    try {
+                        const formData = new FormData();
+                        formData.append('acao', 'marcar_lida');
+                        formData.append('notificacao_id', notificacaoId);
+                        
+                        const response = await fetch('../api/notificacoes.php', {
+                            method: 'POST',
+                            body: formData
+                        });
+                        
+                        const data = await response.json();
+                        
+                        if (data.status === 'success') {
+                            // Atualiza o item na lista local
+                            const notif = this.notificacoes.find(n => n.id == notificacaoId);
+                            if (notif) {
+                                notif.lida = true;
+                            }
+                            
+                            // Atualiza visualmente
+                            const item = document.querySelector(`[data-id="${notificacaoId}"]`);
+                            if (item) {
+                                item.classList.add('lida');
+                                item.classList.remove('nao-lida');
+                                const indicator = item.querySelector('.notif-indicator');
+                                if (indicator) indicator.remove();
+                            }
+                            
+                            // Atualiza contagem
+                            this.buscarContagem();
+                            
+                            console.log('✅ Notificação marcada como lida:', notificacaoId);
+                        } else {
+                            console.error('❌ Erro ao marcar como lida:', data.message);
+                        }
+                    } catch (error) {
+                        console.error('❌ Erro ao marcar notificação:', error);
+                    }
+                }
+                
+                async marcarTodasLidas() {
+                    if (this.totalNaoLidas === 0) {
+                        this.mostrarToast('Não há notificações não lidas', 'info');
+                        return;
+                    }
+                    
+                    try {
+                        const formData = new FormData();
+                        formData.append('acao', 'marcar_todas_lidas');
+                        
+                        const response = await fetch('../api/notificacoes.php', {
+                            method: 'POST',
+                            body: formData
+                        });
+                        
+                        const data = await response.json();
+                        
+                        if (data.status === 'success') {
+                            // Atualiza todas as notificações localmente
+                            this.notificacoes.forEach(notif => {
+                                notif.lida = true;
+                            });
+                            
+                            // Atualiza visualmente
+                            document.querySelectorAll('.notificacao-item.nao-lida').forEach(item => {
+                                item.classList.add('lida');
+                                item.classList.remove('nao-lida');
+                                const indicator = item.querySelector('.notif-indicator');
+                                if (indicator) indicator.remove();
+                            });
+                            
+                            // Atualiza contagem
+                            this.totalNaoLidas = 0;
+                            this.atualizarBadge();
+                            
+                            this.mostrarToast(data.message, 'success');
+                            console.log('✅ Todas as notificações marcadas como lidas');
+                        } else {
+                            console.error('❌ Erro ao marcar todas como lidas:', data.message);
+                            this.mostrarToast('Erro ao marcar notificações', 'error');
+                        }
+                    } catch (error) {
+                        console.error('❌ Erro ao marcar todas as notificações:', error);
+                        this.mostrarToast('Erro de conexão', 'error');
+                    }
+                }
+                
+                filtrarNotificacoes(filtro) {
+                    const items = document.querySelectorAll('.notificacao-item');
+                    
+                    items.forEach(item => {
+                        const tipo = item.dataset.tipo;
+                        let mostrar = true;
+                        
+                        switch (filtro) {
+                            case 'financeiro':
+                                mostrar = tipo === 'ALTERACAO_FINANCEIRO';
+                                break;
+                            case 'observacoes':
+                                mostrar = tipo === 'NOVA_OBSERVACAO';
+                                break;
+                            case 'todas':
+                            default:
+                                mostrar = true;
+                                break;
+                        }
+                        
+                        item.style.display = mostrar ? 'flex' : 'none';
+                    });
+                }
+                
+                iniciarAtualizacaoAutomatica() {
+                    this.pararAtualizacaoAutomatica();
+                    
+                    this.updateInterval = setInterval(() => {
+                        if (!document.hidden) {
+                            this.buscarContagem();
+                            
+                            // Se o painel estiver aberto, atualiza as notificações também
+                            if (this.panelAberto) {
+                                this.buscarNotificacoes();
+                            }
+                        }
+                    }, this.refreshRate);
+                    
+                    console.log(`🔄 Atualização automática iniciada (${this.refreshRate/1000}s)`);
+                }
+                
+                pararAtualizacaoAutomatica() {
+                    if (this.updateInterval) {
+                        clearInterval(this.updateInterval);
+                        this.updateInterval = null;
+                    }
+                }
+                
+                atualizarNotificacoes() {
+                    this.buscarNotificacoes();
+                    this.buscarContagem();
+                    this.mostrarToast('Notificações atualizadas', 'success');
+                }
+                
+                mostrarErro(mensagem) {
+                    const conteudo = document.getElementById('painelConteudo');
+                    if (conteudo) {
+                        conteudo.innerHTML = `
+                            <div class="notificacoes-erro">
+                                <div class="erro-icon">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                </div>
+                                <h4>Erro ao carregar</h4>
+                                <p>${mensagem}</p>
+                                <button class="btn-tentar-novamente" onclick="notificacaoSystem.buscarNotificacoes()">
+                                    <i class="fas fa-redo"></i>
+                                    Tentar novamente
+                                </button>
+                            </div>
+                        `;
+                    }
+                }
+                
+                mostrarToast(mensagem, tipo = 'info') {
+                    // Remove toasts existentes
+                    document.querySelectorAll('.toast-notificacao').forEach(toast => toast.remove());
+                    
+                    const toast = document.createElement('div');
+                    toast.className = `toast-notificacao toast-${tipo}`;
+                    toast.innerHTML = `
+                        <i class="fas fa-${tipo === 'success' ? 'check-circle' : tipo === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
+                        <span>${mensagem}</span>
+                    `;
+                    
+                    document.body.appendChild(toast);
+                    
+                    // Mostra o toast
+                    setTimeout(() => toast.classList.add('show'), 100);
+                    
+                    // Remove após 3 segundos
+                    setTimeout(() => {
+                        toast.classList.remove('show');
+                        setTimeout(() => toast.remove(), 300);
+                    }, 3000);
+                }
+                
+                destruir() {
+                    this.pararAtualizacaoAutomatica();
+                    const painel = document.getElementById('painelNotificacoes');
+                    if (painel) painel.remove();
+                    
+                    console.log('🧹 Sistema de notificações limpo');
+                }
+            }
+
+            // Cleanup ao sair da página
+            window.addEventListener('beforeunload', () => {
+                if (window.notificacaoSystem) {
+                    window.notificacaoSystem.destruir();
+                }
+            });
         </script>
         <?php
     }
