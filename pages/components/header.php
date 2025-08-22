@@ -1122,20 +1122,23 @@ class HeaderComponent {
         }
 
         // Relatórios - todos podem ver
-        $items[] = [
-            'id' => 'relatorios',
-            'label' => 'Relatórios',
-            'icon' => 'fas fa-chart-line',
-            'href' => 'relatorios.php'
-        ];
+        if ($ehDaPresidencia || $ehDoComercial || $ehDoFinanceiro){
+            $items[] = [
+                'id' => 'relatorios',
+                'label' => 'Relatórios',
+                'icon' => 'fas fa-chart-line',
+                'href' => 'relatorios.php'
+            ];
+        }
 
-        // Documentos - todos podem ver
+        if ($ehDaPresidencia || $ehDoComercial){
         $items[] = [
             'id' => 'documentos',
             'label' => 'Documentos',
             'icon' => 'fas fa-folder-open',
             'href' => 'documentos.php'
         ];
+    }
 
         return $items;
     }
