@@ -2,8 +2,9 @@
 /**
  * Componente Header Premium do Sistema ASSEGO
  * components/Header.php
+ * VERSÃO ATUALIZADA COM SISTEMA DE NOTIFICAÇÃO DE SENHA PADRÃO
  * Versão com cores oficiais ASSEGO: Azul Royal (#003C8F) e Dourado (#FFB800)
- * Detecção automática de página ativa
+ * Detecção automática de página ativa + Alerta de senha padrão
  */
 
 class HeaderComponent {
@@ -772,6 +773,264 @@ class HeaderComponent {
             .mobile-nav::-webkit-scrollbar-thumb:hover {
                 background: var(--gray-500);
             }
+
+            /* ===== NOTIFICAÇÃO DE SENHA PADRÃO ===== */
+            .alerta-senha-padrao {
+                position: fixed;
+                top: calc(var(--header-height) + 10px);
+                left: 50%;
+                transform: translateX(-50%);
+                width: 90%;
+                max-width: 800px;
+                background: linear-gradient(135deg, #FFF9E6 0%, #FFF4D6 100%);
+                border: 2px solid var(--assego-gold);
+                border-radius: 16px;
+                box-shadow: 0 10px 40px rgba(255, 184, 0, 0.3), 
+                            0 0 60px rgba(255, 184, 0, 0.1);
+                z-index: 2000;
+                animation: slideDownBounce 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+                overflow: hidden;
+            }
+
+            @keyframes slideDownBounce {
+                0% {
+                    opacity: 0;
+                    transform: translateX(-50%) translateY(-100px);
+                }
+                60% {
+                    transform: translateX(-50%) translateY(20px);
+                }
+                80% {
+                    transform: translateX(-50%) translateY(-5px);
+                }
+                100% {
+                    opacity: 1;
+                    transform: translateX(-50%) translateY(0);
+                }
+            }
+
+            .alerta-senha-container {
+                padding: 20px 25px;
+                display: flex;
+                align-items: center;
+                gap: 20px;
+                position: relative;
+            }
+
+            .alerta-senha-icon-wrapper {
+                flex-shrink: 0;
+            }
+
+            .alerta-senha-icon {
+                width: 60px;
+                height: 60px;
+                background: linear-gradient(135deg, var(--assego-gold) 0%, #FFD700 100%);
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: var(--assego-blue-dark);
+                font-size: 28px;
+                box-shadow: 0 4px 15px rgba(255, 184, 0, 0.4);
+            }
+
+            .alerta-senha-icon.pulse {
+                animation: pulseShadow 2s infinite;
+            }
+
+            @keyframes pulseShadow {
+                0% {
+                    box-shadow: 0 4px 15px rgba(255, 184, 0, 0.4),
+                                0 0 0 0 rgba(255, 184, 0, 0.7);
+                }
+                50% {
+                    box-shadow: 0 4px 15px rgba(255, 184, 0, 0.4),
+                                0 0 0 15px rgba(255, 184, 0, 0);
+                }
+                100% {
+                    box-shadow: 0 4px 15px rgba(255, 184, 0, 0.4),
+                                0 0 0 0 rgba(255, 184, 0, 0);
+                }
+            }
+
+            .alerta-senha-content {
+                flex: 1;
+                padding-right: 20px;
+            }
+
+            .alerta-senha-titulo {
+                font-size: 18px;
+                font-weight: 700;
+                color: var(--assego-blue-dark);
+                margin-bottom: 8px;
+                display: flex;
+                align-items: center;
+            }
+
+            .alerta-senha-mensagem {
+                font-size: 14px;
+                color: #5A4A00;
+                margin-bottom: 10px;
+                line-height: 1.5;
+            }
+
+            .alerta-senha-instrucoes {
+                font-size: 13px;
+                color: #6B5500;
+                background: rgba(255, 255, 255, 0.6);
+                padding: 8px 12px;
+                border-radius: 8px;
+                border-left: 3px solid var(--assego-gold);
+                display: flex;
+                align-items: flex-start;
+            }
+
+            .alerta-senha-instrucoes strong {
+                color: var(--assego-blue-dark);
+                font-weight: 600;
+            }
+
+            .alerta-senha-actions {
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+                align-items: flex-end;
+            }
+
+            .btn-alerta-perfil {
+                background: linear-gradient(135deg, var(--assego-blue) 0%, var(--assego-blue-dark) 100%);
+                color: white;
+                border: none;
+                border-radius: 10px;
+                padding: 10px 20px;
+                font-size: 14px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                display: flex;
+                align-items: center;
+                box-shadow: 0 4px 15px rgba(0, 60, 143, 0.3);
+                white-space: nowrap;
+            }
+
+            .btn-alerta-perfil:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 6px 20px rgba(0, 60, 143, 0.4);
+                background: linear-gradient(135deg, var(--assego-blue-dark) 0%, var(--assego-blue) 100%);
+            }
+
+            .btn-alerta-fechar {
+                width: 32px;
+                height: 32px;
+                border-radius: 50%;
+                background: rgba(255, 255, 255, 0.9);
+                border: 2px solid var(--assego-gold);
+                color: #8B7000;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                font-size: 16px;
+            }
+
+            .btn-alerta-fechar:hover {
+                background: white;
+                color: var(--assego-blue-dark);
+                transform: rotate(90deg);
+                border-color: var(--assego-blue);
+            }
+
+            .alerta-senha-progress {
+                position: absolute;
+                bottom: 0;
+                left: 0;
+                height: 4px;
+                background: linear-gradient(90deg, 
+                    var(--assego-gold) 0%, 
+                    #FFD700 50%, 
+                    var(--assego-gold) 100%);
+                animation: progressMove 3s linear infinite;
+                width: 100%;
+            }
+
+            @keyframes progressMove {
+                0% {
+                    background-position: 0% 50%;
+                }
+                100% {
+                    background-position: 100% 50%;
+                }
+            }
+
+            /* Animação de saída */
+            .alerta-senha-padrao.hiding {
+                animation: slideUpFade 0.4s ease-out forwards;
+            }
+
+            @keyframes slideUpFade {
+                to {
+                    opacity: 0;
+                    transform: translateX(-50%) translateY(-20px);
+                }
+            }
+
+            @keyframes shakeAlert {
+                0%, 100% { transform: translateX(-50%) translateX(0); }
+                10%, 30%, 50%, 70%, 90% { transform: translateX(-50%) translateX(-5px); }
+                20%, 40%, 60%, 80% { transform: translateX(-50%) translateX(5px); }
+            }
+
+            /* Responsivo para o alerta */
+            @media (max-width: 768px) {
+                .alerta-senha-padrao {
+                    width: 95%;
+                    top: calc(var(--header-height) + 5px);
+                }
+                
+                .alerta-senha-container {
+                    flex-direction: column;
+                    text-align: center;
+                    padding: 15px;
+                }
+                
+                .alerta-senha-content {
+                    padding-right: 0;
+                }
+                
+                .alerta-senha-actions {
+                    flex-direction: row;
+                    width: 100%;
+                    justify-content: space-between;
+                    margin-top: 10px;
+                }
+                
+                .alerta-senha-instrucoes {
+                    font-size: 12px;
+                    text-align: left;
+                }
+                
+                .btn-alerta-perfil {
+                    flex: 1;
+                    justify-content: center;
+                }
+            }
+
+            @media (max-width: 480px) {
+                .alerta-senha-titulo {
+                    font-size: 16px;
+                }
+                
+                .alerta-senha-mensagem {
+                    font-size: 13px;
+                }
+                
+                .alerta-senha-icon {
+                    width: 50px;
+                    height: 50px;
+                    font-size: 24px;
+                }
+            }
         </style>
         <?php
     }
@@ -972,6 +1231,27 @@ class HeaderComponent {
                     
                     lastScroll = currentScroll;
                 });
+
+                // ===== NOTIFICAÇÃO DE SENHA PADRÃO =====
+                const alertaSenha = document.getElementById('alertaSenhaPadrao');
+                if (alertaSenha) {
+                    // Auto-fechar após 30 segundos
+                    setTimeout(() => {
+                        if (alertaSenha && alertaSenha.style.display !== 'none') {
+                            fecharAlertaSenha();
+                        }
+                    }, 30000);
+                    
+                    // Shake a cada 10 segundos para chamar atenção
+                    setInterval(() => {
+                        if (alertaSenha && alertaSenha.style.display !== 'none' && !alertaSenha.classList.contains('hiding')) {
+                            alertaSenha.style.animation = 'none';
+                            setTimeout(() => {
+                                alertaSenha.style.animation = 'shakeAlert 0.5s ease-in-out';
+                            }, 10);
+                        }
+                    }, 10000);
+                }
             });
 
             // Função para garantir que o conteúdo não fique sob o header
@@ -982,6 +1262,24 @@ class HeaderComponent {
                     document.body.style.paddingTop = headerHeight + 'px';
                 }
             });
+
+            // ===== FUNÇÕES DO ALERTA DE SENHA PADRÃO =====
+            function fecharAlertaSenha() {
+                const alerta = document.getElementById('alertaSenhaPadrao');
+                if (alerta) {
+                    alerta.classList.add('hiding');
+                    
+                    setTimeout(() => {
+                        alerta.style.display = 'none';
+                    }, 400);
+                    
+                    console.log('✓ Alerta de senha fechado temporariamente');
+                }
+            }
+
+            function irParaPerfil() {
+                window.location.href = 'perfil.php';
+            }
         </script>
         <?php
     }
@@ -990,12 +1288,65 @@ class HeaderComponent {
      * Renderiza o componente
      */
     public function render() {
+        // NOVA VERIFICAÇÃO DE SENHA PADRÃO
+        $mostrarAlertaSenha = false;
+        $authInstance = null;
+        
+        // Verifica se deve mostrar alerta de senha padrão
+        if (class_exists('Auth')) {
+            $authInstance = new Auth();
+            if ($authInstance->isUsingSenhaDefault() && !$authInstance->foiNotificadoSenhaPadrao()) {
+                $mostrarAlertaSenha = true;
+                $authInstance->setNotificadoSenhaPadrao();
+            }
+        }
+        
         $navigationItems = $this->getNavigationItems();
         $userInitials = $this->getUserInitials($this->usuario['nome']);
         
         // Debug para verificar página ativa
         echo "<!-- Página Ativa: " . $this->activePage . " -->";
         ?>
+        
+        <!-- NOTIFICAÇÃO DE SENHA PADRÃO -->
+        <?php if ($mostrarAlertaSenha): ?>
+        <div id="alertaSenhaPadrao" class="alerta-senha-padrao">
+            <div class="alerta-senha-container">
+                <div class="alerta-senha-icon-wrapper">
+                    <div class="alerta-senha-icon pulse">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                </div>
+                
+                <div class="alerta-senha-content">
+                    <div class="alerta-senha-titulo">
+                        <i class="fas fa-lock me-2"></i>
+                        Atenção: Você está usando a senha padrão!
+                    </div>
+                    <div class="alerta-senha-mensagem">
+                        Por questões de segurança, é <strong>obrigatório</strong> alterar sua senha padrão.
+                    </div>
+                    <div class="alerta-senha-instrucoes">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Como alterar: Clique no seu <strong>nome</strong> no canto superior direito → 
+                        <strong>Meu Perfil</strong> → <strong>Alterar Senha</strong>
+                    </div>
+                </div>
+                
+                <div class="alerta-senha-actions">
+                    <button onclick="irParaPerfil()" class="btn-alerta-perfil">
+                        <i class="fas fa-user-cog me-1"></i>
+                        Ir para Meu Perfil
+                    </button>
+                    <button onclick="fecharAlertaSenha()" class="btn-alerta-fechar" title="Fechar temporariamente">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="alerta-senha-progress"></div>
+        </div>
+        <?php endif; ?>
         
         <header class="header-container">
             <div class="header-content">
@@ -1157,236 +1508,5 @@ function renderHeader($config = []) {
     $header->renderCSS();
     $header->render();
     $header->renderJS();
-}
-
-// EXEMPLO DE USO EM SUAS PÁGINAS:
-// ================================
-/*
-
-// Em dashboard.php ou index.php:
-<?php
-require_once 'components/Header.php';
-
-renderHeader([
-    'usuario' => $usuarioLogado,
-    'isDiretor' => $isDiretor,
-    'activePage' => 'associados', // Opcional - detecta automaticamente
-    'notificationCount' => 3
-]);
-?>
-
-// Em financeiro.php:
-<?php
-require_once 'components/Header.php';
-
-renderHeader([
-    'usuario' => $usuarioLogado,
-    'isDiretor' => $isDiretor,
-    'activePage' => 'financeiro', // Opcional - detecta automaticamente
-    'notificationCount' => 5
-]);
-?>
-
-// Em funcionarios.php:
-<?php
-require_once 'components/Header.php';
-
-renderHeader([
-    'usuario' => $usuarioLogado,
-    'isDiretor' => $isDiretor,
-    'activePage' => 'funcionarios', // Opcional - detecta automaticamente
-    'notificationCount' => 2
-]);
-?>
-
-*/
-
-// Exemplo de teste quando acessado diretamente
-if (basename(__FILE__) == basename($_SERVER['SCRIPT_NAME'])) {
-    ?>
-    <!DOCTYPE html>
-    <html lang="pt-BR">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>ASSEGO - Sistema de Gestão</title>
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-        <style>
-            body {
-                margin: 0;
-                padding: 0;
-                background: linear-gradient(135deg, #E6F0FF 0%, #FFF4E0 100%);
-                min-height: 100vh;
-            }
-            
-            .demo-content {
-                padding: 40px;
-                max-width: 1400px;
-                margin: 0 auto;
-            }
-            
-            .demo-card {
-                background: white;
-                border-radius: 16px;
-                padding: 32px;
-                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
-                margin-bottom: 24px;
-                border-top: 4px solid #FFB800;
-            }
-            
-            .demo-title {
-                font-size: 24px;
-                font-weight: 700;
-                color: #003C8F;
-                margin-bottom: 16px;
-            }
-            
-            .code-example {
-                background: #003C8F;
-                color: #10B981;
-                padding: 20px;
-                border-radius: 12px;
-                font-family: 'Courier New', monospace;
-                font-size: 14px;
-                overflow-x: auto;
-                margin-top: 20px;
-            }
-            
-            .highlight {
-                color: #FFB800;
-            }
-            
-            .test-buttons {
-                display: flex;
-                gap: 12px;
-                margin-top: 20px;
-                flex-wrap: wrap;
-            }
-            
-            .test-btn {
-                padding: 10px 20px;
-                border: none;
-                border-radius: 8px;
-                background: #003C8F;
-                color: white;
-                font-weight: 600;
-                cursor: pointer;
-                transition: all 0.2s;
-                border: 2px solid transparent;
-            }
-            
-            .test-btn:hover {
-                background: #002A66;
-                transform: translateY(-2px);
-                border-color: #FFB800;
-            }
-            
-            .success-box {
-                margin-top: 20px;
-                padding: 16px;
-                background: #E6F0FF;
-                border-left: 4px solid #003C8F;
-                border-radius: 8px;
-            }
-            
-            .badge-assego {
-                background: #FFB800;
-                color: #003C8F;
-                padding: 4px 12px;
-                border-radius: 6px;
-                font-weight: 700;
-                display: inline-block;
-            }
-        </style>
-    </head>
-    <body>
-        <?php
-        // Simula diferentes páginas para teste
-        $testPage = $_GET['page'] ?? 'financeiro';
-        
-        // Renderiza o header com a página ativa baseada no parâmetro
-        renderHeader([
-            'usuario' => [
-                'nome' => 'João Silva',
-                'cargo' => 'Contador',
-                'email' => 'joao@assego.com.br',
-                'departamento_id' => 2, // Financeiro
-                'avatar' => null
-            ],
-            'isDiretor' => false,
-            'activePage' => $testPage, // Usa o parâmetro GET para testar diferentes páginas
-            'notificationCount' => 3
-        ]);
-        ?>
-        
-        <div class="demo-content">
-            <div class="demo-card">
-                <h1 class="demo-title">🛡️ Header ASSEGO - Padrão Oficial</h1>
-                <p>Header com as cores oficiais do ASSEGO: <span class="badge-assego">Azul Royal + Dourado</span></p>
-                
-                <h3 style="color: #003C8F; margin-top: 24px;">🎨 Cores Aplicadas:</h3>
-                <ul style="color: #4B5563; line-height: 1.8;">
-                    <li><strong>Azul ASSEGO:</strong> #003C8F (Principal)</li>
-                    <li><strong>Dourado ASSEGO:</strong> #FFB800 (Destaques)</li>
-                    <li><strong>Linha superior:</strong> Barra dourada no topo</li>
-                    <li><strong>Aba ativa:</strong> Fundo azul claro com indicador dourado</li>
-                    <li><strong>Notificações:</strong> Badge dourado</li>
-                    <li><strong>Avatar:</strong> Fundo azul com letras douradas</li>
-                </ul>
-                
-                <h3>🎯 Como Funciona:</h3>
-                <ol>
-                    <li><strong>Detecção Automática:</strong> O componente detecta o arquivo PHP atual</li>
-                    <li><strong>Visual Destacado:</strong> A aba ativa tem visual diferenciado</li>
-                    <li><strong>Linha Inferior:</strong> Indicador colorido embaixo da aba</li>
-                    <li><strong>Texto Gradiente:</strong> O texto fica com gradiente colorido</li>
-                    <li><strong>Ponto Verde:</strong> Indicador pulsante no canto</li>
-                </ol>
-                
-                <div class="code-example">
-                    <span class="highlight">&lt;?php</span><br>
-                    require_once 'components/Header.php';<br><br>
-                    
-                    <span class="highlight">// Modo 1: Detecção Automática (RECOMENDADO)</span><br>
-                    renderHeader([<br>
-                    &nbsp;&nbsp;&nbsp;&nbsp;'usuario' => $usuarioLogado,<br>
-                    &nbsp;&nbsp;&nbsp;&nbsp;'isDiretor' => $isDiretor,<br>
-                    &nbsp;&nbsp;&nbsp;&nbsp;<span class="highlight">// NÃO precisa passar 'activePage' - detecta sozinho!</span><br>
-                    &nbsp;&nbsp;&nbsp;&nbsp;'notificationCount' => 3<br>
-                    ]);<br><br>
-                    
-                    <span class="highlight">// Modo 2: Manual (se necessário)</span><br>
-                    renderHeader([<br>
-                    &nbsp;&nbsp;&nbsp;&nbsp;'usuario' => $usuarioLogado,<br>
-                    &nbsp;&nbsp;&nbsp;&nbsp;'isDiretor' => $isDiretor,<br>
-                    &nbsp;&nbsp;&nbsp;&nbsp;'activePage' => 'financeiro', <span class="highlight">// Força página específica</span><br>
-                    &nbsp;&nbsp;&nbsp;&nbsp;'notificationCount' => 3<br>
-                    ]);<br>
-                    <span class="highlight">?&gt;</span>
-                </div>
-                
-                <h3 style="margin-top: 30px;">🧪 Teste as Abas:</h3>
-                <p>Clique nos botões abaixo para simular diferentes páginas ativas:</p>
-                
-                <div class="test-buttons">
-                    <button class="test-btn" onclick="window.location.href='?page=associados'">Associados</button>
-                    <button class="test-btn" onclick="window.location.href='?page=funcionarios'">Funcionários</button>
-                    <button class="test-btn" onclick="window.location.href='?page=comercial'">Comercial</button>
-                    <button class="test-btn" onclick="window.location.href='?page=financeiro'">Financeiro</button>
-                    <button class="test-btn" onclick="window.location.href='?page=relatorios'">Relatórios</button>
-                    <button class="test-btn" onclick="window.location.href='?page=documentos'">Documentos</button>
-                </div>
-                
-                <p class="success-box">
-                    <strong>✅ Página Ativa:</strong> 
-                    <span class="badge-assego"><?php echo strtoupper($testPage); ?></span>
-                    <br><br>
-                    As cores estão no padrão oficial ASSEGO: Azul Royal (#003C8F) e Dourado (#FFB800)
-                </p>
-            </div>
-        </div>
-    </body>
-    </html>
-    <?php
 }
 ?>
