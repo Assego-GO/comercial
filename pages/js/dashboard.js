@@ -459,6 +459,9 @@ function visualizarAssociado(id) {
         return;
     }
 
+    // NOVA LINHA: Resetar dados de observações ao abrir novo modal
+    resetarObservacoes();
+
     // Atualiza o header do modal
     atualizarHeaderModal(associado);
 
@@ -470,9 +473,100 @@ function visualizarAssociado(id) {
     preencherTabDependentes(associado);
     preencherTabDocumentos(associado);
 
+    // NOVA LINHA: Carregar apenas o contador de observações (não os dados completos)
+    carregarContadorObservacoes(associado.id);
+
     // Abre o modal
     document.getElementById('modalAssociado').classList.add('show');
     document.body.style.overflow = 'hidden';
+}
+// 2. NOVA FUNÇÃO: Resetar observações ao trocar de associado
+function resetarObservacoes() {
+    // Resetar variáveis globais
+    observacoesData = [];
+    currentObservacaoPage = 1;
+    currentFilterObs = 'all';
+    currentAssociadoIdObs = null;
+
+    // Esconder badge
+    const badge = document.getElementById('observacoesCountBadge');
+    if (badge) {
+        badge.style.display = 'none';
+        badge.textContent = '0';
+    }
+
+    // Limpar container de observações
+    const container = document.getElementById('observacoesContainer');
+    if (container) {
+        container.innerHTML = '';
+    }
+
+    // Resetar busca
+    const searchInput = document.getElementById('searchObservacoes');
+    if (searchInput) {
+        searchInput.value = '';
+    }
+
+    // Resetar filtros
+    const filterButtons = document.querySelectorAll('.observacoes-filter-buttons .filter-btn');
+    filterButtons.forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.dataset.filter === 'all') {
+            btn.classList.add('active');
+        }
+    });
+}
+
+// 3. NOVA FUNÇÃO: Carregar apenas o contador de observações (mais rápido)
+function carregarContadorObservacoes(associadoId) {
+    if (!associadoId) return;
+
+    // Fazer requisição leve apenas para contar observações
+    $.ajax({
+        url: '../api/observacoes/contar.php',
+        method: 'GET',
+        data: { associado_id: associadoId },
+        dataType: 'json',
+        success: function (response) {
+            if (response.status === 'success') {
+                const count = response.data.total || 0;
+                const badge = document.getElementById('observacoesCountBadge');
+
+                if (badge) {
+                    if (count > 0) {
+                        badge.textContent = count;
+                        badge.style.display = 'inline-block';
+                    } else {
+                        badge.style.display = 'none';
+                    }
+                }
+            }
+        },
+        error: function () {
+            // Em caso de erro, tenta carregar pela API completa como fallback
+            $.ajax({
+                url: '../api/observacoes/listar.php',
+                method: 'GET',
+                data: { associado_id: associadoId },
+                dataType: 'json',
+                success: function (response) {
+                    if (response.status === 'success') {
+                        const count = (response.data || []).length;
+                        const badge = document.getElementById('observacoesCountBadge');
+
+                        if (badge) {
+                            if (count > 0) {
+                                badge.textContent = count;
+                                badge.style.display = 'inline-block';
+                            } else {
+                                badge.style.display = 'none';
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    });
 }
 
 // Atualiza o header do modal
@@ -2334,6 +2428,9 @@ function fecharModal() {
     modal.classList.remove('show');
     document.body.style.overflow = 'auto';
 
+    // NOVA LINHA: Resetar observações ao fechar
+    resetarObservacoes();
+    
     // Volta para a primeira tab
     abrirTab('overview');
 }
@@ -2490,11 +2587,28 @@ let currentAssociadoIdObs = null;
 
 // Função para carregar observações quando a aba for aberta
 function carregarObservacoes(associadoId) {
+    // Evitar carregar se já estiver carregando
+    if (window.carregandoObservacoes) {
+        console.log('Já está carregando observações, ignorando...');
+        return;
+    }
+    
+    // Evitar recarregar se já carregou para este associado
+    if (currentAssociadoIdObs === associadoId && observacoesData.length > 0) {
+        console.log('Observações já carregadas para este associado');
+        renderizarObservacoes();
+        return;
+    }
+    
+    window.carregandoObservacoes = true;
     currentAssociadoIdObs = associadoId;
 
     // Mostrar loading
     const container = document.getElementById('observacoesContainer');
-    if (!container) return;
+    if (!container) {
+        window.carregandoObservacoes = false;
+        return;
+    }
 
     container.innerHTML = `
         <div class="observacoes-loading" style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 3rem;">
@@ -2510,14 +2624,14 @@ function carregarObservacoes(associadoId) {
         data: { associado_id: associadoId },
         dataType: 'json',
         success: function (response) {
-            console.log('Resposta do servidor:', response); // Debug
+            console.log('Resposta do servidor:', response);
 
             if (response.status === 'success') {
-                // Dados vem diretamente em response.data agora
                 observacoesData = response.data || [];
                 renderizarObservacoes();
                 atualizarContadorObservacoes();
             } else {
+                observacoesData = [];
                 mostrarErroObservacoes('Erro ao carregar observações: ' + (response.message || 'Erro desconhecido'));
             }
         },
@@ -2529,7 +2643,7 @@ function carregarObservacoes(associadoId) {
                 error: error
             });
 
-            // Tentar mostrar mensagem de erro mais específica
+            observacoesData = [];
             let mensagemErro = 'Erro de conexão ao carregar observações';
 
             if (xhr.responseText) {
@@ -2544,9 +2658,13 @@ function carregarObservacoes(associadoId) {
             }
 
             mostrarErroObservacoes(mensagemErro);
+        },
+        complete: function() {
+            window.carregandoObservacoes = false;
         }
     });
 }
+
 
 // Função para renderizar observações
 function renderizarObservacoes() {
@@ -2957,23 +3075,23 @@ function criarModalConfirmacaoExclusao() {
     document.body.insertAdjacentHTML('beforeend', modalHTML);
 
     // Event listener para o botão de confirmação
-    document.getElementById('btnConfirmarExclusaoFinal').addEventListener('click', function() {
+    document.getElementById('btnConfirmarExclusaoFinal').addEventListener('click', function () {
         const id = window.observacaoParaExcluir;
-        
+
         if (!id) {
             alert('Erro: ID da observação não encontrado');
             return;
         }
-        
+
         // Fechar modal
         const modal = bootstrap.Modal.getInstance(document.getElementById('modalConfirmarExclusao'));
         modal.hide();
-        
+
         // Mostrar loading no botão
         const textoOriginal = this.innerHTML;
         this.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Excluindo...';
         this.disabled = true;
-        
+
         // Fazer requisição de exclusão
         $.ajax({
             url: '../api/observacoes/excluir.php',
@@ -2992,11 +3110,11 @@ function criarModalConfirmacaoExclusao() {
             error: function () {
                 alert('❌ Erro de conexão ao excluir observação. Tente novamente.');
             },
-            complete: function() {
+            complete: function () {
                 // Restaurar botão
                 document.getElementById('btnConfirmarExclusaoFinal').innerHTML = textoOriginal;
                 document.getElementById('btnConfirmarExclusaoFinal').disabled = false;
-                
+
                 // Limpar ID armazenado
                 window.observacaoParaExcluir = null;
             }
@@ -3008,10 +3126,10 @@ function criarModalConfirmacaoExclusao() {
 function excluirObservacao(id) {
     // Criar modal se não existir
     criarModalConfirmacaoExclusao();
-    
+
     // Armazenar ID globalmente
     window.observacaoParaExcluir = id;
-    
+
     // Abrir modal
     const modal = new bootstrap.Modal(document.getElementById('modalConfirmarExclusao'));
     modal.show();
@@ -3087,7 +3205,7 @@ function removerDocumento(documentoId) {
         const textoOriginal = botaoRemover.innerHTML;
         botaoRemover.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Removendo...';
         botaoRemover.disabled = true;
-        
+
         // Restaurar botão em caso de erro
         const restaurarBotao = () => {
             botaoRemover.innerHTML = textoOriginal;
@@ -3102,11 +3220,11 @@ function removerDocumento(documentoId) {
         data: JSON.stringify({ id: documentoId }),
         contentType: 'application/json',
         dataType: 'json',
-        success: function(response) {
+        success: function (response) {
             if (response.status === 'success') {
                 // Mostrar mensagem de sucesso
                 mostrarNotificacaoDoc('Documento removido com sucesso!', 'success');
-                
+
                 // Recarregar a aba de documentos
                 const associadoId = document.getElementById('modalId').textContent.replace('Matrícula: ', '').trim();
                 const associado = todosAssociados.find(a => a.id == associadoId);
@@ -3118,9 +3236,9 @@ function removerDocumento(documentoId) {
                 if (botaoRemover) restaurarBotao();
             }
         },
-        error: function(xhr, status, error) {
+        error: function (xhr, status, error) {
             console.error('Erro ao remover documento:', error);
-            
+
             let mensagem = 'Erro ao remover documento';
             if (xhr.status === 404) {
                 mensagem = 'Documento não encontrado';
@@ -3129,7 +3247,7 @@ function removerDocumento(documentoId) {
             } else if (xhr.status === 500) {
                 mensagem = 'Erro interno do servidor';
             }
-            
+
             alert(mensagem + '. Tente novamente.');
             if (botaoRemover) restaurarBotao();
         }
@@ -3174,40 +3292,39 @@ function mostrarErroObservacoes(mensagem) {
 // Atualizar a função abrirTab existente para carregar observações
 const abrirTabOriginal = window.abrirTab;
 window.abrirTab = function (tabName) {
-    // Chamar função original se existir
-    if (typeof abrirTabOriginal === 'function') {
-        abrirTabOriginal.call(this, tabName);
-    } else {
-        // Implementação básica se não existir
-        // Remove active de todas as tabs
-        document.querySelectorAll('.tab-button').forEach(btn => {
-            btn.classList.remove('active');
-        });
+    // Remove active de todas as tabs
+    document.querySelectorAll('.tab-button').forEach(btn => {
+        btn.classList.remove('active');
+    });
 
-        document.querySelectorAll('.tab-content').forEach(content => {
-            content.classList.remove('active');
-        });
+    document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.remove('active');
+    });
 
-        // Adiciona active na tab selecionada
-        const activeButton = document.querySelector(`.tab-button[onclick="abrirTab('${tabName}')"]`);
-        if (activeButton) {
-            activeButton.classList.add('active');
-        }
-
-        const activeContent = document.getElementById(`${tabName}-tab`);
-        if (activeContent) {
-            activeContent.classList.add('active');
-        }
+    // Adiciona active na tab selecionada
+    const activeButton = document.querySelector(`.tab-button[onclick="abrirTab('${tabName}')"]`);
+    if (activeButton) {
+        activeButton.classList.add('active');
     }
 
-    // Se for a aba de observações, carregar dados
+    const activeContent = document.getElementById(`${tabName}-tab`);
+    if (activeContent) {
+        activeContent.classList.add('active');
+    }
+
+    // Se for a aba de observações, carregar dados APENAS se ainda não carregou
     if (tabName === 'observacoes') {
-        // Pegar o ID do associado atual
         const modalId = document.getElementById('modalId')?.textContent;
         if (modalId) {
             const associadoId = modalId.replace('Matrícula: ', '').trim();
             if (associadoId && associadoId !== '-') {
-                carregarObservacoes(associadoId);
+                // Só carrega se ainda não carregou para este associado
+                if (currentAssociadoIdObs !== associadoId || observacoesData.length === 0) {
+                    carregarObservacoes(associadoId);
+                } else {
+                    // Se já tem dados, apenas renderiza novamente
+                    renderizarObservacoes();
+                }
             }
         }
     }
