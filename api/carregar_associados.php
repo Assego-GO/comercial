@@ -244,6 +244,7 @@ try {
     LEFT JOIN Endereco e ON a.id = e.associado_id
     LEFT JOIN Contrato c ON a.id = c.associado_id
     LEFT JOIN Peculio p ON a.id = p.associado_id
+    WHERE a.pre_cadastro = 0
     GROUP BY 
         a.id,
         a.nome,
