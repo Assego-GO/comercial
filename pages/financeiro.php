@@ -49,7 +49,7 @@ if (isset($usuarioLogado['departamento_id'])) {
     $deptId = $usuarioLogado['departamento_id'];
     $departamentoUsuario = $deptId;
 
-    if ($deptId == 5) { // Financeiro
+    if ($deptId == 2) { // Financeiro
         $temPermissaoFinanceiro = true;
         $isFinanceiro = true;
         error_log("✅ Permissão concedida: Usuário pertence ao Setor Financeiro (ID: 5)");
