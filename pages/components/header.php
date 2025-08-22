@@ -1,50 +1,85 @@
 <?php
-
 /**
  * Componente Header Premium do Sistema ASSEGO
  * components/Header.php
- * Versão com design moderno e melhorias de UX/UI
+ * VERSÃO ATUALIZADA COM SISTEMA DE NOTIFICAÇÃO DE SENHA PADRÃO
+ * Versão com cores oficiais ASSEGO: Azul Royal (#003C8F) e Dourado (#FFB800)
+ * Detecção automática de página ativa + Alerta de senha padrão
  */
 
-class HeaderComponent
-{
+class HeaderComponent {
     private $usuario;
     private $isDiretor;
     private $activePage;
     private $notificationCount;
 
-    public function __construct($config = [])
-    {
+    public function __construct($config = []) {
         $this->usuario = $config['usuario'] ?? ['nome' => 'Usuário', 'cargo' => 'Funcionário'];
         $this->isDiretor = $config['isDiretor'] ?? false;
-        $this->activePage = $config['activePage'] ?? 'dashboard';
         $this->notificationCount = $config['notificationCount'] ?? 0;
+        
+        // Detecta automaticamente a página ativa se não foi especificada
+        if (isset($config['activePage'])) {
+            $this->activePage = $config['activePage'];
+        } else {
+            $this->activePage = $this->detectActivePage();
+        }
+    }
+    
+    /**
+     * Detecta automaticamente qual é a página ativa baseada no arquivo atual
+     */
+    private function detectActivePage() {
+        $currentFile = basename($_SERVER['PHP_SELF']);
+        
+        // Mapeamento de arquivos para IDs de página
+        $pageMap = [
+            'dashboard.php' => 'associados',
+            'index.php' => 'associados',
+            'associados.php' => 'associados',
+            'funcionarios.php' => 'funcionarios',
+            'comercial.php' => 'comercial',
+            'financeiro.php' => 'financeiro',
+            'auditoria.php' => 'auditoria',
+            'presidencia.php' => 'presidencia',
+            'relatorios.php' => 'relatorios',
+            'documentos.php' => 'documentos'
+        ];
+        
+        return $pageMap[$currentFile] ?? 'associados';
     }
 
     /**
      * Renderiza o CSS do componente
      */
-    public function renderCSS()
-    {
-?>
+    public function renderCSS() {
+        ?>
         <style>
             @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
-
+            
             :root {
+                /* Cores ASSEGO Oficiais */
+                --assego-blue: #003C8F;
+                --assego-blue-dark: #002A66;
+                --assego-blue-light: #E6F0FF;
+                --assego-gold: #FFB800;
+                --assego-gold-dark: #E5A200;
+                --assego-gold-light: #FFF4E0;
+                
                 /* Cores Principais */
-                --primary: #2563EB;
-                --primary-dark: #1E40AF;
-                --primary-light: #DBEAFE;
-                --primary-gradient: linear-gradient(135deg, #667EEA 0%, #764BA2 100%);
-
+                --primary: var(--assego-blue);
+                --primary-dark: var(--assego-blue-dark);
+                --primary-light: var(--assego-blue-light);
+                --primary-gradient: linear-gradient(135deg, var(--assego-blue) 0%, var(--assego-blue-dark) 100%);
+                
                 /* Cores Secundárias */
-                --secondary: #10B981;
-                --accent: #F59E0B;
-                --danger: #EF4444;
-                --success: #10B981;
-                --warning: #F59E0B;
-                --info: #3B82F6;
-
+                --secondary: var(--assego-gold);
+                --accent: var(--assego-gold);
+                --danger: #DC2626;
+                --success: #16A34A;
+                --warning: var(--assego-gold);
+                --info: #0EA5E9;
+                
                 /* Tons de Cinza */
                 --gray-50: #F9FAFB;
                 --gray-100: #F3F4F6;
@@ -57,25 +92,23 @@ class HeaderComponent
                 --gray-800: #1F2937;
                 --gray-900: #111827;
                 --white: #FFFFFF;
-
+                
                 /* Configurações */
                 --header-height: 72px;
-                --header-bg: rgba(255, 255, 255, 0.95);
+                --header-bg: rgba(255, 255, 255, 0.98);
                 --backdrop-blur: blur(20px);
-
+                
                 /* Sombras */
                 --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
                 --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.06);
                 --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
                 --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
                 --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
-                --shadow-glow: 0 0 20px rgba(37, 99, 235, 0.15);
-
+                
                 /* Transições */
                 --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
                 --transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
                 --transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
-                --transition-slower: 500ms cubic-bezier(0.4, 0, 0.2, 1);
             }
 
             * {
@@ -88,6 +121,7 @@ class HeaderComponent
                 font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
                 -webkit-font-smoothing: antialiased;
                 -moz-osx-font-smoothing: grayscale;
+                background-color: #FAFBFC;
             }
 
             /* Adiciona padding ao body */
@@ -102,23 +136,29 @@ class HeaderComponent
                 -webkit-backdrop-filter: var(--backdrop-blur);
                 height: var(--header-height);
                 border-bottom: 1px solid rgba(229, 231, 235, 0.8);
+                border-top: 3px solid var(--assego-gold);
                 position: fixed;
                 top: 0;
                 left: 0;
                 right: 0;
                 z-index: 1000;
                 transition: all var(--transition-base);
+                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
             }
-
+            
             .header-container::before {
                 content: '';
                 position: absolute;
-                top: 0;
+                top: 3px;
                 left: 0;
                 right: 0;
-                height: 100%;
-                background: linear-gradient(90deg, rgba(37, 99, 235, 0.02) 0%, rgba(147, 51, 234, 0.02) 100%);
-                pointer-events: none;
+                height: 1px;
+                background: linear-gradient(90deg, 
+                    transparent, 
+                    var(--assego-gold), 
+                    var(--assego-gold), 
+                    transparent);
+                opacity: 0.3;
             }
 
             .header-content {
@@ -139,37 +179,57 @@ class HeaderComponent
                 flex: 1;
             }
 
-            /* Logo Animado */
+            /* Logo */
             .logo-container {
                 display: flex;
                 align-items: center;
-                gap: 14px;
+                gap: 12px;
                 text-decoration: none;
                 cursor: pointer;
                 transition: transform var(--transition-base);
-                padding: 8px 0;
             }
 
             .logo-container:hover {
                 transform: scale(1.02);
             }
+            
+            .logo-container:hover .logo-icon {
+                box-shadow: 0 6px 20px rgba(0, 60, 143, 0.3),
+                           0 0 0 2px rgba(255, 184, 0, 0.2);
+            }
 
+            /* Estilo da logo com imagem */
             .logo-icon {
-                width: 44px;
-                height: 44px;
-                background: linear-gradient(135deg, #667EEA 0%, #764BA2 100%);
-                border-radius: 14px;
+                width: 42px !important;
+                height: 42px !important;
+                background: white !important;
+                border-radius: 12px !important;
+                padding: 4px !important;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                color: white;
-                font-weight: 900;
-                font-size: 20px;
-                box-shadow: 0 4px 14px 0 rgba(102, 126, 234, 0.25);
+                box-shadow: 0 4px 12px rgba(0, 60, 143, 0.2);
                 position: relative;
                 overflow: hidden;
+                transition: all var(--transition-base);
             }
 
+            .logo-icon img {
+                width: 100% !important;
+                height: 100% !important;
+                object-fit: contain !important;
+                filter: none !important;
+            }
+            
+            /* Fallback quando não tem imagem */
+            .logo-icon.logo-letter {
+                background: var(--assego-blue) !important;
+                color: var(--assego-gold);
+                font-weight: 900;
+                font-size: 20px;
+                padding: 0 !important;
+            }
+            
             .logo-icon::after {
                 content: '';
                 position: absolute;
@@ -177,30 +237,16 @@ class HeaderComponent
                 left: -50%;
                 width: 200%;
                 height: 200%;
-                background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-                transform: rotate(45deg);
-                transition: all 0.5s;
-                opacity: 0;
+                background: linear-gradient(45deg, 
+                    transparent, 
+                    rgba(255, 184, 0, 0.4), 
+                    transparent);
+                transform: rotate(45deg) translateX(-100%);
+                transition: transform 0.6s;
             }
-
+            
             .logo-container:hover .logo-icon::after {
-                animation: shine 0.5s ease-in-out;
-            }
-
-            @keyframes shine {
-                0% {
-                    transform: translateX(-100%) translateY(-100%) rotate(45deg);
-                    opacity: 0;
-                }
-
-                50% {
-                    opacity: 1;
-                }
-
-                100% {
-                    transform: translateX(100%) translateY(100%) rotate(45deg);
-                    opacity: 0;
-                }
+                transform: rotate(45deg) translateX(100%);
             }
 
             .logo-text-container {
@@ -209,11 +255,17 @@ class HeaderComponent
             }
 
             .logo-text {
-                color: var(--gray-900);
+                color: var(--assego-blue);
                 font-size: 19px;
                 font-weight: 800;
                 letter-spacing: -0.025em;
                 line-height: 1;
+                transition: all var(--transition-base);
+            }
+            
+            .logo-container:hover .logo-text {
+                color: var(--assego-blue-dark);
+                text-shadow: 0 0 20px rgba(255, 184, 0, 0.3);
             }
 
             .logo-subtitle {
@@ -222,19 +274,47 @@ class HeaderComponent
                 font-weight: 500;
                 margin-top: 3px;
                 letter-spacing: 0.025em;
+                transition: all var(--transition-base);
+            }
+            
+            .logo-container:hover .logo-subtitle {
+                color: var(--assego-gold-dark);
             }
 
             /* Menu de Navegação */
             .nav-menu {
                 display: flex;
                 align-items: center;
-                gap: 6px;
+                gap: 4px;
                 flex: 1;
                 padding: 0 20px;
+                height: 100%;
             }
 
             .nav-item {
                 position: relative;
+                height: 100%;
+                display: flex;
+                align-items: center;
+            }
+
+            /* Linha inferior para aba ativa */
+            .nav-item::after {
+                content: '';
+                position: absolute;
+                bottom: 0;
+                left: 50%;
+                transform: translateX(-50%) scaleX(0);
+                width: calc(100% - 16px);
+                height: 3px;
+                background: var(--assego-gold);
+                border-radius: 3px 3px 0 0;
+                transition: transform var(--transition-base);
+                box-shadow: 0 2px 4px rgba(255, 184, 0, 0.3);
+            }
+
+            .nav-item.active::after {
+                transform: translateX(-50%) scaleX(1);
             }
 
             .nav-link {
@@ -249,67 +329,60 @@ class HeaderComponent
                 border-radius: 10px;
                 transition: all var(--transition-base);
                 position: relative;
-                overflow: hidden;
                 border: 1px solid transparent;
             }
 
-            .nav-link::before {
-                content: '';
-                position: absolute;
-                top: 0;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                background: var(--primary);
-                opacity: 0;
-                transition: opacity var(--transition-base);
-                border-radius: 10px;
-            }
-
             .nav-link:hover {
-                color: var(--primary);
-                background: rgba(37, 99, 235, 0.08);
+                color: var(--assego-blue);
+                background: linear-gradient(135deg, var(--assego-blue-light) 0%, rgba(255, 184, 0, 0.05) 100%);
                 transform: translateY(-1px);
+                box-shadow: 0 2px 8px rgba(0, 60, 143, 0.1);
             }
 
+            /* Estado Ativo */
             .nav-link.active {
-                color: var(--white);
-                background: linear-gradient(135deg, #667EEA 0%, #764BA2 100%);
-                box-shadow: 0 4px 12px 0 rgba(102, 126, 234, 0.25);
+                color: var(--assego-blue);
+                background: var(--assego-blue-light);
+                border-color: var(--assego-gold);
                 font-weight: 600;
             }
 
+            .nav-link.active i {
+                color: var(--assego-blue);
+                transform: scale(1.1);
+            }
+
+            .nav-link.active span {
+                color: var(--assego-blue);
+                font-weight: 700;
+            }
+
+            /* Indicador de ativo */
             .nav-link.active::before {
-                opacity: 1;
+                content: '';
+                position: absolute;
+                top: 6px;
+                right: 6px;
+                width: 5px;
+                height: 5px;
+                background: var(--assego-gold);
+                border-radius: 50%;
+                animation: pulse 2s infinite;
+            }
+
+            @keyframes pulse {
+                0% { box-shadow: 0 0 0 0 rgba(255, 184, 0, 0.7); }
+                70% { box-shadow: 0 0 0 5px rgba(255, 184, 0, 0); }
+                100% { box-shadow: 0 0 0 0 rgba(255, 184, 0, 0); }
             }
 
             .nav-link i {
                 font-size: 16px;
-                transition: transform var(--transition-base);
+                transition: all var(--transition-base);
             }
 
             .nav-link:hover i {
                 transform: scale(1.1);
-            }
-
-            .nav-link span {
-                position: relative;
-                z-index: 1;
-            }
-
-            /* Badge de Novo */
-            .nav-badge {
-                position: absolute;
-                top: 6px;
-                right: 6px;
-                background: var(--danger);
-                color: white;
-                font-size: 9px;
-                font-weight: 700;
-                padding: 2px 4px;
-                border-radius: 4px;
-                text-transform: uppercase;
-                letter-spacing: 0.5px;
             }
 
             /* Seção Direita */
@@ -323,8 +396,8 @@ class HeaderComponent
             /* Botão de Notificações */
             .notification-btn {
                 position: relative;
-                width: 44px;
-                height: 44px;
+                width: 42px;
+                height: 42px;
                 border: 1px solid var(--gray-200);
                 background: var(--white);
                 border-radius: 12px;
@@ -337,48 +410,22 @@ class HeaderComponent
             }
 
             .notification-btn:hover {
-                background: var(--gray-50);
-                border-color: var(--primary);
-                color: var(--primary);
+                background: var(--assego-blue-light);
+                border-color: var(--assego-blue);
+                color: var(--assego-blue);
                 transform: translateY(-2px);
                 box-shadow: var(--shadow-md);
-            }
-
-            .notification-btn i {
-                font-size: 18px;
-                transition: transform var(--transition-base);
-            }
-
-            .notification-btn:hover i {
-                transform: scale(1.1);
-                animation: bell-ring 0.5s ease-in-out;
-            }
-
-            @keyframes bell-ring {
-
-                0%,
-                100% {
-                    transform: rotate(0deg) scale(1.1);
-                }
-
-                25% {
-                    transform: rotate(-10deg) scale(1.1);
-                }
-
-                75% {
-                    transform: rotate(10deg) scale(1.1);
-                }
             }
 
             .notification-badge {
                 position: absolute;
                 top: -4px;
                 right: -4px;
-                min-width: 20px;
-                height: 20px;
-                background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
-                color: white;
-                border-radius: 10px;
+                min-width: 18px;
+                height: 18px;
+                background: var(--assego-gold);
+                color: var(--assego-blue-dark);
+                border-radius: 9px;
                 font-size: 11px;
                 font-weight: 700;
                 display: flex;
@@ -386,22 +433,7 @@ class HeaderComponent
                 justify-content: center;
                 padding: 0 5px;
                 border: 2px solid var(--white);
-                box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);
-                animation: pulse-badge 2s infinite;
-            }
-
-            @keyframes pulse-badge {
-                0% {
-                    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
-                }
-
-                70% {
-                    box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
-                }
-
-                100% {
-                    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
-                }
+                box-shadow: 0 2px 4px rgba(255, 184, 0, 0.3);
             }
 
             /* Menu do Usuário */
@@ -422,8 +454,8 @@ class HeaderComponent
             }
 
             .user-menu-trigger:hover {
-                background: var(--gray-50);
-                border-color: var(--primary);
+                background: var(--assego-blue-light);
+                border-color: var(--assego-blue);
                 transform: translateY(-2px);
                 box-shadow: var(--shadow-md);
             }
@@ -450,17 +482,17 @@ class HeaderComponent
             .user-avatar {
                 width: 38px;
                 height: 38px;
-                background: linear-gradient(135deg, #667EEA 0%, #764BA2 100%);
-                color: white;
+                background: var(--assego-blue);
+                color: var(--assego-gold);
                 border-radius: 10px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                font-weight: 600;
+                font-weight: 700;
                 font-size: 14px;
                 overflow: hidden;
-                box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
                 position: relative;
+                box-shadow: 0 2px 8px rgba(0, 60, 143, 0.2);
             }
 
             .user-avatar img {
@@ -473,12 +505,11 @@ class HeaderComponent
                 position: absolute;
                 bottom: -2px;
                 right: -2px;
-                width: 12px;
-                height: 12px;
+                width: 10px;
+                height: 10px;
                 background: var(--success);
                 border: 2px solid var(--white);
                 border-radius: 50%;
-                box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
             }
 
             /* Dropdown do Usuário */
@@ -488,8 +519,8 @@ class HeaderComponent
                 right: 0;
                 background: var(--white);
                 border-radius: 16px;
-                box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12);
-                min-width: 280px;
+                box-shadow: 0 10px 40px rgba(0, 60, 143, 0.15);
+                min-width: 260px;
                 padding: 8px;
                 opacity: 0;
                 visibility: hidden;
@@ -497,6 +528,7 @@ class HeaderComponent
                 transition: all var(--transition-slow);
                 z-index: 1001;
                 border: 1px solid var(--gray-100);
+                border-top: 2px solid var(--assego-gold);
             }
 
             .user-dropdown.show {
@@ -507,27 +539,21 @@ class HeaderComponent
 
             .user-dropdown-header {
                 padding: 16px;
-                background: var(--gray-50);
+                background: linear-gradient(135deg, var(--assego-blue-light) 0%, #FFF4E0 100%);
                 border-radius: 12px;
                 margin-bottom: 8px;
-            }
-
-            .user-dropdown-avatar {
-                display: flex;
-                align-items: center;
-                gap: 12px;
-                margin-bottom: 12px;
+                border: 1px solid rgba(0, 60, 143, 0.1);
             }
 
             .user-dropdown-name {
                 font-weight: 700;
-                color: var(--gray-900);
+                color: var(--assego-blue);
                 font-size: 15px;
             }
 
             .user-dropdown-email {
                 font-size: 13px;
-                color: var(--gray-500);
+                color: var(--gray-600);
                 margin-top: 2px;
             }
 
@@ -543,7 +569,6 @@ class HeaderComponent
                 border-radius: 10px;
                 transition: all var(--transition-base);
                 position: relative;
-                overflow: hidden;
             }
 
             .dropdown-item::before {
@@ -553,14 +578,14 @@ class HeaderComponent
                 top: 0;
                 bottom: 0;
                 width: 3px;
-                background: var(--primary);
+                background: var(--assego-gold);
                 transform: translateX(-100%);
                 transition: transform var(--transition-base);
             }
 
             .dropdown-item:hover {
-                background: var(--gray-50);
-                color: var(--primary);
+                background: var(--assego-blue-light);
+                color: var(--assego-blue);
                 padding-left: 18px;
             }
 
@@ -572,6 +597,7 @@ class HeaderComponent
                 font-size: 16px;
                 width: 20px;
                 text-align: center;
+                color: var(--assego-blue);
             }
 
             .dropdown-divider {
@@ -583,8 +609,8 @@ class HeaderComponent
             /* Mobile Menu Toggle */
             .mobile-menu-toggle {
                 display: none;
-                width: 44px;
-                height: 44px;
+                width: 42px;
+                height: 42px;
                 border: 1px solid var(--gray-200);
                 background: var(--white);
                 border-radius: 12px;
@@ -596,9 +622,9 @@ class HeaderComponent
             }
 
             .mobile-menu-toggle:hover {
-                background: var(--gray-50);
-                border-color: var(--primary);
-                color: var(--primary);
+                background: var(--assego-blue-light);
+                border-color: var(--assego-blue);
+                color: var(--assego-blue);
             }
 
             /* Responsive Design */
@@ -607,7 +633,7 @@ class HeaderComponent
                     padding: 10px 12px;
                     font-size: 13px;
                 }
-
+                
                 .nav-link i {
                     font-size: 15px;
                 }
@@ -681,36 +707,38 @@ class HeaderComponent
                 transition: all var(--transition-base);
                 margin-bottom: 6px;
                 position: relative;
-            }
-
-            .mobile-nav-item::before {
-                content: '';
-                position: absolute;
-                left: 0;
-                top: 0;
-                bottom: 0;
-                width: 3px;
-                background: var(--primary);
-                transform: scaleY(0);
-                transition: transform var(--transition-base);
-                border-radius: 0 3px 3px 0;
+                border-left: 3px solid transparent;
             }
 
             .mobile-nav-item:hover {
-                background: var(--gray-50);
-                color: var(--primary);
+                background: var(--assego-blue-light);
+                color: var(--assego-blue);
                 padding-left: 20px;
-            }
-
-            .mobile-nav-item:hover::before {
-                transform: scaleY(1);
+                border-left-color: var(--assego-gold);
             }
 
             .mobile-nav-item.active {
-                background: linear-gradient(135deg, #667EEA 0%, #764BA2 100%);
-                color: var(--white);
-                font-weight: 600;
-                box-shadow: 0 4px 12px 0 rgba(102, 126, 234, 0.25);
+                background: var(--assego-blue-light);
+                color: var(--assego-blue);
+                font-weight: 700;
+                border-left-color: var(--assego-gold);
+                padding-left: 20px;
+            }
+
+            .mobile-nav-item.active::after {
+                content: '';
+                position: absolute;
+                top: 50%;
+                right: 16px;
+                transform: translateY(-50%);
+                width: 6px;
+                height: 6px;
+                background: var(--assego-gold);
+                border-radius: 50%;
+            }
+
+            .mobile-nav-item.active i {
+                color: var(--assego-blue);
             }
 
             .mobile-nav-item i {
@@ -743,23 +771,6 @@ class HeaderComponent
                 visibility: visible;
             }
 
-            /* Animações de Entrada */
-            @keyframes slideDown {
-                from {
-                    opacity: 0;
-                    transform: translateY(-20px);
-                }
-
-                to {
-                    opacity: 1;
-                    transform: translateY(0);
-                }
-            }
-
-            .header-container {
-                animation: slideDown 0.5s ease-out;
-            }
-
             /* Scrollbar Customizada */
             .mobile-nav::-webkit-scrollbar {
                 width: 6px;
@@ -778,31 +789,274 @@ class HeaderComponent
             .mobile-nav::-webkit-scrollbar-thumb:hover {
                 background: var(--gray-500);
             }
-            .logo-icon {
-    width: 40px !important;
-    height: 40px !important;
-    background: white !important; /* Fundo branco para garantir */
-    border-radius: 8px !important;
-    padding: 2px !important;
-}
 
-.logo-icon img {
-    width: 100% !important;
-    height: 100% !important;
-    object-fit: contain !important;
-    filter: none !important;
-}
+            /* ===== NOTIFICAÇÃO DE SENHA PADRÃO ===== */
+            .alerta-senha-padrao {
+                position: fixed;
+                top: calc(var(--header-height) + 10px);
+                left: 50%;
+                transform: translateX(-50%);
+                width: 90%;
+                max-width: 800px;
+                background: linear-gradient(135deg, #FFF9E6 0%, #FFF4D6 100%);
+                border: 2px solid var(--assego-gold);
+                border-radius: 16px;
+                box-shadow: 0 10px 40px rgba(255, 184, 0, 0.3), 
+                            0 0 60px rgba(255, 184, 0, 0.1);
+                z-index: 2000;
+                animation: slideDownBounce 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+                overflow: hidden;
+            }
+
+            @keyframes slideDownBounce {
+                0% {
+                    opacity: 0;
+                    transform: translateX(-50%) translateY(-100px);
+                }
+                60% {
+                    transform: translateX(-50%) translateY(20px);
+                }
+                80% {
+                    transform: translateX(-50%) translateY(-5px);
+                }
+                100% {
+                    opacity: 1;
+                    transform: translateX(-50%) translateY(0);
+                }
+            }
+
+            .alerta-senha-container {
+                padding: 20px 25px;
+                display: flex;
+                align-items: center;
+                gap: 20px;
+                position: relative;
+            }
+
+            .alerta-senha-icon-wrapper {
+                flex-shrink: 0;
+            }
+
+            .alerta-senha-icon {
+                width: 60px;
+                height: 60px;
+                background: linear-gradient(135deg, var(--assego-gold) 0%, #FFD700 100%);
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: var(--assego-blue-dark);
+                font-size: 28px;
+                box-shadow: 0 4px 15px rgba(255, 184, 0, 0.4);
+            }
+
+            .alerta-senha-icon.pulse {
+                animation: pulseShadow 2s infinite;
+            }
+
+            @keyframes pulseShadow {
+                0% {
+                    box-shadow: 0 4px 15px rgba(255, 184, 0, 0.4),
+                                0 0 0 0 rgba(255, 184, 0, 0.7);
+                }
+                50% {
+                    box-shadow: 0 4px 15px rgba(255, 184, 0, 0.4),
+                                0 0 0 15px rgba(255, 184, 0, 0);
+                }
+                100% {
+                    box-shadow: 0 4px 15px rgba(255, 184, 0, 0.4),
+                                0 0 0 0 rgba(255, 184, 0, 0);
+                }
+            }
+
+            .alerta-senha-content {
+                flex: 1;
+                padding-right: 20px;
+            }
+
+            .alerta-senha-titulo {
+                font-size: 18px;
+                font-weight: 700;
+                color: var(--assego-blue-dark);
+                margin-bottom: 8px;
+                display: flex;
+                align-items: center;
+            }
+
+            .alerta-senha-mensagem {
+                font-size: 14px;
+                color: #5A4A00;
+                margin-bottom: 10px;
+                line-height: 1.5;
+            }
+
+            .alerta-senha-instrucoes {
+                font-size: 13px;
+                color: #6B5500;
+                background: rgba(255, 255, 255, 0.6);
+                padding: 8px 12px;
+                border-radius: 8px;
+                border-left: 3px solid var(--assego-gold);
+                display: flex;
+                align-items: flex-start;
+            }
+
+            .alerta-senha-instrucoes strong {
+                color: var(--assego-blue-dark);
+                font-weight: 600;
+            }
+
+            .alerta-senha-actions {
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+                align-items: flex-end;
+            }
+
+            .btn-alerta-perfil {
+                background: linear-gradient(135deg, var(--assego-blue) 0%, var(--assego-blue-dark) 100%);
+                color: white;
+                border: none;
+                border-radius: 10px;
+                padding: 10px 20px;
+                font-size: 14px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                display: flex;
+                align-items: center;
+                box-shadow: 0 4px 15px rgba(0, 60, 143, 0.3);
+                white-space: nowrap;
+            }
+
+            .btn-alerta-perfil:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 6px 20px rgba(0, 60, 143, 0.4);
+                background: linear-gradient(135deg, var(--assego-blue-dark) 0%, var(--assego-blue) 100%);
+            }
+
+            .btn-alerta-fechar {
+                width: 32px;
+                height: 32px;
+                border-radius: 50%;
+                background: rgba(255, 255, 255, 0.9);
+                border: 2px solid var(--assego-gold);
+                color: #8B7000;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                font-size: 16px;
+            }
+
+            .btn-alerta-fechar:hover {
+                background: white;
+                color: var(--assego-blue-dark);
+                transform: rotate(90deg);
+                border-color: var(--assego-blue);
+            }
+
+            .alerta-senha-progress {
+                position: absolute;
+                bottom: 0;
+                left: 0;
+                height: 4px;
+                background: linear-gradient(90deg, 
+                    var(--assego-gold) 0%, 
+                    #FFD700 50%, 
+                    var(--assego-gold) 100%);
+                animation: progressMove 3s linear infinite;
+                width: 100%;
+            }
+
+            @keyframes progressMove {
+                0% {
+                    background-position: 0% 50%;
+                }
+                100% {
+                    background-position: 100% 50%;
+                }
+            }
+
+            /* Animação de saída */
+            .alerta-senha-padrao.hiding {
+                animation: slideUpFade 0.4s ease-out forwards;
+            }
+
+            @keyframes slideUpFade {
+                to {
+                    opacity: 0;
+                    transform: translateX(-50%) translateY(-20px);
+                }
+            }
+
+            @keyframes shakeAlert {
+                0%, 100% { transform: translateX(-50%) translateX(0); }
+                10%, 30%, 50%, 70%, 90% { transform: translateX(-50%) translateX(-5px); }
+                20%, 40%, 60%, 80% { transform: translateX(-50%) translateX(5px); }
+            }
+
+            /* Responsivo para o alerta */
+            @media (max-width: 768px) {
+                .alerta-senha-padrao {
+                    width: 95%;
+                    top: calc(var(--header-height) + 5px);
+                }
+                
+                .alerta-senha-container {
+                    flex-direction: column;
+                    text-align: center;
+                    padding: 15px;
+                }
+                
+                .alerta-senha-content {
+                    padding-right: 0;
+                }
+                
+                .alerta-senha-actions {
+                    flex-direction: row;
+                    width: 100%;
+                    justify-content: space-between;
+                    margin-top: 10px;
+                }
+                
+                .alerta-senha-instrucoes {
+                    font-size: 12px;
+                    text-align: left;
+                }
+                
+                .btn-alerta-perfil {
+                    flex: 1;
+                    justify-content: center;
+                }
+            }
+
+            @media (max-width: 480px) {
+                .alerta-senha-titulo {
+                    font-size: 16px;
+                }
+                
+                .alerta-senha-mensagem {
+                    font-size: 13px;
+                }
+                
+                .alerta-senha-icon {
+                    width: 50px;
+                    height: 50px;
+                    font-size: 24px;
+                }
+            }
         </style>
-    <?php
+        <?php
     }
 
     /**
      * Gera os itens de navegação baseado em permissões
      */
-    private function getNavigationItems()
-    {
+    private function getNavigationItems() {
         $items = [];
-
+        
         // Verifica permissões
         $ehDaPresidencia = isset($this->usuario['departamento_id']) && $this->usuario['departamento_id'] == 1;
         $ehDoFinanceiro = isset($this->usuario['departamento_id']) && $this->usuario['departamento_id'] == 2;
@@ -889,8 +1143,7 @@ class HeaderComponent
     /**
      * Gera as iniciais do usuário
      */
-    private function getUserInitials($nome)
-    {
+    private function getUserInitials($nome) {
         if (empty($nome)) return '?';
         $parts = explode(' ', trim($nome));
         if (count($parts) >= 2) {
@@ -900,16 +1153,22 @@ class HeaderComponent
     }
 
     /**
+     * Verifica se um item está ativo
+     */
+    private function isItemActive($itemId) {
+        return $this->activePage === $itemId;
+    }
+
+    /**
      * Renderiza o JavaScript
      */
-    public function renderJS()
-    {
-    ?>
+    public function renderJS() {
+        ?>
         <script>
             document.addEventListener('DOMContentLoaded', function() {
                 // Adiciona classe ao body para garantir padding
                 document.body.classList.add('has-header');
-
+                
                 // User Dropdown
                 const userMenuTrigger = document.getElementById('userMenuTrigger');
                 const userDropdown = document.getElementById('userDropdown');
@@ -939,7 +1198,7 @@ class HeaderComponent
                     mobileMenuToggle.addEventListener('click', function() {
                         mobileNav.classList.toggle('show');
                         mobileNavOverlay.classList.toggle('show');
-
+                        
                         // Anima o ícone do menu
                         const icon = this.querySelector('i');
                         if (mobileNav.classList.contains('show')) {
@@ -956,7 +1215,7 @@ class HeaderComponent
                     mobileNavOverlay.addEventListener('click', function() {
                         mobileNav.classList.remove('show');
                         mobileNavOverlay.classList.remove('show');
-
+                        
                         const icon = mobileMenuToggle.querySelector('i');
                         icon.classList.remove('fa-times');
                         icon.classList.add('fa-bars');
@@ -967,7 +1226,6 @@ class HeaderComponent
                 const notificationBtn = document.getElementById('notificationBtn');
                 if (notificationBtn) {
                     notificationBtn.addEventListener('click', function() {
-                        // Implementar lógica de notificações
                         console.log('Notificações clicadas');
                     });
                 }
@@ -975,36 +1233,41 @@ class HeaderComponent
                 // Header scroll effect
                 let lastScroll = 0;
                 const header = document.querySelector('.header-container');
-
+                
                 window.addEventListener('scroll', function() {
                     const currentScroll = window.pageYOffset;
-
+                    
                     if (currentScroll > 100) {
-                        header.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.08)';
+                        header.style.boxShadow = '0 4px 20px rgba(0, 60, 143, 0.1)';
+                        header.style.borderTopColor = 'var(--assego-gold-dark)';
                     } else {
-                        header.style.boxShadow = 'none';
+                        header.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.05)';
+                        header.style.borderTopColor = 'var(--assego-gold)';
                     }
-
+                    
                     lastScroll = currentScroll;
                 });
 
-                // Tooltips nos ícones (opcional)
-                const navLinks = document.querySelectorAll('.nav-link');
-                navLinks.forEach(link => {
-                    link.addEventListener('mouseenter', function() {
-                        const icon = this.querySelector('i');
-                        if (icon) {
-                            icon.style.transform = 'scale(1.1) rotate(5deg)';
+                // ===== NOTIFICAÇÃO DE SENHA PADRÃO =====
+                const alertaSenha = document.getElementById('alertaSenhaPadrao');
+                if (alertaSenha) {
+                    // Auto-fechar após 30 segundos
+                    setTimeout(() => {
+                        if (alertaSenha && alertaSenha.style.display !== 'none') {
+                            fecharAlertaSenha();
                         }
-                    });
-
-                    link.addEventListener('mouseleave', function() {
-                        const icon = this.querySelector('i');
-                        if (icon) {
-                            icon.style.transform = 'scale(1) rotate(0deg)';
+                    }, 30000);
+                    
+                    // Shake a cada 10 segundos para chamar atenção
+                    setInterval(() => {
+                        if (alertaSenha && alertaSenha.style.display !== 'none' && !alertaSenha.classList.contains('hiding')) {
+                            alertaSenha.style.animation = 'none';
+                            setTimeout(() => {
+                                alertaSenha.style.animation = 'shakeAlert 0.5s ease-in-out';
+                            }, 10);
                         }
-                    });
-                });
+                    }, 10000);
+                }
             });
 
             // Função para garantir que o conteúdo não fique sob o header
@@ -1016,31 +1279,91 @@ class HeaderComponent
                 }
             });
 
-            // Adiciona efeitos de micro-interação
-            document.querySelectorAll('button, a').forEach(element => {
-                element.addEventListener('click', function(e) {
-                    const ripple = document.createElement('span');
-                    ripple.classList.add('ripple-effect');
-                    this.appendChild(ripple);
-
+            // ===== FUNÇÕES DO ALERTA DE SENHA PADRÃO =====
+            function fecharAlertaSenha() {
+                const alerta = document.getElementById('alertaSenhaPadrao');
+                if (alerta) {
+                    alerta.classList.add('hiding');
+                    
                     setTimeout(() => {
-                        ripple.remove();
-                    }, 600);
-                });
-            });
+                        alerta.style.display = 'none';
+                    }, 400);
+                    
+                    console.log('✓ Alerta de senha fechado temporariamente');
+                }
+            }
+
+            function irParaPerfil() {
+                window.location.href = 'perfil.php';
+            }
         </script>
-    <?php
+        <?php
     }
 
     /**
      * Renderiza o componente
      */
-    public function render()
-    {
+    public function render() {
+        // NOVA VERIFICAÇÃO DE SENHA PADRÃO
+        $mostrarAlertaSenha = false;
+        $authInstance = null;
+        
+        // Verifica se deve mostrar alerta de senha padrão
+        if (class_exists('Auth')) {
+            $authInstance = new Auth();
+            if ($authInstance->isUsingSenhaDefault() && !$authInstance->foiNotificadoSenhaPadrao()) {
+                $mostrarAlertaSenha = true;
+                $authInstance->setNotificadoSenhaPadrao();
+            }
+        }
+        
         $navigationItems = $this->getNavigationItems();
         $userInitials = $this->getUserInitials($this->usuario['nome']);
-    ?>
-
+        
+        // Debug para verificar página ativa
+        echo "<!-- Página Ativa: " . $this->activePage . " -->";
+        ?>
+        
+        <!-- NOTIFICAÇÃO DE SENHA PADRÃO -->
+        <?php if ($mostrarAlertaSenha): ?>
+        <div id="alertaSenhaPadrao" class="alerta-senha-padrao">
+            <div class="alerta-senha-container">
+                <div class="alerta-senha-icon-wrapper">
+                    <div class="alerta-senha-icon pulse">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                </div>
+                
+                <div class="alerta-senha-content">
+                    <div class="alerta-senha-titulo">
+                        <i class="fas fa-lock me-2"></i>
+                        Atenção: Você está usando a senha padrão!
+                    </div>
+                    <div class="alerta-senha-mensagem">
+                        Por questões de segurança, é <strong>obrigatório</strong> alterar sua senha padrão.
+                    </div>
+                    <div class="alerta-senha-instrucoes">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Como alterar: Clique no seu <strong>nome</strong> no canto superior direito → 
+                        <strong>Meu Perfil</strong> → <strong>Alterar Senha</strong>
+                    </div>
+                </div>
+                
+                <div class="alerta-senha-actions">
+                    <button onclick="irParaPerfil()" class="btn-alerta-perfil">
+                        <i class="fas fa-user-cog me-1"></i>
+                        Ir para Meu Perfil
+                    </button>
+                    <button onclick="fecharAlertaSenha()" class="btn-alerta-fechar" title="Fechar temporariamente">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="alerta-senha-progress"></div>
+        </div>
+        <?php endif; ?>
+        
         <header class="header-container">
             <div class="header-content">
                 <!-- Left Section -->
@@ -1052,20 +1375,30 @@ class HeaderComponent
 
                     <!-- Logo -->
                     <a href="dashboard.php" class="logo-container">
-                        <div class="logo-icon">
-                            <img src="img/logoassego.png" alt="Logo ASSEGO" class="logo-img">
-                        </div>
+                        <?php 
+                        // Verifica se existe a imagem da logo
+                        $logoPath = 'img/logoassego.png';
+                        if (file_exists($logoPath)): 
+                        ?>
+                            <div class="logo-icon">
+                                <img src="<?php echo $logoPath; ?>" alt="Logo ASSEGO" class="logo-img">
+                            </div>
+                        <?php else: ?>
+                            <div class="logo-icon logo-letter">A</div>
+                        <?php endif; ?>
                         <div class="logo-text-container">
                             <span class="logo-text">ASSEGO</span>
+                            <span class="logo-subtitle">Sistema de Gestão</span>
                         </div>
                     </a>
 
                     <!-- Desktop Navigation -->
                     <nav class="nav-menu">
                         <?php foreach ($navigationItems as $item): ?>
-                            <div class="nav-item">
-                                <a href="<?php echo htmlspecialchars($item['href']); ?>"
-                                    class="nav-link <?php echo ($this->activePage === $item['id']) ? 'active' : ''; ?>">
+                            <?php $isActive = $this->isItemActive($item['id']); ?>
+                            <div class="nav-item <?php echo $isActive ? 'active' : ''; ?>">
+                                <a href="<?php echo htmlspecialchars($item['href']); ?>" 
+                                   class="nav-link <?php echo $isActive ? 'active' : ''; ?>">
                                     <i class="<?php echo htmlspecialchars($item['icon']); ?>"></i>
                                     <span><?php echo htmlspecialchars($item['label']); ?></span>
                                 </a>
@@ -1095,8 +1428,8 @@ class HeaderComponent
                             </div>
                             <div class="user-avatar">
                                 <?php if (isset($this->usuario['avatar']) && !empty($this->usuario['avatar'])): ?>
-                                    <img src="<?php echo htmlspecialchars($this->usuario['avatar']); ?>"
-                                        alt="<?php echo htmlspecialchars($this->usuario['nome']); ?>">
+                                    <img src="<?php echo htmlspecialchars($this->usuario['avatar']); ?>" 
+                                         alt="<?php echo htmlspecialchars($this->usuario['nome']); ?>">
                                 <?php else: ?>
                                     <?php echo $userInitials; ?>
                                 <?php endif; ?>
@@ -1107,34 +1440,27 @@ class HeaderComponent
                         <!-- User Dropdown -->
                         <div class="user-dropdown" id="userDropdown">
                             <div class="user-dropdown-header">
-                                <div class="user-dropdown-avatar">
-                                    <div class="user-avatar">
-                                        <?php echo $userInitials; ?>
-                                    </div>
-                                    <div>
-                                        <div class="user-dropdown-name"><?php echo htmlspecialchars($this->usuario['nome']); ?></div>
-                                        <div class="user-dropdown-email"><?php echo htmlspecialchars($this->usuario['email'] ?? 'usuario@assego.com.br'); ?></div>
-                                    </div>
-                                </div>
+                                <div class="user-dropdown-name"><?php echo htmlspecialchars($this->usuario['nome']); ?></div>
+                                <div class="user-dropdown-email"><?php echo htmlspecialchars($this->usuario['email'] ?? 'usuario@assego.com.br'); ?></div>
                             </div>
-
+                            
                             <a href="perfil.php" class="dropdown-item">
                                 <i class="fas fa-user-circle"></i>
                                 <span>Meu Perfil</span>
                             </a>
-
+                            
                             <a href="configuracoes.php" class="dropdown-item">
                                 <i class="fas fa-cog"></i>
                                 <span>Configurações</span>
                             </a>
-
+                            
                             <a href="ajuda.php" class="dropdown-item">
                                 <i class="fas fa-question-circle"></i>
                                 <span>Ajuda</span>
                             </a>
-
+                            
                             <div class="dropdown-divider"></div>
-
+                            
                             <a href="logout.php" class="dropdown-item">
                                 <i class="fas fa-sign-out-alt"></i>
                                 <span>Sair</span>
@@ -1148,60 +1474,53 @@ class HeaderComponent
         <!-- Mobile Navigation -->
         <nav class="mobile-nav" id="mobileNav">
             <div class="mobile-nav-header">
-                <div class="user-dropdown-avatar">
-                    <div class="user-avatar">
-                        <?php echo $userInitials; ?>
-                    </div>
-                    <div>
-                        <div class="user-dropdown-name"><?php echo htmlspecialchars($this->usuario['nome']); ?></div>
-                        <div class="user-dropdown-email"><?php echo htmlspecialchars($this->usuario['cargo'] ?? 'Funcionário'); ?></div>
-                    </div>
-                </div>
+                <div class="user-dropdown-name"><?php echo htmlspecialchars($this->usuario['nome']); ?></div>
+                <div class="user-dropdown-email"><?php echo htmlspecialchars($this->usuario['cargo'] ?? 'Funcionário'); ?></div>
             </div>
-
+            
             <?php foreach ($navigationItems as $item): ?>
-                <a href="<?php echo htmlspecialchars($item['href']); ?>"
-                    class="mobile-nav-item <?php echo ($this->activePage === $item['id']) ? 'active' : ''; ?>">
+                <?php $isActive = $this->isItemActive($item['id']); ?>
+                <a href="<?php echo htmlspecialchars($item['href']); ?>" 
+                   class="mobile-nav-item <?php echo $isActive ? 'active' : ''; ?>">
                     <i class="<?php echo htmlspecialchars($item['icon']); ?>"></i>
                     <span><?php echo htmlspecialchars($item['label']); ?></span>
                 </a>
             <?php endforeach; ?>
-
+            
             <div class="mobile-nav-divider"></div>
-
+            
             <a href="perfil.php" class="mobile-nav-item">
                 <i class="fas fa-user-circle"></i>
                 <span>Meu Perfil</span>
             </a>
-
+            
             <a href="configuracoes.php" class="mobile-nav-item">
                 <i class="fas fa-cog"></i>
                 <span>Configurações</span>
             </a>
-
+            
             <a href="ajuda.php" class="mobile-nav-item">
                 <i class="fas fa-question-circle"></i>
                 <span>Ajuda</span>
             </a>
-
+            
             <div class="mobile-nav-divider"></div>
-
+            
             <a href="logout.php" class="mobile-nav-item">
                 <i class="fas fa-sign-out-alt"></i>
                 <span>Sair</span>
             </a>
         </nav>
-
+        
         <div class="mobile-nav-overlay" id="mobileNavOverlay"></div>
-
-    <?php
+        
+        <?php
     }
 
     /**
      * Método estático para uso rápido
      */
-    public static function create($config = [])
-    {
+    public static function create($config = []) {
         $header = new self($config);
         return $header;
     }
@@ -1210,175 +1529,10 @@ class HeaderComponent
 /**
  * Função helper para renderização rápida
  */
-function renderHeader($config = [])
-{
+function renderHeader($config = []) {
     $header = new HeaderComponent($config);
     $header->renderCSS();
     $header->render();
     $header->renderJS();
-}
-
-// Exemplo de uso quando acessado diretamente
-if (basename(__FILE__) == basename($_SERVER['SCRIPT_NAME'])) {
-    ?>
-    <!DOCTYPE html>
-    <html lang="pt-BR">
-
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>ASSEGO - Sistema de Gestão</title>
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-        <style>
-            body {
-                margin: 0;
-                padding: 0;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                min-height: 100vh;
-            }
-
-            .demo-content {
-                padding: 40px;
-                max-width: 1400px;
-                margin: 0 auto;
-            }
-
-            .demo-card {
-                background: white;
-                border-radius: 20px;
-                padding: 32px;
-                box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-                margin-bottom: 24px;
-            }
-
-            .demo-title {
-                font-size: 28px;
-                font-weight: 800;
-                color: #111827;
-                margin-bottom: 8px;
-            }
-
-            .demo-subtitle {
-                font-size: 16px;
-                color: #6B7280;
-                margin-bottom: 24px;
-            }
-
-            .features-grid {
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-                gap: 20px;
-                margin-top: 24px;
-            }
-
-            .feature-card {
-                padding: 20px;
-                background: #F9FAFB;
-                border-radius: 12px;
-                border: 1px solid #E5E7EB;
-            }
-
-            .feature-icon {
-                width: 40px;
-                height: 40px;
-                background: linear-gradient(135deg, #667EEA 0%, #764BA2 100%);
-                border-radius: 10px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                color: white;
-                margin-bottom: 12px;
-            }
-
-            .feature-title {
-                font-weight: 600;
-                color: #111827;
-                margin-bottom: 4px;
-            }
-
-            .feature-desc {
-                font-size: 14px;
-                color: #6B7280;
-            }
-        </style>
-    </head>
-
-    <body>
-        <?php
-        // Renderiza o header com configurações de exemplo
-        renderHeader([
-            'usuario' => [
-                'nome' => 'Lydia de Souza Pauluci Ferreira',
-                'cargo' => 'Contador',
-                'email' => 'lydia@assego.com.br',
-                'departamento_id' => 2, // Financeiro
-                'avatar' => null
-            ],
-            'isDiretor' => false,
-            'activePage' => 'financeiro',
-            'notificationCount' => 3
-        ]);
-        ?>
-
-        <div class="demo-content">
-            <div class="demo-card">
-                <h1 class="demo-title">🎨 Header Premium ASSEGO</h1>
-                <p class="demo-subtitle">Design moderno com foco em UX/UI e micro-interações</p>
-
-                <div class="features-grid">
-                    <div class="feature-card">
-                        <div class="feature-icon">
-                            <i class="fas fa-paint-brush"></i>
-                        </div>
-                        <div class="feature-title">Design Moderno</div>
-                        <div class="feature-desc">Interface limpa com gradientes e sombras suaves</div>
-                    </div>
-
-                    <div class="feature-card">
-                        <div class="feature-icon">
-                            <i class="fas fa-magic"></i>
-                        </div>
-                        <div class="feature-title">Animações Fluidas</div>
-                        <div class="feature-desc">Transições suaves e micro-interações elegantes</div>
-                    </div>
-
-                    <div class="feature-card">
-                        <div class="feature-icon">
-                            <i class="fas fa-mobile-alt"></i>
-                        </div>
-                        <div class="feature-title">100% Responsivo</div>
-                        <div class="feature-desc">Adaptável a todos os tamanhos de tela</div>
-                    </div>
-
-                    <div class="feature-card">
-                        <div class="feature-icon">
-                            <i class="fas fa-shield-alt"></i>
-                        </div>
-                        <div class="feature-title">Sistema de Permissões</div>
-                        <div class="feature-desc">Controle de acesso por departamento</div>
-                    </div>
-
-                    <div class="feature-card">
-                        <div class="feature-icon">
-                            <i class="fas fa-bell"></i>
-                        </div>
-                        <div class="feature-title">Notificações Animadas</div>
-                        <div class="feature-desc">Badge com efeito pulse e contador</div>
-                    </div>
-
-                    <div class="feature-card">
-                        <div class="feature-icon">
-                            <i class="fas fa-user-circle"></i>
-                        </div>
-                        <div class="feature-title">Menu de Usuário</div>
-                        <div class="feature-desc">Dropdown elegante com avatar e status</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </body>
-
-    </html>
-<?php
 }
 ?>
