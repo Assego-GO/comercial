@@ -4,6 +4,9 @@
  * /api/auditoria/exportar.php
  */
 
+// ===== ADICIONAR APENAS: SESSÃO E AUTENTICAÇÃO =====
+session_start();
+
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET');
 header('Access-Control-Allow-Headers: Content-Type');
@@ -11,6 +14,7 @@ header('Access-Control-Allow-Headers: Content-Type');
 require_once '../../config/config.php';
 require_once '../../config/database.php';
 require_once '../../classes/Database.php';
+require_once '../../classes/Auth.php';        // ← ADICIONAR
 require_once '../../classes/Auditoria.php';
 
 try {
@@ -19,6 +23,23 @@ try {
         throw new Exception('Método não permitido');
     }
 
+    // ===== ADICIONAR APENAS: VERIFICAR AUTENTICAÇÃO E CAPTURAR USUÁRIO =====
+    $auth = new Auth();
+    if (!$auth->isLoggedIn()) {
+        throw new Exception('Usuário não autenticado');
+    }
+
+    $usuarioLogado = $auth->getUser();
+    $funcionarioId = $usuarioLogado['id'] ?? null;
+    $funcionarioNome = $usuarioLogado['nome'] ?? 'Desconhecido';
+    
+    // Debug
+    error_log("=== EXPORTAÇÃO AUDITORIA ===");
+    error_log("Funcionário ID: " . $funcionarioId);
+    error_log("Funcionário Nome: " . $funcionarioNome);
+
+    // ===== RESTO DO CÓDIGO ORIGINAL (sem mexer) =====
+    
     // Criar instância da auditoria
     $auditoria = new Auditoria();
     
@@ -47,6 +68,16 @@ try {
     
     if (!empty($_GET['data_fim'])) {
         $filtros['data_fim'] = $_GET['data_fim'];
+    }
+    
+    // ===== ADICIONAR APENAS: FILTRO DEPARTAMENTAL =====
+    $departamentoUsuario = $usuarioLogado['departamento_id'] ?? null;
+    $isPresidencia = ($departamentoUsuario == 1) || in_array($usuarioLogado['cargo'] ?? '', ['Presidente', 'Vice-Presidente']);
+    $isDiretor = in_array($usuarioLogado['cargo'] ?? '', ['Diretor', 'Gerente', 'Supervisor', 'Coordenador']);
+    
+    if (!$isPresidencia && $isDiretor && $departamentoUsuario) {
+        $filtros['departamento_usuario'] = $departamentoUsuario;
+        error_log("Aplicando filtro departamental: " . $departamentoUsuario);
     }
     
     // Remover limite para exportar todos os dados
@@ -149,11 +180,12 @@ try {
     
     fclose($output);
     
-    // Registrar a exportação na auditoria
+    // ===== MANTER A ESTRUTURA ORIGINAL, MAS COM FUNCIONÁRIO ID =====
     try {
         $auditoria->registrar([
             'tabela' => 'Auditoria',
             'acao' => 'EXPORTAR',
+            'funcionario_id' => $funcionarioId,    // ← ADICIONAR APENAS ISTO
             'detalhes' => [
                 'tipo_exportacao' => 'CSV',
                 'total_registros' => count($registros),
