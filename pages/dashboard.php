@@ -23,6 +23,8 @@ if (!$auth->isLoggedIn()) {
     exit;
 }
 
+
+
 // Pega dados do usuário logado
 $usuarioLogado = $auth->getUser();
 
