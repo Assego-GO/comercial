@@ -570,7 +570,7 @@ $motivoNegacao = 'Acesso restrito ao departamento financeiro e presidência.';
 
 if (isset($usuarioLogado['departamento_id'])) {
     $deptId = $usuarioLogado['departamento_id'];
-    if ($deptId == 5 || $deptId == 1) {
+    if ($deptId == 2 || $deptId == 1) {
         $temPermissaoFinanceiro = true;
     }
 }
