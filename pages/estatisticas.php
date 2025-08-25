@@ -274,7 +274,7 @@ function buscarDadosRelatorio($db, $filtros = []) {
             MAX(a.rg) as rg,
             a.id as associado_id,
             SUM(sa.valor_aplicado) as valor_total_contratado,
-            COUNT(sa.id) as total_servicos,
+            COUNT(DISTINCT sa.servico_id) as total_servicos,
             MAX(a.situacao) as situacao,
             MAX(a.email) as email,
             COALESCE(MAX(m.patente), 'Não informado') as patente,
