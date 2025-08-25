@@ -64,7 +64,7 @@ function getPermissoesDepartamento($departamentoId) {
             'acesso_total' => false,
             'criar_personalizado' => false,
             'relatorios_permitidos' => [
-                'financeiro', 'servicos', 'documentos', 'estatisticas'
+                'financeiro', 'servicos', 'estatisticas' // REMOVIDO 'documentos'
             ]
         ],
         10 => [ // Comercial (ID correto: 10)
@@ -72,7 +72,7 @@ function getPermissoesDepartamento($departamentoId) {
             'acesso_total' => false,
             'criar_personalizado' => false,
             'relatorios_permitidos' => [
-                'associados', 'militar', 'documentos'
+                'associados', 'militar', 'documentos' // MANTIDO 'documentos'
             ]
         ]
     ];
@@ -182,7 +182,7 @@ if (!$temPermissaoRelatorios) {
                         <ul class="mb-0">
                             <li><strong>Presidência:</strong> Acesso total a todos os relatórios</li>
                             <li><strong>Comercial:</strong> Associados, Distribuição Militar, Status de Documentos</li>
-                            <li><strong>Financeiro:</strong> Situação Financeira, Adesão aos Serviços, Status de Documentos, Estatísticas</li>
+                            <li><strong>Financeiro:</strong> Situação Financeira, Adesão aos Serviços, Estatísticas</li>
                         </ul>
                     </div>
                     
@@ -531,7 +531,7 @@ $headerComponent = HeaderComponent::create([
                     </div>
                     <?php endif; ?>
 
-                    <!-- Relatório de Documentos - Todos os departamentos -->
+                    <!-- Relatório de Documentos - APENAS PRESIDÊNCIA E COMERCIAL -->
                     <?php if (podeAcessarRelatorio('documentos', $permissoesDept)): ?>
                     <div class="report-card" onclick="executarRelatorioRapido('documentos')">
                         <div class="report-icon red">
