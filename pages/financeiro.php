@@ -1111,7 +1111,7 @@ $headerComponent = HeaderComponent::create([
                                     </div>
                                 </div>
 
-                                <div class="financeiro-option" onclick="extratoFinanceiro()">
+                                <!-- <div class="financeiro-option" onclick="extratoFinanceiro()">
                                     <div class="financeiro-option-icon">
                                         <i class="fas fa-file-invoice-dollar"></i>
                                     </div>
@@ -1119,7 +1119,7 @@ $headerComponent = HeaderComponent::create([
                                         <h5>Extrato Financeiro</h5>
                                         <p>Acompanhe entradas, saídas e saldo atual da associação</p>
                                     </div>
-                                </div>
+                                </div>-->
 
                                 <div class="financeiro-option" onclick="importarAsaas()">
                                     <div class="financeiro-option-icon">
@@ -1648,7 +1648,7 @@ $headerComponent = HeaderComponent::create([
         function relatorioArrecadacao() {
             notifications.show('Carregando relatório de arrecadação...', 'info');
             setTimeout(() => {
-                window.location.href = '../pages/relatorio_arrecadacao.php';
+                window.location.href = '../pages/estatisticas.php';
             }, 1000);
         }
 
