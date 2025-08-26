@@ -2,6 +2,8 @@
 /**
  * API para upload de documentos de associados
  * api/documentos/documentos_upload.php
+ * 
+ * VERSÃO CORRIGIDA: Atualiza pre_cadastro para 0 quando upload é feito pela presidência
  */
 
 header('Content-Type: application/json');
@@ -33,6 +35,18 @@ try {
 
     $usuarioLogado = $auth->getUser();
     $funcionarioId = $usuarioLogado['id'];
+
+    // ===== NOVA VERIFICAÇÃO: DETECTAR SE É PRESIDÊNCIA =====
+    $isPresidencia = false;
+    $departamentoId = $usuarioLogado['departamento_id'] ?? null;
+    
+    // Verifica se é da presidência (departamento 1) OU é diretor
+    if ($departamentoId == 1 || $auth->isDiretor()) {
+        $isPresidencia = true;
+        error_log("✅ Upload pela PRESIDÊNCIA detectado - Usuário: " . $usuarioLogado['nome']);
+    } else {
+        error_log("📄 Upload por departamento comum - Departamento: " . $departamentoId);
+    }
 
     // Valida dados obrigatórios
     if (!isset($_POST['associado_id']) || !isset($_POST['tipo_documento'])) {
@@ -108,14 +122,17 @@ try {
     // Conecta ao banco
     $db = Database::getInstance(DB_NAME_CADASTRO)->getConnection();
 
-    // Verifica se o associado existe
-    $stmt = $db->prepare("SELECT id, nome FROM Associados WHERE id = ?");
+    // Verifica se o associado existe e pega status atual
+    $stmt = $db->prepare("SELECT id, nome, pre_cadastro FROM Associados WHERE id = ?");
     $stmt->execute([$associadoId]);
     $associado = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$associado) {
         throw new Exception('Associado não encontrado');
     }
+
+    // Log do status atual do associado
+    error_log("📋 Associado encontrado: " . $associado['nome'] . " | Pre-cadastro atual: " . $associado['pre_cadastro']);
 
     // Cria diretório de upload se não existir
     $baseDir = '../../uploads/anexos';
@@ -192,117 +209,160 @@ try {
         $db->exec($createTableSQL);
     }
 
-    // Insere registro do documento no banco
-    $stmt = $db->prepare("
-        INSERT INTO DocumentosFluxo (
-            associado_id, 
-            tipo_documento, 
-            tipo_descricao,
-            nome_arquivo, 
-            caminho_arquivo, 
-            tamanho_arquivo, 
-            tipo_mime,
-            funcionario_upload,
-            funcionario_ultima_acao,
-            observacao
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    ");
+    // ===== NOVA LÓGICA: TRANSAÇÃO PARA GARANTIR CONSISTÊNCIA =====
+    $db->beginTransaction();
 
-    $caminhoRelativo = 'uploads/anexos/' . $associadoId . '/' . $nomeArquivo;
-
-    $result = $stmt->execute([
-        $associadoId,
-        $tipoDocumento,
-        $tipoDescricao,
-        $nomeArquivo,
-        $caminhoRelativo,
-        $tamanho,
-        $tipoMime,
-        $funcionarioId,
-        $funcionarioId,
-        $observacao
-    ]);
-
-    if (!$result) {
-        // Se falhou ao inserir no banco, remove o arquivo
-        unlink($caminhoCompleto);
-        throw new Exception('Erro ao registrar documento no banco de dados');
-    }
-
-    $documentoId = $db->lastInsertId();
-
-    // Registra no histórico (se a tabela existir)
     try {
-        $stmt = $db->prepare("SHOW TABLES LIKE 'DocumentosFluxoHistorico'");
-        $stmt->execute();
-        $historicoExiste = $stmt->fetch();
-
-        if (!$historicoExiste) {
-            // Cria tabela de histórico
-            $createHistoricoSQL = "
-                CREATE TABLE DocumentosFluxoHistorico (
-                    id INT AUTO_INCREMENT PRIMARY KEY,
-                    documento_id INT NOT NULL,
-                    status_anterior VARCHAR(50),
-                    status_novo VARCHAR(50) NOT NULL,
-                    departamento_origem INT,
-                    departamento_destino INT,
-                    funcionario_acao INT NOT NULL,
-                    data_acao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    observacao TEXT,
-                    INDEX idx_documento (documento_id),
-                    INDEX idx_data_acao (data_acao),
-                    FOREIGN KEY (documento_id) REFERENCES DocumentosFluxo(id) ON DELETE CASCADE
-                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
-            ";
-            
-            $db->exec($createHistoricoSQL);
-        }
-
+        // Insere registro do documento no banco
         $stmt = $db->prepare("
-            INSERT INTO DocumentosFluxoHistorico (
-                documento_id, 
-                status_anterior, 
-                status_novo, 
-                departamento_destino,
-                funcionario_acao, 
+            INSERT INTO DocumentosFluxo (
+                associado_id, 
+                tipo_documento, 
+                tipo_descricao,
+                nome_arquivo, 
+                caminho_arquivo, 
+                tamanho_arquivo, 
+                tipo_mime,
+                funcionario_upload,
+                funcionario_ultima_acao,
                 observacao
-            ) VALUES (?, NULL, 'DIGITALIZADO', 1, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ");
 
-        $stmt->execute([
-            $documentoId,
+        $caminhoRelativo = 'uploads/anexos/' . $associadoId . '/' . $nomeArquivo;
+
+        $result = $stmt->execute([
+            $associadoId,
+            $tipoDocumento,
+            $tipoDescricao,
+            $nomeArquivo,
+            $caminhoRelativo,
+            $tamanho,
+            $tipoMime,
             $funcionarioId,
-            'Documento digitalizado e anexado ao sistema - ' . $tipoDescricao
+            $funcionarioId,
+            $observacao
         ]);
 
-    } catch (Exception $e) {
-        // Log do erro mas não falha o upload
-        error_log("Erro ao registrar histórico: " . $e->getMessage());
-    }
+        if (!$result) {
+            throw new Exception('Erro ao registrar documento no banco de dados');
+        }
 
-    // Atualiza contador de documentos do associado (se campo existir)
-    try {
-        $stmt = $db->prepare("
-            UPDATE Associados 
-            SET total_documentos = (
-                SELECT COUNT(*) 
-                FROM DocumentosFluxo 
-                WHERE associado_id = ?
-            ) 
-            WHERE id = ?
-        ");
-        $stmt->execute([$associadoId, $associadoId]);
-    } catch (Exception $e) {
-        // Se o campo não existir, ignora
-        error_log("Campo total_documentos não existe: " . $e->getMessage());
-    }
+        $documentoId = $db->lastInsertId();
 
-    // Resposta de sucesso
-    echo json_encode([
-        'status' => 'success',
-        'message' => 'Documento anexado com sucesso',
-        'data' => [
+        // ===== NOVA FUNCIONALIDADE: ATUALIZAR PRE_CADASTRO QUANDO É PRESIDÊNCIA =====
+        $statusAssociadoAlterado = false;
+        $statusAnterior = $associado['pre_cadastro'];
+        
+        if ($isPresidencia && $associado['pre_cadastro'] == 1) {
+            // Atualiza o associado para cadastro definitivo
+            $stmt = $db->prepare("
+                UPDATE Associados 
+                SET pre_cadastro = 0, 
+                    data_aprovacao = CURRENT_TIMESTAMP,
+                    aprovado_por = ?,
+                    observacao_aprovacao = ?
+                WHERE id = ?
+            ");
+            
+            $observacaoAprovacao = "Cadastro aprovado pela presidência via upload de documento: " . $tipoDescricao;
+            
+            $result = $stmt->execute([
+                $funcionarioId,
+                $observacaoAprovacao,
+                $associadoId
+            ]);
+            
+            if ($result) {
+                $statusAssociadoAlterado = true;
+                error_log("✅ PRESIDÊNCIA: Associado {$associadoId} convertido de pré-cadastro para cadastro definitivo");
+            } else {
+                error_log("❌ Erro ao atualizar status do associado {$associadoId}");
+            }
+        }
+
+        // Registra no histórico (se a tabela existir)
+        try {
+            $stmt = $db->prepare("SHOW TABLES LIKE 'DocumentosFluxoHistorico'");
+            $stmt->execute();
+            $historicoExiste = $stmt->fetch();
+
+            if (!$historicoExiste) {
+                // Cria tabela de histórico
+                $createHistoricoSQL = "
+                    CREATE TABLE DocumentosFluxoHistorico (
+                        id INT AUTO_INCREMENT PRIMARY KEY,
+                        documento_id INT NOT NULL,
+                        status_anterior VARCHAR(50),
+                        status_novo VARCHAR(50) NOT NULL,
+                        departamento_origem INT,
+                        departamento_destino INT,
+                        funcionario_acao INT NOT NULL,
+                        data_acao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        observacao TEXT,
+                        INDEX idx_documento (documento_id),
+                        INDEX idx_data_acao (data_acao),
+                        FOREIGN KEY (documento_id) REFERENCES DocumentosFluxo(id) ON DELETE CASCADE
+                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+                ";
+                
+                $db->exec($createHistoricoSQL);
+            }
+
+            // Observação expandida para histórico
+            $observacaoHistorico = 'Documento digitalizado e anexado ao sistema - ' . $tipoDescricao;
+            
+            if ($isPresidencia) {
+                $observacaoHistorico .= ' | UPLOAD PELA PRESIDÊNCIA';
+                if ($statusAssociadoAlterado) {
+                    $observacaoHistorico .= ' | Associado aprovado automaticamente (pré-cadastro → cadastro definitivo)';
+                }
+            }
+
+            $stmt = $db->prepare("
+                INSERT INTO DocumentosFluxoHistorico (
+                    documento_id, 
+                    status_anterior, 
+                    status_novo, 
+                    departamento_destino,
+                    funcionario_acao, 
+                    observacao
+                ) VALUES (?, NULL, 'DIGITALIZADO', 1, ?, ?)
+            ");
+
+            $stmt->execute([
+                $documentoId,
+                $funcionarioId,
+                $observacaoHistorico
+            ]);
+
+        } catch (Exception $e) {
+            // Log do erro mas não falha o upload
+            error_log("Erro ao registrar histórico: " . $e->getMessage());
+        }
+
+        // Atualiza contador de documentos do associado (se campo existir)
+        try {
+            $stmt = $db->prepare("
+                UPDATE Associados 
+                SET total_documentos = (
+                    SELECT COUNT(*) 
+                    FROM DocumentosFluxo 
+                    WHERE associado_id = ?
+                ) 
+                WHERE id = ?
+            ");
+            $stmt->execute([$associadoId, $associadoId]);
+        } catch (Exception $e) {
+            // Se o campo não existir, ignora
+            error_log("Campo total_documentos não existe: " . $e->getMessage());
+        }
+
+        // ===== COMMIT DA TRANSAÇÃO =====
+        $db->commit();
+
+        // ===== RESPOSTA DE SUCESSO EXPANDIDA =====
+        $responseData = [
             'documento_id' => $documentoId,
             'associado_id' => $associadoId,
             'associado_nome' => $associado['nome'],
@@ -311,9 +371,41 @@ try {
             'nome_arquivo' => $nomeArquivo,
             'tamanho_mb' => round($tamanho / (1024 * 1024), 2),
             'data_upload' => date('Y-m-d H:i:s'),
-            'status' => 'DIGITALIZADO'
-        ]
-    ]);
+            'status' => 'DIGITALIZADO',
+            'upload_pela_presidencia' => $isPresidencia
+        ];
+
+        // Adicionar informações sobre mudança de status se ocorreu
+        if ($statusAssociadoAlterado) {
+            $responseData['associado_status_alterado'] = true;
+            $responseData['status_anterior'] = 'Pré-cadastro';
+            $responseData['status_novo'] = 'Cadastro definitivo';
+            $responseData['data_aprovacao'] = date('Y-m-d H:i:s');
+            $responseData['aprovado_por'] = $funcionarioId;
+        }
+
+        $mensagem = 'Documento anexado com sucesso';
+        if ($statusAssociadoAlterado) {
+            $mensagem .= ' e associado aprovado automaticamente pela presidência';
+        }
+
+        echo json_encode([
+            'status' => 'success',
+            'message' => $mensagem,
+            'data' => $responseData
+        ]);
+
+    } catch (Exception $e) {
+        // Rollback em caso de erro
+        $db->rollBack();
+        
+        // Remove arquivo se foi criado
+        if (file_exists($caminhoCompleto)) {
+            unlink($caminhoCompleto);
+        }
+        
+        throw $e;
+    }
 
 } catch (Exception $e) {
     error_log("Erro no upload de documento: " . $e->getMessage());
