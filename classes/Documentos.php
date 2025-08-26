@@ -174,6 +174,7 @@ class Documentos
 
     /**
      * Assinar documento (presidência)
+     * CORRIGIDO: Agora aprova automaticamente o associado quando assinado
      */
     public function assinarDocumento($documentoId, $arquivoAssinado = null, $observacao = null)
     {
@@ -239,6 +240,18 @@ class Documentos
                 $documentoId
             ]);
 
+            // ✅ CORREÇÃO: Aprovar associado automaticamente quando presidência assina
+                $stmtAssociado = $this->db->prepare("
+                    UPDATE Associados 
+                    SET pre_cadastro = 0
+                    WHERE id = ?
+                ");
+
+            $stmtAssociado->execute([$documento['associado_id']]);
+
+            // Log da aprovação automática
+            error_log("✅ Associado ID {$documento['associado_id']} aprovado automaticamente pela assinatura da presidência");
+
             // Registrar no histórico
             $this->registrarHistoricoFluxo(
                 $documentoId,
@@ -246,11 +259,11 @@ class Documentos
                 self::STATUS_ASSINADO,
                 $documento['departamento_atual'],
                 $deptComercial,
-                "Documento assinado e devolvido ao comercial"
+                "Documento assinado e associado aprovado automaticamente"
             );
 
             // Notificar comercial
-            $this->notificarDepartamento($deptComercial, "Documento assinado e devolvido", $documentoId);
+            $this->notificarDepartamento($deptComercial, "Documento assinado e associado aprovado", $documentoId);
 
             $this->db->commit();
             return true;
@@ -263,6 +276,7 @@ class Documentos
 
     /**
      * Finalizar processo de documentação
+     * CORRIGIDO: Removida lógica de aprovação (agora acontece na assinatura)
      */
     public function finalizarProcesso($documentoId, $observacao = null)
     {
@@ -280,7 +294,7 @@ class Documentos
                 throw new Exception("Documento precisa estar assinado para ser finalizado");
             }
 
-            // Atualizar status
+            // Atualizar status do documento
             $stmt = $this->db->prepare("
                 UPDATE Documentos_Associado 
                 SET status_fluxo = ?,
@@ -305,7 +319,7 @@ class Documentos
                 self::STATUS_FINALIZADO,
                 $documento['departamento_atual'],
                 $documento['departamento_atual'],
-                "Processo de documentação finalizado"
+                "Processo de documentação finalizado - Administrativo"
             );
 
             $this->db->commit();
