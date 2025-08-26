@@ -23,71 +23,15 @@ if (!$auth->isLoggedIn()) {
     exit;
 }
 
-
-
 // Pega dados do usuário logado
 $usuarioLogado = $auth->getUser();
-
-// DEBUG USUÁRIO LOGADO - CONSOLE (REMOVER APÓS TESTE)
-echo "<script>";
-echo "console.log('=== DEBUG USUÁRIO LOGADO ===');";
-echo "console.log('Array completo:', " . json_encode($usuarioLogado) . ");";
-echo "console.log('Tem departamento_id?', " . (isset($usuarioLogado['departamento_id']) ? 'true' : 'false') . ");";
-if (isset($usuarioLogado['departamento_id'])) {
-    echo "console.log('Departamento ID valor:', " . json_encode($usuarioLogado['departamento_id']) . ");";
-    echo "console.log('Departamento ID tipo:', '" . gettype($usuarioLogado['departamento_id']) . "');";
-    echo "console.log('É igual a 1?', " . ($usuarioLogado['departamento_id'] == 1 ? 'true' : 'false') . ");";
-    echo "console.log('É idêntico a 1?', " . ($usuarioLogado['departamento_id'] === 1 ? 'true' : 'false') . ");";
-    echo "console.log('É idêntico a \"1\"?', " . ($usuarioLogado['departamento_id'] === '1' ? 'true' : 'false') . ");";
-}
-echo "console.log('isDiretor:', " . ($auth->isDiretor() ? 'true' : 'false') . ");";
-echo "console.log('=============================');";
-echo "</script>";
 
 // Define o título da página
 $page_title = 'Associados - ASSEGO';
 
-// Busca estatísticas usando a classe Database
-try {
-    $db = Database::getInstance(DB_NAME_CADASTRO)->getConnection();
-
-    $stmt = $db->prepare("SELECT COUNT(*) as total FROM Associados");
-    $stmt->execute();
-    $totalAssociados = $stmt->fetch()['total'] ?? 0;
-
-    $stmt = $db->prepare("
-        SELECT COUNT(DISTINCT a.id) as total 
-        FROM Associados a 
-        WHERE a.situacao = 'Filiado'
-    ");
-    $stmt->execute();
-    $associadosFiliados = $stmt->fetch()['total'] ?? 0;
-
-    $stmt = $db->prepare("
-        SELECT COUNT(DISTINCT a.id) as total 
-        FROM Associados a 
-        WHERE a.situacao = 'Desfiliado'
-    ");
-    $stmt->execute();
-    $associadosDesfiliados = $stmt->fetch()['total'] ?? 0;
-
-    $stmt = $db->prepare("
-        SELECT COUNT(*) as total 
-        FROM Associados a
-        LEFT JOIN Contrato c ON a.id = c.associado_id
-        WHERE c.dataFiliacao >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
-    ");
-    $stmt->execute();
-    $novosAssociados = $stmt->fetch()['total'] ?? 0;
-
-} catch (Exception $e) {
-    error_log("Erro ao buscar estatísticas: " . $e->getMessage());
-    $totalAssociados = $associadosFiliados = $associadosDesfiliados = $novosAssociados = 0;
-}
-
 // CORREÇÃO: Cria instância do Header Component - Passa TODO o array do usuário
 $headerComponent = HeaderComponent::create([
-    'usuario' => $usuarioLogado, // ← CORRIGIDO: Agora passa TODO o array (incluindo departamento_id)
+    'usuario' => $usuarioLogado,
     'isDiretor' => $auth->isDiretor(),
     'activeTab' => 'associados',
     'notificationCount' => 0,
@@ -127,7 +71,6 @@ $headerComponent = HeaderComponent::create([
     <!-- Custom CSS -->
     <link rel="stylesheet" href="./estilizacao/style.css">
 
-
 </head>
 
 <body>
@@ -143,7 +86,6 @@ $headerComponent = HeaderComponent::create([
         <!-- NOVO: Header Component -->
         <?php $headerComponent->render(); ?>
 
-
         <!-- Content Area -->
         <div class="content-area">
             <!-- Page Title -->
@@ -154,31 +96,13 @@ $headerComponent = HeaderComponent::create([
 
             <!-- Stats Grid -->
             <div class="stats-grid" data-aos="fade-up">
+                <!-- Card 1: Associados Ativos -->
                 <div class="stat-card">
                     <div class="stat-header">
                         <div>
-                            <div class="stat-value"><?php echo number_format($totalAssociados, 0, ',', '.'); ?></div>
-                            <div class="stat-label">Total de Associados</div>
-                            <div class="stat-change positive">
-                                <i class="fas fa-arrow-up"></i>
-                                12% este mês
-                            </div>
-                        </div>
-                        <div class="stat-icon primary">
-                            <i class="fas fa-users"></i>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="stat-card">
-                    <div class="stat-header">
-                        <div>
-                            <div class="stat-value"><?php echo number_format($associadosFiliados, 0, ',', '.'); ?></div>
+                            <div class="stat-value" id="associadosAtivos">-</div>
                             <div class="stat-label">Associados Ativos</div>
-                            <div class="stat-change positive">
-                                <i class="fas fa-arrow-up"></i>
-                                8% este mês
-                            </div>
+                           
                         </div>
                         <div class="stat-icon success">
                             <i class="fas fa-user-check"></i>
@@ -186,35 +110,72 @@ $headerComponent = HeaderComponent::create([
                     </div>
                 </div>
 
+                <!-- Card 2: Novos (30 dias) -->
                 <div class="stat-card">
                     <div class="stat-header">
                         <div>
-                            <div class="stat-value"><?php echo number_format($associadosDesfiliados, 0, ',', '.'); ?>
-                            </div>
-                            <div class="stat-label">Inativos</div>
-                            <div class="stat-change negative">
-                                <i class="fas fa-arrow-down"></i>
-                                3% este mês
-                            </div>
-                        </div>
-                        <div class="stat-icon danger">
-                            <i class="fas fa-user-times"></i>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="stat-card">
-                    <div class="stat-header">
-                        <div>
-                            <div class="stat-value"><?php echo number_format($novosAssociados, 0, ',', '.'); ?></div>
+                            <div class="stat-value" id="novosAssociados">-</div>
                             <div class="stat-label">Novos (30 dias)</div>
+                            <!-- 
                             <div class="stat-change positive">
                                 <i class="fas fa-arrow-up"></i>
                                 25% este mês
                             </div>
+                            -->
                         </div>
                         <div class="stat-icon warning">
                             <i class="fas fa-user-plus"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 3: PM + BM -->
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div>
+                            <div class="stat-value" id="corporacoesQtd">-</div>
+                            <div class="stat-label">PM + Bombeiros</div>
+                            <div class="stat-change positive" id="corporacoesPercent">
+                                <i class="fas fa-chart-pie"></i>
+                                -% do total
+                            </div>
+                        </div>
+                        <div class="stat-icon info">
+                            <i class="fas fa-shield-alt"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 4: Aniversariantes -->
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div>
+                            <div class="stat-value" id="aniversariantes">-</div>
+                            <div class="stat-label">Aniversariantes Hoje</div>
+                            <div class="stat-change neutral">
+                                <i class="fas fa-birthday-cake"></i>
+                                Parabéns!
+                            </div>
+                        </div>
+                        <div class="stat-icon birthday">
+                            <i class="fas fa-birthday-cake"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 5: Capital/Interior -->
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div>
+                            <div class="stat-value" id="localizacaoQtd">-</div>
+                            <div class="stat-label">Capital/Interior</div>
+                            <div class="stat-change positive" id="localizacaoInfo">
+                                <i class="fas fa-map-marked-alt"></i>
+                                Distribuição geográfica
+                            </div>
+                        </div>
+                        <div class="stat-icon geographic">
+                            <i class="fas fa-map-marked-alt"></i>
                         </div>
                     </div>
                 </div>
@@ -268,7 +229,6 @@ $headerComponent = HeaderComponent::create([
                         <i class="fas fa-sync-alt"></i>
                         Atualizar
                     </button>
-
                 </div>
             </div>
 
@@ -409,7 +369,6 @@ $headerComponent = HeaderComponent::create([
                     Documentos
                     <span class="tab-indicator"></span>
                 </button>
-                <!-- NOVA ABA DE OBSERVAÇÕES -->
                 <button class="tab-button" onclick="abrirTab('observacoes')">
                     <i class="fas fa-sticky-note"></i>
                     Observações
@@ -624,12 +583,49 @@ $headerComponent = HeaderComponent::create([
     <!-- JavaScript do Header Component -->
     <?php $headerComponent->renderJS(); ?>
 
-    <!-- JavaScript customizado para os botões do header -->
+    <!-- CSS e JavaScript inline -->
+    <style>
+        .stat-icon.birthday {
+            background: linear-gradient(135deg, #e91e63 0%, #ad1457 100%);
+        }
+        
+        .stat-icon.geographic {
+            background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
+        }
+        
+        .stat-change.neutral {
+            background: rgba(156, 39, 176, 0.1);
+            color: #9c27b0;
+        }
+        
+        .stat-change.neutral i {
+            color: #e91e63;
+        }
+        
+        /* Ajusta grid para 5 cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+        
+        @media (min-width: 1200px) {
+            .stats-grid {
+                grid-template-columns: repeat(5, 1fr);
+            }
+        }
+        
+        /* Estilo para cards com duas linhas */
+        .stat-card:nth-child(3) .stat-value,
+        .stat-card:nth-child(5) .stat-value {
+            font-size: 1.4rem;
+            line-height: 1.2;
+        }
+    </style>
+
     <script>
         function toggleSearch() {
-            // Implementar funcionalidade de busca global
             console.log('Busca global ativada');
-            // Você pode focar no campo de busca da tabela ou abrir um modal de busca
             const searchInput = document.getElementById('searchInput');
             if (searchInput) {
                 searchInput.focus();
@@ -637,19 +633,16 @@ $headerComponent = HeaderComponent::create([
         }
 
         function toggleNotifications() {
-            // Implementar painel de notificações
             console.log('Painel de notificações');
             alert('Painel de notificações em desenvolvimento');
         }
 
-        // Funções para a aba de observações
         function abrirModalNovaObservacao() {
             const modal = new bootstrap.Modal(document.getElementById('modalNovaObservacao'));
             modal.show();
         }
 
         function salvarObservacao() {
-            // Esta função será implementada no JavaScript
             console.log('Salvando observação...');
         }
 
@@ -667,7 +660,6 @@ $headerComponent = HeaderComponent::create([
                     break;
 
                 case 'AGUARDANDO_ASSINATURA':
-                    // Verificar se usuário tem permissão para assinar (apenas presidência)
                     <?php if ($auth->isDiretor() || $usuarioLogado['departamento_id'] == 2): ?>
                     acoes = `
                             <button class="btn-modern btn-success btn-sm" onclick="abrirModalAssinaturaModal(${doc.id})" title="Assinar">
@@ -690,153 +682,61 @@ $headerComponent = HeaderComponent::create([
 
             return acoes;
         }
+
+        // Carrega estatísticas via API
+        function carregarEstatisticas() {
+            fetch('../api/dashboard_stats.php')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        const stats = data.data;
+                        
+                        // Atualiza os cards
+                        document.getElementById('associadosAtivos').textContent = 
+                            new Intl.NumberFormat('pt-BR').format(stats.associados_ativos);
+                        
+                        document.getElementById('novosAssociados').textContent = 
+                            new Intl.NumberFormat('pt-BR').format(stats.novos_associados);
+                        
+                        // PM + Bombeiros
+                        const pmBm = stats.corporacoes_principais;
+                        document.getElementById('corporacoesQtd').innerHTML = 
+                            `<span style="font-size: 0.8em; color: #666;">PM:</span> ${new Intl.NumberFormat('pt-BR').format(pmBm.pm_quantidade)}<br>` +
+                            `<span style="font-size: 0.8em; color: #666;">BM:</span> ${new Intl.NumberFormat('pt-BR').format(pmBm.bm_quantidade)}`;
+                        
+                        document.getElementById('corporacoesPercent').innerHTML = 
+                            `<i class="fas fa-chart-pie"></i> ${pmBm.total_percentual}% do total`;
+                        
+                        // Aniversariantes
+                        document.getElementById('aniversariantes').textContent = 
+                            new Intl.NumberFormat('pt-BR').format(stats.aniversariantes_hoje);
+                        
+                        // Capital/Interior
+                        document.getElementById('localizacaoQtd').innerHTML = 
+                            `<span style="font-size: 0.8em; color: #666;">Capital:</span> ${new Intl.NumberFormat('pt-BR').format(stats.capital)}<br>` +
+                            `<span style="font-size: 0.8em; color: #666;">Interior:</span> ${new Intl.NumberFormat('pt-BR').format(stats.interior)}`;
+                        
+                        document.getElementById('localizacaoInfo').innerHTML = 
+                            `<i class="fas fa-map-marked-alt"></i> ${stats.capital_percentual}%/${stats.interior_percentual}%`;
+                        
+                        console.log('Estatísticas carregadas:', stats);
+                        
+                    } else {
+                        console.error('Erro ao carregar estatísticas:', data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro de rede:', error);
+                });
+        }
+
+        // Carrega quando a página está pronta
+        document.addEventListener('DOMContentLoaded', function() {
+            carregarEstatisticas();
+        });
     </script>
 
-
     <script src="js/dashboard.js"></script>
-
-
-
-<script>
-/**
- * Função para recalcular valores dos serviços
- */
-function recalcularServicos() {
-    // Confirmação
-    if (!confirm(
-        'ATENÇÃO!\n\n' +
-        'Esta ação irá recalcular TODOS os valores dos serviços dos associados ' +
-        'baseado nos valores base atuais do sistema.\n\n' +
-        'Isso pode alterar centenas de registros!\n\n' +
-        'Deseja continuar?'
-    )) {
-        return;
-    }
-
-    const btnRecalcular = document.getElementById('btnRecalcular');
-    const originalText = btnRecalcular.innerHTML;
-    
-    // Desabilita botão e mostra loading
-    btnRecalcular.disabled = true;
-    btnRecalcular.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Recalculando...';
-    
-    // Mostra loading geral
-    showLoading();
-    
-    console.log('Iniciando recálculo dos serviços...');
-    
-    fetch('../api/recalcular_servicos.php', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        }
-    })
-    .then(response => {
-        console.log('Response status:', response.status);
-        return response.text();
-    })
-    .then(responseText => {
-        console.log('Response:', responseText);
-        
-        let data;
-        try {
-            data = JSON.parse(responseText);
-        } catch (e) {
-            console.error('Erro ao fazer parse JSON:', e);
-            throw new Error('Resposta inválida do servidor');
-        }
-
-        
-        if (data.status === 'success') {
-            console.log('✓ Recálculo concluído:', data.data);
-            
-            // Monta mensagem detalhada
-            let mensagem = data.message;
-            
-            if (data.data.total_valores_alterados > 0) {
-                mensagem += '\n\n📊 RESUMO:';
-                mensagem += '\n• Total processados: ' + data.data.total_servicos_processados;
-                mensagem += '\n• Valores alterados: ' + data.data.total_valores_alterados;
-                mensagem += '\n• Sem alteração: ' + data.data.total_sem_alteracao;
-                
-                if (data.data.economia_total !== 0) {
-                    const economia = data.data.economia_total;
-                    if (economia > 0) {
-                        mensagem += '\n• Aumento total: +R$ ' + economia.toFixed(2).replace('.', ',');
-                    } else {
-                        mensagem += '\n• Redução total: R$ ' + Math.abs(economia).toFixed(2).replace('.', ',');
-                    }
-                }
-                
-                mensagem += '\n\n🕒 Processado em: ' + data.data.data_recalculo;
-                
-                // Mostra alguns exemplos
-                if (data.data.alteracoes_detalhadas && data.data.alteracoes_detalhadas.length > 0) {
-                    mensagem += '\n\n📋 EXEMPLOS DE ALTERAÇÕES:';
-                    data.data.alteracoes_detalhadas.slice(0, 5).forEach(alt => {
-                        mensagem += `\n• ${alt.associado} (${alt.servico}): R$ ${alt.valor_anterior.toFixed(2)} → R$ ${alt.valor_novo.toFixed(2)}`;
-                    });
-                    
-                    if (data.data.alteracoes_detalhadas.length > 5) {
-                        mensagem += `\n... e mais ${data.data.alteracoes_detalhadas.length - 5} alterações`;
-
-                    }
-                }
-
-            }
-            
-            alert(mensagem);
-            
-            // Recarrega a página para atualizar os dados
-            setTimeout(() => {
-                window.location.reload();
-            }, 2000);
-            
-        } else {
-            console.error('Erro na API:', data);
-            alert('❌ ERRO: ' + data.message);
-        }
-    })
-    .catch(error => {
-        console.error('Erro de rede:', error);
-        alert('❌ Erro de comunicação: ' + error.message);
-    })
-    .finally(() => {
-        // Restaura botão
-        btnRecalcular.disabled = false;
-        btnRecalcular.innerHTML = originalText;
-        hideLoading();
-    });
-}
-
-// Adiciona CSS para o botão (coloque no <head> ou arquivo CSS)
-const style = document.createElement('style');
-style.textContent = `
-.btn-modern.btn-warning {
-    background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
-    color: white;
-    border: none;
-    padding: 0.75rem 1.5rem;
-    border-radius: 8px;
-    font-weight: 600;
-    box-shadow: 0 4px 12px rgba(243, 156, 18, 0.3);
-    transition: all 0.3s ease;
-}
-
-.btn-modern.btn-warning:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(243, 156, 18, 0.4);
-    background: linear-gradient(135deg, #e67e22 0%, #d35400 100%);
-}
-
-.btn-modern:disabled {
-    opacity: 0.7;
-    cursor: not-allowed;
-    transform: none !important;
-}
-`;
-document.head.appendChild(style);
-</script>
 
 </body>
 
