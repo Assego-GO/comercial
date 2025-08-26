@@ -2145,7 +2145,138 @@ function abrirModalAssinaturaFluxo(documentoId) {
 }
 
 function finalizarProcessoFluxo(documentoId) {
-    if (confirm('Deseja finalizar o processo deste documento?\n\nO documento retornará ao comercial e o pré-cadastro poderá ser aprovado.')) {
+    const documento = documentosFluxo.find(doc => doc.id === documentoId);
+    
+    if (!documento) {
+        notifications.show('Documento não encontrado', 'error');
+        return;
+    }
+
+    // Criar o modal dinamicamente
+    const modalHTML = `
+        <div class="modal fade" id="modalFinalizarProcesso" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden;">
+                    <div class="modal-header text-white border-0" style="background: linear-gradient(135deg, #28a745, #20c997);">
+                        <div class="d-flex align-items-center">
+                            <div class="modal-icon me-3" style="width: 60px; height: 60px; background: rgba(255, 255, 255, 0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(10px);">
+                                <i class="fas fa-flag-checkered fa-2x"></i>
+                            </div>
+                            <div>
+                                <h5 class="modal-title mb-0 fw-bold">Finalizar Processo</h5>
+                                <small style="opacity: 0.75;">Última etapa do documento</small>
+                            </div>
+                        </div>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    
+                    <div class="modal-body p-4">
+                        <div class="text-center mb-4">
+                            <div class="alert border-0" style="background-color: rgba(13, 202, 240, 0.1);">
+                                <div class="d-flex align-items-start">
+                                    <i class="fas fa-info-circle text-info me-3 mt-1"></i>
+                                    <div class="flex-grow-1 text-start">
+                                        <h6 class="mb-2 text-dark">O que acontecerá:</h6>
+                                        <ul class="mb-0 text-muted small">
+                                            <li>O documento retornará para o departamento comercial</li>
+                                            <li>O pré-cadastro poderá ser aprovado automaticamente</li>
+                                            <li>O processo de filiação será concluído</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-light p-3 rounded mb-3" style="border-left: 4px solid #007bff;">
+                            <h6 class="text-dark mb-2">
+                                <i class="fas fa-file-alt text-primary me-2"></i>
+                                Informações do Documento
+                            </h6>
+                            <div class="row g-2 small">
+                                <div class="col-6">
+                                    <strong>Associado:</strong><br>
+                                    <span class="text-muted">${documento.associado_nome || 'N/A'}</span>
+                                </div>
+                                <div class="col-6">
+                                    <strong>CPF:</strong><br>
+                                    <span class="text-muted">${formatarCPF(documento.associado_cpf) || 'N/A'}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">
+                                <i class="fas fa-comment-dots me-2"></i>
+                                Observação (opcional)
+                            </label>
+                            <textarea class="form-control border-2" id="observacaoFinalizacao" rows="3" 
+                                      placeholder="Adicione uma observação sobre a finalização..." 
+                                      style="border-radius: 8px;"></textarea>
+                        </div>
+
+                        <div class="alert border-0" style="background-color: rgba(255, 193, 7, 0.1);">
+                            <div class="d-flex">
+                                <i class="fas fa-exclamation-triangle text-warning me-3"></i>
+                                <div>
+                                    <strong>Atenção:</strong> Esta ação não pode ser desfeita. 
+                                    Certifique-se de que o documento foi devidamente revisado.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="modal-footer border-0 p-4">
+                        <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal" 
+                                style="border-radius: 8px; padding: 10px 20px; font-weight: 500;">
+                            <i class="fas fa-times me-2"></i>Cancelar
+                        </button>
+                        <button type="button" class="btn btn-success px-4 fw-bold" id="btnConfirmarFinalizacao"
+                                style="border-radius: 8px; padding: 10px 20px; font-weight: 500; transition: all 0.3s ease;">
+                            <i class="fas fa-check me-2"></i>Finalizar Processo
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Adicionar CSS se não existir
+    if (!document.getElementById('modal-finalizar-styles')) {
+        const styleSheet = document.createElement('style');
+        styleSheet.id = 'modal-finalizar-styles';
+        styleSheet.textContent = `
+            #modalFinalizarProcesso .btn:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            }
+            #modalFinalizarProcesso .form-control:focus {
+                border-color: #28a745;
+                box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+            }
+        `;
+        document.head.appendChild(styleSheet);
+    }
+
+    // Remover modal anterior se existir
+    const modalExistente = document.getElementById('modalFinalizarProcesso');
+    if (modalExistente) {
+        modalExistente.remove();
+    }
+
+    // Adicionar modal ao DOM
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+    // Configurar evento do botão de confirmação
+    document.getElementById('btnConfirmarFinalizacao').addEventListener('click', function() {
+        const observacao = document.getElementById('observacaoFinalizacao').value.trim();
+        const btnConfirmar = this;
+        const textoOriginal = btnConfirmar.innerHTML;
+        
+        // Loading state
+        btnConfirmar.disabled = true;
+        btnConfirmar.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Finalizando...';
+        
+        // Fazer requisição
         fetch('../api/documentos/documentos_finalizar.php', {
             method: 'POST',
             headers: {
@@ -2153,25 +2284,48 @@ function finalizarProcessoFluxo(documentoId) {
             },
             body: JSON.stringify({
                 documento_id: documentoId,
-                observacao: 'Processo finalizado - Documento pronto para aprovação do pré-cadastro'
+                observacao: observacao || 'Processo finalizado - Documento pronto para aprovação do pré-cadastro'
             })
         })
         .then(response => response.json())
         .then(result => {
             if (result.status === 'success') {
+                // Fechar e remover modal
+                const modalInstance = bootstrap.Modal.getInstance(document.getElementById('modalFinalizarProcesso'));
+                if (modalInstance) {
+                    modalInstance.hide();
+                }
+                
+                // Remover modal do DOM após fechar
+                setTimeout(() => {
+                    document.getElementById('modalFinalizarProcesso')?.remove();
+                }, 300);
+                
                 notifications.show('Processo finalizado com sucesso! O pré-cadastro já pode ser aprovado.', 'success');
                 carregarDocumentosFluxo();
             } else {
                 notifications.show('Erro: ' + result.message, 'error');
+                btnConfirmar.disabled = false;
+                btnConfirmar.innerHTML = textoOriginal;
             }
         })
         .catch(error => {
             console.error('Erro ao finalizar processo:', error);
             notifications.show('Erro ao finalizar processo', 'error');
+            btnConfirmar.disabled = false;
+            btnConfirmar.innerHTML = textoOriginal;
         });
-    }
-}
+    });
 
+    // Mostrar modal
+    const modal = new bootstrap.Modal(document.getElementById('modalFinalizarProcesso'));
+    modal.show();
+
+    // Limpar modal do DOM quando fechado
+    document.getElementById('modalFinalizarProcesso').addEventListener('hidden.bs.modal', function() {
+        this.remove();
+    });
+}
 function verHistoricoFluxo(documentoId) {
     fetch('../api/documentos/documentos_historico_fluxo.php?documento_id=' + documentoId)
         .then(response => response.json())
