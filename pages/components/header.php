@@ -43,6 +43,8 @@ class HeaderComponent {
             'auditoria.php' => 'auditoria',
             'presidencia.php' => 'presidencia',
             'relatorios.php' => 'relatorios',
+            'relatorio_financeiro.php' => 'relatorios',
+            'estatisticas.php' => 'relatorios',
             'documentos.php' => 'documentos'
         ];
         

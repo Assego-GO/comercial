@@ -683,7 +683,7 @@ if ($temPermissaoFinanceiro) {
 $headerComponent = HeaderComponent::create([
     'usuario' => $usuarioLogado,
     'isDiretor' => $auth->isDiretor(),
-    'activeTab' => 'financeiro',
+    'activeTab' => 'relatorios',
     'notificationCount' => $dadosRelatorio['estatisticas_gerais']['cancelamentos'] ?? 0,
     'showSearch' => true
 ]);
