@@ -2624,15 +2624,7 @@ class HeaderComponent {
                                 <span>Meu Perfil</span>
                             </a>
                             
-                            <a href="configuracoes.php" class="dropdown-item">
-                                <i class="fas fa-cog"></i>
-                                <span>Configurações</span>
-                            </a>
                             
-                            <a href="ajuda.php" class="dropdown-item">
-                                <i class="fas fa-question-circle"></i>
-                                <span>Ajuda</span>
-                            </a>
                             
                             <div class="dropdown-divider"></div>
                             
@@ -2669,15 +2661,9 @@ class HeaderComponent {
                 <span>Meu Perfil</span>
             </a>
             
-            <a href="configuracoes.php" class="mobile-nav-item">
-                <i class="fas fa-cog"></i>
-                <span>Configurações</span>
-            </a>
+           
             
-            <a href="ajuda.php" class="mobile-nav-item">
-                <i class="fas fa-question-circle"></i>
-                <span>Ajuda</span>
-            </a>
+           
             
             <div class="mobile-nav-divider"></div>
             
