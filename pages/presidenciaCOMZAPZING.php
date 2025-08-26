@@ -3,7 +3,7 @@
  * Página da Presidência - Assinatura de Documentos
  * pages/presidencia.php
  * 
- * VERSÃO: Sistema interno de documentos apenas
+ * VERSÃO CORRIGIDA: Usa sistema interno de documentos com funcionalidades completas
  */
 
 // Tratamento de erros para debug
@@ -1262,7 +1262,9 @@ $headerComponent = HeaderComponent::create([
 
     <script>
        // ===== VARIÁVEIS GLOBAIS =====
+let documentosZapSign = [];
 let documentosFluxo = [];
+let documentosTodos = []; // Array unificado
 let paginaAtual = 1;
 let statusFiltro = '';
 let termoBusca = '';
@@ -1274,6 +1276,8 @@ let arquivoAssinado = null;
 let filtrosAtuais = {};
 let valoresBaseAtuais = {};
 let dadosSimulacao = {};
+let chartDiaSemana = null;
+let chartTempoProcessamento = null;
 const temPermissao = typeof window.temPermissaoPresidencia !== 'undefined' ? window.temPermissaoPresidencia : true;
 
 // ===== SISTEMA DE NOTIFICAÇÕES UNIFICADO =====
@@ -1366,9 +1370,44 @@ class SimpleCache {
     }
 }
 
+// ===== SISTEMA DE ATUALIZAÇÃO AUTOMÁTICA =====
+class AutoUpdater {
+    constructor(interval = 30000) {
+        this.interval = interval;
+        this.timer = null;
+        this.isActive = true;
+    }
+    
+    start() {
+        if (this.timer) this.stop();
+        
+        this.timer = setInterval(() => {
+            if (this.isActive && document.hasFocus()) {
+                carregarTodosDocumentos();
+            }
+        }, this.interval);
+    }
+    
+    stop() {
+        if (this.timer) {
+            clearInterval(this.timer);
+            this.timer = null;
+        }
+    }
+    
+    pause() {
+        this.isActive = false;
+    }
+    
+    resume() {
+        this.isActive = true;
+    }
+}
+
 // Instanciar sistemas
 const notifications = new NotificationSystem();
 const cache = new SimpleCache();
+const autoUpdater = new AutoUpdater();
 
 // ===== INICIALIZAÇÃO ROBUSTA =====
 function initializeUserDropdown() {
@@ -1443,8 +1482,8 @@ function initializeUserDropdown() {
     }
 }
 
-// ===== CARREGAMENTO DE DOCUMENTOS DO FLUXO INTERNO =====
-async function carregarDocumentosFluxo(resetarPagina = false) {
+// ===== CARREGAMENTO UNIFICADO DE DOCUMENTOS =====
+async function carregarTodosDocumentos(resetarPagina = false) {
     if (carregandoDocumentos) return;
     
     carregandoDocumentos = true;
@@ -1462,30 +1501,108 @@ async function carregarDocumentosFluxo(resetarPagina = false) {
     }
     
     try {
-        console.log('🔄 Carregando documentos do fluxo interno...');
+        console.log('🔄 Carregando TODOS os documentos (ZapSign + Fluxo Interno)...');
         
+        // Carregar AMBOS os tipos de documentos em paralelo
+        const [resultadoZapSign, resultadoFluxo] = await Promise.allSettled([
+            carregarDocumentosZapSign(),
+            carregarDocumentosFluxo()
+        ]);
+        
+        // Processar resultados
+        if (resultadoZapSign.status === 'fulfilled') {
+            documentosZapSign = resultadoZapSign.value || [];
+            console.log('✅ ZapSign carregados:', documentosZapSign.length);
+        } else {
+            console.error('❌ Erro ao carregar ZapSign:', resultadoZapSign.reason);
+            documentosZapSign = [];
+        }
+        
+        if (resultadoFluxo.status === 'fulfilled') {
+            documentosFluxo = resultadoFluxo.value || [];
+            console.log('✅ Fluxo Interno carregados:', documentosFluxo.length);
+        } else {
+            console.error('❌ Erro ao carregar Fluxo Interno:', resultadoFluxo.reason);
+            documentosFluxo = [];
+        }
+        
+        // Unificar e renderizar documentos
+        unificarERenderizarDocumentos();
+        
+        const totalDocs = documentosZapSign.length + documentosFluxo.length;
+        notifications.show(`${totalDocs} documento(s) carregado(s) (${documentosZapSign.length} ZapSign + ${documentosFluxo.length} Fluxo Interno)`, 'success', 4000);
+        
+    } catch (error) {
+        console.error('❌ Erro ao carregar documentos:', error);
+        mostrarErroCarregamento(error.message);
+        notifications.show('Erro ao carregar documentos: ' + error.message, 'error');
+    } finally {
+        carregandoDocumentos = false;
+    }
+}
+
+// ===== CARREGAMENTO ESPECÍFICO DOS DOCUMENTOS ZAPSIGN =====
+async function carregarDocumentosZapSign() {
+    try {
+        statusFiltro = document.getElementById('filterStatus')?.value || '';
+        termoBusca = document.getElementById('searchInput')?.value || '';
+        ordenacao = document.getElementById('filterOrdenacao')?.value || 'desc';
+        
+        const params = new URLSearchParams({
+            page: paginaAtual,
+            sort_order: ordenacao
+        });
+        
+        if (statusFiltro) params.append('status', statusFiltro);
+        if (termoBusca) params.append('search', termoBusca);
+        
+        const response = await fetch(`../api/documentos/zapsign_listar_documentos.php?${params}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            credentials: 'same-origin'
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Erro HTTP ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data.status === 'success') {
+            return data.data || [];
+        } else {
+            throw new Error(data.message || 'Erro ao carregar documentos ZapSign');
+        }
+        
+    } catch (error) {
+        console.error('❌ Erro ZapSign:', error);
+        return [];
+    }
+}
+
+// ===== CARREGAMENTO ESPECÍFICO DOS DOCUMENTOS DO FLUXO INTERNO =====
+async function carregarDocumentosFluxo() {
+    try {
         // Montar filtros para o fluxo interno
         const filtros = {};
         
-        const statusFiltroAtual = document.getElementById('filtroStatusFluxo')?.value || '';
-        const termoBuscaAtual = document.getElementById('filtroBuscaFluxo')?.value || '';
-        const tipoFluxo = document.getElementById('filtroTipoFluxo')?.value || '';
-        const periodo = document.getElementById('filtroPeriodo')?.value || '';
-        
-        if (statusFiltroAtual) {
-            filtros.status = statusFiltroAtual;
+        // Mapear filtros da interface para API do fluxo
+        if (statusFiltro) {
+            // Mapear status ZapSign para status do fluxo interno
+            const mapeamentoStatus = {
+                'pending': 'AGUARDANDO_ASSINATURA',
+                'signed': 'ASSINADO',
+                'refused': 'RECUSADO',
+                'expired': 'EXPIRADO'
+            };
+            filtros.status = mapeamentoStatus[statusFiltro] || statusFiltro;
         }
         
-        if (termoBuscaAtual) {
-            filtros.busca = termoBuscaAtual;
-        }
-        
-        if (tipoFluxo) {
-            filtros.tipo_origem = tipoFluxo;
-        }
-        
-        if (periodo) {
-            filtros.periodo = periodo;
+        if (termoBusca) {
+            filtros.busca = termoBusca;
         }
         
         const params = new URLSearchParams(filtros);
@@ -1506,203 +1623,83 @@ async function carregarDocumentosFluxo(resetarPagina = false) {
         const data = await response.json();
         
         if (data.status === 'success') {
-            documentosFluxo = data.data || [];
-            console.log('✅ Documentos do fluxo interno carregados:', documentosFluxo.length);
-            
-            renderizarDocumentosFluxo();
-            
-            notifications.show(`${documentosFluxo.length} documento(s) carregado(s) do sistema interno`, 'success', 3000);
+            return data.data || [];
         } else {
             throw new Error(data.message || 'Erro ao carregar documentos do fluxo interno');
         }
         
     } catch (error) {
-        console.error('❌ Erro ao carregar documentos:', error);
-        mostrarErroCarregamento(error.message);
-        notifications.show('Erro ao carregar documentos: ' + error.message, 'error');
-    } finally {
-        carregandoDocumentos = false;
+        console.error('❌ Erro Fluxo Interno:', error);
+        return [];
     }
 }
 
-// ===== RENDERIZAÇÃO DOS DOCUMENTOS DO FLUXO INTERNO =====
-function renderizarDocumentosFluxo() {
+// ===== UNIFICAÇÃO E RENDERIZAÇÃO DOS DOCUMENTOS =====
+function unificarERenderizarDocumentos() {
     const container = document.getElementById('documentsList');
     container.innerHTML = '';
     
     // Adicionar CSS moderno se não existir
     adicionarEstilosModernos();
     
-    console.log('📋 Renderizando documentos do fluxo interno:', documentosFluxo.length);
+    // Unificar documentos com identificação de origem
+    documentosTodos = [];
     
-    if (documentosFluxo.length === 0) {
+    // Adicionar documentos ZapSign
+    documentosZapSign.forEach(doc => {
+        documentosTodos.push({
+            ...doc,
+            tipo_sistema: 'ZAPSIGN',
+            sistema_nome: 'ZapSign',
+            sistema_cor: 'primary',
+            sistema_icone: 'fas fa-cloud'
+        });
+    });
+    
+    // Adicionar documentos do fluxo interno
+    documentosFluxo.forEach(doc => {
+        documentosTodos.push({
+            ...doc,
+            tipo_sistema: 'FLUXO_INTERNO',
+            sistema_nome: 'Sistema Interno',
+            sistema_cor: 'success',
+            sistema_icone: 'fas fa-building'
+        });
+    });
+    
+    console.log('📋 Documentos unificados:', documentosTodos.length);
+    
+    if (documentosTodos.length === 0) {
         mostrarEstadoVazio();
         return;
     }
     
     // Ordenar por data (mais recentes primeiro)
-    documentosFluxo.sort((a, b) => {
-        const dataA = new Date(a.data_upload || 0);
-        const dataB = new Date(b.data_upload || 0);
+    documentosTodos.sort((a, b) => {
+        const dataA = new Date(a.created_at || a.data_upload || 0);
+        const dataB = new Date(b.created_at || b.data_upload || 0);
         return dataB - dataA;
     });
     
     // Renderizar cada documento
-    documentosFluxo.forEach(doc => {
+    documentosTodos.forEach(doc => {
         const itemDiv = document.createElement('div');
-        itemDiv.className = 'document-item-modern document-fluxo-interno';
+        itemDiv.className = `document-item-modern document-${doc.tipo_sistema.toLowerCase()}`;
         itemDiv.dataset.docId = doc.id;
+        itemDiv.dataset.tipoSistema = doc.tipo_sistema;
         
-        renderizarDocumentoFluxoInterno(itemDiv, doc);
+        if (doc.tipo_sistema === 'ZAPSIGN') {
+            itemDiv.dataset.token = doc.token;
+            renderizarDocumentoZapSign(itemDiv, doc);
+        } else {
+            renderizarDocumentoFluxo(itemDiv, doc);
+        }
         
         container.appendChild(itemDiv);
     });
-}
-
-// ===== RENDERIZAÇÃO ESPECÍFICA PARA FLUXO INTERNO =====
-function renderizarDocumentoFluxoInterno(container, doc) {
-    const statusIcon = getStatusIconFluxo(doc.status_fluxo);
-    const actionButtons = getActionButtonsFluxo(doc);
-    const isPresencial = doc.tipo_origem === 'FISICO';
-    const diasEmProcesso = doc.dias_em_processo || 0;
     
-    container.innerHTML = `
-        <div class="document-card-modern">
-            <!-- Header com badges organizados -->
-            <div class="document-header-modern">
-                <div class="document-icon-modern">
-                    <i class="fas fa-file-pdf"></i>
-                </div>
-                <div class="document-title-section">
-                    <h6 class="document-title-modern">Ficha de Filiação</h6>
-                    <div class="document-badges">
-                        <span class="badge badge-sistema bg-success">
-                            <i class="fas fa-building"></i> Sistema Interno
-                        </span>
-                        <span class="badge badge-origem bg-${isPresencial ? 'warning' : 'info'}">
-                            <i class="fas fa-${isPresencial ? 'handshake' : 'desktop'}"></i> ${isPresencial ? 'Presencial' : 'Virtual'}
-                        </span>
-                        <span class="badge badge-status status-${doc.status_fluxo?.toLowerCase().replace('_', '-')}">
-                            ${statusIcon} ${doc.status_descricao || doc.status_fluxo}
-                        </span>
-                        ${diasEmProcesso > 0 ? `
-                        <span class="badge badge-urgencia bg-danger">
-                            <i class="fas fa-exclamation-triangle"></i> ${diasEmProcesso} dias
-                        </span>
-                        ` : ''}
-                    </div>
-                </div>
-                <div class="document-actions-modern">
-                    ${actionButtons}
-                </div>
-            </div>
-            
-            <!-- Informações do Associado -->
-            <div class="document-associado-info">
-                <div class="info-row">
-                    <i class="fas fa-user icon-info"></i>
-                    <div class="info-content">
-                        <span class="info-label">Associado:</span>
-                        <span class="info-value">${doc.associado_nome || 'N/A'}</span>
-                    </div>
-                </div>
-                <div class="info-row">
-                    <i class="fas fa-id-card icon-info"></i>
-                    <div class="info-content">
-                        <span class="info-label">CPF:</span>
-                        <span class="info-value">${formatarCPF(doc.associado_cpf)}</span>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Grid de informações técnicas -->
-            <div class="document-meta-grid">
-                <div class="meta-item-modern">
-                    <i class="fas fa-calendar-plus meta-icon"></i>
-                    <div class="meta-content">
-                        <span class="meta-label">Upload</span>
-                        <span class="meta-value">${formatarData(doc.data_upload)}</span>
-                    </div>
-                </div>
-                <div class="meta-item-modern">
-                    <i class="fas fa-building meta-icon"></i>
-                    <div class="meta-content">
-                        <span class="meta-label">Departamento</span>
-                        <span class="meta-value">${doc.departamento_atual_nome || 'Comercial'}</span>
-                    </div>
-                </div>
-                <div class="meta-item-modern">
-                    <i class="fas fa-hashtag meta-icon"></i>
-                    <div class="meta-content">
-                        <span class="meta-label">ID Associado</span>
-                        <span class="meta-value">${doc.associado_id || 'N/A'}</span>
-                    </div>
-                </div>
-                <div class="meta-item-modern">
-                    <i class="fas fa-route meta-icon"></i>
-                    <div class="meta-content">
-                        <span class="meta-label">Origem</span>
-                        <span class="meta-value">${isPresencial ? 'Digitalizada' : 'Sistema'}</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-}
-
-// ===== FUNÇÕES DE SUPORTE PARA ÍCONES E AÇÕES =====
-function getStatusIconFluxo(status) {
-    const icons = {
-        'DIGITALIZADO': '<i class="fas fa-upload"></i>',
-        'AGUARDANDO_ASSINATURA': '<i class="fas fa-clock"></i>',
-        'ASSINADO': '<i class="fas fa-check"></i>',
-        'FINALIZADO': '<i class="fas fa-flag-checkered"></i>'
-    };
-    
-    return icons[status] || '<i class="fas fa-file"></i>';
-}
-
-function getActionButtonsFluxo(doc) {
-    let buttons = '';
-    
-    // Botão download sempre disponível
-    buttons += `
-        <button class="btn-action primary" onclick="downloadDocumentoFluxo(${doc.id})" title="Download">
-            <i class="fas fa-download"></i>
-            <span class="btn-text">Baixar</span>
-        </button>
-    `;
-    
-    // Ações específicas por status
-    switch (doc.status_fluxo) {
-        case 'AGUARDANDO_ASSINATURA':
-            buttons += `
-                <button class="btn-action success" onclick="abrirModalAssinaturaFluxo(${doc.id})" title="Assinar Documento">
-                    <i class="fas fa-signature"></i>
-                    <span class="btn-text">Assinar</span>
-                </button>
-            `;
-            break;
-            
-        case 'ASSINADO':
-            buttons += `
-                <button class="btn-action warning" onclick="finalizarProcessoFluxo(${doc.id})" title="Finalizar Processo">
-                    <i class="fas fa-flag-checkered"></i>
-                    <span class="btn-text">Finalizar</span>
-                </button>
-            `;
-            break;
-    }
-    
-    // Histórico sempre disponível
-    buttons += `
-        <button class="btn-action secondary" onclick="verHistoricoFluxo(${doc.id})" title="Ver Histórico">
-            <i class="fas fa-history"></i>
-            <span class="btn-text">Histórico</span>
-        </button>
-    `;
-    
-    return buttons;
+    // Atualizar estatísticas
+    atualizarEstatisticasUnificadas();
 }
 
 // ===== ADICIONAR ESTILOS MODERNOS =====
@@ -2048,7 +2045,11 @@ function adicionarEstilosModernos() {
         }
         
         /* Melhorias visuais */
-        .document-item-modern.document-fluxo-interno {
+        .document-item-modern.document-zapsign {
+            border-left: 4px solid #007bff;
+        }
+        
+        .document-item-modern.document-fluxo_interno {
             border-left: 4px solid #28a745;
         }
         
@@ -2075,12 +2076,660 @@ function adicionarEstilosModernos() {
         }
         
         /* Indicadores de sistema melhorados */
+        .badge-sistema.bg-primary {
+            background: linear-gradient(135deg, #007bff, #0056b3) !important;
+        }
+        
         .badge-sistema.bg-success {
             background: linear-gradient(135deg, #28a745, #1e7e34) !important;
+        }
+        
+        /* Scroll personalizado para container se necessário */
+        .documents-list {
+            scrollbar-width: thin;
+            scrollbar-color: #cbd5e0 #f7fafc;
+        }
+        
+        .documents-list::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .documents-list::-webkit-scrollbar-track {
+            background: #f7fafc;
+            border-radius: 3px;
+        }
+        
+        .documents-list::-webkit-scrollbar-thumb {
+            background: #cbd5e0;
+            border-radius: 3px;
+        }
+        
+        .documents-list::-webkit-scrollbar-thumb:hover {
+            background: #a0aec0;
         }
     `;
     
     document.head.appendChild(style);
+}
+
+// ===== RENDERIZAÇÃO ESPECÍFICA PARA ZAPSIGN =====
+function renderizarDocumentoZapSign(container, doc) {
+    const statusIcon = getStatusIconZapSign(doc.status);
+    const actionButtons = getActionButtonsZapSign(doc);
+    
+    container.innerHTML = `
+        <div class="document-card-modern">
+            <!-- Header com badges organizados -->
+            <div class="document-header-modern">
+                <div class="document-icon-modern">
+                    <i class="fas fa-file-pdf"></i>
+                </div>
+                <div class="document-title-section">
+                    <h6 class="document-title-modern">${escapeHtml(doc.name)}</h6>
+                    <div class="document-badges">
+                        <span class="badge badge-sistema bg-${doc.sistema_cor}">
+                            <i class="${doc.sistema_icone}"></i> ${doc.sistema_nome}
+                        </span>
+                        <span class="badge badge-status status-${doc.status}">
+                            ${statusIcon} ${doc.status_label}
+                        </span>
+                    </div>
+                </div>
+                <div class="document-actions-modern">
+                    ${actionButtons}
+                </div>
+            </div>
+            
+            <!-- Informações do Associado (se existir) -->
+            ${doc.associado?.id ? `
+            <div class="document-associado-info">
+                <div class="info-row">
+                    <i class="fas fa-user icon-info"></i>
+                    <div class="info-content">
+                        <span class="info-label">Associado:</span>
+                        <span class="info-value">${doc.associado.id} - ${escapeHtml(doc.associado.nome || 'N/A')}</span>
+                    </div>
+                </div>
+                ${doc.associado.situacao ? `
+                <div class="info-row">
+                    <i class="fas fa-info-circle icon-info"></i>
+                    <div class="info-content">
+                        <span class="info-label">Situação:</span>
+                        <span class="badge bg-secondary">${escapeHtml(doc.associado.situacao)}</span>
+                    </div>
+                </div>
+                ` : ''}
+            </div>
+            ` : ''}
+            
+            <!-- Grid de informações técnicas -->
+            <div class="document-meta-grid">
+                <div class="meta-item-modern">
+                    <i class="fas fa-calendar-plus meta-icon"></i>
+                    <div class="meta-content">
+                        <span class="meta-label">Criado</span>
+                        <span class="meta-value">${doc.created_at_formatted}</span>
+                    </div>
+                </div>
+                <div class="meta-item-modern">
+                    <i class="fas fa-clock meta-icon"></i>
+                    <div class="meta-content">
+                        <span class="meta-label">Atualizado</span>
+                        <span class="meta-value">${doc.last_update_formatted}</span>
+                    </div>
+                </div>
+                <div class="meta-item-modern">
+                    <i class="fas fa-hourglass-half meta-icon"></i>
+                    <div class="meta-content">
+                        <span class="meta-label">Tempo</span>
+                        <span class="meta-value">${doc.tempo_desde_criacao}</span>
+                    </div>
+                </div>
+                <div class="meta-item-modern">
+                    <i class="fas fa-folder meta-icon"></i>
+                    <div class="meta-content">
+                        <span class="meta-label">Pasta</span>
+                        <span class="meta-value">${doc.folder_path}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// ===== RENDERIZAÇÃO ESPECÍFICA PARA FLUXO INTERNO =====
+function renderizarDocumentoFluxo(container, doc) {
+    const statusIcon = getStatusIconFluxo(doc.status_fluxo);
+    const actionButtons = getActionButtonsFluxo(doc);
+    const isPresencial = doc.tipo_origem === 'FISICO';
+    const diasEmProcesso = doc.dias_em_processo || 0;
+    
+    container.innerHTML = `
+        <div class="document-card-modern">
+            <!-- Header com badges organizados -->
+            <div class="document-header-modern">
+                <div class="document-icon-modern">
+                    <i class="fas fa-file-pdf"></i>
+                </div>
+                <div class="document-title-section">
+                    <h6 class="document-title-modern">Ficha de Filiação</h6>
+                    <div class="document-badges">
+                        <span class="badge badge-sistema bg-${doc.sistema_cor}">
+                            <i class="${doc.sistema_icone}"></i> ${doc.sistema_nome}
+                        </span>
+                        <span class="badge badge-origem bg-${isPresencial ? 'warning' : 'info'}">
+                            <i class="fas fa-${isPresencial ? 'handshake' : 'desktop'}"></i> ${isPresencial ? 'Presencial' : 'Virtual'}
+                        </span>
+                        <span class="badge badge-status status-${doc.status_fluxo?.toLowerCase().replace('_', '-')}">
+                            ${statusIcon} ${doc.status_descricao || doc.status_fluxo}
+                        </span>
+                        ${diasEmProcesso > 0 ? `
+                        <span class="badge badge-urgencia bg-danger">
+                            <i class="fas fa-exclamation-triangle"></i> ${diasEmProcesso} dias
+                        </span>
+                        ` : ''}
+                    </div>
+                </div>
+                <div class="document-actions-modern">
+                    ${actionButtons}
+                </div>
+            </div>
+            
+            <!-- Informações do Associado -->
+            <div class="document-associado-info">
+                <div class="info-row">
+                    <i class="fas fa-user icon-info"></i>
+                    <div class="info-content">
+                        <span class="info-label">Associado:</span>
+                        <span class="info-value">${doc.associado_nome || 'N/A'}</span>
+                    </div>
+                </div>
+                <div class="info-row">
+                    <i class="fas fa-id-card icon-info"></i>
+                    <div class="info-content">
+                        <span class="info-label">CPF:</span>
+                        <span class="info-value">${formatarCPF(doc.associado_cpf)}</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Grid de informações técnicas -->
+            <div class="document-meta-grid">
+                <div class="meta-item-modern">
+                    <i class="fas fa-calendar-plus meta-icon"></i>
+                    <div class="meta-content">
+                        <span class="meta-label">Upload</span>
+                        <span class="meta-value">${formatarData(doc.data_upload)}</span>
+                    </div>
+                </div>
+                <div class="meta-item-modern">
+                    <i class="fas fa-building meta-icon"></i>
+                    <div class="meta-content">
+                        <span class="meta-label">Departamento</span>
+                        <span class="meta-value">${doc.departamento_atual_nome || 'Comercial'}</span>
+                    </div>
+                </div>
+                <div class="meta-item-modern">
+                    <i class="fas fa-hashtag meta-icon"></i>
+                    <div class="meta-content">
+                        <span class="meta-label">ID Associado</span>
+                        <span class="meta-value">${doc.associado_id || 'N/A'}</span>
+                    </div>
+                </div>
+                <div class="meta-item-modern">
+                    <i class="fas fa-route meta-icon"></i>
+                    <div class="meta-content">
+                        <span class="meta-label">Origem</span>
+                        <span class="meta-value">${isPresencial ? 'Digitalizada' : 'Sistema'}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// ===== FUNÇÕES DE SUPORTE PARA ÍCONES E AÇÕES =====
+function getStatusIconZapSign(status) {
+    const icons = {
+        'pending': '<i class="fas fa-clock"></i>',
+        'signed': '<i class="fas fa-check-circle"></i>',
+        'refused': '<i class="fas fa-times-circle"></i>',
+        'expired': '<i class="fas fa-hourglass-end"></i>'
+    };
+    
+    return icons[status] || '<i class="fas fa-question-circle"></i>';
+}
+
+function getStatusIconFluxo(status) {
+    const icons = {
+        'DIGITALIZADO': '<i class="fas fa-upload"></i>',
+        'AGUARDANDO_ASSINATURA': '<i class="fas fa-clock"></i>',
+        'ASSINADO': '<i class="fas fa-check"></i>',
+        'FINALIZADO': '<i class="fas fa-flag-checkered"></i>'
+    };
+    
+    return icons[status] || '<i class="fas fa-file"></i>';
+}
+
+function getActionButtonsZapSign(doc) {
+    let buttons = '';
+    
+    // Botão visualizar
+    if (doc.original_file || doc.signed_file) {
+        buttons += `
+            <button class="btn-action secondary" onclick="visualizarDocumentoZapSign('${doc.token}', '${doc.status}')" title="Visualizar documento">
+                <i class="fas fa-eye"></i>
+                <span class="btn-text">Visualizar</span>
+            </button>
+        `;
+    }
+    
+    // Botão assinar presidente (ZapSign)
+    if (doc.status === 'pending' && doc.signed_file) {
+        buttons += `
+            <button class="btn-action primary" onclick="abrirLinkAssinaturaPresidente('${doc.token}')" title="Assinar como presidente">
+                <i class="fas fa-signature"></i>
+                <span class="btn-text">Assinar</span>
+            </button>
+        `;
+    }
+    
+    // Ações específicas por status
+    switch (doc.status) {
+        case 'pending':
+            buttons += `
+                <button class="btn-action warning" onclick="acompanharDocumentoZapSign('${doc.token}')" title="Ver detalhes">
+                    <i class="fas fa-users"></i>
+                    <span class="btn-text">Detalhes</span>
+                </button>
+            `;
+            break;
+            
+        case 'signed':
+            if (doc.signed_file) {
+                buttons += `
+                    <button class="btn-action success" onclick="baixarDocumentoAssinado('${doc.token}')" title="Baixar assinado">
+                        <i class="fas fa-download"></i>
+                        <span class="btn-text">Baixar</span>
+                    </button>
+                `;
+            }
+            break;
+    }
+    
+    return buttons;
+}
+
+function getActionButtonsFluxo(doc) {
+    let buttons = '';
+    
+    // Botão download sempre disponível
+    buttons += `
+        <button class="btn-action primary" onclick="downloadDocumentoFluxo(${doc.id})" title="Download">
+            <i class="fas fa-download"></i>
+            <span class="btn-text">Baixar</span>
+        </button>
+    `;
+    
+    // Ações específicas por status
+    switch (doc.status_fluxo) {
+        case 'AGUARDANDO_ASSINATURA':
+            buttons += `
+                <button class="btn-action success" onclick="abrirModalAssinaturaFluxo(${doc.id})" title="Assinar Documento">
+                    <i class="fas fa-signature"></i>
+                    <span class="btn-text">Assinar</span>
+                </button>
+            `;
+            break;
+            
+        case 'ASSINADO':
+            buttons += `
+                <button class="btn-action warning" onclick="finalizarProcessoFluxo(${doc.id})" title="Finalizar Processo">
+                    <i class="fas fa-flag-checkered"></i>
+                    <span class="btn-text">Finalizar</span>
+                </button>
+            `;
+            break;
+    }
+    
+    // Histórico sempre disponível
+    buttons += `
+        <button class="btn-action secondary" onclick="verHistoricoFluxo(${doc.id})" title="Ver Histórico">
+            <i class="fas fa-history"></i>
+            <span class="btn-text">Histórico</span>
+        </button>
+    `;
+    
+    return buttons;
+}
+
+// ===== OTIMIZAÇÃO RESPONSIVA =====
+function otimizarResponsividade() {
+    // Verificar tamanho da tela e ajustar interface
+    const isMobile = window.innerWidth <= 768;
+    const isSmallMobile = window.innerWidth <= 480;
+    
+    if (isMobile) {
+        // Ocultar texto dos botões em dispositivos móveis
+        const btnTexts = document.querySelectorAll('.btn-text');
+        btnTexts.forEach(text => {
+            text.style.display = isSmallMobile ? 'none' : 'inline';
+        });
+        
+        // Ajustar grid de metadados para uma coluna em dispositivos pequenos
+        const metaGrids = document.querySelectorAll('.document-meta-grid');
+        metaGrids.forEach(grid => {
+            if (isSmallMobile) {
+                grid.style.gridTemplateColumns = '1fr';
+            } else {
+                grid.style.gridTemplateColumns = 'repeat(auto-fit, minmax(200px, 1fr))';
+            }
+        });
+    }
+}
+
+// ===== MELHORIAS NA PERFORMANCE =====
+function otimizarPerformance() {
+    // Debounce para resize
+    let resizeTimeout;
+    window.addEventListener('resize', () => {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(otimizarResponsividade, 150);
+    });
+    
+    // Lazy loading para elementos visuais pesados (se necessário)
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('visible');
+            }
+        });
+    }, { threshold: 0.1 });
+    
+    // Observar elementos que entram na viewport
+    const observeElements = () => {
+        document.querySelectorAll('.document-item-modern').forEach(el => {
+            observer.observe(el);
+        });
+    };
+    
+    // Chamar quando elementos são adicionados
+    const originalAppendChild = Element.prototype.appendChild;
+    Element.prototype.appendChild = function(child) {
+        const result = originalAppendChild.call(this, child);
+        if (child.classList && child.classList.contains('document-item-modern')) {
+            observer.observe(child);
+        }
+        return result;
+    };
+}
+
+// ===== FUNÇÃO PARA GARANTIR COMPATIBILIDADE =====
+function garantirCompatibilidade() {
+    // Verificar se jQuery está disponível
+    const jqueryDisponivel = typeof $ !== 'undefined';
+    
+    // Verificar se Bootstrap está disponível
+    const bootstrapDisponivel = typeof bootstrap !== 'undefined';
+    
+    // Log de compatibilidade
+    console.log('📋 Verificação de Compatibilidade:');
+    console.log('  jQuery:', jqueryDisponivel ? '✅ Disponível' : '❌ Não disponível');
+    console.log('  Bootstrap:', bootstrapDisponivel ? '✅ Disponível' : '❌ Não disponível');
+    
+    // Se Bootstrap não estiver disponível, adicionar polyfill básico para modais
+    if (!bootstrapDisponivel && typeof $ !== 'undefined') {
+        console.log('🔧 Aplicando polyfill para Bootstrap...');
+        
+        // Polyfill básico para modal
+        if (!$.fn.modal) {
+            $.fn.modal = function(action) {
+                return this.each(function() {
+                    const $this = $(this);
+                    if (action === 'show') {
+                        $this.show().css('display', 'block').addClass('show');
+                        $('body').addClass('modal-open');
+                    } else if (action === 'hide') {
+                        $this.hide().removeClass('show');
+                        $('body').removeClass('modal-open');
+                    }
+                });
+            };
+        }
+    }
+    
+    // Garantir que Font Awesome está carregado
+    const fontAwesome = document.querySelector('link[href*="font-awesome"], link[href*="fontawesome"]');
+    if (!fontAwesome) {
+        console.log('⚠️ Font Awesome pode não estar carregado - alguns ícones podem não aparecer');
+    }
+    
+    return {
+        jquery: jqueryDisponivel,
+        bootstrap: bootstrapDisponivel,
+        fontAwesome: !!fontAwesome
+    };
+}
+
+// ===== FUNÇÃO DE HEALTH CHECK =====
+function executarHealthCheck() {
+    console.log('🏥 Executando Health Check do Sistema...');
+    
+    const checks = {
+        permissao: temPermissao,
+        containerDocumentos: !!document.getElementById('documentsList'),
+        apis: {
+            zapsign: false,
+            fluxoInterno: false
+        },
+        bibliotecas: garantirCompatibilidade(),
+        elementos: {
+            filtros: !!document.getElementById('filterStatus'),
+            busca: !!document.getElementById('searchInput'),
+            modais: !!document.getElementById('assinaturaModal')
+        }
+    };
+    
+    // Teste rápido das APIs (sem fazer requisições completas)
+    const testarAPIs = async () => {
+        try {
+            // Teste ZapSign
+            const responseZap = await fetch('../api/documentos/zapsign_listar_documentos.php?page=1&limit=1', {
+                method: 'HEAD'
+            });
+            checks.apis.zapsign = responseZap.ok;
+        } catch (e) {
+            checks.apis.zapsign = false;
+        }
+        
+        try {
+            // Teste Fluxo Interno
+            const responseFluxo = await fetch('../api/documentos/documentos_fluxo_listar.php', {
+                method: 'HEAD'
+            });
+            checks.apis.fluxoInterno = responseFluxo.ok;
+        } catch (e) {
+            checks.apis.fluxoInterno = false;
+        }
+        
+        console.log('📊 Resultado do Health Check:', checks);
+        
+        // Mostrar warnings se necessário
+        if (!checks.apis.zapsign) {
+            console.warn('⚠️ API ZapSign não está respondendo');
+        }
+        
+        if (!checks.apis.fluxoInterno) {
+            console.warn('⚠️ API Fluxo Interno não está respondendo');
+        }
+        
+        if (!checks.elementos.filtros) {
+            console.warn('⚠️ Elementos de filtro não encontrados');
+        }
+        
+        return checks;
+    };
+    
+    // Executar testes assíncronos
+    testarAPIs();
+    
+    return checks;
+}
+
+// ===== AÇÕES ESPECÍFICAS PARA ZAPSIGN =====
+async function abrirLinkAssinaturaPresidente(token) {
+    try {
+        notifications.show('Buscando link de assinatura...', 'info', 2000);
+        
+        const response = await fetch(`../api/documentos/zapsign_detalhar_documento.php?token=${token}`);
+        const data = await response.json();
+        
+        if (data.status === 'success' && data.data.signers) {
+            const presidente = data.data.signers[1];
+            
+            if (!presidente) {
+                throw new Error('Presidente (signatário 2) não encontrado');
+            }
+            
+            if (!presidente.sign_url) {
+                throw new Error('Link de assinatura do presidente não disponível');
+            }
+            
+            window.open(presidente.sign_url, '_blank');
+            notifications.show('Link de assinatura aberto!', 'success', 3000);
+            
+        } else {
+            throw new Error('Dados do documento não encontrados');
+        }
+        
+    } catch (error) {
+        console.error('Erro ao abrir link de assinatura:', error);
+        notifications.show('Erro: ' + error.message, 'error');
+    }
+}
+
+function visualizarDocumentoZapSign(token, status) {
+    const documento = documentosZapSign.find(doc => doc.token === token);
+    
+    if (!documento) {
+        notifications.show('Documento não encontrado na lista atual', 'error');
+        return;
+    }
+    
+    let linkParaAbrir = null;
+    
+    if (status === 'signed' && documento.signed_file) {
+        linkParaAbrir = documento.signed_file;
+    } else if (documento.original_file) {
+        linkParaAbrir = documento.original_file;
+    } else {
+        notifications.show('Nenhum arquivo disponível para visualização', 'warning');
+        return;
+    }
+    
+    window.open(linkParaAbrir, '_blank');
+}
+
+function acompanharDocumentoZapSign(token) {
+    const documento = documentosZapSign.find(doc => doc.token === token);
+    
+    if (!documento) {
+        notifications.show('Documento não encontrado', 'error');
+        return;
+    }
+    
+    const modal = document.createElement('div');
+    modal.className = 'modal fade';
+    modal.innerHTML = `
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-info-circle"></i>
+                        Detalhes do Documento ZapSign
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <table class="table table-sm">
+                        <tr>
+                            <td><strong>Nome:</strong></td>
+                            <td>${escapeHtml(documento.name || 'N/A')}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Status:</strong></td>
+                            <td>
+                                <span class="badge bg-${getStatusBadgeClass(documento.status)}">
+                                    ${documento.status_label || documento.status}
+                                </span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><strong>Token:</strong></td>
+                            <td><code>${documento.token}</code></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Criado:</strong></td>
+                            <td>${documento.created_at_formatted || 'N/A'}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Tempo:</strong></td>
+                            <td>${documento.tempo_desde_criacao || 'N/A'}</td>
+                        </tr>
+                    </table>
+                    
+                    <div class="d-flex gap-2 mt-3">
+                        ${documento.original_file ? `
+                            <button class="btn btn-outline-primary btn-sm" onclick="window.open('${documento.original_file}', '_blank')">
+                                <i class="fas fa-file-pdf"></i> Ver Original
+                            </button>
+                        ` : ''}
+                        ${documento.signed_file ? `
+                            <button class="btn btn-outline-success btn-sm" onclick="window.open('${documento.signed_file}', '_blank')">
+                                <i class="fas fa-file-pdf"></i> Ver Assinado
+                            </button>
+                        ` : ''}
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    const bsModal = new bootstrap.Modal(modal);
+    bsModal.show();
+    
+    modal.addEventListener('hidden.bs.modal', () => {
+        modal.remove();
+    });
+}
+
+function baixarDocumentoAssinado(token) {
+    const documento = documentosZapSign.find(doc => doc.token === token);
+    
+    if (!documento) {
+        notifications.show('Documento não encontrado', 'error');
+        return;
+    }
+    
+    if (!documento.signed_file) {
+        notifications.show('Documento assinado não disponível', 'warning');
+        return;
+    }
+    
+    const link = document.createElement('a');
+    link.href = documento.signed_file;
+    link.download = `${documento.name}_assinado.pdf`;
+    link.target = '_blank';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    notifications.show('Download iniciado', 'success');
 }
 
 // ===== AÇÕES ESPECÍFICAS PARA FLUXO INTERNO =====
@@ -2160,7 +2809,7 @@ function finalizarProcessoFluxo(documentoId) {
         .then(result => {
             if (result.status === 'success') {
                 notifications.show('Processo finalizado com sucesso! O pré-cadastro já pode ser aprovado.', 'success');
-                carregarDocumentosFluxo();
+                carregarTodosDocumentos();
             } else {
                 notifications.show('Erro: ' + result.message, 'error');
             }
@@ -2273,7 +2922,7 @@ function confirmarAssinatura() {
                 bootstrap.Modal.getInstance(document.getElementById('assinaturaModal')).hide();
                 notifications.show('Documento assinado com sucesso!', 'success');
                 
-                carregarDocumentosFluxo();
+                carregarTodosDocumentos();
             } else {
                 throw new Error(result.message || 'Erro desconhecido');
             }
@@ -2293,6 +2942,206 @@ function confirmarAssinatura() {
         btnAssinar.disabled = false;
         btnAssinar.innerHTML = originalContent;
     }
+}
+
+// ===== CARREGAMENTO DE ESTATÍSTICAS UNIFICADAS =====
+async function carregarEstatisticasZapSign() {
+    try {
+        console.log('🔄 Carregando estatísticas ZapSign...');
+        
+        const response = await fetch('../api/documentos/zapsign_estatisticas.php', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            credentials: 'same-origin'
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Erro HTTP ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data.status === 'success') {
+            atualizarCardsEstatisticas(data.data);
+            
+            if (data.cache) {
+                console.log('📊 Estatísticas carregadas do cache');
+            } else {
+                console.log('📊 Estatísticas obtidas da API ZapSign');
+            }
+            
+            if (!data.cache) {
+                setTimeout(carregarEstatisticasZapSign, 5 * 60 * 1000);
+            }
+        } else {
+            throw new Error(data.message || 'Erro desconhecido');
+        }
+        
+    } catch (error) {
+        console.error('❌ Erro ao carregar estatísticas:', error);
+        mostrarEstatisticasErro();
+        setTimeout(carregarEstatisticasZapSign, 30 * 1000);
+    }
+}
+
+function atualizarCardsEstatisticas(dados) {
+    const aguardandoElement = document.querySelector('.stat-card:nth-child(1) .stat-value');
+    const aguardandoStatus = document.querySelector('.stat-card:nth-child(1) .stat-change');
+    
+    if (aguardandoElement) {
+        // Somar pendentes do ZapSign + aguardando assinatura do fluxo interno
+        const totalPendentes = (dados.pending || 0) + documentosFluxo.filter(doc => doc.status_fluxo === 'AGUARDANDO_ASSINATURA').length;
+        aguardandoElement.textContent = totalPendentes;
+        
+        if (aguardandoStatus) {
+            if (totalPendentes > 0) {
+                aguardandoStatus.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Requer atenção';
+                aguardandoStatus.className = 'stat-change negative';
+            } else {
+                aguardandoStatus.innerHTML = '<i class="fas fa-check-circle"></i> Tudo em dia';
+                aguardandoStatus.className = 'stat-change positive';
+            }
+        }
+    }
+    
+    const assinadosHojeElement = document.querySelector('.stat-card:nth-child(2) .stat-value');
+    const assinadosHojeStatus = document.querySelector('.stat-card:nth-child(2) .stat-change');
+    
+    if (assinadosHojeElement) {
+        const hoje = new Date().toDateString();
+        const assinadosZapSignHoje = (dados.documentos_recentes || []).filter(doc => {
+            if (doc.status === 'signed' && doc.created_at) {
+                const docDate = new Date(doc.created_at).toDateString();
+                return docDate === hoje;
+            }
+            return false;
+        }).length;
+        
+        // Somar assinados do ZapSign + assinados do fluxo interno hoje
+        const assinadosFluxoHoje = documentosFluxo.filter(doc => {
+            if (doc.status_fluxo === 'ASSINADO' && doc.data_upload) {
+                const docDate = new Date(doc.data_upload).toDateString();
+                return docDate === hoje;
+            }
+            return false;
+        }).length;
+        
+        const totalAssinadosHoje = assinadosZapSignHoje + assinadosFluxoHoje;
+        assinadosHojeElement.textContent = totalAssinadosHoje;
+        
+        if (assinadosHojeStatus) {
+            assinadosHojeStatus.innerHTML = '<i class="fas fa-arrow-up"></i> Produtividade';
+            assinadosHojeStatus.className = 'stat-change positive';
+        }
+    }
+    
+    const totalAssinadosElement = document.querySelector('.stat-card:nth-child(3) .stat-value');
+    if (totalAssinadosElement) {
+        const totalZapSign = dados.signed || 0;
+        const totalFluxo = documentosFluxo.filter(doc => doc.status_fluxo === 'ASSINADO' || doc.status_fluxo === 'FINALIZADO').length;
+        totalAssinadosElement.textContent = totalZapSign + totalFluxo;
+    }
+    
+    const tempoMedioElement = document.querySelector('.stat-card:nth-child(4) .stat-value');
+    if (tempoMedioElement) {
+        const tempo = dados.tempo_medio_assinatura || 0;
+        tempoMedioElement.textContent = tempo > 0 ? `${tempo}h` : '-';
+    }
+    
+    atualizarIconesCards(dados);
+}
+
+function atualizarEstatisticasUnificadas() {
+    // Atualizar contadores com dados unificados
+    const totalZapSign = documentosZapSign.length;
+    const totalFluxo = documentosFluxo.length;
+    const totalPendentesZapSign = documentosZapSign.filter(doc => doc.status === 'pending').length;
+    const totalPendentesFluxo = documentosFluxo.filter(doc => doc.status_fluxo === 'AGUARDANDO_ASSINATURA').length;
+    
+    console.log('📊 Estatísticas Unificadas:', {
+        totalDocumentos: totalZapSign + totalFluxo,
+        zapSign: totalZapSign,
+        fluxoInterno: totalFluxo,
+        totalPendentes: totalPendentesZapSign + totalPendentesFluxo
+    });
+}
+
+function atualizarIconesCards(dados) {
+    const cards = document.querySelectorAll('.stat-card');
+    
+    if (cards[0]) {
+        const icon = cards[0].querySelector('.stat-icon');
+        if (icon) {
+            const totalPendentes = (dados.pending || 0) + documentosFluxo.filter(doc => doc.status_fluxo === 'AGUARDANDO_ASSINATURA').length;
+            if (totalPendentes > 5) {
+                icon.className = 'stat-icon danger';
+            } else if (totalPendentes > 0) {
+                icon.className = 'stat-icon warning';
+            } else {
+                icon.className = 'stat-icon success';
+            }
+        }
+    }
+    
+    if (cards[1]) {
+        const icon = cards[1].querySelector('.stat-icon');
+        if (icon) {
+            icon.className = 'stat-icon success';
+        }
+    }
+    
+    if (cards[2]) {
+        const icon = cards[2].querySelector('.stat-icon');
+        if (icon) {
+            icon.className = 'stat-icon primary';
+        }
+    }
+    
+    if (cards[3]) {
+        const icon = cards[3].querySelector('.stat-icon');
+        if (icon) {
+            if (dados.tempo_medio_assinatura > 48) {
+                icon.className = 'stat-icon warning';
+            } else if (dados.tempo_medio_assinatura > 24) {
+                icon.className = 'stat-icon info';
+            } else {
+                icon.className = 'stat-icon success';
+            }
+        }
+    }
+}
+
+function mostrarEstatisticasErro() {
+    const elements = [
+        '.stat-card .stat-value',
+        '#statPendentes',
+        '#statAssinados', 
+        '#statRecusados',
+        '#statExpirados'
+    ];
+    
+    elements.forEach(selector => {
+        const element = document.querySelector(selector);
+        if (element) {
+            element.textContent = '-';
+        }
+    });
+    
+    const statusChanges = document.querySelectorAll('.stat-change');
+    statusChanges.forEach(element => {
+        element.innerHTML = '<i class="fas fa-exclamation-circle"></i> Erro ao carregar';
+        element.className = 'stat-change negative';
+    });
+    
+    notifications.show('Erro ao carregar estatísticas do ZapSign. Tentando novamente...', 'warning', 5000);
+}
+
+function forcarAtualizacaoEstatisticas() {
+    carregarEstatisticasZapSign();
+    notifications.show('Atualizando estatísticas...', 'info', 2000);
 }
 
 // ===== SISTEMA DE VALORES BASE =====
@@ -2556,49 +3405,144 @@ function fecharModalEditarValores() {
     }
 }
 
-// ===== SISTEMA DE FILTROS =====
-function configurarFiltros() {
-    const filtroStatus = document.getElementById('filtroStatusFluxo');
-    const filtroBusca = document.getElementById('filtroBuscaFluxo');
-    const filtroTipo = document.getElementById('filtroTipoFluxo');
-    const filtroPeriodo = document.getElementById('filtroPeriodo');
+// ===== SISTEMA DE RECÁLCULO DE SERVIÇOS =====
+function showLoading() {
+    const overlay = document.getElementById('loadingOverlay');
+    if (overlay) {
+        overlay.classList.add('active');
+        console.log('Loading ativado');
+    }
+}
+
+function hideLoading() {
+    const overlay = document.getElementById('loadingOverlay');
+    if (overlay) {
+        overlay.classList.remove('active');
+        console.log('Loading desativado');
+    }
+}
+
+function recalcularServicos() {
+    if (!confirm(
+        'ATENÇÃO!\n\n' +
+        'Esta ação irá recalcular TODOS os valores dos serviços dos associados ' +
+        'baseado nos valores base atuais do sistema.\n\n' +
+        'Isso pode alterar centenas de registros!\n\n' +
+        'Deseja continuar?'
+    )) {
+        return;
+    }
+
+    const btnRecalcular = document.getElementById('btnRecalcular');
+    const originalText = btnRecalcular.innerHTML;
     
-    if (filtroStatus) {
-        filtroStatus.addEventListener('change', () => {
-            carregarDocumentosFluxo(true);
+    btnRecalcular.disabled = true;
+    btnRecalcular.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Recalculando...';
+    
+    showLoading();
+    
+    console.log('Iniciando recálculo dos serviços...');
+    
+    fetch('../api/recalcular_servicos.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => {
+        console.log('Response status:', response.status);
+        return response.text();
+    })
+    .then(responseText => {
+        console.log('Response:', responseText);
+        
+        let data;
+        try {
+            data = JSON.parse(responseText);
+        } catch (e) {
+            console.error('Erro ao fazer parse JSON:', e);
+            throw new Error('Resposta inválida do servidor');
+        }
+        
+        if (data.status === 'success') {
+            console.log('✓ Recálculo concluído:', data.data);
+            
+            let mensagem = data.message;
+            
+            if (data.data.total_valores_alterados > 0) {
+                mensagem += '\n\n📊 RESUMO:';
+                mensagem += '\n• Total processados: ' + data.data.total_servicos_processados;
+                mensagem += '\n• Valores alterados: ' + data.data.total_valores_alterados;
+                mensagem += '\n• Sem alteração: ' + data.data.total_sem_alteracao;
+                
+                if (data.data.economia_total !== 0) {
+                    const economia = data.data.economia_total;
+                    if (economia > 0) {
+                        mensagem += '\n• Aumento total: +R$ ' + economia.toFixed(2).replace('.', ',');
+                    } else {
+                        mensagem += '\n• Redução total: R$ ' + Math.abs(economia).toFixed(2).replace('.', ',');
+                    }
+                }
+                
+                mensagem += '\n\n🕒 Processado em: ' + data.data.data_recalculo;
+                
+                if (data.data.alteracoes_detalhadas && data.data.alteracoes_detalhadas.length > 0) {
+                    mensagem += '\n\n📋 EXEMPLOS DE ALTERAÇÕES:';
+                    data.data.alteracoes_detalhadas.slice(0, 5).forEach(alt => {
+                        mensagem += `\n• ${alt.associado} (${alt.servico}): R$ ${alt.valor_anterior.toFixed(2)} → R$ ${alt.valor_novo.toFixed(2)}`;
+                    });
+                    
+                    if (data.data.alteracoes_detalhadas.length > 5) {
+                        mensagem += `\n... e mais ${data.data.alteracoes_detalhadas.length - 5} alterações`;
+                    }
+                }
+            }
+            
+            alert(mensagem);
+            
+            setTimeout(() => {
+                window.location.reload();
+            }, 2000);
+            
+        } else {
+            console.error('Erro na API:', data);
+            alert('❌ ERRO: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Erro de rede:', error);
+        alert('❌ Erro de comunicação: ' + error.message);
+    })
+    .finally(() => {
+        btnRecalcular.disabled = false;
+        btnRecalcular.innerHTML = originalText;
+        hideLoading();
+    });
+}
+
+// ===== SISTEMA DE FILTROS =====
+function configurarFiltrosZapSign() {
+    const filterStatus = document.getElementById('filterStatus');
+    const searchInput = document.getElementById('searchInput');
+    const filterOrdenacao = document.getElementById('filterOrdenacao');
+    
+    if (filterStatus) {
+        filterStatus.addEventListener('change', () => {
+            carregarTodosDocumentos(true);
         });
     }
     
-    if (filtroBusca) {
-        filtroBusca.addEventListener('input', debounce(() => {
-            carregarDocumentosFluxo(true);
+    if (searchInput) {
+        searchInput.addEventListener('input', debounce(() => {
+            carregarTodosDocumentos(true);
         }, 500));
     }
     
-    if (filtroTipo) {
-        filtroTipo.addEventListener('change', () => {
-            carregarDocumentosFluxo(true);
+    if (filterOrdenacao) {
+        filterOrdenacao.addEventListener('change', () => {
+            carregarTodosDocumentos(true);
         });
     }
-    
-    if (filtroPeriodo) {
-        filtroPeriodo.addEventListener('change', () => {
-            carregarDocumentosFluxo(true);
-        });
-    }
-}
-
-function aplicarFiltros() {
-    carregarDocumentosFluxo(true);
-}
-
-function limparFiltros() {
-    document.getElementById('filtroStatusFluxo').value = '';
-    document.getElementById('filtroTipoFluxo').value = '';
-    document.getElementById('filtroBuscaFluxo').value = '';
-    document.getElementById('filtroPeriodo').value = '';
-    
-    carregarDocumentosFluxo(true);
 }
 
 // ===== FUNÇÕES DE APOIO PARA INTERFACE =====
@@ -2695,17 +3639,14 @@ function mostrarEstadoVazio() {
     let icone = 'fas fa-inbox';
     let descricao = 'Ainda não há documentos registrados no sistema.';
     
-    const statusFiltroAtual = document.getElementById('filtroStatusFluxo')?.value || '';
-    const termoBuscaAtual = document.getElementById('filtroBuscaFluxo')?.value || '';
-    
-    if (statusFiltroAtual) {
+    if (statusFiltro) {
         mensagem = `Nenhum documento encontrado com o filtro aplicado`;
         icone = 'fas fa-filter';
         descricao = 'Tente ajustar os filtros ou fazer uma nova busca.';
     }
     
-    if (termoBuscaAtual) {
-        mensagem += ` para "${termoBuscaAtual}"`;
+    if (termoBusca) {
+        mensagem += ` para "${termoBusca}"`;
         icone = 'fas fa-search';
         descricao = 'Tente usar outros termos de busca ou verifique a ortografia.';
     }
@@ -2719,20 +3660,20 @@ function mostrarEstadoVazio() {
                 <h5 class="empty-state-title">${mensagem}</h5>
                 <p class="empty-state-description">${descricao}</p>
                 
-                ${statusFiltroAtual || termoBuscaAtual ? `
+                ${statusFiltro || termoBusca ? `
                 <div class="empty-state-actions">
                     <button class="btn-action primary" onclick="limparFiltros()">
                         <i class="fas fa-times"></i>
                         Limpar Filtros
                     </button>
-                    <button class="btn-action secondary" onclick="carregarDocumentosFluxo(true)">
+                    <button class="btn-action secondary" onclick="carregarTodosDocumentos(true)">
                         <i class="fas fa-refresh"></i>
                         Atualizar
                     </button>
                 </div>
                 ` : `
                 <div class="empty-state-actions">
-                    <button class="btn-action primary" onclick="carregarDocumentosFluxo(true)">
+                    <button class="btn-action primary" onclick="carregarTodosDocumentos(true)">
                         <i class="fas fa-refresh"></i>
                         Atualizar Lista
                     </button>
@@ -2742,7 +3683,8 @@ function mostrarEstadoVazio() {
                 <div class="empty-state-tips">
                     <h6>💡 Dicas:</h6>
                     <ul>
-                        <li><strong>Sistema Interno:</strong> Fichas de filiação do fluxo presencial e virtual</li>
+                        <li><strong>ZapSign:</strong> Documentos enviados para assinatura digital</li>
+                        <li><strong>Sistema Interno:</strong> Fichas de filiação do fluxo presencial</li>
                         <li>Use os filtros para encontrar documentos específicos</li>
                         <li>A lista é atualizada automaticamente a cada 30 segundos</li>
                     </ul>
@@ -2871,7 +3813,7 @@ function mostrarErroCarregamento(mensagem) {
                 <p class="error-state-description">${escapeHtml(mensagem)}</p>
                 
                 <div class="error-state-actions">
-                    <button class="btn-action primary" onclick="carregarDocumentosFluxo(true)">
+                    <button class="btn-action primary" onclick="carregarTodosDocumentos(true)">
                         <i class="fas fa-redo"></i>
                         Tentar Novamente
                     </button>
@@ -3003,9 +3945,21 @@ function mostrarErroCarregamento(mensagem) {
     }
 }
 
-function atualizarLista() {
-    cache.clear();
-    carregarDocumentosFluxo(true);
+function limparFiltros() {
+    document.getElementById('filterStatus').value = '';
+    document.getElementById('searchInput').value = '';
+    document.getElementById('filterOrdenacao').value = 'desc';
+    
+    statusFiltro = '';
+    termoBusca = '';
+    ordenacao = 'desc';
+    paginaAtual = 1;
+    
+    carregarTodosDocumentos(true);
+}
+
+function atualizarDocumentos() {
+    carregarTodosDocumentos(true);
 }
 
 // ===== FUNÇÕES DE UPLOAD E ASSINATURA =====
@@ -3111,219 +4065,9 @@ function assinarTodos() {
     notifications.show('Funcionalidade de assinatura em lote em desenvolvimento', 'info');
 }
 
-function carregarHistoricoGeral() {
-    notifications.show('Carregando histórico geral...', 'info', 2000);
-    
-    const periodo = document.getElementById('filtroPeriodoHistorico').value;
-    const funcionario = document.getElementById('filtroFuncionarioHistorico').value;
-    
-    const params = new URLSearchParams();
-    params.append('periodo_dias', periodo);
-    if (funcionario) {
-        params.append('funcionario_id', funcionario);
-    }
-    
-    fetch('../api/documentos/historico_assinaturas_presidencia.php?' + params)
-        .then(response => response.json())
-        .then(result => {
-            if (result.status === 'success') {
-                renderizarHistoricoGeral(result.data);
-            } else {
-                notifications.show('Erro ao carregar histórico: ' + result.message, 'error');
-            }
-        })
-        .catch(error => {
-            console.error('Erro ao carregar histórico geral:', error);
-            notifications.show('Erro ao carregar histórico', 'error');
-        });
-}
-
-function renderizarHistoricoGeral(dados) {
-    const container = document.getElementById('timelineHistoricoGeral');
-    const resumoContainer = document.getElementById('resumoHistoricoGeral');
-    
-    // Limpar containers
-    container.innerHTML = '';
-    resumoContainer.innerHTML = '';
-    
-    // Renderizar timeline
-    if (dados.historico && dados.historico.length > 0) {
-        dados.historico.forEach(item => {
-            const timelineItem = document.createElement('div');
-            timelineItem.className = 'timeline-item';
-            
-            timelineItem.innerHTML = `
-                <div class="timeline-marker"></div>
-                <div class="timeline-content">
-                    <div class="d-flex justify-content-between align-items-start">
-                        <div>
-                            <h6 class="mb-1">${item.acao}</h6>
-                            <p class="mb-2">${item.associado_nome} - ${formatarCPF(item.associado_cpf)}</p>
-                            <small class="text-muted">
-                                Por: ${item.funcionario_nome}<br>
-                                ${item.observacao ? item.observacao : 'Sem observações'}
-                            </small>
-                        </div>
-                        <div class="text-end">
-                            <small class="text-muted">${formatarData(item.data_acao)}</small>
-                        </div>
-                    </div>
-                </div>
-            `;
-            
-            container.appendChild(timelineItem);
-        });
-    } else {
-        container.innerHTML = '<p class="text-muted text-center">Nenhum histórico encontrado para o período selecionado</p>';
-    }
-    
-    // Renderizar resumo
-    if (dados.resumo) {
-        resumoContainer.innerHTML = `
-            <div class="col-md-3">
-                <h5 class="text-primary">${dados.resumo.total_assinaturas || 0}</h5>
-                <small class="text-muted">Total de Assinaturas</small>
-            </div>
-            <div class="col-md-3">
-                <h5 class="text-success">${dados.resumo.documentos_assinados || 0}</h5>
-                <small class="text-muted">Documentos Assinados</small>
-            </div>
-            <div class="col-md-3">
-                <h5 class="text-info">${dados.resumo.documentos_finalizados || 0}</h5>
-                <small class="text-muted">Documentos Finalizados</small>
-            </div>
-            <div class="col-md-3">
-                <h5 class="text-warning">${dados.resumo.tempo_medio || 0}h</h5>
-                <small class="text-muted">Tempo Médio</small>
-            </div>
-        `;
-    }
-}
-
-function imprimirHistoricoGeral() {
-    window.print();
-}
-
-// ===== OTIMIZAÇÃO RESPONSIVA =====
-function otimizarResponsividade() {
-    // Verificar tamanho da tela e ajustar interface
-    const isMobile = window.innerWidth <= 768;
-    const isSmallMobile = window.innerWidth <= 480;
-    
-    if (isMobile) {
-        // Ocultar texto dos botões em dispositivos móveis
-        const btnTexts = document.querySelectorAll('.btn-text');
-        btnTexts.forEach(text => {
-            text.style.display = isSmallMobile ? 'none' : 'inline';
-        });
-        
-        // Ajustar grid de metadados para uma coluna em dispositivos pequenos
-        const metaGrids = document.querySelectorAll('.document-meta-grid');
-        metaGrids.forEach(grid => {
-            if (isSmallMobile) {
-                grid.style.gridTemplateColumns = '1fr';
-            } else {
-                grid.style.gridTemplateColumns = 'repeat(auto-fit, minmax(200px, 1fr))';
-            }
-        });
-    }
-}
-
-// ===== FUNÇÃO PARA GARANTIR COMPATIBILIDADE =====
-function garantirCompatibilidade() {
-    // Verificar se jQuery está disponível
-    const jqueryDisponivel = typeof $ !== 'undefined';
-    
-    // Verificar se Bootstrap está disponível
-    const bootstrapDisponivel = typeof bootstrap !== 'undefined';
-    
-    // Log de compatibilidade
-    console.log('📋 Verificação de Compatibilidade:');
-    console.log('  jQuery:', jqueryDisponivel ? '✅ Disponível' : '❌ Não disponível');
-    console.log('  Bootstrap:', bootstrapDisponivel ? '✅ Disponível' : '❌ Não disponível');
-    
-    // Se Bootstrap não estiver disponível, adicionar polyfill básico para modais
-    if (!bootstrapDisponivel && typeof $ !== 'undefined') {
-        console.log('🔧 Aplicando polyfill para Bootstrap...');
-        
-        // Polyfill básico para modal
-        if (!$.fn.modal) {
-            $.fn.modal = function(action) {
-                return this.each(function() {
-                    const $this = $(this);
-                    if (action === 'show') {
-                        $this.show().css('display', 'block').addClass('show');
-                        $('body').addClass('modal-open');
-                    } else if (action === 'hide') {
-                        $this.hide().removeClass('show');
-                        $('body').removeClass('modal-open');
-                    }
-                });
-            };
-        }
-    }
-    
-    // Garantir que Font Awesome está carregado
-    const fontAwesome = document.querySelector('link[href*="font-awesome"], link[href*="fontawesome"]');
-    if (!fontAwesome) {
-        console.log('⚠️ Font Awesome pode não estar carregado - alguns ícones podem não aparecer');
-    }
-    
-    return {
-        jquery: jqueryDisponivel,
-        bootstrap: bootstrapDisponivel,
-        fontAwesome: !!fontAwesome
-    };
-}
-
-// ===== FUNÇÃO DE HEALTH CHECK =====
-function executarHealthCheck() {
-    console.log('🏥 Executando Health Check do Sistema...');
-    
-    const checks = {
-        permissao: temPermissao,
-        containerDocumentos: !!document.getElementById('documentsList'),
-        apis: {
-            fluxoInterno: false
-        },
-        bibliotecas: garantirCompatibilidade(),
-        elementos: {
-            filtros: !!document.getElementById('filtroStatusFluxo'),
-            busca: !!document.getElementById('filtroBuscaFluxo'),
-            modais: !!document.getElementById('assinaturaModal')
-        }
-    };
-    
-    // Teste rápido da API (sem fazer requisições completas)
-    const testarAPIs = async () => {
-        try {
-            // Teste Fluxo Interno
-            const responseFluxo = await fetch('../api/documentos/documentos_fluxo_listar.php', {
-                method: 'HEAD'
-            });
-            checks.apis.fluxoInterno = responseFluxo.ok;
-        } catch (e) {
-            checks.apis.fluxoInterno = false;
-        }
-        
-        console.log('📊 Resultado do Health Check:', checks);
-        
-        // Mostrar warnings se necessário
-        if (!checks.apis.fluxoInterno) {
-            console.warn('⚠️ API Fluxo Interno não está respondendo');
-        }
-        
-        if (!checks.elementos.filtros) {
-            console.warn('⚠️ Elementos de filtro não encontrados');
-        }
-        
-        return checks;
-    };
-    
-    // Executar testes assíncronos
-    testarAPIs();
-    
-    return checks;
+function atualizarLista() {
+    cache.clear();
+    carregarTodosDocumentos(true);
 }
 
 // ===== FUNÇÕES AUXILIARES =====
@@ -3364,6 +4108,17 @@ function formatBytes(bytes) {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
+function getStatusBadgeClass(status) {
+    const classes = {
+        'pending': 'warning',
+        'signed': 'success',
+        'refused': 'danger',
+        'expired': 'secondary'
+    };
+    
+    return classes[status] || 'secondary';
+}
+
 function debounce(func, wait) {
     let timeout;
     return function executedFunction(...args) {
@@ -3395,7 +4150,7 @@ document.addEventListener('DOMContentLoaded', function() {
     setTimeout(initializeUserDropdown, 1000);
     setTimeout(initializeUserDropdown, 2000);
 
-    console.log('=== 🚀 PRESIDÊNCIA FRONTEND SISTEMA INTERNO v2.0 ===');
+    console.log('=== 🚀 PRESIDÊNCIA FRONTEND UNIFICADO v2.0 ===');
     console.log('🔐 Tem permissão:', temPermissao);
     
     // Só continuar se tiver permissão
@@ -3410,23 +4165,33 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
     }
 
-    console.log('✅ Usuário autorizado - carregando funcionalidades do sistema interno...');
+    console.log('✅ Usuário autorizado - carregando funcionalidades unificadas...');
 
     // Configurar todas as funcionalidades
-    configurarFiltros();
+    configurarFiltrosZapSign();
     configurarUpload();
     configurarMetodoAssinatura();
 
-    // Otimizar responsividade
+    // Otimizar responsividade e performance
     otimizarResponsividade();
+    otimizarPerformance();
 
     // Verificar compatibilidade
     const compatibilidade = garantirCompatibilidade();
     
-    // Carregar documentos do fluxo interno
-    console.log('📋 Iniciando carregamento de documentos do sistema interno...');
-    carregarDocumentosFluxo(true);
+    // Carregar TODOS os documentos (ZapSign + Fluxo Interno)
+    console.log('📋 Iniciando carregamento de documentos...');
+    carregarTodosDocumentos(true);
     
+    // Aguardar um pouco antes de carregar estatísticas para não sobrecarregar
+    setTimeout(() => {
+        console.log('📊 Carregando estatísticas...');
+        carregarEstatisticasZapSign();
+    }, 1500);
+    
+    // Configurar refresh automático das estatísticas (a cada 5 minutos)
+    setInterval(carregarEstatisticasZapSign, 5 * 60 * 1000);
+
     // Event listeners para cálculo de impacto em tempo real (valores base)
     const valorSocial = document.getElementById('valorBaseSocial');
     const valorJuridico = document.getElementById('valorBaseJuridico');
@@ -3448,12 +4213,15 @@ document.addEventListener('DOMContentLoaded', function() {
         refreshBtn.className = 'btn btn-sm btn-outline-secondary position-absolute';
         refreshBtn.style.cssText = 'top: 10px; right: 10px; z-index: 10; border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;';
         refreshBtn.innerHTML = '<i class="fas fa-sync-alt"></i>';
-        refreshBtn.title = 'Atualizar documentos';
+        refreshBtn.title = 'Atualizar estatísticas e documentos';
         refreshBtn.onclick = () => {
             refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
             refreshBtn.disabled = true;
             
-            carregarDocumentosFluxo(true).finally(() => {
+            Promise.all([
+                forcarAtualizacaoEstatisticas(),
+                carregarTodosDocumentos(true)
+            ]).finally(() => {
                 refreshBtn.innerHTML = '<i class="fas fa-sync-alt"></i>';
                 refreshBtn.disabled = false;
                 notifications.show('Dados atualizados! 🔄', 'success', 2000);
@@ -3468,40 +4236,47 @@ document.addEventListener('DOMContentLoaded', function() {
     setInterval(function() {
         if (temPermissao && document.hasFocus() && !document.querySelector('.modal.show')) {
             console.log('🔄 Auto-refresh executado');
-            carregarDocumentosFluxo();
+            carregarTodosDocumentos();
         }
     }, 30000);
 
     // Notificação de sucesso da inicialização
     setTimeout(() => {
+        const totalSistemas = 2;
         const funcionalidades = [
+            'ZapSign Integration',
             'Sistema Interno',
             'Valores Base',
             'Recálculo Automático',
+            'Estatísticas em Tempo Real',
             'Interface Responsiva'
         ];
         
         notifications.show(
             `Sistema da Presidência v2.0 carregado! 🎉<br>
-            <small>Sistema interno • ${funcionalidades.length} funcionalidades ativas</small>`, 
+            <small>${totalSistemas} sistemas integrados • ${funcionalidades.length} funcionalidades ativas</small>`, 
             'success', 
             4000
         );
     }, 2500);
 
     // Logs finais
-    console.log('✅ Sistema da Presidência INTERNO v2.0 carregado com sucesso!');
+    console.log('✅ Sistema da Presidência UNIFICADO v2.0 carregado com sucesso!');
     console.log('📋 Sistemas integrados:', {
-        'Sistema Interno': '✅ Fluxo presencial e virtual',
-        'Valores Base': '✅ Gestão financeira'
+        'ZapSign': '✅ Documentos digitais',
+        'Sistema Interno': '✅ Fluxo presencial',
+        'Valores Base': '✅ Gestão financeira',
+        'Estatísticas': '✅ Métricas em tempo real'
     });
     console.log('🎨 Interface:', {
         'Design': 'Moderno e responsivo',
         'Compatibilidade': compatibilidade,
-        'Performance': 'Otimizada'
+        'Performance': 'Otimizada',
+        'Acessibilidade': 'Melhorada'
     });
     console.log('⚡ Performance:', {
         'Auto-refresh': '30s',
+        'Lazy loading': 'Ativo',
         'Cache': 'Inteligente',
         'Debounce': 'Configurado'
     });
