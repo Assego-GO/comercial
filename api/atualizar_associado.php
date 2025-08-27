@@ -1,7 +1,6 @@
 <?php
-
 /**
- * API para atualizar associado - VERSÃO CORRIGIDA COM TIPO_ASSOCIADO E DATA_DESFILIACAO
+ * API para atualizar associado - VERSÃO COM INDICAÇÕES INTEGRADAS
  * api/atualizar_associado.php
  */
 ob_start();
@@ -39,6 +38,7 @@ try {
     require_once '../classes/Auth.php';
     require_once '../classes/Associados.php';
     require_once '../classes/JsonManager.php';
+    require_once '../classes/Indicacoes.php'; // ✅ NOVO
 
     // Inicia sessão
     if (session_status() === PHP_SESSION_NONE) {
@@ -58,11 +58,12 @@ try {
         'nome' => $_SESSION['user_name'] ?? 'Usuário',
         'email' => $_SESSION['user_email'] ?? null
     ];
+    
+    $funcionarioId = $_SESSION['funcionario_id'] ?? null;
 
-    error_log("=== ATUALIZAR ASSOCIADO COM TIPO_ASSOCIADO E DATA_DESFILIACAO ===");
+    error_log("=== ATUALIZAR ASSOCIADO COM INDICAÇÕES ===");
     error_log("ID: $associadoId | Usuário: " . $usuarioLogado['nome']);
-    error_log("tipoAssociadoServico recebido: " . ($_POST['tipoAssociadoServico'] ?? 'NÃO INFORMADO'));
-    error_log("situacao recebida: " . ($_POST['situacao'] ?? 'NÃO INFORMADA'));
+    error_log("Funcionário ID: " . $funcionarioId);
 
     // Validação básica
     $camposObrigatorios = ['nome', 'cpf', 'rg', 'telefone', 'situacao'];
@@ -77,6 +78,8 @@ try {
 
     // Busca dados atuais do associado
     $associados = new Associados();
+    $indicacoes = new Indicacoes(); // ✅ NOVO
+    
     $associadoAtual = $associados->getById($associadoId);
     if (!$associadoAtual) {
         throw new Exception('Associado não encontrado');
@@ -84,36 +87,52 @@ try {
 
     error_log("✓ Associado encontrado: " . $associadoAtual['nome']);
 
-    // ✅ NOVA LÓGICA: Verifica mudança de situação para atualizar data_desfiliacao
+    // =====================================
+    // ✅ CAPTURA E VERIFICA INDICAÇÃO
+    // =====================================
+    $indicacaoNome = trim($_POST['indicacao'] ?? '');
+    $indicacaoAnterior = trim($associadoAtual['indicacao'] ?? '');
+    $indicacaoMudou = $indicacaoNome !== $indicacaoAnterior;
+    $temNovaIndicacao = !empty($indicacaoNome);
+    $indicacaoPatente = null;
+    $indicacaoCorporacao = null;
+    
+    if ($indicacaoMudou) {
+        error_log("📌 Mudança de indicação detectada:");
+        error_log("  - Anterior: '$indicacaoAnterior'");
+        error_log("  - Nova: '$indicacaoNome'");
+        
+        if ($temNovaIndicacao) {
+            // Tenta extrair patente e corporação do nome
+            if (preg_match('/^(.*?)\s+(PM|BM)\s+(.*)$/i', $indicacaoNome, $matches)) {
+                $indicacaoPatente = trim($matches[1]);
+                $indicacaoCorporacao = ($matches[2] === 'PM') ? 'Polícia Militar' : 'Bombeiro Militar';
+                error_log("  - Patente extraída: $indicacaoPatente");
+                error_log("  - Corporação extraída: $indicacaoCorporacao");
+            }
+        }
+    }
+
+    // Verifica mudança de situação para atualizar data_desfiliacao
     $situacaoAtual = strtoupper(trim($associadoAtual['situacao'] ?? ''));
     $novaSituacao = strtoupper(trim($_POST['situacao'] ?? ''));
     $mudouSituacao = $situacaoAtual !== $novaSituacao;
     $ficouDesfiliado = $novaSituacao === 'DESFILIADO';
     $saiuDeDesfiliado = $situacaoAtual === 'DESFILIADO' && $novaSituacao !== 'DESFILIADO';
 
-    error_log("=== VERIFICAÇÃO DE DESFILIAÇÃO ===");
-    error_log("Situação atual: '$situacaoAtual' | Nova situação: '$novaSituacao'");
-    error_log("Mudou situação: " . ($mudouSituacao ? 'SIM' : 'NÃO'));
-    error_log("Ficou desfiliado: " . ($ficouDesfiliado ? 'SIM' : 'NÃO'));
-    error_log("Saiu de desfiliado: " . ($saiuDeDesfiliado ? 'SIM' : 'NÃO'));
-
     // Determina a data de desfiliação
     $dataDesfiliacao = null;
     if ($ficouDesfiliado && $mudouSituacao) {
-        // Está sendo desfiliado agora
-        $dataDesfiliacao = date('Y-m-d H:i:s'); // NOW()
+        $dataDesfiliacao = date('Y-m-d H:i:s');
         error_log("✅ Definindo data_desfiliacao = NOW() para nova desfiliação");
     } elseif ($saiuDeDesfiliado) {
-        // Estava desfiliado e agora está sendo reativado
         $dataDesfiliacao = null;
         error_log("✅ Limpando data_desfiliacao (reativação)");
     } else {
-        // Mantém o valor atual ou usa o que veio do formulário
         $dataDesfiliacao = $_POST['dataDesfiliacao'] ?? $associadoAtual['data_desfiliacao'];
-        error_log("✅ Mantendo data_desfiliacao existente: " . ($dataDesfiliacao ?? 'NULL'));
     }
 
-    // INICIA TRANSAÇÃO ÚNICA PARA TUDO
+    // INICIA TRANSAÇÃO
     $db->beginTransaction();
     $transacaoAtiva = true;
 
@@ -130,9 +149,9 @@ try {
             'escolaridade' => $_POST['escolaridade'] ?? null,
             'estadoCivil' => $_POST['estadoCivil'] ?? null,
             'telefone' => preg_replace('/[^0-9]/', '', $_POST['telefone']),
-            'indicacao' => trim($_POST['indicacao'] ?? '') ?: null,
+            'indicacao' => $indicacaoNome, // Mantém na tabela Associados para compatibilidade
             'dataFiliacao' => $_POST['dataFiliacao'] ?? $associadoAtual['data_filiacao'],
-            'dataDesfiliacao' => $dataDesfiliacao, // ✅ Usa a lógica definida acima
+            'dataDesfiliacao' => $dataDesfiliacao,
             'corporacao' => $_POST['corporacao'] ?? null,
             'patente' => $_POST['patente'] ?? null,
             'categoria' => $_POST['categoria'] ?? null,
@@ -160,20 +179,6 @@ try {
             'percentualAplicadoJuridico' => $_POST['percentualAplicadoJuridico'] ?? '0',
             'servicoJuridico' => $_POST['servicoJuridico'] ?? null
         ];
-
-        // Log da mudança de situação para auditoria
-        if ($mudouSituacao) {
-            error_log("🔄 MUDANÇA DE SITUAÇÃO DETECTADA:");
-            error_log("   Associado: " . $associadoAtual['nome']);
-            error_log("   De: '$situacaoAtual' → Para: '$novaSituacao'");
-            error_log("   Data desfiliação: " . ($dataDesfiliacao ?? 'NULL'));
-
-            if ($ficouDesfiliado) {
-                error_log("🚨 NOVA DESFILIAÇÃO registrada em: " . date('Y-m-d H:i:s'));
-            } elseif ($saiuDeDesfiliado) {
-                error_log("🔄 REATIVAÇÃO de associado desfiliado");
-            }
-        }
 
         // Processa dependentes
         $dados['dependentes'] = [];
@@ -227,21 +232,82 @@ try {
             throw new Exception('Erro ao atualizar dados básicos do associado');
         }
 
-        error_log("✓ Dados básicos atualizados (incluindo data_desfiliacao)");
+        error_log("✓ Dados básicos atualizados");
+
+        // =====================================
+        // ✅ 2. PROCESSA INDICAÇÃO SE MUDOU
+        // =====================================
+        $indicacaoProcessada = false;
+        $indicadorId = null;
+        $indicadorInfo = null;
+        
+        if ($indicacaoMudou) {
+            try {
+                error_log("=== PROCESSANDO MUDANÇA DE INDICAÇÃO ===");
+                
+                if (!$temNovaIndicacao) {
+                    // Removendo indicação
+                    $indicacoes->removerIndicacao($associadoId);
+                    $indicacaoProcessada = true;
+                    error_log("✓ Indicação removida");
+                    
+                } else {
+                    // Adicionando ou alterando indicação
+                    $resultadoIndicacao = $indicacoes->processarIndicacao(
+                        $associadoId,
+                        $indicacaoNome,
+                        $indicacaoPatente,
+                        $indicacaoCorporacao,
+                        $funcionarioId,
+                        "Indicação " . (empty($indicacaoAnterior) ? "adicionada" : "alterada") . " na edição do associado"
+                    );
+                    
+                    if ($resultadoIndicacao['sucesso']) {
+                        $indicacaoProcessada = true;
+                        $indicadorId = $resultadoIndicacao['indicador_id'];
+                        $indicadorInfo = [
+                            'id' => $indicadorId,
+                            'nome' => $resultadoIndicacao['indicador_nome'],
+                            'novo' => $resultadoIndicacao['novo_indicador'] ?? false
+                        ];
+                        
+                        error_log("✓ Indicação processada com sucesso!");
+                        error_log("  - Indicador ID: $indicadorId");
+                        error_log("  - Nome: " . $indicadorInfo['nome']);
+                    } else {
+                        error_log("⚠ Erro ao processar indicação: " . $resultadoIndicacao['erro']);
+                    }
+                }
+                
+            } catch (Exception $e) {
+                error_log("⚠ Exceção ao processar indicação: " . $e->getMessage());
+                // Não falha a atualização por causa da indicação
+            }
+        } else if ($temNovaIndicacao) {
+            // Mantém a indicação existente mas busca informações
+            try {
+                $indicacaoExistente = $indicacoes->obterIndicacaoAssociado($associadoId);
+                if ($indicacaoExistente) {
+                    $indicadorInfo = [
+                        'id' => $indicacaoExistente['indicador_id'],
+                        'nome' => $indicacaoExistente['indicador_nome_atual'] ?? $indicacaoNome,
+                        'novo' => false
+                    ];
+                    error_log("✓ Indicação existente mantida: " . $indicadorInfo['nome']);
+                }
+            } catch (Exception $e) {
+                error_log("⚠ Erro ao buscar indicação existente: " . $e->getMessage());
+            }
+        }
 
         // INICIA NOVA TRANSAÇÃO PARA OS SERVIÇOS
         $db->beginTransaction();
         $transacaoAtiva = true;
 
-        // 2. PROCESSA OS SERVIÇOS COM TIPO_ASSOCIADO CORRIGIDO
+        // 3. PROCESSA OS SERVIÇOS
         $servicosAlterados = false;
         $detalhesServicos = [];
-
-        // ✅ CORREÇÃO: Captura o tipo de associado
         $tipoAssociadoServico = trim($_POST['tipoAssociadoServico'] ?? '');
-
-        error_log("=== PROCESSAMENTO DE SERVIÇOS CORRIGIDO ===");
-        error_log("Tipo de associado para serviços: '$tipoAssociadoServico'");
 
         // Busca serviços atuais
         $stmt = $db->prepare("
@@ -259,63 +325,48 @@ try {
             $servicosAtivosMap[$servico['servico_id']] = $servico;
         }
 
-        error_log("✓ Serviços atuais encontrados: " . count($servicosAtivos));
-
         // DEFINE OS NOVOS SERVIÇOS
         $novosServicos = [];
 
         if (!empty($tipoAssociadoServico)) {
-
             // SERVIÇO SOCIAL (ID = 1)
             $valorSocialStr = trim($_POST['valorSocial'] ?? '0');
             $valorSocial = floatval($valorSocialStr);
 
             if ($valorSocialStr !== '' && $valorSocial >= 0) {
                 $novosServicos[1] = [
-                    'tipo_associado' => $tipoAssociadoServico, // ✅ ADICIONADO
+                    'tipo_associado' => $tipoAssociadoServico,
                     'valor_aplicado' => $valorSocial,
                     'percentual_aplicado' => floatval($_POST['percentualAplicadoSocial'] ?? 0),
                     'observacao' => "Atualizado - Tipo: $tipoAssociadoServico"
                 ];
-                error_log("✓ Novo serviço Social: R$ $valorSocial | Tipo: $tipoAssociadoServico");
             }
 
             // SERVIÇO JURÍDICO (ID = 2)
-            if (
-                !empty($_POST['servicoJuridico']) &&
-                !empty($_POST['valorJuridico']) &&
-                floatval($_POST['valorJuridico']) > 0
-            ) {
-
+            if (!empty($_POST['servicoJuridico']) && !empty($_POST['valorJuridico']) && floatval($_POST['valorJuridico']) > 0) {
                 $novosServicos[2] = [
-                    'tipo_associado' => $tipoAssociadoServico, // ✅ ADICIONADO
+                    'tipo_associado' => $tipoAssociadoServico,
                     'valor_aplicado' => floatval($_POST['valorJuridico']),
                     'percentual_aplicado' => floatval($_POST['percentualAplicadoJuridico'] ?? 100),
                     'observacao' => "Atualizado - Tipo: $tipoAssociadoServico"
                 ];
-                error_log("✓ Novo serviço Jurídico: R$ " . $_POST['valorJuridico'] . " | Tipo: $tipoAssociadoServico");
             }
         }
 
-        // 3. PROCESSA CADA SERVIÇO COM TIPO_ASSOCIADO
+        // PROCESSA CADA SERVIÇO
         foreach ([1, 2] as $servicoId) {
             $servicoNome = ($servicoId == 1) ? 'Social' : 'Jurídico';
             $servicoAtivo = isset($servicosAtivosMap[$servicoId]) ? $servicosAtivosMap[$servicoId] : null;
             $novoServico = isset($novosServicos[$servicoId]) ? $novosServicos[$servicoId] : null;
 
             if ($novoServico) {
-                // QUER MANTER/CRIAR ESTE SERVIÇO
-
                 if ($servicoAtivo) {
                     // JÁ EXISTE - VERIFICAR SE PRECISA ATUALIZAR
-
                     $valorMudou = abs($servicoAtivo['valor_aplicado'] - $novoServico['valor_aplicado']) > 0.01;
                     $percentualMudou = abs($servicoAtivo['percentual_aplicado'] - $novoServico['percentual_aplicado']) > 0.01;
-                    $tipoMudou = ($servicoAtivo['tipo_associado'] ?? '') !== ($novoServico['tipo_associado'] ?? ''); // ✅ ADICIONADO
+                    $tipoMudou = ($servicoAtivo['tipo_associado'] ?? '') !== ($novoServico['tipo_associado'] ?? '');
 
                     if ($valorMudou || $percentualMudou || $tipoMudou) {
-                        // ✅ CORRIGIDO: ATUALIZAR SERVIÇO EXISTENTE COM TIPO_ASSOCIADO
-
                         // Registra histórico
                         $stmt = $db->prepare("
                             INSERT INTO Historico_Servicos_Associado (
@@ -330,11 +381,11 @@ try {
                             $novoServico['valor_aplicado'],
                             $servicoAtivo['percentual_aplicado'],
                             $novoServico['percentual_aplicado'],
-                            'Alteração via edição do associado' . ($tipoMudou ? " - Tipo alterado de '{$servicoAtivo['tipo_associado']}' para '{$novoServico['tipo_associado']}'" : ''),
+                            'Alteração via edição do associado',
                             $usuarioLogado['id']
                         ]);
 
-                        // ✅ CORRIGIDO: Atualiza o serviço COM tipo_associado
+                        // Atualiza o serviço
                         $stmt = $db->prepare("
                             UPDATE Servicos_Associado 
                             SET tipo_associado = ?, valor_aplicado = ?, percentual_aplicado = ?, observacao = ?
@@ -350,15 +401,10 @@ try {
                         ]);
 
                         $servicosAlterados = true;
-                        $detalhesServicos[] = "Atualizado {$servicoNome}: R$ " . number_format($novoServico['valor_aplicado'], 2, ',', '.') . " (Tipo: {$novoServico['tipo_associado']})";
-                        error_log("✓ Serviço {$servicoNome} atualizado com tipo_associado");
-                    } else {
-                        error_log("✓ Serviço {$servicoNome} sem alterações");
+                        $detalhesServicos[] = "Atualizado {$servicoNome}: R$ " . number_format($novoServico['valor_aplicado'], 2, ',', '.');
                     }
                 } else {
                     // NÃO EXISTE - CRIAR NOVO
-
-                    // ✅ CORRIGIDO: CRIAR NOVO SERVIÇO COM tipo_associado
                     $stmt = $db->prepare("
                         INSERT INTO Servicos_Associado (
                             associado_id, servico_id, tipo_associado, ativo, data_adesao, 
@@ -375,30 +421,12 @@ try {
                         $novoServico['observacao']
                     ]);
 
-                    $novoServicoId = $db->lastInsertId();
-
-                    // Registra histórico de criação
-                    $stmt = $db->prepare("
-                        INSERT INTO Historico_Servicos_Associado (
-                            servico_associado_id, tipo_alteracao, motivo, funcionario_id
-                        ) VALUES (?, 'ADESAO', ?, ?)
-                    ");
-
-                    $stmt->execute([
-                        $novoServicoId,
-                        'Adicionado na edição do associado - Tipo: ' . $novoServico['tipo_associado'],
-                        $usuarioLogado['id']
-                    ]);
-
                     $servicosAlterados = true;
-                    $detalhesServicos[] = "Adicionado {$servicoNome}: R$ " . number_format($novoServico['valor_aplicado'], 2, ',', '.') . " (Tipo: {$novoServico['tipo_associado']})";
-                    error_log("✓ Novo serviço {$servicoNome} criado com tipo_associado");
+                    $detalhesServicos[] = "Adicionado {$servicoNome}: R$ " . number_format($novoServico['valor_aplicado'], 2, ',', '.');
                 }
             } else {
                 // NÃO QUER ESTE SERVIÇO - DESATIVAR SE ESTIVER ATIVO
-
                 if ($servicoAtivo) {
-                    // DESATIVAR SERVIÇO
                     $stmt = $db->prepare("
                         UPDATE Servicos_Associado 
                         SET ativo = 0, data_cancelamento = NOW()
@@ -407,28 +435,14 @@ try {
 
                     $stmt->execute([$servicoAtivo['id']]);
 
-                    // Registra histórico de cancelamento
-                    $stmt = $db->prepare("
-                        INSERT INTO Historico_Servicos_Associado (
-                            servico_associado_id, tipo_alteracao, motivo, funcionario_id
-                        ) VALUES (?, 'CANCELAMENTO', ?, ?)
-                    ");
-
-                    $stmt->execute([
-                        $servicoAtivo['id'],
-                        'Removido na edição do associado',
-                        $usuarioLogado['id']
-                    ]);
-
                     $servicosAlterados = true;
                     $detalhesServicos[] = "Removido {$servicoNome}";
-                    error_log("✓ Serviço {$servicoNome} desativado");
                 }
             }
         }
 
-        // Salva auditoria com informações de desfiliação
-        if (($mudouSituacao && $ficouDesfiliado) || (!empty($tipoAssociadoServico) && $servicosAlterados)) {
+        // Salva auditoria incluindo informações de indicação
+        if (($mudouSituacao && $ficouDesfiliado) || $servicosAlterados || $indicacaoMudou) {
             $stmt = $db->prepare("
                 INSERT INTO Auditoria (
                     tabela, acao, registro_id, funcionario_id, 
@@ -448,9 +462,12 @@ try {
                 'data_desfiliacao' => $dataDesfiliacao,
                 'tipo_associado_servico' => $tipoAssociadoServico,
                 'detalhes_servicos' => $detalhesServicos,
-                'novos_campos_financeiros' => [
-                    'observacoes' => $dados['observacoes'],
-                    'doador' => $dados['doador']
+                'indicacao' => [
+                    'mudou' => $indicacaoMudou,
+                    'anterior' => $indicacaoAnterior,
+                    'nova' => $indicacaoNome,
+                    'processada' => $indicacaoProcessada,
+                    'indicador_id' => $indicadorId
                 ]
             ];
 
@@ -461,26 +478,32 @@ try {
                 $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1'
             ]);
 
-            if ($ficouDesfiliado) {
-                error_log("✅ DESFILIAÇÃO registrada na auditoria: " . $associadoAtual['nome'] . " em " . date('Y-m-d H:i:s'));
-            }
-            if (!empty($tipoAssociadoServico)) {
-                error_log("✓ Tipo de associado salvo na auditoria: $tipoAssociadoServico");
-            }
+            error_log("✓ Auditoria registrada com informações de indicação");
         }
 
         // Confirma transação dos serviços
         $db->commit();
         $transacaoAtiva = false;
-        error_log("✓ Transação dos serviços confirmada");
+        error_log("✓ Transação confirmada");
 
-        // 3. SALVA DADOS EM JSON
+        // 4. SALVA DADOS EM JSON
         $resultadoJson = ['sucesso' => false, 'erro' => 'Não processado'];
 
         try {
             error_log("=== INICIANDO SALVAMENTO EM JSON (ATUALIZAÇÃO) ===");
 
             $jsonManager = new JsonManager();
+            
+            // ✅ Adiciona informações de indicação aos dados
+            if ($indicadorInfo) {
+                $dados['indicacao_detalhes'] = [
+                    'indicador_id' => $indicadorInfo['id'],
+                    'indicador_nome' => $indicadorInfo['nome'],
+                    'processado' => true,
+                    'data_atualizacao' => date('Y-m-d H:i:s')
+                ];
+            }
+            
             $resultadoJson = $jsonManager->salvarAssociadoJson($dados, $associadoId, 'UPDATE');
 
             if ($resultadoJson['sucesso']) {
@@ -501,16 +524,8 @@ try {
 
         // Log final
         error_log("✓ SUCESSO - Associado ID $associadoId atualizado completamente");
-        if ($mudouSituacao) {
-            error_log("✓ Situação alterada: '$situacaoAtual' → '$novaSituacao'");
-            if ($ficouDesfiliado) {
-                error_log("🚨 NOVA DESFILIAÇÃO PROCESSADA com data_desfiliacao = $dataDesfiliacao");
-            } elseif ($saiuDeDesfiliado) {
-                error_log("🔄 REATIVAÇÃO PROCESSADA - data_desfiliacao limpa");
-            }
-        }
-        if ($servicosAlterados) {
-            error_log("✓ Alterações nos serviços: " . implode(', ', $detalhesServicos));
+        if ($indicacaoMudou) {
+            error_log("✓ Indicação alterada: '$indicacaoAnterior' → '$indicacaoNome'");
         }
 
         // Resposta de sucesso
@@ -521,6 +536,20 @@ try {
                 'id' => $associadoId,
                 'nome' => $associadoAtualizado['nome'] ?? $dados['nome'],
                 'cpf' => $associadoAtualizado['cpf'] ?? $dados['cpf'],
+                
+                // ✅ NOVA SEÇÃO - INDICAÇÃO
+                'indicacao' => [
+                    'mudou' => $indicacaoMudou,
+                    'anterior' => $indicacaoAnterior,
+                    'nova' => $indicacaoNome,
+                    'processada' => $indicacaoProcessada,
+                    'indicador_id' => $indicadorId,
+                    'indicador_info' => $indicadorInfo,
+                    'mensagem' => $indicacaoMudou 
+                        ? ($indicacaoProcessada ? 'Indicação atualizada com sucesso' : 'Indicação salva mas não processada')
+                        : 'Indicação mantida'
+                ],
+                
                 'situacao_alterada' => $mudouSituacao,
                 'situacao_anterior' => $situacaoAtual,
                 'situacao_nova' => $novaSituacao,
@@ -529,45 +558,32 @@ try {
                 'data_desfiliacao' => $dataDesfiliacao,
                 'servicos_alterados' => $servicosAlterados,
                 'detalhes_servicos' => $detalhesServicos,
-                'total_alteracoes_servicos' => count($detalhesServicos),
                 'tipo_associado_servico' => $tipoAssociadoServico,
-                'novos_campos_financeiros' => [
-                    'observacoes' => $dados['observacoes'],
-                    'doador' => $dados['doador'],
-                    'doador_texto' => $dados['doador'] ? 'Sim' : 'Não'
-                ],
+                
                 'json_export' => [
                     'atualizado' => $resultadoJson['sucesso'],
                     'arquivo' => $resultadoJson['arquivo_individual'] ?? null,
                     'tamanho_bytes' => $resultadoJson['tamanho_bytes'] ?? 0,
                     'timestamp' => $resultadoJson['timestamp'] ?? null,
-                    'erro' => $resultadoJson['sucesso'] ? null : $resultadoJson['erro'],
-                    'operacao' => 'UPDATE',
-                    'pronto_para_zapsing' => $resultadoJson['sucesso']
+                    'erro' => $resultadoJson['sucesso'] ? null : $resultadoJson['erro']
                 ]
             ]
         ];
 
+        if ($indicacaoMudou && $indicacaoProcessada) {
+            $response['message'] .= ' Indicação atualizada.';
+        }
+        
         if ($resultadoJson['sucesso']) {
             $response['message'] .= ' Dados atualizados na integração.';
         }
 
         if ($ficouDesfiliado) {
-            $response['message'] .= ' Desfiliação registrada com data/hora.';
+            $response['message'] .= ' Desfiliação registrada.';
         } elseif ($saiuDeDesfiliado) {
             $response['message'] .= ' Associado reativado.';
         }
 
-        if (!empty($dados['observacoes']) || $dados['doador']) {
-            $infoNovos = [];
-            if (!empty($dados['observacoes'])) {
-                $infoNovos[] = 'observações financeiras';
-            }
-            if ($dados['doador']) {
-                $infoNovos[] = 'status de doador';
-            }
-            $response['message'] .= ' Incluindo ' . implode(' e ', $infoNovos) . '.';
-        }
     } catch (Exception $e) {
         if ($transacaoAtiva) {
             $db->rollback();
@@ -575,6 +591,7 @@ try {
         error_log("✗ Erro na transação: " . $e->getMessage());
         throw $e;
     }
+
 } catch (Exception $e) {
     error_log("✗ ERRO GERAL: " . $e->getMessage());
     error_log("Stack trace: " . $e->getTraceAsString());
@@ -588,13 +605,7 @@ try {
             'line' => $e->getLine(),
             'associado_id' => $associadoId ?? 'não fornecido',
             'post_count' => count($_POST),
-            'situacao_recebida' => $_POST['situacao'] ?? 'não informada',
-            'tipo_associado_recebido' => $_POST['tipoAssociadoServico'] ?? 'não informado',
-            'mudanca_situacao_detectada' => isset($mudouSituacao) ? ($mudouSituacao ? 'SIM' : 'NÃO') : 'não verificado',
-            'novos_campos' => [
-                'observacoes' => $_POST['observacoes'] ?? 'não informado',
-                'doador' => $_POST['doador'] ?? 'não informado'
-            ]
+            'indicacao_recebida' => $_POST['indicacao'] ?? 'não informada'
         ]
     ];
 
@@ -659,3 +670,4 @@ function processarUploadFoto($arquivo, $cpf)
 
     return $resultado;
 }
+?>
