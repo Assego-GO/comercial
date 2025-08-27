@@ -395,9 +395,7 @@ function renderizarTabela(dados) {
                     <button class="btn-icon edit" onclick="editarAssociado(${associado.id})" title="Editar">
                         <i class="fas fa-edit"></i>
                     </button>
-                    <button class="btn-icon delete" onclick="excluirAssociado(${associado.id})" title="Excluir">
-                        <i class="fas fa-trash"></i>
-                    </button>
+                   
                 </div>
             </td>
         `;
