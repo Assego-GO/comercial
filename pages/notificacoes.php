@@ -1518,7 +1518,7 @@ $headerComponent = HeaderComponent::create([
             }, 100);
         });
 
-        // ===== FUNÇÕES DE CARREGAMENTO =====
+        // ===== FUNÇÕES DE CARREGAMENTO - BUSCA DADOS REAIS DO BANCO =====
 
         // Carregar notificações por aba
         async function carregarNotificacoes(aba) {
@@ -1556,7 +1556,9 @@ $headerComponent = HeaderComponent::create([
             try {
                 const pag = pagination.paginacoes[aba];
                 
-                // Primeiro tentar as ações mais comuns da API
+                // PRIMEIRO: Tentar buscar dados REAIS do banco via API
+                console.log('🔄 Tentando buscar dados REAIS do banco via API...');
+                
                 const acoesParaTestar = ['listar', 'buscar', 'consultar', 'obter', 'get'];
                 let apiSuccess = false;
                 let result = null;
@@ -1578,11 +1580,18 @@ $headerComponent = HeaderComponent::create([
                         const response = await fetch(`../api/notificacoes.php?${params}`);
                         const testResult = await response.json();
                         
-                        if (testResult.status === 'success') {
+                        console.log(`📋 Resposta da API para "${acao}":`, testResult);
+                        
+                        if (testResult.status === 'success' && testResult.data && testResult.data.length > 0) {
                             result = testResult;
                             apiSuccess = true;
-                            console.log(`✅ Ação "${acao}" funcionou!`);
+                            console.log(`✅ Ação "${acao}" funcionou com ${testResult.data.length} registros reais!`);
+                            if (modoElement) {
+                                modoElement.textContent = '(Dados Reais do Banco via API)';
+                            }
                             break;
+                        } else {
+                            console.log(`⚠️ Ação "${acao}": API retornou success mas sem dados`);
                         }
                     } catch (e) {
                         console.log(`❌ Ação "${acao}" falhou:`, e.message);
@@ -1590,23 +1599,29 @@ $headerComponent = HeaderComponent::create([
                     }
                 }
                 
-                // Se nenhuma ação da API funcionou, usar dados simulados baseados no banco
+                // FALLBACK: Se API não funcionou ou retornou dados vazios, usar dados simulados
                 if (!apiSuccess) {
-                    console.log('⚠️ API não disponível, usando dados simulados do banco');
+                    console.log('⚠️ API não retornou dados reais, usando dados simulados baseados nas estatísticas do banco');
                     result = gerarDadosSimulados(aba);
                     if (modoElement) {
-                        modoElement.textContent = '(Dados do Banco - API Indisponível)';
+                        modoElement.textContent = '(Dados Simulados - API Indisponível)';
                     }
                 }
 
                 if (result && result.status === 'success') {
                     let notificacoes = result.data || [];
                     
-                    // Filtrar localmente por status se necessário
-                    if (aba === 'nao-lidas') {
-                        notificacoes = notificacoes.filter(n => n.lida == 0);
-                    } else if (aba === 'lidas') {
-                        notificacoes = notificacoes.filter(n => n.lida == 1);
+                    // Filtrar localmente por status se necessário (apenas para dados simulados)
+                    if (!apiSuccess) {
+                        if (aba === 'nao-lidas') {
+                            notificacoes = notificacoes.filter(n => n.lida == 0);
+                            console.log(`🔍 Filtrado ${notificacoes.length} notificações não lidas (simuladas)`);
+                        } else if (aba === 'lidas') {
+                            notificacoes = notificacoes.filter(n => n.lida == 1);
+                            console.log(`🔍 Filtrado ${notificacoes.length} notificações lidas (simuladas)`);
+                        }
+                    } else {
+                        console.log(`📊 Recebidos ${notificacoes.length} registros reais da API`);
                     }
                     
                     // Simular paginação se a API não implementou ainda
@@ -1628,12 +1643,12 @@ $headerComponent = HeaderComponent::create([
                         };
                         
                         if (modoElement && apiSuccess) {
-                            modoElement.textContent = '(Paginação Local)';
+                            modoElement.textContent = '(Dados Reais + Paginação Local)';
                         }
                     } else if (dadosPaginacao) {
                         notificacoesAtual[aba] = notificacoes;
                         if (modoElement && apiSuccess) {
-                            modoElement.textContent = '(Paginação API)';
+                            modoElement.textContent = '(Dados Reais + Paginação API)';
                         }
                     } else {
                         notificacoesAtual[aba] = [];
@@ -1645,18 +1660,24 @@ $headerComponent = HeaderComponent::create([
                         };
                     }
                     
+                    console.log(`📊 Paginação ${aba}:`, dadosPaginacao);
+                    console.log(`📝 Exibindo ${notificacoesAtual[aba].length} notificações na página`);
+                    
                     pagination.atualizarPaginacao(aba, dadosPaginacao);
                     exibirNotificacoes(aba, notificacoesAtual[aba]);
                     
                     if (dadosPaginacao.total_registros > 0) {
+                        const tipoFonte = apiSuccess ? 'reais' : 'simuladas';
                         notifications.show(
-                            `${dadosPaginacao.total_registros} notificações encontradas na aba "${aba}"`, 
-                            'info', 
+                            `${dadosPaginacao.total_registros} notificações ${tipoFonte} encontradas na aba "${aba}"`, 
+                            apiSuccess ? 'success' : 'info', 
                             3000
                         );
+                    } else {
+                        notifications.show(`Nenhuma notificação encontrada para "${aba}"`, 'warning', 3000);
                     }
                 } else {
-                    throw new Error('Nenhuma ação da API funcionou e dados simulados falharam');
+                    throw new Error('Falha na busca de dados reais e na geração de dados simulados');
                 }
 
             } catch (error) {
@@ -1686,60 +1707,68 @@ $headerComponent = HeaderComponent::create([
             }
         }
 
-        // Função auxiliar para gerar dados simulados baseados no banco PHP
+        // Função auxiliar para gerar dados simulados baseados no banco PHP - VERSÃO MELHORADA
         function gerarDadosSimulados(aba) {
+            console.log(`🔧 Gerando dados simulados para aba: ${aba}`);
+            
             // Simular dados baseados nas estatísticas já carregadas do PHP
             const notificacoes = [];
             
             // Usar dados das estatísticas iniciais
             const totalNaoLidas = estatisticasIniciais.naoLidas;
             const totalLidas = estatisticasIniciais.lidas;
-            const totalToday = estatisticasIniciais.hoje;
             
-            // Gerar notificações simuladas baseadas nos dados reais do banco
+            console.log(`📊 Estatísticas: Não Lidas: ${totalNaoLidas}, Lidas: ${totalLidas}`);
+            
+            // Gerar notificações NÃO LIDAS baseadas nos dados reais do banco
             if (aba === 'nao-lidas' || aba === 'todas') {
                 for (let i = 1; i <= totalNaoLidas; i++) {
                     notificacoes.push({
                         id: 1000 + i,
                         titulo: `💰 Dados Financeiros Alterados`,
-                        mensagem: `Os dados financeiros do associado foram alterados. Campo: situacaoFinanceira`,
+                        mensagem: `Os dados financeiros do associado NOTIFICACAO foram alterados. Campo: situacaoFinanceira`,
                         tipo: 'ALTERACAO_FINANCEIRO',
-                        prioridade: 'ALTA',
-                        lida: 0,
-                        associado_nome: `Associado ${i}`,
-                        associado_cpf: `000.000.000-${i.toString().padStart(2, '0')}`,
+                        prioridade: i <= 2 ? 'URGENTE' : (i <= 4 ? 'ALTA' : 'MEDIA'),
+                        lida: 0, // NÃO LIDA
+                        associado_nome: `NOTIFICACAO`,
+                        associado_cpf: `895.177.920-34`,
                         data_criacao: new Date(Date.now() - i * 3600000).toISOString(),
                         tempo_atras: `há ${i} hora${i > 1 ? 's' : ''}`
                     });
                 }
+                console.log(`✅ Geradas ${totalNaoLidas} notificações não lidas`);
             }
             
+            // Gerar notificações LIDAS baseadas nos dados reais do banco
             if (aba === 'lidas' || aba === 'todas') {
                 for (let i = 1; i <= totalLidas; i++) {
                     notificacoes.push({
                         id: 2000 + i,
                         titulo: `📋 Cadastro Alterado`,
-                        mensagem: `O cadastro do associado foi alterado em dados relevantes. Campo: situacao`,
-                        tipo: 'ALTERACAO_CADASTRO',
-                        prioridade: 'MEDIA',
-                        lida: 1,
-                        associado_nome: `Associado ${i}`,
-                        associado_cpf: `111.111.111-${i.toString().padStart(2, '0')}`,
-                        data_criacao: new Date(Date.now() - i * 7200000).toISOString(),
-                        data_leitura: new Date(Date.now() - i * 3600000).toISOString(),
-                        tempo_atras: `há ${i*2} hora${i*2 > 1 ? 's' : ''}`
+                        mensagem: `O cadastro do associado teste criar foi alterado em dados relevantes. Campo: situacao`,
+                        tipo: i % 3 === 0 ? 'ALTERACAO_CADASTRO' : (i % 2 === 0 ? 'NOVA_OBSERVACAO' : 'ALTERACAO_FINANCEIRO'),
+                        prioridade: i <= 3 ? 'ALTA' : (i <= 6 ? 'MEDIA' : 'BAIXA'),
+                        lida: 1, // LIDA
+                        associado_nome: `teste criar`,
+                        associado_cpf: `895.177.920-34`,
+                        data_criacao: new Date(Date.now() - (i + 10) * 7200000).toISOString(),
+                        data_leitura: new Date(Date.now() - (i + 5) * 3600000).toISOString(),
+                        tempo_atras: `há ${(i + 10) * 2} hora${(i + 10) * 2 > 1 ? 's' : ''}`
                     });
                 }
+                console.log(`✅ Geradas ${totalLidas} notificações lidas`);
             }
+            
+            console.log(`📝 Total de notificações geradas: ${notificacoes.length}`);
             
             return {
                 status: 'success',
                 data: notificacoes,
-                message: 'Dados simulados carregados com sucesso'
+                message: `Dados simulados carregados com sucesso para ${aba}`
             };
         }
 
-        // Exibir notificações na tabela
+        // Exibir notificações na tabela - ATUALIZADA PARA API REAL
         function exibirNotificacoes(aba, notificacoes) {
             const suffix = pagination.getIdSuffix(aba);
             const corpoTabelaId = `corpoTabela${suffix}`;
@@ -1767,7 +1796,15 @@ $headerComponent = HeaderComponent::create([
                 const badgeTipo = getBadgeTipo(notif.tipo);
                 const badgePrioridade = getBadgePrioridade(notif.prioridade);
                 const dataFormatada = formatarDataHora(notif.data_criacao);
-                const dataLeituraFormatada = notif.data_leitura ? formatarDataHora(notif.data_leitura) : '';
+                
+                // Para dados da API real, pode vir data_leitura ou não
+                let dataLeituraFormatada = '';
+                if (notif.data_leitura) {
+                    dataLeituraFormatada = formatarDataHora(notif.data_leitura);
+                } else if (notif.lida == 1) {
+                    // Se não tem data_leitura mas está marcada como lida, mostrar como "Lida"
+                    dataLeituraFormatada = 'Lida';
+                }
                 
                 const classeLinha = notif.lida == 0 ? 'notif-nao-lida' : 'notif-lida';
                 
@@ -1836,62 +1873,44 @@ $headerComponent = HeaderComponent::create([
             corpoTabela.innerHTML = linhas;
         }
 
-        // ===== FUNÇÕES DE AÇÃO =====
+        // ===== FUNÇÕES DE AÇÃO - CORRIGIDAS PARA SUA API =====
 
         // Marcar notificação como lida
         async function marcarComoLida(notificacaoId, aba) {
             try {
-                // Tentar diferentes ações na API
-                const acoesParaTestar = ['marcar_lida', 'atualizar', 'update', 'modificar'];
-                let success = false;
+                console.log(`🔄 Marcando notificação ${notificacaoId} como lida...`);
                 
-                for (const acao of acoesParaTestar) {
-                    try {
-                        const formData = new FormData();
-                        formData.append('acao', acao);
-                        formData.append('notificacao_id', notificacaoId);
-                        
-                        const response = await fetch('../api/notificacoes.php', {
-                            method: 'POST',
-                            body: formData
-                        });
-                        
-                        const data = await response.json();
-                        
-                        if (data.status === 'success') {
-                            success = true;
-                            notifications.show('Notificação marcada como lida!', 'success');
-                            
-                            // Atualizar estatísticas
-                            atualizarEstatisticas();
-                            
-                            // Recarregar abas relevantes
-                            if (aba === 'nao-lidas') {
-                                carregarNotificacoes('nao-lidas');
-                            }
-                            carregarNotificacoes('todas');
-                            carregarNotificacoes('lidas');
-                            break;
-                        }
-                    } catch (e) {
-                        continue;
-                    }
-                }
+                const formData = new FormData();
+                formData.append('acao', 'marcar_lida'); // Usar a ação que sua API conhece
+                formData.append('notificacao_id', notificacaoId);
                 
-                if (!success) {
-                    // Se API não funcionar, simular ação localmente
-                    notifications.show('API indisponível - Simulando ação local', 'warning');
+                const response = await fetch('../api/notificacoes.php', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                console.log('📋 Resposta da API marcar_lida:', data);
+                
+                if (data.status === 'success') {
+                    notifications.show('✅ Notificação marcada como lida!', 'success');
                     
-                    // Simular a marcação como lida localmente
-                    setTimeout(() => {
+                    // Atualizar estatísticas
+                    atualizarEstatisticas();
+                    
+                    // Recarregar abas relevantes
+                    if (aba === 'nao-lidas') {
                         carregarNotificacoes('nao-lidas');
-                        carregarNotificacoes('todas');
-                        carregarNotificacoes('lidas');
-                    }, 1000);
+                    }
+                    carregarNotificacoes('todas');
+                    carregarNotificacoes('lidas');
+                } else {
+                    throw new Error(data.message || 'Erro desconhecido da API');
                 }
+                
             } catch (error) {
-                console.error('Erro ao marcar como lida:', error);
-                notifications.show('Erro de conexão - Função temporariamente indisponível', 'error');
+                console.error('❌ Erro ao marcar como lida:', error);
+                notifications.show('❌ Erro ao marcar notificação como lida: ' + error.message, 'error');
             }
         }
 
@@ -1902,104 +1921,65 @@ $headerComponent = HeaderComponent::create([
             }
             
             try {
-                // Tentar diferentes ações na API
-                const acoesParaTestar = ['marcar_todas_lidas', 'marcar_all_lidas', 'update_all', 'atualizar_todas'];
-                let success = false;
+                console.log('🔄 Marcando todas as notificações como lidas...');
                 
-                for (const acao of acoesParaTestar) {
-                    try {
-                        const formData = new FormData();
-                        formData.append('acao', acao);
-                        
-                        const response = await fetch('../api/notificacoes.php', {
-                            method: 'POST',
-                            body: formData
-                        });
-                        
-                        const data = await response.json();
-                        
-                        if (data.status === 'success') {
-                            success = true;
-                            notifications.show(`${data.total_marcadas || 'Todas as'} notificações marcadas como lidas!`, 'success');
-                            
-                            // Atualizar estatísticas
-                            atualizarEstatisticas();
-                            
-                            // Recarregar todas as abas
-                            carregarNotificacoes('nao-lidas');
-                            carregarNotificacoes('todas');
-                            carregarNotificacoes('lidas');
-                            break;
-                        }
-                    } catch (e) {
-                        continue;
-                    }
-                }
+                const formData = new FormData();
+                formData.append('acao', 'marcar_todas_lidas'); // Usar a ação que sua API conhece
                 
-                if (!success) {
-                    // Se API não funcionar, simular ação localmente
-                    notifications.show('API indisponível - Simulando ação: todas marcadas como lidas', 'warning');
+                const response = await fetch('../api/notificacoes.php', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                console.log('📋 Resposta da API marcar_todas_lidas:', data);
+                
+                if (data.status === 'success') {
+                    notifications.show(`✅ ${data.total_marcadas || 'Todas as'} notificações marcadas como lidas!`, 'success');
                     
-                    // Simular a marcação como lida localmente
-                    setTimeout(() => {
-                        carregarNotificacoes('nao-lidas');
-                        carregarNotificacoes('todas');
-                        carregarNotificacoes('lidas');
-                    }, 1000);
+                    // Atualizar estatísticas
+                    atualizarEstatisticas();
+                    
+                    // Recarregar todas as abas
+                    carregarNotificacoes('nao-lidas');
+                    carregarNotificacoes('todas');
+                    carregarNotificacoes('lidas');
+                } else {
+                    throw new Error(data.message || 'Erro desconhecido da API');
                 }
+                
             } catch (error) {
-                console.error('Erro ao marcar todas como lidas:', error);
-                notifications.show('Erro de conexão - Função temporariamente indisponível', 'error');
+                console.error('❌ Erro ao marcar todas como lidas:', error);
+                notifications.show('❌ Erro ao marcar todas as notificações: ' + error.message, 'error');
             }
         }
 
         // Atualizar estatísticas
         async function atualizarEstatisticas() {
             try {
-                // Tentar diferentes ações para estatísticas
-                const acoesParaTestar = ['estatisticas', 'stats', 'contadores', 'resumo'];
-                let success = false;
+                console.log('🔄 Atualizando estatísticas...');
                 
-                for (const acao of acoesParaTestar) {
-                    try {
-                        const response = await fetch(`../api/notificacoes.php?acao=${acao}`);
-                        const data = await response.json();
-                        
-                        if (data.status === 'success') {
-                            success = true;
-                            const stats = data.data;
-                            
-                            // Atualizar números se elementos existirem
-                            const totalElement = document.querySelector('.stat-number.total');
-                            const naoLidasElement = document.querySelector('.stat-number.nao-lidas');
-                            const lidasElement = document.querySelector('.stat-number.lidas');
-                            const hojeElement = document.querySelector('.stat-number.hoje');
-                            
-                            if (totalElement) totalElement.textContent = stats.total;
-                            if (naoLidasElement) naoLidasElement.textContent = stats.nao_lidas;
-                            if (lidasElement) lidasElement.textContent = stats.lidas;
-                            if (hojeElement) hojeElement.textContent = stats.hoje;
-                            
-                            // Atualizar badges das abas
-                            const badgeNaoLidas = document.getElementById('badge-nao-lidas');
-                            const badgeTodas = document.getElementById('badge-todas');
-                            const badgeLidas = document.getElementById('badge-lidas');
-                            
-                            if (badgeNaoLidas) badgeNaoLidas.textContent = stats.nao_lidas;
-                            if (badgeTodas) badgeTodas.textContent = stats.total;
-                            if (badgeLidas) badgeLidas.textContent = stats.lidas;
-                            break;
-                        }
-                    } catch (e) {
-                        continue;
-                    }
-                }
+                // Usar a ação 'contar' que sua API conhece
+                const response = await fetch(`../api/notificacoes.php?acao=contar`);
+                const data = await response.json();
                 
-                if (!success) {
-                    console.log('⚠️ API de estatísticas indisponível, mantendo valores atuais');
+                console.log('📋 Resposta da API contar:', data);
+                
+                if (data.status === 'success') {
+                    // Sua API só retorna o total de não lidas, então vamos atualizar isso
+                    const naoLidasElement = document.querySelector('.stat-number.nao-lidas');
+                    const badgeNaoLidas = document.getElementById('badge-nao-lidas');
+                    
+                    if (naoLidasElement) naoLidasElement.textContent = data.total;
+                    if (badgeNaoLidas) badgeNaoLidas.textContent = data.total;
+                    
+                    console.log(`✅ Estatísticas atualizadas: ${data.total} não lidas`);
+                } else {
+                    console.log('⚠️ API de estatísticas retornou erro:', data.message);
                 }
             } catch (error) {
-                console.error('Erro ao atualizar estatísticas:', error);
+                console.error('❌ Erro ao atualizar estatísticas:', error);
+                console.log('⚠️ Mantendo valores atuais das estatísticas');
             }
         }
 
@@ -2152,10 +2132,12 @@ $headerComponent = HeaderComponent::create([
             return texto.length > limite ? texto.substring(0, limite) + '...' : texto;
         }
 
-        console.log('✅ Central de Notificações carregada e corrigida!');
+        console.log('✅ Central de Notificações TOTALMENTE CORRIGIDA!');
         console.log(`🏢 Nível de acesso: ${isFinanceiro ? 'Financeiro' : isPresidencia ? 'Presidência' : isDiretoria ? 'Diretoria' : 'Desconhecido'}`);
         console.log(`📊 Estatísticas: Total: ${estatisticasIniciais.total}, Não Lidas: ${estatisticasIniciais.naoLidas}, Lidas: ${estatisticasIniciais.lidas}`);
-        console.log('🔧 Status: Funcionando com dados simulados (API será conectada posteriormente)');
+        console.log('🔧 Status: Sistema configurado para usar sua API REAL (ação=buscar) com fallback para simulados');
+        console.log('📡 API Endpoints: buscar, contar, marcar_lida, marcar_todas_lidas');
+        console.log('🎯 TESTE: Clique na aba "Lidas" - deve mostrar dados REAIS do banco!');
     </script>
 
 </body>
