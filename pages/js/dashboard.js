@@ -2761,12 +2761,7 @@ function criarCardObservacao(obs) {
                         <button class="btn-observacao-action" title="${isImportante ? 'Remover importância' : 'Marcar como importante'}" onclick="toggleImportanteObs(${obs.id})">
                             <i class="${isImportante ? 'fas' : 'far'} fa-star ${isImportante ? 'text-warning' : ''}"></i>
                         </button>
-                        <button class="btn-observacao-action" title="Editar" onclick="editarObservacao(${obs.id})">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button class="btn-observacao-action delete" title="Excluir" onclick="excluirObservacao(${obs.id})">
-                            <i class="fas fa-trash"></i>
-                        </button>
+                        
                     </div>
                 </div>
                 <div class="observacao-date">

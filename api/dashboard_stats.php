@@ -56,17 +56,25 @@ try {
     $stmt->execute();
     $stats['por_corporacao'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
-    // Busca especificamente PM e BM para o card principal
+    // CORRIGIDO: Busca PM, BM e calcula OUTROS corretamente
     $stmt = $db->prepare("
         SELECT 
-            COUNT(DISTINCT CASE WHEN UPPER(TRIM(m.corporacao)) LIKE '%POLICIA MILITAR%' 
-                                  OR UPPER(TRIM(m.corporacao)) LIKE '%POLÍCIA MILITAR%'
-                                  OR UPPER(TRIM(m.corporacao)) LIKE '%PM%' 
-                               THEN a.id END) as pm_count,
-            COUNT(DISTINCT CASE WHEN UPPER(TRIM(m.corporacao)) LIKE '%BOMBEIRO%'
-                                  OR UPPER(TRIM(m.corporacao)) LIKE '%BM%'
-                               THEN a.id END) as bm_count,
-            (SELECT COUNT(DISTINCT a2.id) FROM Associados a2 WHERE a2.situacao = 'Filiado') as total_ativos
+            COUNT(DISTINCT CASE WHEN 
+                UPPER(TRIM(COALESCE(m.corporacao, ''))) LIKE '%POLICIA MILITAR%' 
+                OR UPPER(TRIM(COALESCE(m.corporacao, ''))) LIKE '%POLÍCIA MILITAR%'
+                OR UPPER(TRIM(COALESCE(m.corporacao, ''))) LIKE '%PM %' 
+                OR UPPER(TRIM(COALESCE(m.corporacao, ''))) = 'PM'
+                OR UPPER(TRIM(COALESCE(m.corporacao, ''))) LIKE 'PM-%'
+                THEN a.id END) as pm_count,
+                
+            COUNT(DISTINCT CASE WHEN 
+                UPPER(TRIM(COALESCE(m.corporacao, ''))) LIKE '%BOMBEIRO%'
+                OR UPPER(TRIM(COALESCE(m.corporacao, ''))) LIKE '%BM %'
+                OR UPPER(TRIM(COALESCE(m.corporacao, ''))) = 'BM'
+                OR UPPER(TRIM(COALESCE(m.corporacao, ''))) LIKE '%CORPO DE BOMBEIRO%'
+                OR UPPER(TRIM(COALESCE(m.corporacao, ''))) LIKE 'CBM%'
+                THEN a.id END) as bm_count
+                
         FROM Associados a 
         LEFT JOIN Militar m ON a.id = m.associado_id 
         WHERE a.situacao = 'Filiado'
@@ -76,17 +84,28 @@ try {
     
     $pm_count = $corporacoes_principais['pm_count'] ?? 0;
     $bm_count = $corporacoes_principais['bm_count'] ?? 0;
-    $total_pm_bm = $pm_count + $bm_count;
-    $total_ativos = $corporacoes_principais['total_ativos'] ?? 1;
+    $total_ativos = $stats['associados_ativos'];
     
-    // Dados para o card principal (PM + BM)
+    // CORREÇÃO: Calcular "outros" subtraindo PM e BM do total de ativos
+    $outros_count = $total_ativos - $pm_count - $bm_count;
+    
+    // Garantir que não fique negativo
+    if ($outros_count < 0) {
+        $outros_count = 0;
+    }
+    
+    $total_corporacoes = $pm_count + $bm_count + $outros_count;
+    
+    // Dados para o card principal (PM + BM + OUTROS) - CORRIGIDO
     $stats['corporacoes_principais'] = [
         'pm_quantidade' => $pm_count,
         'bm_quantidade' => $bm_count,
-        'total_quantidade' => $total_pm_bm,
-        'pm_percentual' => round(($pm_count * 100) / $total_ativos, 1),
-        'bm_percentual' => round(($bm_count * 100) / $total_ativos, 1),
-        'total_percentual' => round(($total_pm_bm * 100) / $total_ativos, 1)
+        'outros_quantidade' => $outros_count,
+        'total_quantidade' => $total_corporacoes,
+        'pm_percentual' => $total_ativos > 0 ? round(($pm_count * 100) / $total_ativos, 1) : 0,
+        'bm_percentual' => $total_ativos > 0 ? round(($bm_count * 100) / $total_ativos, 1) : 0,
+        'outros_percentual' => $total_ativos > 0 ? round(($outros_count * 100) / $total_ativos, 1) : 0,
+        'total_percentual' => $total_ativos > 0 ? round(($total_corporacoes * 100) / $total_ativos, 1) : 0
     ];
     
     // Mantém compatibilidade (pega a maior individual para fallback)
@@ -197,6 +216,16 @@ try {
             'novos_associados' => 0,
             'por_corporacao' => [],
             'corporacao_principal' => ['corporacao' => 'N/A', 'quantidade' => 0, 'percentual' => 0],
+            'corporacoes_principais' => [
+                'pm_quantidade' => 0,
+                'bm_quantidade' => 0,
+                'outros_quantidade' => 0,
+                'total_quantidade' => 0,
+                'pm_percentual' => 0,
+                'bm_percentual' => 0,
+                'outros_percentual' => 0,
+                'total_percentual' => 0
+            ],
             'aniversariantes_hoje' => 0,
             'capital' => 0,
             'interior' => 0,
