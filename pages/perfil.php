@@ -58,13 +58,12 @@ if ($funcionarioCompleto['criado_em']) {
 }
 
 // Cria instância do Header Component
-// ✅ CORRIGIDO
 $headerComponent = HeaderComponent::create([
     'usuario' => [
         'nome' => $usuarioLogado['nome'],
         'cargo' => $usuarioLogado['cargo'] ?? 'Funcionário',
         'avatar' => $usuarioLogado['avatar'] ?? null,
-        'departamento_id' => $usuarioLogado['departamento_id'] ?? null  // ✅ ADICIONAR ESTA LINHA
+        'departamento_id' => $usuarioLogado['departamento_id'] ?? null
     ],
     'isDiretor' => $auth->isDiretor(),
     'activeTab' => '',
@@ -143,10 +142,10 @@ $headerComponent = HeaderComponent::create([
                         </div>
                     </div>
                     <div class="profile-actions">
-                        <button class="btn-modern btn-white" onclick="abrirModalEdicao()">
+                        <!-- <button class="btn-modern btn-white" onclick="abrirModalEdicao()">
                             <i class="fas fa-edit"></i>
                             Editar Perfil
-                        </button>
+                        </button> -->
                         <button class="btn-modern btn-white" onclick="abrirModalSenha()">
                             <i class="fas fa-key"></i>
                             Alterar Senha
@@ -161,7 +160,8 @@ $headerComponent = HeaderComponent::create([
             <div class="profile-grid">
                 <!-- Sidebar -->
                 <div class="profile-sidebar">
-                    <!-- Stats Card -->
+                    <!-- Stats Card - COMENTADO TEMPORARIAMENTE -->
+                    <!--
                     <div class="profile-card" data-aos="fade-right">
                         <div class="profile-card-header">
                             <h3 class="profile-card-title">
@@ -186,6 +186,7 @@ $headerComponent = HeaderComponent::create([
                             </div>
                         </div>
                     </div>
+                    -->
 
                     <!-- Personal Info Card -->
                     <div class="profile-card" data-aos="fade-right" data-aos-delay="100">
@@ -255,7 +256,8 @@ $headerComponent = HeaderComponent::create([
 
                 <!-- Main Content -->
                 <div class="profile-main">
-                    <!-- Badges Section -->
+                    <!-- Badges Section - COMENTADO TEMPORARIAMENTE -->
+                    <!--
                     <div class="profile-card" data-aos="fade-up">
                         <div class="profile-card-header">
                             <h3 class="profile-card-title">
@@ -291,8 +293,10 @@ $headerComponent = HeaderComponent::create([
                             <?php endif; ?>
                         </div>
                     </div>
+                    -->
 
-                    <!-- Contributions Section -->
+                    <!-- Contributions Section - COMENTADO TEMPORARIAMENTE -->
+                    <!--
                     <div class="profile-card" data-aos="fade-up" data-aos-delay="100">
                         <div class="profile-card-header">
                             <h3 class="profile-card-title">
@@ -341,6 +345,7 @@ $headerComponent = HeaderComponent::create([
                             <?php endif; ?>
                         </div>
                     </div>
+                    -->
                 </div>
             </div>
         </div>
