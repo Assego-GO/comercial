@@ -274,7 +274,7 @@ function buscarDadosRelatorio($db, $filtros = []) {
             MAX(a.rg) as rg,
             a.id as associado_id,
             SUM(sa.valor_aplicado) as valor_total_contratado,
-            COUNT(sa.id) as total_servicos,
+            COUNT(DISTINCT sa.servico_id) as total_servicos,
             MAX(a.situacao) as situacao,
             MAX(a.email) as email,
             COALESCE(MAX(m.patente), 'Não informado') as patente,
@@ -570,7 +570,7 @@ $motivoNegacao = 'Acesso restrito ao departamento financeiro e presidência.';
 
 if (isset($usuarioLogado['departamento_id'])) {
     $deptId = $usuarioLogado['departamento_id'];
-    if ($deptId == 5 || $deptId == 1) {
+    if ($deptId == 2 || $deptId == 1) {
         $temPermissaoFinanceiro = true;
     }
 }
@@ -683,7 +683,7 @@ if ($temPermissaoFinanceiro) {
 $headerComponent = HeaderComponent::create([
     'usuario' => $usuarioLogado,
     'isDiretor' => $auth->isDiretor(),
-    'activeTab' => 'financeiro',
+    'activeTab' => 'relatorios',
     'notificationCount' => $dadosRelatorio['estatisticas_gerais']['cancelamentos'] ?? 0,
     'showSearch' => true
 ]);

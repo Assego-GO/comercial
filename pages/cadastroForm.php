@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Formulário de Cadastro de Associados - VERSÃO COM ENVIO AUTOMÁTICO OBRIGATÓRIO
  * pages/cadastroForm.php
@@ -34,28 +35,28 @@ $associadoData = null;
 if ($isEdit) {
     try {
         $db = Database::getInstance(DB_NAME_CADASTRO)->getConnection();
-        
+
         error_log("=== INÍCIO BUSCA DADOS ASSOCIADO ===");
         error_log("Associado ID: $associadoId");
-        
+
         // 1. BUSCA DADOS PRINCIPAIS DO ASSOCIADO
         $stmt = $db->prepare("SELECT * FROM Associados WHERE id = ?");
         $stmt->execute([$associadoId]);
         $associadoData = $stmt->fetch(PDO::FETCH_ASSOC);
-        
+
         if (!$associadoData) {
             error_log("ERRO: Associado não encontrado com ID: $associadoId");
             header('Location: dashboard.php');
             exit;
         }
-        
+
         error_log("✓ Dados básicos do associado carregados");
-        
+
         // 2. BUSCA DADOS MILITARES - MÉTODO DIRETO
         $stmtMilitar = $db->prepare("SELECT * FROM Militar WHERE associado_id = ?");
         $stmtMilitar->execute([$associadoId]);
         $dadosMilitar = $stmtMilitar->fetch(PDO::FETCH_ASSOC);
-        
+
         if ($dadosMilitar) {
             // Se encontrou dados militares, adiciona ao array principal
             $associadoData['corporacao'] = $dadosMilitar['corporacao'];
@@ -63,7 +64,7 @@ if ($isEdit) {
             $associadoData['categoria'] = $dadosMilitar['categoria'];
             $associadoData['lotacao'] = $dadosMilitar['lotacao'];
             $associadoData['unidade'] = $dadosMilitar['unidade'];
-            
+
             error_log("✓ Dados militares encontrados:");
             error_log("  - Patente: '" . ($dadosMilitar['patente'] ?? 'VAZIO') . "'");
             error_log("  - Corporação: '" . ($dadosMilitar['corporacao'] ?? 'VAZIO') . "'");
@@ -71,28 +72,28 @@ if ($isEdit) {
         } else {
             // Se não encontrou, cria registro vazio e define valores padrão
             error_log("⚠ Nenhum dado militar encontrado. Criando registro...");
-            
+
             $stmtInsert = $db->prepare("
                 INSERT INTO Militar (associado_id, corporacao, patente, categoria, lotacao, unidade) 
                 VALUES (?, '', '', '', '', '')
             ");
             $stmtInsert->execute([$associadoId]);
-            
+
             // Define valores vazios no array
             $associadoData['corporacao'] = '';
             $associadoData['patente'] = '';
             $associadoData['categoria'] = '';
             $associadoData['lotacao'] = '';
             $associadoData['unidade'] = '';
-            
+
             error_log("✓ Registro militar criado com valores vazios");
         }
-        
+
         // 3. BUSCA DADOS DE ENDEREÇO
         $stmtEndereco = $db->prepare("SELECT * FROM Endereco WHERE associado_id = ?");
         $stmtEndereco->execute([$associadoId]);
         $dadosEndereco = $stmtEndereco->fetch(PDO::FETCH_ASSOC);
-        
+
         if ($dadosEndereco) {
             $associadoData['cep'] = $dadosEndereco['cep'];
             $associadoData['endereco'] = $dadosEndereco['endereco'];
@@ -102,12 +103,12 @@ if ($isEdit) {
             $associadoData['complemento'] = $dadosEndereco['complemento'];
             error_log("✓ Dados de endereço carregados");
         }
-        
+
         // 4. BUSCA DADOS FINANCEIROS
         $stmtFinanceiro = $db->prepare("SELECT * FROM Financeiro WHERE associado_id = ?");
         $stmtFinanceiro->execute([$associadoId]);
         $dadosFinanceiro = $stmtFinanceiro->fetch(PDO::FETCH_ASSOC);
-        
+
         if ($dadosFinanceiro) {
             $associadoData['tipoAssociado'] = $dadosFinanceiro['tipoAssociado'];
             $associadoData['situacaoFinanceira'] = $dadosFinanceiro['situacaoFinanceira'];
@@ -116,36 +117,35 @@ if ($isEdit) {
             $associadoData['agencia'] = $dadosFinanceiro['agencia'];
             $associadoData['operacao'] = $dadosFinanceiro['operacao'];
             $associadoData['contaCorrente'] = $dadosFinanceiro['contaCorrente'];
-           
+
             $associadoData['doador'] = $dadosFinanceiro['doador'];
             error_log("✓ Dados financeiros carregados");
         }
-        
+
         // 5. BUSCA DADOS DE CONTRATO/FILIAÇÃO
         $stmtContrato = $db->prepare("SELECT * FROM Contrato WHERE associado_id = ?");
         $stmtContrato->execute([$associadoId]);
         $dadosContrato = $stmtContrato->fetch(PDO::FETCH_ASSOC);
-        
+
         if ($dadosContrato) {
             $associadoData['data_filiacao'] = $dadosContrato['dataFiliacao'];
             $associadoData['dataDesfiliacao'] = $dadosContrato['dataDesfiliacao'];
             error_log("✓ Dados de contrato carregados");
         }
-        
+
         // 6. BUSCA DEPENDENTES
         $stmtDep = $db->prepare("SELECT * FROM Dependentes WHERE associado_id = ? ORDER BY nome ASC");
         $stmtDep->execute([$associadoId]);
         $dependentes = $stmtDep->fetchAll(PDO::FETCH_ASSOC);
         $associadoData['dependentes'] = $dependentes;
         error_log("✓ Dependentes carregados: " . count($dependentes));
-        
+
         // DEBUG FINAL
         error_log("=== RESULTADO FINAL ===");
         error_log("Patente final: '" . ($associadoData['patente'] ?? 'NULL') . "'");
         error_log("Corporação final: '" . ($associadoData['corporacao'] ?? 'NULL') . "'");
         error_log("Total de campos carregados: " . count($associadoData));
         error_log("=== FIM BUSCA DADOS ===");
-        
     } catch (Exception $e) {
         error_log("ERRO na busca de dados: " . $e->getMessage());
         error_log("Stack trace: " . $e->getTraceAsString());
@@ -229,7 +229,6 @@ try {
             }
         }
     }
-
 } catch (Exception $e) {
     error_log("Erro ao buscar dados para serviços: " . $e->getMessage());
     $servicos = [];
@@ -583,16 +582,16 @@ $lotacoes = [
     "TERCEIRA SECAO DO ESTADO MAIOR"
 ];
 
-// Array de patentes com encoding correto E hífens corretos
+// Array de patentes com encoding correto E hífens corretos (sem duplicação)
 $patentes = [
     'Praças' => [
         'Aluno Soldado',
         'Soldado 2ª Classe',
-        'Soldado 1ª Classe', 
+        'Soldado 1ª Classe',
         'Cabo',
         'Terceiro Sargento',
         'Terceiro-Sargento',
-        'Segundo Sargento', 
+        'Segundo Sargento',
         'Segundo-Sargento',
         'Primeiro Sargento',
         'Primeiro-Sargento',
@@ -648,7 +647,7 @@ $patentes = [
     <!-- Custom CSS Files -->
     <link rel="stylesheet" href="estilizacao/cadastroForm.css">
     <link rel="stylesheet" href="estilizacao/autocomplete.css">
-    
+
     <!-- Passar dados para o JavaScript -->
     <script>
         // Dados essenciais para o JavaScript
@@ -912,16 +911,16 @@ $patentes = [
                         </div>
 
                         <div class="form-group">
-                        <label class="form-label">
-                            Situação <span class="required">*</span>
-                        </label>
-                        <select class="form-input form-select" name="situacao" id="situacao" required>
-                            <option value="Filiado" <?php echo (!isset($associadoData['situacao']) || $associadoData['situacao'] == 'Filiado') ? 'selected' : ''; ?>>Filiado</option>
-                            <option value="Desfiliado" <?php echo (isset($associadoData['situacao']) && $associadoData['situacao'] == 'Desfiliado') ? 'selected' : ''; ?>>Desfiliado</option>
-                            <option value="Remido" <?php echo (isset($associadoData['situacao']) && $associadoData['situacao'] == 'Remido') ? 'selected' : ''; ?>>Remido</option>
-                            <option value="Agregado" <?php echo (isset($associadoData['situacao']) && $associadoData['situacao'] == 'Agregado') ? 'selected' : ''; ?>>Agregado</option>
-                        </select>
-                    </div>
+                            <label class="form-label">
+                                Situação <span class="required">*</span>
+                            </label>
+                            <select class="form-input form-select" name="situacao" id="situacao" required>
+                                <option value="Filiado" <?php echo (!isset($associadoData['situacao']) || $associadoData['situacao'] == 'Filiado') ? 'selected' : ''; ?>>Filiado</option>
+                                <option value="Desfiliado" <?php echo (isset($associadoData['situacao']) && $associadoData['situacao'] == 'Desfiliado') ? 'selected' : ''; ?>>Desfiliado</option>
+                                <option value="Remido" <?php echo (isset($associadoData['situacao']) && $associadoData['situacao'] == 'Remido') ? 'selected' : ''; ?>>Remido</option>
+                                <option value="Agregado" <?php echo (isset($associadoData['situacao']) && $associadoData['situacao'] == 'Agregado') ? 'selected' : ''; ?>>Agregado</option>
+                            </select>
+                        </div>
 
                         <div class="form-group">
                             <label class="form-label">
@@ -940,7 +939,7 @@ $patentes = [
                             <div class="photo-upload-container">
                                 <div class="photo-preview" id="photoPreview">
                                     <?php if (isset($associadoData['foto']) && $associadoData['foto']): ?>
-                                        <?php 
+                                        <?php
                                         // Corrige o caminho da foto
                                         $fotoPath = $associadoData['foto'];
                                         if (!str_starts_with($fotoPath, 'http') && !str_starts_with($fotoPath, '../')) {
@@ -1060,11 +1059,7 @@ $patentes = [
                                 <option value="">Selecione...</option>
                                 <option value="Polícia Militar" <?php echo (isset($associadoData['corporacao']) && $associadoData['corporacao'] == 'Polícia Militar') ? 'selected' : ''; ?>>Polícia Militar</option>
                                 <option value="Bombeiro Militar" <?php echo (isset($associadoData['corporacao']) && $associadoData['corporacao'] == 'Bombeiro Militar') ? 'selected' : ''; ?>>Bombeiro Militar</option>
-                                <option value="Pensionista" <?php echo (isset($associadoData['corporacao']) && $associadoData['corporacao'] == 'Pensionista') ? 'selected' : ''; ?>>Pensionista</option>
-                                <option value="Civil" <?php echo (isset($associadoData['corporacao']) && $associadoData['corporacao'] == 'Civil') ? 'selected' : ''; ?>>Civil</option>
-                                <option value="Agregados" <?php echo (isset($associadoData['corporacao']) && $associadoData['corporacao'] == 'Agregados') ? 'selected' : ''; ?>>Agregados</option>
-                                <option value="Exército" <?php echo (isset($associadoData['corporacao']) && $associadoData['corporacao'] == 'Exército') ? 'selected' : ''; ?>>Exército</option>
-                                <option value="Outros" <?php echo (isset($associadoData['corporacao']) && $associadoData['corporacao'] == 'Outros') ? 'selected' : ''; ?>>Outros</option>
+
                             </select>
                         </div>
 
@@ -1072,15 +1067,21 @@ $patentes = [
                             <label class="form-label">Patente</label>
                             <select class="form-input form-select" name="patente" id="patente" data-current-value="<?php echo isset($associadoData['patente']) ? htmlspecialchars($associadoData['patente'], ENT_QUOTES, 'UTF-8') : ''; ?>">
                                 <option value="">Selecione...</option>
-                                <?php foreach($patentes as $grupo => $listPatentes): ?>
-                                    <optgroup label="<?php echo $grupo; ?>">
-                                        <?php foreach($listPatentes as $patente): ?>
-                                            <option value="<?php echo htmlspecialchars($patente, ENT_QUOTES, 'UTF-8'); ?>" 
-                                                <?php echo (isset($associadoData['patente']) && $associadoData['patente'] == $patente) ? 'selected' : ''; ?>>
-                                                <?php echo htmlspecialchars($patente, ENT_QUOTES, 'UTF-8'); ?>
-                                            </option>
-                                        <?php endforeach; ?>
-                                    </optgroup>
+                                <?php
+                                // Lista todas as patentes sem grupos
+                                $todasPatentes = array();
+                                foreach ($patentes as $grupo => $listPatentes) {
+                                    foreach ($listPatentes as $patente) {
+                                        $todasPatentes[] = $patente;
+                                    }
+                                }
+                                sort($todasPatentes);
+
+                                foreach ($todasPatentes as $patente): ?>
+                                    <option value="<?php echo htmlspecialchars($patente, ENT_QUOTES, 'UTF-8'); ?>"
+                                        <?php echo (isset($associadoData['patente']) && $associadoData['patente'] == $patente) ? 'selected' : ''; ?>>
+                                        <?php echo htmlspecialchars($patente, ENT_QUOTES, 'UTF-8'); ?>
+                                    </option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
@@ -1104,8 +1105,8 @@ $patentes = [
                             </label>
                             <select class="form-input form-select" name="lotacao" id="lotacao">
                                 <option value="">Selecione...</option>
-                                <?php foreach($lotacoes as $lotacao): ?>
-                                    <option value="<?php echo htmlspecialchars($lotacao); ?>" 
+                                <?php foreach ($lotacoes as $lotacao): ?>
+                                    <option value="<?php echo htmlspecialchars($lotacao); ?>"
                                         <?php echo (isset($associadoData['lotacao']) && $associadoData['lotacao'] == $lotacao) ? 'selected' : ''; ?>>
                                         <?php echo htmlspecialchars($lotacao); ?>
                                     </option>
@@ -1212,29 +1213,29 @@ $patentes = [
                     <div class="form-grid">
                         <!-- Tipo de Associado (controla percentuais) -->
                         <div class="form-group full-width">
-    <label class="form-label">
-        Tipo de Associado <span class="required">*</span>
-        <i class="fas fa-info-circle info-tooltip"
-            title="Define o percentual de cobrança dos serviços. Benemérito e Agregado não têm direito ao serviço jurídico."></i>
-    </label>
-    <select class="form-input form-select" name="tipoAssociadoServico" id="tipoAssociadoServico"
-        required onchange="calcularServicos()">
-        <option value="">Selecione o tipo de associado...</option>
-        <?php foreach($tiposAssociado as $tipo): ?>
-            <option value="<?php echo $tipo; ?>" 
-                <?php echo (isset($associadoData['tipoAssociadoServico']) && $associadoData['tipoAssociadoServico'] == $tipo) ? 'selected' : ''; ?>
-                <?php echo (in_array($tipo, ['Benemérito', 'Agregado'])) ? 'data-restricao="sem-juridico"' : ''; ?>>
-                <?php echo $tipo; ?>
-                <?php echo (in_array($tipo, ['Benemérito', 'Agregado'])) ? ' (Sem serviço jurídico)' : ''; ?>
-            </option>
-        <?php endforeach; ?>
-    </select>
-    <span class="form-error">Por favor, selecione o tipo de associado</span>
-    <div class="tipo-associado-info" id="infoTipoAssociado" style="display: none;">
-        <i class="fas fa-info-circle"></i>
-        <span id="textoInfoTipo"></span>
-    </div>
-</div>
+                            <label class="form-label">
+                                Tipo de Associado <span class="required">*</span>
+                                <i class="fas fa-info-circle info-tooltip"
+                                    title="Define o percentual de cobrança dos serviços. Benemérito e Agregado não têm direito ao serviço jurídico."></i>
+                            </label>
+                            <select class="form-input form-select" name="tipoAssociadoServico" id="tipoAssociadoServico"
+                                required onchange="calcularServicos()">
+                                <option value="">Selecione o tipo de associado...</option>
+                                <?php foreach ($tiposAssociado as $tipo): ?>
+                                    <option value="<?php echo $tipo; ?>"
+                                        <?php echo (isset($associadoData['tipoAssociadoServico']) && $associadoData['tipoAssociadoServico'] == $tipo) ? 'selected' : ''; ?>
+                                        <?php echo (in_array($tipo, ['Benemérito', 'Agregado'])) ? 'data-restricao="sem-juridico"' : ''; ?>>
+                                        <?php echo $tipo; ?>
+                                        <?php echo (in_array($tipo, ['Benemérito', 'Agregado'])) ? ' (Sem serviço jurídico)' : ''; ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                            <span class="form-error">Por favor, selecione o tipo de associado</span>
+                            <div class="tipo-associado-info" id="infoTipoAssociado" style="display: none;">
+                                <i class="fas fa-info-circle"></i>
+                                <span id="textoInfoTipo"></span>
+                            </div>
+                        </div>
 
                         <!-- Seção de Serviços -->
                         <div class="form-group full-width">
@@ -1276,8 +1277,8 @@ $patentes = [
                                 </div>
 
                                 <!-- Serviço Jurídico (Opcional) -->
-                                    <div class="servico-item" id="servicoJuridicoItem"
-                                        style="margin-bottom: 1rem; padding: 1rem; background: var(--gray-100); border-radius: 8px;">
+                                <div class="servico-item" id="servicoJuridicoItem"
+                                    style="margin-bottom: 1rem; padding: 1rem; background: var(--gray-100); border-radius: 8px;">
                                     <div
                                         style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
                                         <div style="display: flex; align-items: center; gap: 0.5rem;">
@@ -1288,10 +1289,10 @@ $patentes = [
                                                 style="font-weight: 600; color: var(--info); cursor: pointer;">
                                                 <i class="fas fa-balance-scale"></i> Serviço Jurídico
                                             </label>
-                                                <span
-                                                    style="background: var(--info); color: white; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.7rem;">
-                                                    OPCIONAL
-                                                </span>
+                                            <span
+                                                style="background: var(--info); color: white; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.7rem;">
+                                                OPCIONAL
+                                            </span>
                                         </div>
                                         <div style="text-align: right;">
                                             <div style="font-size: 0.8rem; color: var(--gray-600);">Valor Base: R$ <span
@@ -1307,7 +1308,7 @@ $patentes = [
                                     <input type="hidden" name="valorJuridico" id="valorJuridico" value="0">
                                     <input type="hidden" name="percentualAplicadoJuridico"
                                         id="percentualAplicadoJuridico" value="0">
-                                        <div id="mensagemRestricaoJuridico" style="display: none;"></div>
+                                    <div id="mensagemRestricaoJuridico" style="display: none;"></div>
                                 </div>
 
                                 <!-- Total Geral -->
@@ -1362,7 +1363,7 @@ $patentes = [
                                 <i class="fas fa-info-circle info-tooltip" title="Digite o número do vínculo"></i>
                             </label>
                             <input type="text" class="form-input" name="vinculoServidor" id="vinculoServidor"
-                                value="<?php echo $associadoData['vinculoServidor'] ?? ''; ?>" 
+                                value="<?php echo $associadoData['vinculoServidor'] ?? ''; ?>"
                                 placeholder="Digite o número do vínculo">
                         </div>
 
@@ -1547,7 +1548,7 @@ $patentes = [
     <!-- Scripts separados para melhor organização -->
     <script src="js/cadastroForm.js"></script>
     <script src="js/cadastroFormAutocomplete.js"></script>
-    
+
     <script>
     // Função para definir valor do select após carregar
     function definirValorSelect(selectId, valor) {
@@ -1559,7 +1560,7 @@ $patentes = [
             console.warn(`❌ Select ${selectId} não encontrado`);
             return false;
         }
-
+        
         // Lista todas as opções disponíveis para debug
         const options = select.querySelectorAll('option');
         console.log(`Opções disponíveis em ${selectId}:`);
@@ -1568,7 +1569,7 @@ $patentes = [
                 console.log(`  [${index}] "${option.value}"`);
             }
         });
-
+        
         // Procura a opção exata
         let encontrou = false;
         
@@ -1579,18 +1580,18 @@ $patentes = [
                 console.log(`✅ Opção encontrada e selecionada: "${valor}"`);
             }
         });
-
+        
         if (!encontrou) {
             console.warn(`❌ Valor "${valor}" NÃO encontrado nas opções do select ${selectId}`);
             console.warn(`Verifique se o valor está exatamente igual no banco e no array PHP`);
         }
-
+        
         // Atualiza Select2 se estiver inicializado
         if (typeof $ !== 'undefined' && $(`#${selectId}`).hasClass('select2-hidden-accessible')) {
             $(`#${selectId}`).trigger('change');
             console.log(`🔄 Select2 atualizado para ${selectId}`);
         }
-
+        
         console.log(`=== FIM ${selectId} ===\n`);
         return encontrou;
     }
