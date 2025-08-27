@@ -1055,72 +1055,7 @@ $headerComponent = HeaderComponent::create([
                     </p>
                 </div>
 
-                <!-- Estatísticas Comerciais - SEMPRE VISÍVEIS (independente de permissões) -->
-                <div class="stats-grid" data-aos="fade-up">
-                    <div class="stat-card primary">
-                        <div class="stat-header">
-                            <div>
-                                <div class="stat-value"><?php echo number_format($totalAssociadosAtivos, 0, ',', '.'); ?></div>
-                                <div class="stat-label">Associados Ativos</div>
-                                <div class="stat-change neutral">
-                                    <i class="fas fa-users"></i>
-                                    Base atual
-                                </div>
-                            </div>
-                            <div class="stat-icon primary">
-                                <i class="fas fa-users"></i>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="stat-card success">
-                        <div class="stat-header">
-                            <div>
-                                <div class="stat-value"><?php echo number_format($cadastrosHoje, 0, ',', '.'); ?></div>
-                                <div class="stat-label">Cadastros Hoje</div>
-                                <div class="stat-change positive">
-                                    <i class="fas fa-arrow-up"></i>
-                                    Novos cadastros
-                                </div>
-                            </div>
-                            <div class="stat-icon success">
-                                <i class="fas fa-user-plus"></i>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="stat-card warning">
-                        <div class="stat-header">
-                            <div>
-                                <div class="stat-value"><?php echo number_format($preCadastrosPendentes, 0, ',', '.'); ?></div>
-                                <div class="stat-label">Pré-cadastros Pendentes</div>
-                                <div class="stat-change neutral">
-                                    <i class="fas fa-clock"></i>
-                                    Aguardando análise
-                                </div>
-                            </div>
-                            <div class="stat-icon warning">
-                                <i class="fas fa-clock"></i>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="stat-card info">
-                        <div class="stat-header">
-                            <div>
-                                <div class="stat-value"><?php echo number_format($desfiliacoesRecentes, 0, ',', '.'); ?></div>
-                                <div class="stat-label">Desfiliações (30 dias)</div>
-                                <div class="stat-change negative">
-                                    <i class="fas fa-user-times"></i>
-                                    Último mês
-                                </div>
-                            </div>
-                            <div class="stat-icon info">
-                                <i class="fas fa-user-times"></i>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+               
 
                 <!-- Alert informativo sobre o nível de acesso -->
                 <div class="alert-custom alert-info-custom" data-aos="fade-up">
