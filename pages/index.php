@@ -1,8 +1,10 @@
 <?php
+// Configurar duração da sessão para 14 horas (50400 segundos)
+ini_set('session.gc_maxlifetime', 50400);
+session_set_cookie_params(50400);
 
 require_once '../config/config.php';
 require_once '../config/database.php';
-
 require_once '../classes/Database.php';
 require_once '../classes/Auth.php';
 
@@ -10,16 +12,15 @@ require_once '../classes/Auth.php';
  * Classe para gerenciar Rate Limiting de tentativas de login
  */
 class LoginRateLimit {
-    private $maxAttempts = 100;// mudar em produção
-    private $lockoutTime = 9; // mudar em produção
+    private $maxAttempts = 100;
+    private $lockoutTime = 9; 
     private $globalMaxAttempts = 500; 
-    private $globalLockoutTime = 18; // mudar em produção
+    private $globalLockoutTime = 18; 
     private $minTimeBetweenAttempts = 0.5; 
     private $dataFile;
     private $globalFile;
     
     public function __construct() {
-        // Criar diretório para armazenar dados se não existir
         $dataDir = '../data/rate_limit';
         if (!is_dir($dataDir)) {
             mkdir($dataDir, 0755, true);
@@ -28,9 +29,6 @@ class LoginRateLimit {
         $this->globalFile = $dataDir . '/global_attempts.json';
     }
     
-    /**
-     * Carrega dados de tentativas do arquivo
-     */
     private function loadAttempts() {
         if (!file_exists($this->dataFile)) {
             return [];
@@ -42,16 +40,10 @@ class LoginRateLimit {
         return is_array($attempts) ? $attempts : [];
     }
     
-    /**
-     * Salva dados de tentativas no arquivo
-     */
     private function saveAttempts($attempts) {
         file_put_contents($this->dataFile, json_encode($attempts, JSON_PRETTY_PRINT));
     }
     
-    /**
-     * Carrega dados globais de tentativas
-     */
     private function loadGlobalAttempts() {
         if (!file_exists($this->globalFile)) {
             return ['attempts' => 0, 'last_attempt' => 0, 'ips' => []];
@@ -63,53 +55,38 @@ class LoginRateLimit {
         return is_array($attempts) ? $attempts : ['attempts' => 0, 'last_attempt' => 0, 'ips' => []];
     }
     
-    /**
-     * Salva dados globais de tentativas
-     */
     private function saveGlobalAttempts($attempts) {
         file_put_contents($this->globalFile, json_encode($attempts, JSON_PRETTY_PRINT));
     }
     
-    /**
-     * Registra uma tentativa global (MÉTODO QUE ESTAVA FALTANDO)
-     */
     private function recordGlobalAttempt($ip) {
         $globalData = $this->loadGlobalAttempts();
         $currentTime = time();
         
-        // Incrementar contador global
         $globalData['attempts']++;
         $globalData['last_attempt'] = $currentTime;
         
-        // Registrar IP único
         if (!in_array($ip, $globalData['ips'])) {
             $globalData['ips'][] = $ip;
         }
         
-        // Salvar dados globais
         $this->saveGlobalAttempts($globalData);
         
         return $globalData;
     }
     
-    /**
-     * Verifica se o sistema está em bloqueio global
-     */
     public function isGloballyBlocked() {
         $globalData = $this->loadGlobalAttempts();
         $currentTime = time();
         
-        // Se passou do tempo de bloqueio global, resetar
         if (($currentTime - $globalData['last_attempt']) >= $this->globalLockoutTime) {
             if ($globalData['attempts'] >= $this->globalMaxAttempts) {
-                // Resetar contador global
                 $globalData = ['attempts' => 0, 'last_attempt' => 0, 'ips' => []];
                 $this->saveGlobalAttempts($globalData);
             }
             return false;
         }
         
-        // Verificar se atingiu o limite global
         if ($globalData['attempts'] >= $this->globalMaxAttempts) {
             return [
                 'blocked' => true,
@@ -122,9 +99,6 @@ class LoginRateLimit {
         return false;
     }
     
-    /**
-     * Verifica se a tentativa é muito rápida
-     */
     public function isTooFast($email, $ip) {
         $attempts = $this->loadAttempts();
         $key = $this->generateKey($email, $ip);
@@ -146,9 +120,6 @@ class LoginRateLimit {
         return false;
     }
     
-    /**
-     * Limpa tentativas expiradas
-     */
     private function cleanExpiredAttempts($attempts) {
         $currentTime = time();
         $cleaned = [];
@@ -162,16 +133,10 @@ class LoginRateLimit {
         return $cleaned;
     }
     
-    /**
-     * Gera chave única baseada no IP e email
-     */
     private function generateKey($email, $ip) {
         return md5($email . '|' . $ip);
     }
     
-    /**
-     * Verifica se o usuário está bloqueado
-     */
     public function isBlocked($email, $ip) {
         $attempts = $this->loadAttempts();
         $attempts = $this->cleanExpiredAttempts($attempts);
@@ -185,14 +150,12 @@ class LoginRateLimit {
         $userData = $attempts[$key];
         $currentTime = time();
         
-        // Se passou do tempo de bloqueio, libera o usuário
         if (($currentTime - $userData['last_attempt']) >= $this->lockoutTime) {
             unset($attempts[$key]);
             $this->saveAttempts($attempts);
             return false;
         }
         
-        // Se atingiu o máximo de tentativas e ainda está no período de bloqueio
         if ($userData['attempts'] >= $this->maxAttempts) {
             return [
                 'blocked' => true,
@@ -205,11 +168,7 @@ class LoginRateLimit {
         return false;
     }
     
-    /**
-     * Registra uma tentativa de login falhada
-     */
     public function recordFailedAttempt($email, $ip) {
-        // Registrar tentativa global
         $globalData = $this->recordGlobalAttempt($ip);
         
         $attempts = $this->loadAttempts();
@@ -245,9 +204,6 @@ class LoginRateLimit {
         ];
     }
     
-    /**
-     * Limpa tentativas após login bem-sucedido
-     */
     public function clearAttempts($email, $ip) {
         $attempts = $this->loadAttempts();
         $key = $this->generateKey($email, $ip);
@@ -256,13 +212,8 @@ class LoginRateLimit {
             unset($attempts[$key]);
             $this->saveAttempts($attempts);
         }
-        
-        // Não limpar tentativas globais - elas continuam para proteção geral
     }
     
-    /**
-     * Retorna informações sobre as tentativas atuais
-     */
     public function getAttemptInfo($email, $ip) {
         $attempts = $this->loadAttempts();
         $attempts = $this->cleanExpiredAttempts($attempts);
@@ -286,9 +237,6 @@ class LoginRateLimit {
         ];
     }
     
-    /**
-     * Formata tempo restante para exibição
-     */
     public static function formatTimeRemaining($seconds) {
         if ($seconds <= 0) return '0 segundos';
         
@@ -297,7 +245,7 @@ class LoginRateLimit {
         
         if ($minutes > 0) {
             return $minutes . ' minuto' . ($minutes != 1 ? 's' : '') . 
-                   ($remainingSeconds > 0 ? ' e ' . $remainingSeconds . ' segundo' . ($remainingSeconds != 1 ? 's' : '') : '');
+                ($remainingSeconds > 0 ? ' e ' . $remainingSeconds . ' segundo' . ($remainingSeconds != 1 ? 's' : '') : '');
         } else {
             return $remainingSeconds . ' segundo' . ($remainingSeconds != 1 ? 's' : '');
         }
@@ -309,32 +257,23 @@ class LoginRateLimit {
  */
 class HoneypotValidator {
     
-    /**
-     * Valida os campos honeypot
-     * 
-     * @param array $postData Dados do POST
-     * @return array Resultado da validação
-     */
     public static function validate($postData) {
         $errors = [];
         
-        // Campos honeypot que devem estar vazios
         $honeypotFields = [
-            'username',      // Campo username falso
-            'phone',         // Campo telefone falso
-            'website',       // Campo website falso
-            'company',       // Campo empresa falso
-            'address'        // Campo endereço falso
+            'username',
+            'phone',
+            'website',
+            'company',
+            'address'
         ];
         
-        // Verificar se algum campo honeypot foi preenchido
         foreach ($honeypotFields as $field) {
             if (!empty($postData[$field])) {
                 $errors[] = "Campo {$field} foi preenchido (possível bot)";
             }
         }
         
-        // Campo de tempo - deve ser preenchido e ter um valor mínimo
         $formTime = $postData['form_time'] ?? '';
         if (empty($formTime)) {
             $errors[] = "Campo de tempo não encontrado";
@@ -342,18 +281,15 @@ class HoneypotValidator {
             $submitTime = time();
             $timeDiff = $submitTime - (int)$formTime;
             
-            // Tempo mínimo de 3 segundos para preencher o formulário
             if ($timeDiff < 3) {
                 $errors[] = "Formulário preenchido muito rapidamente ({$timeDiff}s)";
             }
             
-            // Tempo máximo de 1 hora
             if ($timeDiff > 3600) {
                 $errors[] = "Formulário expirado (mais de 1 hora)";
             }
         }
         
-        // Verificar se o JavaScript está habilitado através do campo oculto
         $jsEnabled = $postData['js_enabled'] ?? '';
         if ($jsEnabled !== '1') {
             $errors[] = "JavaScript não está habilitado ou campo não foi preenchido";
@@ -366,16 +302,10 @@ class HoneypotValidator {
         ];
     }
     
-    /**
-     * Gera um token único para o formulário
-     */
     public static function generateToken() {
         return bin2hex(random_bytes(16));
     }
     
-    /**
-     * Valida o token do formulário
-     */
     public static function validateToken($token, $sessionToken) {
         return !empty($token) && !empty($sessionToken) && hash_equals($sessionToken, $token);
     }
@@ -390,13 +320,6 @@ class TurnstileValidator {
         $this->secretKey = $secretKey ?: CLOUDFLARE_TURNSTILE_SECRET_KEY;
     }
     
-    /**
-     * Valida o token do Turnstile
-     * 
-     * @param string $token Token retornado pelo widget
-     * @param string $remoteIp IP do usuário (opcional)
-     * @return array Resultado da validação
-     */
     public function verify($token, $remoteIp = null) {
         if (empty($token)) {
             return [
@@ -406,18 +329,15 @@ class TurnstileValidator {
             ];
         }
         
-        // Preparar dados para envio
         $postData = [
             'secret' => $this->secretKey,
             'response' => $token,
         ];
         
-        // Adicionar IP se fornecido
         if ($remoteIp) {
             $postData['remoteip'] = $remoteIp;
         }
         
-        // Configurar cURL
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $this->verifyUrl);
         curl_setopt($ch, CURLOPT_POST, true);
@@ -434,7 +354,6 @@ class TurnstileValidator {
         $curlError = curl_error($ch);
         curl_close($ch);
         
-        // Verificar erros de cURL
         if ($curlError) {
             return [
                 'success' => false,
@@ -443,7 +362,6 @@ class TurnstileValidator {
             ];
         }
         
-        // Verificar código HTTP
         if ($httpCode !== 200) {
             return [
                 'success' => false,
@@ -452,7 +370,6 @@ class TurnstileValidator {
             ];
         }
         
-        // Decodificar resposta JSON
         $result = json_decode($response, true);
         
         if (json_last_error() !== JSON_ERROR_NONE) {
@@ -463,7 +380,6 @@ class TurnstileValidator {
             ];
         }
         
-        // Processar resultado
         if ($result['success']) {
             return [
                 'success' => true,
@@ -483,12 +399,6 @@ class TurnstileValidator {
         }
     }
     
-    /**
-     * Converte códigos de erro em mensagens amigáveis
-     * 
-     * @param array $errorCodes
-     * @return string
-     */
     private function getErrorMessage($errorCodes) {
         $messages = [
             'missing-input-secret' => 'Chave secreta não configurada.',
@@ -509,16 +419,11 @@ class TurnstileValidator {
         return implode(' ', $userMessages);
     }
     
-    /**
-     * Verifica se o Turnstile está configurado
-     * 
-     * @return bool
-     */
     public static function isConfigured() {
         return !empty(CLOUDFLARE_TURNSTILE_SITE_KEY) && 
-               !empty(CLOUDFLARE_TURNSTILE_SECRET_KEY) &&
-               CLOUDFLARE_TURNSTILE_SITE_KEY !== 'your_site_key_here' &&
-               CLOUDFLARE_TURNSTILE_SECRET_KEY !== 'your_secret_key_here';
+            !empty(CLOUDFLARE_TURNSTILE_SECRET_KEY) &&
+            CLOUDFLARE_TURNSTILE_SITE_KEY !== 'your_site_key_here' &&
+            CLOUDFLARE_TURNSTILE_SECRET_KEY !== 'your_secret_key_here';
     }
 }
 
@@ -541,6 +446,28 @@ if ($auth->isLoggedIn()) {
     header('Location: ' . BASE_URL . '/pages/dashboard.php');
     exit;
 }
+
+// Frases motivacionais para o loading
+$frasesMotivacionais = [
+    "O sucesso é a soma de pequenos esforços repetidos dia após dia.",
+    "Grandes realizações requerem grandes ambições.",
+    "O único limite para o nosso crescimento é nossa determinação.",
+    "Cada meta alcançada é o início de uma nova jornada.",
+    "A excelência não é um ato, mas um hábito.",
+    "Transformamos desafios em oportunidades de crescimento.",
+    "Juntos, construímos um futuro de sucesso e prosperidade.",
+    "Nossa dedicação hoje define o sucesso de amanhã.",
+    "Inovação e qualidade são os pilares do nosso progresso.",
+    "Cada dia é uma nova chance de superar nossas expectativas.",
+    "A gestão eficiente é a chave para o crescimento sustentável.",
+    "Trabalho em equipe é o combustível do sucesso organizacional.",
+    "Planejamento estratégico é o mapa para alcançar nossos objetivos.",
+    "A melhoria contínua nos leva sempre adiante.",
+    "Foco, disciplina e perseverança constroem grandes resultados.",
+];
+
+// Selecionar frase aleatória
+$fraseAleatoria = $frasesMotivacionais[array_rand($frasesMotivacionais)];
 
 // Processar mensagens de logout
 $mensagem = '';
@@ -569,18 +496,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $honeypotResult = HoneypotValidator::validate($_POST);
         
         if (!$honeypotResult['valid']) {
-            // Log da tentativa de bot
             error_log("Possível bot detectado no login - IP: {$userIP}, Email: {$email}, Erros: " . implode(', ', $honeypotResult['errors']));
             
-            // Registrar como tentativa falhada mas não mostrar erro específico
             $attemptInfo = $rateLimit->recordFailedAttempt($email, $userIP);
             
-            // Dar uma resposta genérica para não revelar o honeypot
             $erro = 'Erro na validação do formulário. Tente novamente.';
             
-            // Opcional: banir IP temporariamente se for claramente um bot
             if (count($honeypotResult['errors']) > 2) {
-                // Criar arquivo de IPs banidos se não existir
                 $bannedIpsFile = '../data/rate_limit/banned_ips.json';
                 $bannedIps = [];
                 if (file_exists($bannedIpsFile)) {
@@ -596,45 +518,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 file_put_contents($bannedIpsFile, json_encode($bannedIps, JSON_PRETTY_PRINT));
             }
         } else {
-            // Validar token do honeypot
             if (!HoneypotValidator::validateToken($honeypotToken, $_SESSION['honeypot_token'])) {
                 $erro = 'Token de segurança inválido. Recarregue a página.';
             } else {
-                // Verificar se o usuário está bloqueado
                 $blockStatus = $rateLimit->isBlocked($email, $userIP);
                 
                 if ($blockStatus && $blockStatus['blocked']) {
                     $timeRemaining = LoginRateLimit::formatTimeRemaining($blockStatus['time_remaining']);
                     $erro = "Muitas tentativas de login falhadas. Tente novamente em {$timeRemaining}. " .
-                           "({$blockStatus['attempts']} tentativas registradas)";
+                        "({$blockStatus['attempts']} tentativas registradas)";
                 } else {
-                    // Validar Turnstile
                     $turnstileValidator = new TurnstileValidator();
                     $turnstileResult = $turnstileValidator->verify($turnstileToken, $userIP);
                     
                     if (!$turnstileResult['success']) {
                         $erro = 'Verificação de segurança falhou: ' . $turnstileResult['message'];
                         
-                        // Também registrar como tentativa falhada se Turnstile falhar
                         $attemptInfo = $rateLimit->recordFailedAttempt($email, $userIP);
                         if ($attemptInfo['remaining'] > 0) {
                             $erro .= " (Restam {$attemptInfo['remaining']} tentativas)";
                         }
                     } else {
-                        // Prosseguir com o login
                         $resultado = $auth->login($email, $senha);
                         
                         if ($resultado['success']) {
-                            // Login bem-sucedido - limpar tentativas e regenerar token
                             $rateLimit->clearAttempts($email, $userIP);
                             $_SESSION['honeypot_token'] = HoneypotValidator::generateToken();
                             
-                            // Redirecionar para página solicitada ou dashboard
                             $redirect = $_GET['redirect'] ?? BASE_URL . '/pages/dashboard.php';
                             header('Location: ' . $redirect);
                             exit;
                         } else {
-                            // Login falhou - registrar tentativa
                             $attemptInfo = $rateLimit->recordFailedAttempt($email, $userIP);
                             
                             if ($attemptInfo['remaining'] > 0) {
@@ -661,52 +575,24 @@ if (!empty($_POST['email'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - <?php echo SISTEMA_NOME; ?></title>
+    <title>ASSEGO - Sistema de Gestão</title>
     
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <!-- Custom Styles -->
-    <link rel="stylesheet" href="estilizacao/login-style.css">
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     
     <!-- Cloudflare Turnstile -->
     <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
     
-    <!-- Tailwind Config -->
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        primary: {
-                            50: '#e0f2fe',
-                            100: '#bae6fd',
-                            200: '#7dd3fc',
-                            300: '#38bdf8',
-                            400: '#0ea5e9',
-                            500: '#0284c7',
-                            600: '#0369a1',
-                            700: '#0c4a6e',
-                            800: '#075985',
-                            900: '#0c4a6e',
-                        }
-                    },
-                    animation: {
-                        'float': 'float 6s ease-in-out infinite',
-                        'glow': 'glow 2s ease-in-out infinite alternate',
-                        'twinkle': 'twinkle 3s ease-in-out infinite alternate',
-                        'shoot': 'shoot 3s linear infinite',
-                        'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-                    }
-                }
-            }
-        }
-    </script>
-    
     <style>
+        /* Reset */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         /* Honeypot styles - campos completamente ocultos */
         .honeypot {
             position: absolute !important;
@@ -723,336 +609,800 @@ if (!empty($_POST['email'])) {
             tab-index: -1;
             z-index: -1;
         }
+
+        html, body {
+            height: 100%;
+            font-family: 'Inter', system-ui, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 1rem;
+        }
+
+        /* Loading inicial */
+        .initial-loading {
+            position: fixed;
+            inset: 0;
+            background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            transition: opacity 0.8s ease-out, visibility 0.8s ease-out;
+        }
+
+        .initial-loading.fade-out {
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        .loading-content {
+            text-align: center;
+            animation: loadingPulse 1.5s ease-in-out infinite;
+            max-width: 500px;
+            padding: 0 1.5rem;
+        }
+
+        @keyframes loadingPulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.05); opacity: 0.8; }
+        }
+
+        .loading-logo {
+            margin-bottom: 2rem;
+        }
+
+        .loading-logo img {
+            width: 80px;
+            height: 80px;
+            object-fit: contain;
+            border-radius: 50%;
+            box-shadow: 0 0 30px rgba(255, 255, 255, 0.3);
+        }
+
+        .loading-title {
+            font-size: 2rem;
+            font-weight: 800;
+            color: white;
+            letter-spacing: -0.02em;
+            margin: 1rem 0;
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(255, 255, 255, 0.2);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        .loading-text {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 0.875rem;
+            margin-top: 1rem;
+            font-weight: 500;
+        }
+
+        .loading-quote {
+            margin-top: 2rem;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .loading-quote-text {
+            font-size: 0.8125rem;
+            color: rgba(255, 255, 255, 0.9);
+            font-style: italic;
+            line-height: 1.5;
+        }
+
+        /* Container principal */
+        .login-container {
+            background: white;
+            border-radius: 24px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            width: 100%;
+            max-width: 400px;
+            overflow: hidden;
+            animation: fadeInUp 0.6s ease-out;
+            opacity: 0;
+            animation-delay: 0.3s;
+            animation-fill-mode: forwards;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Header com logo */
+        .login-header {
+            background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+            padding: 2.5rem 2rem 2rem;
+            text-align: center;
+            position: relative;
+        }
+
+        .logo-container {
+            margin-bottom: 1rem;
+        }
+
+        .logo-wrapper {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1rem;
+        }
+
+        .logo-wrapper img {
+            width: 80px;
+            height: 80px;
+            object-fit: contain;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .system-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: white;
+            margin-bottom: 0.25rem;
+        }
+
+        .system-subtitle {
+            font-size: 0.875rem;
+            color: rgba(255, 255, 255, 0.8);
+            font-weight: 400;
+        }
+
+        /* Corpo do formulário */
+        .login-body {
+            padding: 2rem;
+        }
+
+        /* Alertas */
+        .alert {
+            padding: 1rem;
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            animation: slideDown 0.3s ease-out;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .alert-success {
+            background: #dcfce7;
+            color: #166534;
+            border: 1px solid #bbf7d0;
+        }
+
+        .alert-error {
+            background: #fee2e2;
+            color: #dc2626;
+            border: 1px solid #fecaca;
+        }
+
+        .alert-warning {
+            background: #fef3c7;
+            color: #d97706;
+            border: 1px solid #fed7aa;
+        }
+
+        .alert svg {
+            width: 18px;
+            height: 18px;
+            flex-shrink: 0;
+            margin-top: 1px;
+        }
+
+        /* Formulário */
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 1rem 1rem 1rem 3rem;
+            background: #f9fafb;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            font-size: 1rem;
+            color: #1f2937;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .form-input::placeholder {
+            color: #6b7280;
+            font-weight: 400;
+        }
+
+        .input-wrapper {
+            position: relative;
+        }
+
+        .input-icon {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 18px;
+            height: 18px;
+            color: #6b7280;
+            pointer-events: none;
+            transition: color 0.3s;
+            z-index: 2;
+        }
+
+        .form-input:focus + .input-icon {
+            color: #3b82f6;
+        }
+
+        /* Toggle de senha */
+        .password-toggle {
+            position: absolute;
+            right: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: #6b7280;
+            cursor: pointer;
+            padding: 0.25rem;
+            transition: color 0.3s;
+            z-index: 2;
+        }
+
+        .password-toggle:hover {
+            color: #3b82f6;
+        }
+
+        /* Turnstile */
+        .turnstile-container {
+            background: #f9fafb;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 1rem;
+            display: flex;
+            justify-content: center;
+            margin-bottom: 1rem;
+        }
+
+        /* Checkbox e link */
+        .form-options {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .checkbox-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .checkbox-input {
+            width: 18px;
+            height: 18px;
+            accent-color: #3b82f6;
+            cursor: pointer;
+        }
+
+        .checkbox-label {
+            font-size: 0.875rem;
+            color: #1f2937;
+            cursor: pointer;
+            font-weight: 500;
+            user-select: none;
+        }
+
+        .forgot-link {
+            font-size: 0.875rem;
+            color: #3b82f6;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+
+        .forgot-link:hover {
+            color: #1e40af;
+            text-decoration: underline;
+        }
+
+        /* Botão de submit */
+        .submit-btn {
+            width: 100%;
+            padding: 1rem;
+            background: #3b82f6;
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.025em;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .submit-btn:not(:disabled):hover {
+            background: #1e40af;
+            transform: translateY(-1px);
+            box-shadow: 0 10px 25px rgba(59, 130, 246, 0.3);
+        }
+
+        .submit-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .submit-btn.loading::after {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            top: 50%;
+            left: 50%;
+            margin: -10px 0 0 -10px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        /* Footer */
+        .login-footer {
+            padding: 1.5rem 2rem 2rem;
+            text-align: center;
+            border-top: 1px solid #e5e7eb;
+            background: #fafafa;
+        }
+
+        .copyright {
+            font-size: 0.75rem;
+            color: #6b7280;
+            margin-bottom: 0.5rem;
+        }
+
+        .protection {
+            font-size: 0.6875rem;
+            color: #6b7280;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.25rem;
+        }
+
+        .protection svg {
+            width: 12px;
+            height: 12px;
+        }
+
+        /* Loading overlay */
+        .loading-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(30, 58, 138, 0.95);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .loading-overlay.active {
+            display: flex;
+        }
+
+        .loader {
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        /* Responsividade */
+        @media (max-width: 480px) {
+            body {
+                padding: 0;
+            }
+
+            .login-container {
+                border-radius: 0;
+                min-height: 100vh;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+            }
+
+            .login-header {
+                padding: 2rem 1.5rem;
+            }
+
+            .logo-wrapper img {
+                width: 60px;
+                height: 60px;
+            }
+
+            .system-title {
+                font-size: 1.125rem;
+            }
+
+            .login-body {
+                padding: 1.5rem;
+            }
+
+            .form-input {
+                font-size: 16px; /* Previne zoom no iOS */
+                padding: 1rem;
+                padding-left: 3rem;
+            }
+
+            .form-options {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.75rem;
+            }
+
+            .submit-btn {
+                padding: 1.125rem;
+                font-size: 1rem;
+            }
+
+            .login-footer {
+                padding: 1.5rem;
+            }
+
+            /* Loading mobile */
+            .loading-logo img {
+                width: 60px;
+                height: 60px;
+            }
+
+            .loading-title {
+                font-size: 1.75rem;
+            }
+
+            .loading-spinner {
+                width: 35px;
+                height: 35px;
+            }
+
+            .loading-quote {
+                margin-top: 1.5rem;
+                padding: 0.875rem;
+            }
+
+            .loading-quote-text {
+                font-size: 0.75rem;
+            }
+        }
     </style>
 </head>
-<body class="min-h-screen overflow-hidden relative">
-    <!-- Galaxy Background -->
-    <div class="galaxy-bg" id="galaxy-container"></div>
-    
-    <!-- Stars Background -->
-    <div class="stars-bg" id="stars-container"></div>
-    
-    <!-- Nebulas -->
-    <div class="nebulas-bg" id="nebulas-container"></div>
-    
-    <!-- Particles -->
-    <div id="particles-container"></div>
-    
-    <!-- Main Container -->
-    <div class="min-h-screen flex items-center justify-center relative z-10 p-4">
-        <div class="login-container backdrop-blur-lg bg-gradient-to-br from-sky-500/10 to-blue-800/20 border border-sky-300/20 rounded-3xl shadow-2xl max-w-md w-full overflow-hidden">
-            <!-- Header -->
-            <div class="login-header bg-gradient-to-br from-sky-600/90 to-blue-800/90 text-white p-8 text-center relative">
-                <div class="absolute inset-0 bg-gradient-to-br from-sky-500/20 to-blue-600/20 animate-pulse-slow"></div>
-                
-                <div class="logo-container relative z-10 mb-6">
-                 <div class="logo w-40 h-40 bg-white/20 backdrop-blur-sm rounded-full mx-auto flex items-center justify-center text-4xl animate-float border border-white/30">
-                <img src="./img/logoassego.png" alt="Logo" class="w-36 h-36 object-cover rounded-full">
+<body>
+    <!-- Loading Inicial -->
+    <div class="initial-loading" id="initialLoading">
+        <div class="loading-content">
+            <div class="loading-logo">
+                <img src="./img/logoassego.png" alt="ASSEGO Logo">
+            </div>
+            <h1 class="loading-title">ASSEGO</h1>
+            <div class="loading-spinner"></div>
+            <p class="loading-text">Preparando o sistema...</p>
+            
+            <!-- Frase Motivacional no Loading -->
+            <div class="loading-quote">
+                <p class="loading-quote-text"><?= htmlspecialchars($fraseAleatoria) ?></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Container Principal -->
+    <div class="login-container">
+        <!-- Header -->
+        <div class="login-header">
+            <div class="logo-container">
+                <div class="logo-wrapper">
+                    <img src="./img/logoassego.png" alt="ASSEGO Logo">
                 </div>
-                </div>
-                
-                <h1 class="text-3xl font-bold mb-2 animate-glow relative z-10">
-                    <?php echo SISTEMA_NOME ?? 'Sistema De Gestão'; ?>
-                </h1>
-                <p class="text-sky-100 text-sm font-medium relative z-10">
-                    Área De Gestão Da Assego
-                </p>
             </div>
             
-            <!-- Form Body -->
-            <div class="login-body p-8 relative">
-                <?php if ($mensagem): ?>
-                    <?php
-                    $alert_classes = [
-                        'success' => 'bg-green-500/10 border-green-500/20 text-green-300',
-                        'error' => 'bg-red-500/10 border-red-500/20 text-red-300',
-                        'warning' => 'bg-yellow-500/10 border-yellow-500/20 text-yellow-300',
-                        'info' => 'bg-blue-500/10 border-blue-500/20 text-blue-300'
-                    ];
-                    $icon_classes = [
-                        'success' => 'fa-check-circle text-green-400',
-                        'error' => 'fa-exclamation-circle text-red-400',
-                        'warning' => 'fa-exclamation-triangle text-yellow-400',
-                        'info' => 'fa-info-circle text-blue-400'
-                    ];
-                    $alert_class = $alert_classes[$tipo_mensagem] ?? $alert_classes['info'];
-                    $icon_class = $icon_classes[$tipo_mensagem] ?? $icon_classes['info'];
-                    ?>
-                    <div class="alert-message <?php echo $alert_class; ?> backdrop-blur-sm border px-4 py-3 rounded-xl mb-6 flex items-center animate-fade-in" role="alert">
-                        <i class="fas <?php echo $icon_class; ?> mr-3"></i>
-                        <span><?php echo htmlspecialchars($mensagem); ?></span>
-                        <button type="button" class="ml-auto text-gray-300 hover:text-white transition-colors" onclick="this.parentElement.style.display='none'">
-                            <i class="fas fa-times"></i>
+            <h1 class="system-title">Sistema De Gestão</h1>
+            <p class="system-subtitle">Área De Gestão Da ASSEGO</p>
+        </div>
+        
+        <!-- Corpo do formulário -->
+        <div class="login-body">
+            <?php if ($mensagem): ?>
+                <?php
+                $alert_classes = [
+                    'success' => 'alert-success',
+                    'error' => 'alert-error',
+                    'warning' => 'alert-warning'
+                ];
+                $alert_class = $alert_classes[$tipo_mensagem] ?? 'alert-success';
+                ?>
+                <div class="alert <?php echo $alert_class; ?>" role="alert">
+                    <svg fill="currentColor" viewBox="0 0 20 20">
+                        <?php if ($tipo_mensagem === 'success'): ?>
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                        <?php else: ?>
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                        <?php endif; ?>
+                    </svg>
+                    <span><?php echo htmlspecialchars($mensagem); ?></span>
+                </div>
+            <?php endif; ?>
+            
+            <?php if ($erro): ?>
+                <div class="alert alert-error" role="alert">
+                    <svg fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                    </svg>
+                    <span><?php echo htmlspecialchars($erro); ?></span>
+                </div>
+            <?php endif; ?>
+            
+            <?php if ($currentAttempts && $currentAttempts['attempts'] > 0 && !$erro): ?>
+                <div class="alert alert-warning" role="alert">
+                    <svg fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                    </svg>
+                    <span>
+                        Atenção: <?php echo $currentAttempts['attempts']; ?> tentativa(s) de login registrada(s). 
+                        Restam <?php echo $currentAttempts['remaining']; ?> tentativa(s) antes do bloqueio temporário.
+                    </span>
+                </div>
+            <?php endif; ?>
+            
+            <form method="POST" action="" id="loginForm">
+                <!-- Campos Honeypot (Ocultos) -->
+                <div class="honeypot">
+                    <label for="username">Nome de usuário (não preencha)</label>
+                    <input type="text" id="username" name="username" tabindex="-1" autocomplete="off">
+                </div>
+                
+                <div class="honeypot">
+                    <label for="phone">Telefone (não preencha)</label>
+                    <input type="tel" id="phone" name="phone" tabindex="-1" autocomplete="off">
+                </div>
+                
+                <div class="honeypot">
+                    <label for="website">Website (não preencha)</label>
+                    <input type="url" id="website" name="website" tabindex="-1" autocomplete="off">
+                </div>
+                
+                <div class="honeypot">
+                    <label for="company">Empresa (não preencha)</label>
+                    <input type="text" id="company" name="company" tabindex="-1" autocomplete="off">
+                </div>
+                
+                <div class="honeypot">
+                    <label for="address">Endereço (não preencha)</label>
+                    <input type="text" id="address" name="address" tabindex="-1" autocomplete="off">
+                </div>
+                
+                <!-- Campo de tempo oculto -->
+                <input type="hidden" name="form_time" value="<?php echo time(); ?>">
+                
+                <!-- Campo para verificar se JavaScript está habilitado -->
+                <input type="hidden" name="js_enabled" id="js_enabled" value="0">
+                
+                <!-- Token de segurança -->
+                <input type="hidden" name="honeypot_token" value="<?php echo $_SESSION['honeypot_token']; ?>">
+                
+                <!-- Email Field -->
+                <div class="form-group">
+                    <div class="input-wrapper">
+                        <input type="email" 
+                            class="form-input"
+                            id="email" 
+                            name="email" 
+                            placeholder="Seu Email"
+                            value="<?php echo htmlspecialchars($_POST['email'] ?? ''); ?>"
+                            required 
+                            autofocus>
+                        <svg class="input-icon" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"/>
+                            <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"/>
+                        </svg>
+                    </div>
+                </div>
+                
+                <!-- Password Field -->
+                <div class="form-group">
+                    <div class="input-wrapper">
+                        <input type="password" 
+                            class="form-input"
+                            id="senha" 
+                            name="senha" 
+                            placeholder="Sua Senha"
+                            required>
+                        <svg class="input-icon" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"/>
+                        </svg>
+                        <button type="button" class="password-toggle" onclick="togglePassword()">
+                            <svg fill="currentColor" viewBox="0 0 20 20" style="width: 18px; height: 18px;">
+                                <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/>
+                                <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"/>
+                            </svg>
                         </button>
                     </div>
-                <?php endif; ?>
+                </div>
                 
-                <?php if ($erro): ?>
-                    <div class="alert-error bg-red-500/10 backdrop-blur-sm border border-red-500/20 text-red-300 px-4 py-3 rounded-xl mb-6 flex items-center animate-pulse" role="alert">
-                        <i class="fas fa-exclamation-circle mr-3 text-red-400"></i>
-                        <span><?php echo htmlspecialchars($erro); ?></span>
-                        <button type="button" class="ml-auto text-red-400 hover:text-red-300 transition-colors" onclick="this.parentElement.style.display='none'">
-                            <i class="fas fa-times"></i>
-                        </button>
+                <!-- Cloudflare Turnstile -->
+                <div class="form-group">
+                    <div class="turnstile-container">
+                        <div class="cf-turnstile" 
+                            data-sitekey="<?php echo CLOUDFLARE_TURNSTILE_SITE_KEY; ?>"
+                            data-theme="light"
+                            data-size="normal"
+                            data-callback="onTurnstileSuccess"
+                            data-error-callback="onTurnstileError"
+                            data-expired-callback="onTurnstileExpired">
+                        </div>
                     </div>
-                <?php endif; ?>
+                </div>
                 
-                <?php if ($currentAttempts && $currentAttempts['attempts'] > 0 && !$erro): ?>
-                    <div class="alert-warning bg-yellow-500/10 backdrop-blur-sm border border-yellow-500/20 text-yellow-300 px-4 py-3 rounded-xl mb-6 flex items-center" role="alert">
-                        <i class="fas fa-exclamation-triangle mr-3 text-yellow-400"></i>
-                        <span>
-                            Atenção: <?php echo $currentAttempts['attempts']; ?> tentativa(s) de login registrada(s). 
-                            Restam <?php echo $currentAttempts['remaining']; ?> tentativa(s) antes do bloqueio temporário.
-                        </span>
-                    </div>
-                <?php endif; ?>
-                
-                <form method="POST" action="" id="loginForm" class="space-y-6">
-                    <!-- Campos Honeypot (Ocultos) -->
-                    <div class="honeypot">
-                        <label for="username">Nome de usuário (não preencha)</label>
-                        <input type="text" id="username" name="username" tabindex="-1" autocomplete="off">
-                    </div>
-                    
-                    <div class="honeypot">
-                        <label for="phone">Telefone (não preencha)</label>
-                        <input type="tel" id="phone" name="phone" tabindex="-1" autocomplete="off">
-                    </div>
-                    
-                    <div class="honeypot">
-                        <label for="website">Website (não preencha)</label>
-                        <input type="url" id="website" name="website" tabindex="-1" autocomplete="off">
-                    </div>
-                    
-                    <div class="honeypot">
-                        <label for="company">Empresa (não preencha)</label>
-                        <input type="text" id="company" name="company" tabindex="-1" autocomplete="off">
-                    </div>
-                    
-                    <div class="honeypot">
-                        <label for="address">Endereço (não preencha)</label>
-                        <input type="text" id="address" name="address" tabindex="-1" autocomplete="off">
-                    </div>
-                    
-                    <!-- Campo de tempo oculto -->
-                    <input type="hidden" name="form_time" value="<?php echo time(); ?>">
-                    
-                    <!-- Campo para verificar se JavaScript está habilitado -->
-                    <input type="hidden" name="js_enabled" id="js_enabled" value="0">
-                    
-                    <!-- Token de segurança -->
-                    <input type="hidden" name="honeypot_token" value="<?php echo $_SESSION['honeypot_token']; ?>">
-                    
-                    <!-- Email Field -->
-                    <div class="form-group relative">
-                        <div class="input-wrapper">
-                            <i class="fas fa-envelope input-icon"></i>
-                            <input type="email" 
-                                   class="form-input w-full bg-white/5 backdrop-blur-sm border border-white/20 rounded-xl px-12 py-4 text-black placeholder-gray-300 focus:border-sky-400 focus:bg-white/10 transition-all duration-300"
-                                   id="email" 
-                                   name="email" 
-                                   placeholder="Seu Email"
-                                   value="<?php echo htmlspecialchars($_POST['email'] ?? ''); ?>"
-                                   required 
-                                   autofocus>
-                        </div>
-                    </div>
-                    
-                    <!-- Password Field -->
-                    <div class="form-group relative">
-                        <div class="input-wrapper">
-                            <i class="fas fa-lock input-icon"></i>
-                            <input type="password" 
-                                   class="form-input w-full bg-white/5 backdrop-blur-sm border border-white/20 rounded-xl px-12 py-4 pr-16 text-black placeholder-gray-300 focus:border-sky-400 focus:bg-white/10 transition-all duration-300"
-                                   id="senha" 
-                                   name="senha" 
-                                   placeholder="Sua Senha"
-                                   required>
-                            <button type="button" class="password-toggle absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-black transition-colors" onclick="togglePassword()">
-                                <i class="fas fa-eye" id="toggleIcon"></i>
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <!-- Cloudflare Turnstile -->
-                    <div class="form-group relative">
-                        <div class="turnstile-container bg-white/5 backdrop-blur-sm border border-white/20 rounded-xl p-4 flex justify-center">
-                            <div class="cf-turnstile" 
-                                 data-sitekey="<?php echo CLOUDFLARE_TURNSTILE_SITE_KEY; ?>"
-                                 data-theme="light"
-                                 data-size="normal"
-                                 data-callback="onTurnstileSuccess"
-                                 data-error-callback="onTurnstileError"
-                                 data-expired-callback="onTurnstileExpired">
-                            </div>
-                        </div>
-                        <div id="turnstile-error" class="text-red-400 text-sm mt-2 hidden">
-                            <i class="fas fa-exclamation-triangle mr-1"></i>
-                            <span>Verificação de segurança necessária</span>
-                        </div>
-                    </div>
-                    
-                    <!-- Remember Me -->
-                    <div class="form-check flex items-center">
+                <!-- Checkbox e forgot password -->
+                <div class="form-options">
+                    <div class="checkbox-wrapper">
                         <input type="checkbox" 
-                               id="lembrar" 
-                               name="lembrar"
-                               class="w-4 h-4 text-sky-600 bg-white/10 border-white/20 rounded focus:ring-sky-500 focus:ring-2">
-                        <label for="lembrar" class="ml-3 text-sm text-gray-300 cursor-pointer">
+                            id="lembrar" 
+                            name="lembrar"
+                            class="checkbox-input">
+                        <label for="lembrar" class="checkbox-label">
                             Lembrar meu acesso
                         </label>
                     </div>
-                    
-                    <!-- Submit Button -->
-                    <button type="submit" id="submitBtn" class="btn-login w-full bg-gradient-to-r from-sky-600 to-blue-800 hover:from-sky-700 hover:to-blue-900 text-white font-bold py-4 px-8 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg focus:outline-none focus:ring-4 focus:ring-sky-500/50 relative overflow-hidden group" disabled>
-                        <span class="relative z-10 flex items-center justify-center">
-                            <i class="fas fa-sign-in-alt mr-3"></i>
-                            ACESSAR SISTEMA
-                        </span>
-                        <div class="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
-                    </button>
-                </form>
-                
-                <!-- Forgot Password -->
-                <div class="text-center mt-8">
-                    <a href="<?php echo BASE_URL ?? ''; ?>/pages/recuperar-senha.php" 
-                       class="forgot-link text-sky-300 hover:text-sky-100 text-sm font-medium transition-colors duration-300 flex items-center justify-center">
-                        <i class="fas fa-key mr-2"></i>
+                    <a href="<?php echo BASE_URL ?? ''; ?>/pages/recuperar-senha.php" class="forgot-link">
                         Esqueceu sua senha?
                     </a>
                 </div>
                 
-                <!-- Footer -->
-                <div class="text-center mt-8 pt-6 border-t border-white/10">
-                    <p class="text-xs text-gray-400 mb-1">
-                        &copy; <?php echo date('Y'); ?> <?php echo SISTEMA_EMPRESA ?? 'ASSEGO'; ?>. Todos os direitos reservados.
-                    </p>
-                    <p class="text-xs text-gray-500">
-                        Versão <?php echo SISTEMA_VERSAO ?? '1.0.0'; ?>
-                    </p>
-                    <div class="flex items-center justify-center mt-2 text-xs text-gray-500">
-                        <i class="fas fa-shield-alt mr-1"></i>
-                        <span>Protegido por Cloudflare + Honeypot</span>
-                    </div>
-                </div>
+                <!-- Submit Button -->
+                <button type="submit" id="submitBtn" class="submit-btn" disabled>
+                    ACESSAR SISTEMA
+                </button>
+            </form>
+        </div>
+        
+        <!-- Footer -->
+        <div class="login-footer">
+            <p class="copyright">
+                &copy; <?php echo date('Y'); ?> <?php echo SISTEMA_EMPRESA ?? 'ASSEGO'; ?>. Todos os direitos reservados.
+            </p>
+            <p class="copyright">
+                Versão <?php echo SISTEMA_VERSAO ?? '1.0.0'; ?>
+            </p>
+            <div class="protection">
+                <svg fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                </svg>
+               
             </div>
         </div>
     </div>
     
     <!-- Loading Overlay -->
-    <div id="loadingOverlay" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center hidden">
-        <div class="bg-white/10 backdrop-blur-sm rounded-2xl p-8 text-center">
-            <div class="loading-spinner mx-auto mb-4"></div>
-            <p class="text-white font-medium">Fazendo login...</p>
-        </div>
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="loader"></div>
     </div>
     
-    <!-- Scripts -->
-    <script src="js/login-script.js"></script>
-    
-    <!-- Honeypot + Turnstile Integration Scripts -->
     <script>
         let turnstileVerified = false;
+        
+        // Loading inicial de 5 segundos
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                document.getElementById('initialLoading').classList.add('fade-out');
+            }, 5000);
+        });
         
         // Marcar que JavaScript está habilitado
         document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('js_enabled').value = '1';
-            
-            const submitBtn = document.getElementById('submitBtn');
-            submitBtn.disabled = true;
-            submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
         });
         
         // Callback para sucesso do Turnstile
         function onTurnstileSuccess(token) {
-            console.log('Turnstile verificado com sucesso');
             turnstileVerified = true;
             document.getElementById('submitBtn').disabled = false;
-            document.getElementById('submitBtn').classList.remove('opacity-50', 'cursor-not-allowed');
-            document.getElementById('turnstile-error').classList.add('hidden');
         }
         
         // Callback para erro do Turnstile
         function onTurnstileError(error) {
-            console.error('Erro no Turnstile:', error);
             turnstileVerified = false;
             document.getElementById('submitBtn').disabled = true;
-            document.getElementById('submitBtn').classList.add('opacity-50', 'cursor-not-allowed');
-            document.getElementById('turnstile-error').classList.remove('hidden');
         }
         
         // Callback para expiração do Turnstile
         function onTurnstileExpired() {
-            console.log('Turnstile expirado');
             turnstileVerified = false;
             document.getElementById('submitBtn').disabled = true;
-            document.getElementById('submitBtn').classList.add('opacity-50', 'cursor-not-allowed');
-            document.getElementById('turnstile-error').classList.remove('hidden');
-            document.getElementById('turnstile-error').querySelector('span').textContent = 'Verificação expirada, clique novamente';
         }
         
         // Validação do formulário
         document.getElementById('loginForm').addEventListener('submit', function(e) {
             if (!turnstileVerified) {
                 e.preventDefault();
-                document.getElementById('turnstile-error').classList.remove('hidden');
-                document.getElementById('turnstile-error').querySelector('span').textContent = 'Complete a verificação de segurança';
-                
-                // Animar o widget Turnstile
-                const turnstileWidget = document.querySelector('.cf-turnstile');
-                if (turnstileWidget) {
-                    turnstileWidget.style.transform = 'scale(1.05)';
-                    turnstileWidget.style.boxShadow = '0 0 20px rgba(239, 68, 68, 0.5)';
-                    setTimeout(() => {
-                        turnstileWidget.style.transform = 'scale(1)';
-                        turnstileWidget.style.boxShadow = 'none';
-                    }, 300);
-                }
-                
+                alert('Complete a verificação de segurança');
                 return false;
             }
             
             // Mostrar loading overlay
-            document.getElementById('loadingOverlay').classList.remove('hidden');
+            document.getElementById('loadingOverlay').classList.add('active');
+            document.getElementById('submitBtn').classList.add('loading');
         });
         
         // Função para alternar visibilidade da senha
         function togglePassword() {
             const passwordInput = document.getElementById('senha');
-            const toggleIcon = document.getElementById('toggleIcon');
+            const toggleBtn = passwordInput.nextElementSibling;
+            const icon = toggleBtn.querySelector('svg');
             
             if (passwordInput.type === 'password') {
                 passwordInput.type = 'text';
-                toggleIcon.classList.remove('fa-eye');
-                toggleIcon.classList.add('fa-eye-slash');
+                icon.innerHTML = '<path d="M17.94 17.94A10.07 10.07 0 01.66 10C2.36 6.91 6 4.5 10 4.5c1.2 0 2.37.18 3.5.5M9.9 4.24A9.12 9.12 0 01.66 10a14.5 14.5 0 006.58 6.58"/><path d="M6.61 6.61A13.526 13.526 0 00.41 10a13.526 13.526 0 0019.18 0A13.526 13.526 0 0013.39 13.39M9.9 4.24A9.12 9.12 0 0119.34 10"/><path d="m15 9l-6 6m0-6l6 6"/>';
             } else {
                 passwordInput.type = 'password';
-                toggleIcon.classList.remove('fa-eye-slash');
-                toggleIcon.classList.add('fa-eye');
+                icon.innerHTML = '<path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/><path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"/>';
             }
         }
         
-        // Proteção adicional contra bots - verificar comportamento do mouse
-        let mouseMovements = 0;
-        document.addEventListener('mousemove', function() {
-            mouseMovements++;
-        });
-        
-        // Adicionar campo oculto com movimentos do mouse
-        document.getElementById('loginForm').addEventListener('submit', function() {
-            const mouseField = document.createElement('input');
-            mouseField.type = 'hidden';
-            mouseField.name = 'mouse_movements';
-            mouseField.value = mouseMovements;
-            this.appendChild(mouseField);
-        });
-    </script>
-    
-    <!-- Auto-hide messages after 5 seconds -->
-    <script>
-        // Auto-hide logout messages
+        // Auto-hide messages after 5 seconds
         setTimeout(function() {
-            const alerts = document.querySelectorAll('.alert-message, .alert-warning');
+            const alerts = document.querySelectorAll('.alert');
             alerts.forEach(function(alert) {
                 if (!alert.classList.contains('alert-error')) {
                     alert.style.transition = 'opacity 0.5s ease-out';

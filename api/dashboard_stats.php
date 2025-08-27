@@ -56,9 +56,10 @@ try {
     $stmt->execute();
     $stats['por_corporacao'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
-    // CORRIGIDO: Busca PM, BM e calcula OUTROS corretamente
+    // NOVO: Busca PM, BM e OUTROS com contagem ATIVA/RESERVA
     $stmt = $db->prepare("
         SELECT 
+            -- PM Total e por categoria
             COUNT(DISTINCT CASE WHEN 
                 UPPER(TRIM(COALESCE(m.corporacao, ''))) LIKE '%POLICIA MILITAR%' 
                 OR UPPER(TRIM(COALESCE(m.corporacao, ''))) LIKE '%POLÍCIA MILITAR%'
@@ -68,12 +69,49 @@ try {
                 THEN a.id END) as pm_count,
                 
             COUNT(DISTINCT CASE WHEN 
+                (UPPER(TRIM(COALESCE(m.corporacao, ''))) LIKE '%POLICIA MILITAR%' 
+                 OR UPPER(TRIM(COALESCE(m.corporacao, ''))) LIKE '%POLÍCIA MILITAR%'
+                 OR UPPER(TRIM(COALESCE(m.corporacao, ''))) LIKE '%PM %' 
+                 OR UPPER(TRIM(COALESCE(m.corporacao, ''))) = 'PM'
+                 OR UPPER(TRIM(COALESCE(m.corporacao, ''))) LIKE 'PM-%')
+                AND UPPER(TRIM(COALESCE(m.categoria, ''))) = 'ATIVA'
+                THEN a.id END) as pm_ativa,
+                
+            COUNT(DISTINCT CASE WHEN 
+                (UPPER(TRIM(COALESCE(m.corporacao, ''))) LIKE '%POLICIA MILITAR%' 
+                 OR UPPER(TRIM(COALESCE(m.corporacao, ''))) LIKE '%POLÍCIA MILITAR%'
+                 OR UPPER(TRIM(COALESCE(m.corporacao, ''))) LIKE '%PM %' 
+                 OR UPPER(TRIM(COALESCE(m.corporacao, ''))) = 'PM'
+                 OR UPPER(TRIM(COALESCE(m.corporacao, ''))) LIKE 'PM-%')
+                AND UPPER(TRIM(COALESCE(m.categoria, ''))) = 'RESERVA'
+                THEN a.id END) as pm_reserva,
+                
+            -- BM Total e por categoria
+            COUNT(DISTINCT CASE WHEN 
                 UPPER(TRIM(COALESCE(m.corporacao, ''))) LIKE '%BOMBEIRO%'
                 OR UPPER(TRIM(COALESCE(m.corporacao, ''))) LIKE '%BM %'
                 OR UPPER(TRIM(COALESCE(m.corporacao, ''))) = 'BM'
                 OR UPPER(TRIM(COALESCE(m.corporacao, ''))) LIKE '%CORPO DE BOMBEIRO%'
                 OR UPPER(TRIM(COALESCE(m.corporacao, ''))) LIKE 'CBM%'
-                THEN a.id END) as bm_count
+                THEN a.id END) as bm_count,
+                
+            COUNT(DISTINCT CASE WHEN 
+                (UPPER(TRIM(COALESCE(m.corporacao, ''))) LIKE '%BOMBEIRO%'
+                 OR UPPER(TRIM(COALESCE(m.corporacao, ''))) LIKE '%BM %'
+                 OR UPPER(TRIM(COALESCE(m.corporacao, ''))) = 'BM'
+                 OR UPPER(TRIM(COALESCE(m.corporacao, ''))) LIKE '%CORPO DE BOMBEIRO%'
+                 OR UPPER(TRIM(COALESCE(m.corporacao, ''))) LIKE 'CBM%')
+                AND UPPER(TRIM(COALESCE(m.categoria, ''))) = 'ATIVA'
+                THEN a.id END) as bm_ativa,
+                
+            COUNT(DISTINCT CASE WHEN 
+                (UPPER(TRIM(COALESCE(m.corporacao, ''))) LIKE '%BOMBEIRO%'
+                 OR UPPER(TRIM(COALESCE(m.corporacao, ''))) LIKE '%BM %'
+                 OR UPPER(TRIM(COALESCE(m.corporacao, ''))) = 'BM'
+                 OR UPPER(TRIM(COALESCE(m.corporacao, ''))) LIKE '%CORPO DE BOMBEIRO%'
+                 OR UPPER(TRIM(COALESCE(m.corporacao, ''))) LIKE 'CBM%')
+                AND UPPER(TRIM(COALESCE(m.categoria, ''))) = 'RESERVA'
+                THEN a.id END) as bm_reserva
                 
         FROM Associados a 
         LEFT JOIN Militar m ON a.id = m.associado_id 
@@ -84,6 +122,10 @@ try {
     
     $pm_count = $corporacoes_principais['pm_count'] ?? 0;
     $bm_count = $corporacoes_principais['bm_count'] ?? 0;
+    $pm_ativa = $corporacoes_principais['pm_ativa'] ?? 0;
+    $pm_reserva = $corporacoes_principais['pm_reserva'] ?? 0;
+    $bm_ativa = $corporacoes_principais['bm_ativa'] ?? 0;
+    $bm_reserva = $corporacoes_principais['bm_reserva'] ?? 0;
     $total_ativos = $stats['associados_ativos'];
     
     // CORREÇÃO: Calcular "outros" subtraindo PM e BM do total de ativos
@@ -94,14 +136,67 @@ try {
         $outros_count = 0;
     }
     
+    // Calcular Outros Ativa/Reserva
+    $stmt = $db->prepare("
+        SELECT 
+            COUNT(DISTINCT CASE WHEN 
+                -- Não é PM
+                NOT (UPPER(TRIM(COALESCE(m.corporacao, ''))) LIKE '%POLICIA MILITAR%' 
+                     OR UPPER(TRIM(COALESCE(m.corporacao, ''))) LIKE '%POLÍCIA MILITAR%'
+                     OR UPPER(TRIM(COALESCE(m.corporacao, ''))) LIKE '%PM %' 
+                     OR UPPER(TRIM(COALESCE(m.corporacao, ''))) = 'PM'
+                     OR UPPER(TRIM(COALESCE(m.corporacao, ''))) LIKE 'PM-%')
+                AND 
+                -- Não é BM
+                NOT (UPPER(TRIM(COALESCE(m.corporacao, ''))) LIKE '%BOMBEIRO%'
+                     OR UPPER(TRIM(COALESCE(m.corporacao, ''))) LIKE '%BM %'
+                     OR UPPER(TRIM(COALESCE(m.corporacao, ''))) = 'BM'
+                     OR UPPER(TRIM(COALESCE(m.corporacao, ''))) LIKE '%CORPO DE BOMBEIRO%'
+                     OR UPPER(TRIM(COALESCE(m.corporacao, ''))) LIKE 'CBM%')
+                AND UPPER(TRIM(COALESCE(m.categoria, ''))) = 'ATIVA'
+                THEN a.id END) as outros_ativa,
+                
+            COUNT(DISTINCT CASE WHEN 
+                -- Não é PM
+                NOT (UPPER(TRIM(COALESCE(m.corporacao, ''))) LIKE '%POLICIA MILITAR%' 
+                     OR UPPER(TRIM(COALESCE(m.corporacao, ''))) LIKE '%POLÍCIA MILITAR%'
+                     OR UPPER(TRIM(COALESCE(m.corporacao, ''))) LIKE '%PM %' 
+                     OR UPPER(TRIM(COALESCE(m.corporacao, ''))) = 'PM'
+                     OR UPPER(TRIM(COALESCE(m.corporacao, ''))) LIKE 'PM-%')
+                AND 
+                -- Não é BM
+                NOT (UPPER(TRIM(COALESCE(m.corporacao, ''))) LIKE '%BOMBEIRO%'
+                     OR UPPER(TRIM(COALESCE(m.corporacao, ''))) LIKE '%BM %'
+                     OR UPPER(TRIM(COALESCE(m.corporacao, ''))) = 'BM'
+                     OR UPPER(TRIM(COALESCE(m.corporacao, ''))) LIKE '%CORPO DE BOMBEIRO%'
+                     OR UPPER(TRIM(COALESCE(m.corporacao, ''))) LIKE 'CBM%')
+                AND UPPER(TRIM(COALESCE(m.categoria, ''))) = 'RESERVA'
+                THEN a.id END) as outros_reserva
+                
+        FROM Associados a 
+        LEFT JOIN Militar m ON a.id = m.associado_id 
+        WHERE a.situacao = 'Filiado'
+    ");
+    $stmt->execute();
+    $outros_categoria = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    $outros_ativa = $outros_categoria['outros_ativa'] ?? 0;
+    $outros_reserva = $outros_categoria['outros_reserva'] ?? 0;
+    
     $total_corporacoes = $pm_count + $bm_count + $outros_count;
     
-    // Dados para o card principal (PM + BM + OUTROS) - CORRIGIDO
+    // Dados para o card principal (PM + BM + OUTROS) com Ativa/Reserva - COMPLETO
     $stats['corporacoes_principais'] = [
         'pm_quantidade' => $pm_count,
         'bm_quantidade' => $bm_count,
         'outros_quantidade' => $outros_count,
         'total_quantidade' => $total_corporacoes,
+        'pm_ativa' => $pm_ativa,
+        'pm_reserva' => $pm_reserva,
+        'bm_ativa' => $bm_ativa,
+        'bm_reserva' => $bm_reserva,
+        'outros_ativa' => $outros_ativa,
+        'outros_reserva' => $outros_reserva,
         'pm_percentual' => $total_ativos > 0 ? round(($pm_count * 100) / $total_ativos, 1) : 0,
         'bm_percentual' => $total_ativos > 0 ? round(($bm_count * 100) / $total_ativos, 1) : 0,
         'outros_percentual' => $total_ativos > 0 ? round(($outros_count * 100) / $total_ativos, 1) : 0,
@@ -221,6 +316,12 @@ try {
                 'bm_quantidade' => 0,
                 'outros_quantidade' => 0,
                 'total_quantidade' => 0,
+                'pm_ativa' => 0,
+                'pm_reserva' => 0,
+                'bm_ativa' => 0,
+                'bm_reserva' => 0,
+                'outros_ativa' => 0,
+                'outros_reserva' => 0,
                 'pm_percentual' => 0,
                 'bm_percentual' => 0,
                 'outros_percentual' => 0,
