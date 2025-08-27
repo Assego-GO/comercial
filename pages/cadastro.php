@@ -991,6 +991,10 @@ document.addEventListener('DOMContentLoaded', function() {
             // Atualiza interface
             updateProgressBar();
             updateNavigationButtons();
+            // Inicializa navegação por clique nos steps
+setTimeout(() => {
+    inicializarNavegacaoSteps();
+}, 1000);
             
         })
         .catch(error => {
@@ -1260,14 +1264,21 @@ function preencherDadosServicos(dadosServicos) {
 }
 
 // Navegação entre steps
+// SUBSTITUIR a função proximoStep existente por:
 function proximoStep() {
+    // VALIDAÇÃO ESPECÍFICA para step financeiro
+    if (currentStep === 4) {
+        if (!validarTipoEServicos()) {
+            return;
+        }
+    }
+    
     if (validarStepAtual()) {
         if (currentStep < totalSteps) {
             // Marca step atual como completo
             document.querySelector(`[data-step="${currentStep}"]`).classList.add('completed');
             
-            currentStep++;
-            mostrarStep(currentStep);
+            irParaStep(currentStep + 1);
             
             // Se for o último step, preenche a revisão
             if (currentStep === totalSteps) {
@@ -1277,10 +1288,10 @@ function proximoStep() {
     }
 }
 
+// SUBSTITUIR a função voltarStep existente por:
 function voltarStep() {
     if (currentStep > 1) {
-        currentStep--;
-        mostrarStep(currentStep);
+        irParaStep(currentStep - 1);
     }
 }
 
@@ -1296,6 +1307,10 @@ function mostrarStep(step) {
     // Atualiza progress
     updateProgressBar();
     updateNavigationButtons();
+    // Inicializa navegação por clique nos steps
+setTimeout(() => {
+    inicializarNavegacaoSteps();
+}, 1000);
     
     // Scroll para o topo
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -2415,6 +2430,69 @@ function hideSuggestions() {
     currentSelectedIndex = -1;
     currentSuggestions = [];
 }
+// NAVEGAÇÃO POR CLIQUE NOS STEPS
+function irParaStep(numeroStep) {
+    if (numeroStep < 1 || numeroStep > totalSteps) return;
+    
+    // Validação antes de navegar (opcional)
+    if (numeroStep > currentStep && !validarStepAtual()) {
+        return;
+    }
+    
+    currentStep = numeroStep;
+    mostrarStep(currentStep);
+}
+
+function inicializarNavegacaoSteps() {
+    document.querySelectorAll('.step').forEach(step => {
+        step.style.cursor = 'pointer';
+        step.style.transition = 'all 0.3s ease';
+        
+        step.addEventListener('click', function() {
+            const numeroStep = parseInt(this.getAttribute('data-step'));
+            if (numeroStep) {
+                irParaStep(numeroStep);
+                
+                // Efeito visual de clique
+                this.style.transform = 'scale(0.95)';
+                setTimeout(() => {
+                    this.style.transform = 'scale(1)';
+                }, 150);
+            }
+        });
+        
+        step.addEventListener('mouseenter', function() {
+            if (!this.classList.contains('active')) {
+                this.style.transform = 'scale(1.05)';
+                this.style.opacity = '0.8';
+            }
+        });
+        
+        step.addEventListener('mouseleave', function() {
+            this.style.transform = 'scale(1)';
+            this.style.opacity = '1';
+        });
+    });
+    
+    console.log('✓ Navegação por clique nos steps inicializada');
+}
+// Atalhos de teclado para navegação
+document.addEventListener('keydown', function(e) {
+    if (!e.target.matches('input, textarea, select')) {
+        if (e.key >= '1' && e.key <= '6') {
+            e.preventDefault();
+            irParaStep(parseInt(e.key));
+        }
+        else if (e.key === 'ArrowLeft') {
+            e.preventDefault();
+            voltarStep();
+        }
+        else if (e.key === 'ArrowRight') {
+            e.preventDefault();
+            proximoStep();
+        }
+    }
+});
 
 console.log('✓ Script de autocomplete carregado');
 </script>
