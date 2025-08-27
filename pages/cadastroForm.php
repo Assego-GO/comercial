@@ -1,6 +1,6 @@
 <?php
 /**
- * Formulário de Cadastro de Associados - VERSÃO CORRIGIDA PATENTE
+ * Formulário de Cadastro de Associados - VERSÃO COM ENVIO AUTOMÁTICO OBRIGATÓRIO
  * pages/cadastroForm.php
  */
 
@@ -583,7 +583,7 @@ $lotacoes = [
     "TERCEIRA SECAO DO ESTADO MAIOR"
 ];
 
-// CORREÇÃO: Definir array de patentes com encoding correto E hífens corretos
+// Array de patentes com encoding correto E hífens corretos
 $patentes = [
     'Praças' => [
         'Aluno Soldado',
@@ -591,11 +591,11 @@ $patentes = [
         'Soldado 1ª Classe', 
         'Cabo',
         'Terceiro Sargento',
-        'Terceiro-Sargento', // Versão com hífen
+        'Terceiro-Sargento',
         'Segundo Sargento', 
-        'Segundo-Sargento', // Versão com hífen
+        'Segundo-Sargento',
         'Primeiro Sargento',
-        'Primeiro-Sargento', // Versão com hífen
+        'Primeiro-Sargento',
         'Subtenente',
         'Suboficial'
     ],
@@ -657,7 +657,6 @@ $patentes = [
             associadoId: <?php echo $associadoId ? $associadoId : 'null'; ?>,
             regrasContribuicao: <?php echo json_encode($regrasContribuicao); ?>,
             servicos: <?php echo json_encode($servicos); ?>,
-            // CORREÇÃO: Passa dados militares para o JavaScript
             associadoData: <?php echo json_encode($associadoData); ?>
         };
     </script>
@@ -972,7 +971,7 @@ $patentes = [
                             </div>
                         </div>
 
-                        <!-- Campo para upload da ficha assinada - APENAS PARA NOVOS CADASTROS -->
+                        <!-- Campo para upload da ficha assinada - APENAS PARA NOVOS CADASTROS - MODIFICADO -->
                         <?php if (!$isEdit): ?>
                             <div class="form-group full-width">
                                 <label class="form-label">
@@ -981,12 +980,12 @@ $patentes = [
                                         title="Anexe a foto ou PDF da ficha preenchida e assinada pelo associado"></i>
                                 </label>
                                 <div class="ficha-upload-container"
-                                    style="background: var(--warning); background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%); padding: 2rem; border-radius: 16px; border: 2px dashed #f0ad4e;">
+                                    style="background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); padding: 2rem; border-radius: 16px; border: 2px dashed #4caf50;">
                                     <div style="display: flex; align-items: center; gap: 2rem;">
                                         <div class="ficha-preview" id="fichaPreview"
-                                            style="width: 200px; height: 250px; background: var(--white); border-radius: 12px; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; border: 2px solid var(--warning);">
+                                            style="width: 200px; height: 250px; background: var(--white); border-radius: 12px; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; border: 2px solid #4caf50;">
                                             <div class="ficha-preview-placeholder"
-                                                style="text-align: center; color: var(--warning);">
+                                                style="text-align: center; color: #4caf50;">
                                                 <i class="fas fa-file-contract"
                                                     style="font-size: 4rem; margin-bottom: 1rem;"></i>
                                                 <p style="font-weight: 600;">Ficha de Filiação</p>
@@ -995,45 +994,43 @@ $patentes = [
                                         </div>
 
                                         <div style="flex: 1;">
-                                            <h4 style="color: var(--warning); margin-bottom: 1rem;">
-                                                <i class="fas fa-exclamation-triangle"></i> Documento Obrigatório
+                                            <h4 style="color: #2e7d32; margin-bottom: 1rem;">
+                                                <i class="fas fa-check-circle"></i> Documento Obrigatório
                                             </h4>
-                                            <p style="color: #856404; margin-bottom: 1rem;">
+                                            <p style="color: #1b5e20; margin-bottom: 1rem;">
                                                 É obrigatório anexar a ficha de filiação preenchida e assinada pelo
                                                 associado.
-                                                Este documento será enviado para aprovação da presidência.
+                                                Este documento será enviado automaticamente para aprovação da presidência.
                                             </p>
 
                                             <input type="file" name="ficha_assinada" id="ficha_assinada"
                                                 accept=".pdf,.jpg,.jpeg,.png" style="display: none;" required>
 
-                                            <button type="button" class="btn btn-warning"
+                                            <button type="button" class="btn"
                                                 onclick="document.getElementById('ficha_assinada').click();"
-                                                style="background: var(--warning); color: var(--dark); border: none; padding: 0.875rem 1.5rem; border-radius: 12px; font-weight: 600; cursor: pointer;">
+                                                style="background: #4caf50; color: white; border: none; padding: 0.875rem 1.5rem; border-radius: 12px; font-weight: 600; cursor: pointer;">
                                                 <i class="fas fa-upload"></i> Anexar Ficha Assinada
                                             </button>
 
-                                            <p style="font-size: 0.75rem; color: #856404; margin-top: 0.5rem;">
+                                            <p style="font-size: 0.75rem; color: #2e7d32; margin-top: 0.5rem;">
                                                 Formatos aceitos: PDF, JPG, PNG | Tamanho máximo: 10MB
                                             </p>
                                         </div>
                                     </div>
 
-                                    <!-- Opção de enviar automaticamente -->
+                                    <!-- Campo hidden para sempre enviar automaticamente -->
+                                    <input type="hidden" name="enviar_presidencia" id="enviar_presidencia" value="1">
+
+                                    <!-- Informação visual de que será enviado automaticamente -->
                                     <div
-                                        style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid rgba(240, 173, 78, 0.3);">
-                                        <div class="checkbox-item">
-                                            <input type="checkbox" name="enviar_presidencia" id="enviar_presidencia"
-                                                value="1" checked>
-                                            <label for="enviar_presidencia" style="color: #856404; font-weight: 600;">
-                                                <i class="fas fa-paper-plane"></i> Enviar automaticamente para aprovação da
-                                                presidência após a filiação
-                                            </label>
+                                        style="margin-top: 1.5rem; padding: 1rem; background: rgba(76, 175, 80, 0.1); border-radius: 8px; border-left: 4px solid #4caf50;">
+                                        <div style="display: flex; align-items: center; gap: 0.5rem; color: #2e7d32;">
+                                            <i class="fas fa-info-circle"></i>
+                                            <strong>Envio Automático Ativado</strong>
                                         </div>
-                                        <p
-                                            style="font-size: 0.75rem; color: #856404; margin-top: 0.5rem; margin-left: 1.5rem;">
-                                            Se desmarcado, a ficha de filiação ficará aguardando até que você envie manualmente
-                                            para aprovação.
+                                        <p style="font-size: 0.875rem; color: #2e7d32; margin-top: 0.5rem; margin-left: 1.5rem;">
+                                            A ficha de filiação será enviada automaticamente para aprovação da presidência após a conclusão do cadastro.
+                                            Este processo é obrigatório para validar a filiação do novo associado.
                                         </p>
                                     </div>
                                 </div>
@@ -1073,9 +1070,6 @@ $patentes = [
 
                         <div class="form-group">
                             <label class="form-label">Patente</label>
-                            
-                            
-                            
                             <select class="form-input form-select" name="patente" id="patente" data-current-value="<?php echo isset($associadoData['patente']) ? htmlspecialchars($associadoData['patente'], ENT_QUOTES, 'UTF-8') : ''; ?>">
                                 <option value="">Selecione...</option>
                                 <?php foreach($patentes as $grupo => $listPatentes): ?>
@@ -1203,7 +1197,7 @@ $patentes = [
                     </div>
                 </div>
 
-                <!-- Step 4: Financeiro CORRIGIDO E EXPANDIDO -->
+                <!-- Step 4: Financeiro -->
                 <div class="section-card" data-step="4">
                     <div class="section-header">
                         <div class="section-icon">
@@ -1282,7 +1276,6 @@ $patentes = [
                                 </div>
 
                                 <!-- Serviço Jurídico (Opcional) -->
-                               <!-- Serviço Jurídico (Opcional) -->
                                     <div class="servico-item" id="servicoJuridicoItem"
                                         style="margin-bottom: 1rem; padding: 1rem; background: var(--gray-100); border-radius: 8px;">
                                     <div
@@ -1362,7 +1355,7 @@ $patentes = [
                             </select>
                         </div>
 
-                        <!-- Vínculo Servidor - CAMPO NUMÉRICO -->
+                        <!-- Vínculo Servidor -->
                         <div class="form-group">
                             <label class="form-label">
                                 Vínculo do Servidor
@@ -1413,7 +1406,7 @@ $patentes = [
                                 placeholder="Número da conta">
                         </div>
 
-                        <!-- Doador - NOVO CAMPO -->
+                        <!-- Doador -->
                         <div class="form-group">
                             <label class="form-label">
                                 Doador
@@ -1556,7 +1549,7 @@ $patentes = [
     <script src="js/cadastroFormAutocomplete.js"></script>
     
     <script>
-    // CORREÇÃO: Função para definir valor do select após carregar
+    // Função para definir valor do select após carregar
     function definirValorSelect(selectId, valor) {
         console.log(`=== DEFININDO VALOR PARA ${selectId} ===`);
         console.log(`Valor procurado: "${valor}"`);
@@ -1614,13 +1607,13 @@ $patentes = [
             allowClear: true
         });
         
-        // Inicializa Select2 para patente - IMPORTANTE: garante que todas as opções apareçam
+        // Inicializa Select2 para patente
         $('#patente').select2({
             placeholder: 'Selecione a patente...',
             language: 'pt-BR',
             width: '100%',
             allowClear: true,
-            dropdownParent: $('#patente').parent() // Garante que o dropdown apareça corretamente
+            dropdownParent: $('#patente').parent()
         });
         
         // Inicializa Select2 para corporação
@@ -1639,15 +1632,13 @@ $patentes = [
             allowClear: true
         });
 
-        // CORREÇÃO: Se estiver editando, define valores após inicialização
+        // Se estiver editando, define valores após inicialização
         <?php if ($isEdit && isset($associadoData)): ?>
             console.log('=== MODO EDIÇÃO DETECTADO ===');
             
-            // Aguarda um pouco para garantir que tudo está carregado
             setTimeout(function() {
                 console.log('Definindo valores dos campos militares...');
                 
-                // Define patente
                 <?php if (isset($associadoData['patente']) && !empty($associadoData['patente'])): ?>
                     const patenteAtual = <?php echo json_encode($associadoData['patente']); ?>;
                     console.log('Patente do banco:', patenteAtual);
@@ -1657,7 +1648,6 @@ $patentes = [
                     }
                 <?php endif; ?>
                 
-                // Define corporação
                 <?php if (isset($associadoData['corporacao']) && !empty($associadoData['corporacao'])): ?>
                     const corporacaoAtual = <?php echo json_encode($associadoData['corporacao']); ?>;
                     console.log('Corporação do banco:', corporacaoAtual);
@@ -1667,7 +1657,6 @@ $patentes = [
                     }
                 <?php endif; ?>
                 
-                // Define categoria
                 <?php if (isset($associadoData['categoria']) && !empty($associadoData['categoria'])): ?>
                     const categoriaAtual = <?php echo json_encode($associadoData['categoria']); ?>;
                     console.log('Categoria do banco:', categoriaAtual);
@@ -1677,17 +1666,14 @@ $patentes = [
                     }
                 <?php endif; ?>
                 
-                // Define lotação
                 <?php if (isset($associadoData['lotacao']) && !empty($associadoData['lotacao'])): ?>
                     const lotacaoAtual = <?php echo json_encode($associadoData['lotacao']); ?>;
                     console.log('Lotação do banco:', lotacaoAtual);
                     
-                    // Para Select2, usa método específico
                     $('#lotacao').val(lotacaoAtual).trigger('change');
                     console.log('✅ Lotação definida via Select2');
                 <?php endif; ?>
                 
-                // Define unidade (campo input text)
                 <?php if (isset($associadoData['unidade']) && !empty($associadoData['unidade'])): ?>
                     const unidadeAtual = <?php echo json_encode($associadoData['unidade']); ?>;
                     console.log('Unidade do banco:', unidadeAtual);
@@ -1705,11 +1691,9 @@ $patentes = [
             // Busca dados dos serviços ao carregar página de edição
             buscarDadosServicosAssociado(<?php echo $associadoId; ?>);
             
-            // CORREÇÃO EXTRA: Garante que todas as patentes apareçam após carregar
             setTimeout(function() {
                 console.log('🔄 Garantindo que todas as patentes apareçam no dropdown...');
                 
-                // Força o Select2 da patente a recarregar todas as opções
                 $('#patente').select2('destroy').select2({
                     placeholder: 'Selecione a patente...',
                     language: 'pt-BR',
@@ -1717,7 +1701,6 @@ $patentes = [
                     allowClear: true
                 });
                 
-                // Redefine o valor da patente se existir
                 <?php if (isset($associadoData['patente']) && !empty($associadoData['patente'])): ?>
                     const patenteParaRedefinir = <?php echo json_encode($associadoData['patente']); ?>;
                     $('#patente').val(patenteParaRedefinir).trigger('change');
@@ -1728,20 +1711,17 @@ $patentes = [
             }, 1200);
         <?php endif; ?>
         
-        // Evento especial para garantir que patente mostre todas as opções
         $('#patente').on('select2:open', function() {
             console.log('🔽 Dropdown da patente aberto - verificando se todas as opções estão disponíveis');
             
-            // Verifica se todas as opções estão sendo mostradas
             const totalOptions = $('#patente option').length;
             console.log(`📊 Total de opções de patente disponíveis: ${totalOptions}`);
             
-            if (totalOptions < 15) { // Esperamos pelo menos 15 patentes
+            if (totalOptions < 15) {
                 console.warn('⚠️ Poucas opções encontradas, pode haver problema no carregamento');
             }
         });
         
-        // Evento para debug quando o valor é alterado
         $('#patente').on('change', function() {
             const valorSelecionado = $(this).val();
             console.log(`✅ Patente selecionada: "${valorSelecionado}"`);
@@ -1750,68 +1730,12 @@ $patentes = [
         console.log('✓ Página inicializada');
     });
 
-    // Função de debug para patente
-    function debugPatente() {
-        console.log('🔍 === DEBUG PATENTE ===');
-        
-        const selectPatente = document.getElementById('patente');
-        const valorAtual = selectPatente.value;
-        
-        console.log(`Valor atual selecionado: "${valorAtual}"`);
-        console.log('Lista de TODAS as opções disponíveis:');
-        
-        const opcoes = selectPatente.querySelectorAll('option');
-        opcoes.forEach((opcao, index) => {
-            if (opcao.value) {
-                const selected = opcao.selected ? ' ← SELECIONADA' : '';
-                console.log(`  [${index}] "${opcao.value}"${selected}`);
-            }
-        });
-        
-        console.log(`Total de opções (incluindo vazia): ${opcoes.length}`);
-        
-        // Testa abrir o dropdown
-        $('#patente').select2('open');
-        setTimeout(() => {
-            $('#patente').select2('close');
-            console.log('✅ Dropdown testado - se você viu todas as opções, está funcionando!');
-        }, 2000);
-        
-        console.log('🔍 === FIM DEBUG ===');
-    }
-    
-    // Função para forçar reset completo do Select2 da patente
-    function resetPatenteSelect2() {
-        console.log('🔄 Resetando Select2 da patente...');
-        
-        const valorAtual = $('#patente').val();
-        
-        // Destroi e recria o Select2
-        $('#patente').select2('destroy');
-        $('#patente').select2({
-            placeholder: 'Selecione a patente...',
-            language: 'pt-BR',
-            width: '100%',
-            allowClear: true,
-            closeOnSelect: true
-        });
-        
-        // Redefine o valor se existia
-        if (valorAtual) {
-            $('#patente').val(valorAtual).trigger('change');
-            console.log(`✅ Valor "${valorAtual}" redefinido após reset`);
-        }
-        
-        console.log('✅ Reset do Select2 concluído');
-    }
-
     // Função para buscar dados dos serviços do associado em edição
     function buscarDadosServicosAssociado(associadoId) {
         fetch(`../api/buscar_servicos_associado.php?associado_id=${associadoId}`)
             .then(response => response.json())
             .then(data => {
                 if (data.status === 'success' && data.data) {
-                    // Preenche os campos de serviço baseado nos dados retornados
                     if (data.data.servicos.social) {
                         const social = data.data.servicos.social;
                         document.getElementById('valorSocial').value = social.valor_aplicado;
@@ -1829,10 +1753,8 @@ $patentes = [
                         document.getElementById('percentualJuridico').textContent = parseFloat(juridico.percentual_aplicado).toFixed(0);
                     }
                     
-                    // Atualiza o total
                     document.getElementById('valorTotalGeral').textContent = parseFloat(data.data.valor_total_mensal || 0).toFixed(2).replace('.', ',');
                     
-                    // Define o tipo de associado dos serviços se disponível
                     if (data.data.tipo_associado_servico) {
                         const selectTipo = document.getElementById('tipoAssociadoServico');
                         if (selectTipo) {
