@@ -96,86 +96,117 @@ $headerComponent = HeaderComponent::create([
 
             <!-- Stats Grid -->
             <div class="stats-grid" data-aos="fade-up">
-                <!-- Card 1: Associados Ativos -->
-                <div class="stat-card">
-                    <div class="stat-header">
-                        <div>
-                            <div class="stat-value" id="associadosAtivos">-</div>
-                            <div class="stat-label">Associados Ativos</div>
-                           
+                <!-- Card 1: Associados Ativos + Novos - AGRUPADO -->
+                <div class="stat-card dual-stat-card">
+                    <div class="dual-stat-header">
+                        <div class="dual-stat-title">
+                            <i class="fas fa-users"></i>
+                            Associados
                         </div>
-                        <div class="stat-icon success">
-                            <i class="fas fa-user-check"></i>
+                        <div class="dual-stat-percentage" id="associadosPercent">
+                            <i class="fas fa-chart-line"></i>
+                            Crescimento
+                        </div>
+                    </div>
+                    <div class="dual-stats-row">
+                        <div class="dual-stat-item ativos-item">
+                            <div class="dual-stat-icon ativos-icon">
+                                <i class="fas fa-user-check"></i>
+                            </div>
+                            <div class="dual-stat-info">
+                                <div class="dual-stat-value" id="associadosAtivos">-</div>
+                                <div class="dual-stat-label">Ativos</div>
+                            </div>
+                        </div>
+                        <div class="dual-stats-separator"></div>
+                        <div class="dual-stat-item novos-item">
+                            <div class="dual-stat-icon novos-icon">
+                                <i class="fas fa-user-plus"></i>
+                            </div>
+                            <div class="dual-stat-info">
+                                <div class="dual-stat-value" id="novosAssociados">-</div>
+                                <div class="dual-stat-label">Novos (30d)</div>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Card 2: Novos (30 dias) -->
-                <div class="stat-card">
-                    <div class="stat-header">
-                        <div>
-                            <div class="stat-value" id="novosAssociados">-</div>
-                            <div class="stat-label">Novos (30 dias)</div>
-                            <!-- 
-                            <div class="stat-change positive">
-                                <i class="fas fa-arrow-up"></i>
-                                25% este mês
-                            </div>
-                            -->
-                        </div>
-                        <div class="stat-icon warning">
-                            <i class="fas fa-user-plus"></i>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Card 3: PM + BM -->
-                <div class="stat-card">
-                    <div class="stat-header">
-                        <div>
-                            <div class="stat-value" id="corporacoesQtd">-</div>
-                            <div class="stat-label">PM + Bombeiros</div>
-                            <div class="stat-change positive" id="corporacoesPercent">
-                                <i class="fas fa-chart-pie"></i>
-                                -% do total
-                            </div>
-                        </div>
-                        <div class="stat-icon info">
+                <!-- Card 2: PM + BM + Outros -->
+                <div class="stat-card dual-stat-card triple-stat-card">
+                    <div class="dual-stat-header">
+                        <div class="dual-stat-title">
                             <i class="fas fa-shield-alt"></i>
+                            Corporações
+                        </div>
+                        <div class="dual-stat-percentage" id="corporacoesPercent">
+                            <i class="fas fa-chart-pie"></i>
+                            -% do total
+                        </div>
+                    </div>
+                    <div class="dual-stats-row triple-stats-row">
+                        <div class="dual-stat-item pm-item">
+                            <div class="dual-stat-icon pm-icon">
+                                <i class="fas fa-shield-alt"></i>
+                            </div>
+                            <div class="dual-stat-info">
+                                <div class="dual-stat-value" id="pmQuantidade">-</div>
+                                <div class="dual-stat-label">PM</div>
+                            </div>
+                        </div>
+                        <div class="dual-stats-separator"></div>
+                        <div class="dual-stat-item bm-item">
+                            <div class="dual-stat-icon bm-icon">
+                                <i class="fas fa-fire-extinguisher"></i>
+                            </div>
+                            <div class="dual-stat-info">
+                                <div class="dual-stat-value" id="bmQuantidade">-</div>
+                                <div class="dual-stat-label">BM</div>
+                            </div>
+                        </div>
+                        <div class="dual-stats-separator"></div>
+                        <div class="dual-stat-item outros-item">
+                            <div class="dual-stat-icon outros-icon">
+                                <i class="fas fa-users"></i>
+                            </div>
+                            <div class="dual-stat-info">
+                                <div class="dual-stat-value" id="outrosQuantidade">-</div>
+                                <div class="dual-stat-label">Outros</div>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Card 4: Aniversariantes -->
-                <div class="stat-card">
-                    <div class="stat-header">
-                        <div>
-                            <div class="stat-value" id="aniversariantes">-</div>
-                            <div class="stat-label">Aniversariantes Hoje</div>
-                            <div class="stat-change neutral">
-                                <i class="fas fa-birthday-cake"></i>
-                                Parabéns!
-                            </div>
-                        </div>
-                        <div class="stat-icon birthday">
-                            <i class="fas fa-birthday-cake"></i>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Card 5: Capital/Interior -->
-                <div class="stat-card">
-                    <div class="stat-header">
-                        <div>
-                            <div class="stat-value" id="localizacaoQtd">-</div>
-                            <div class="stat-label">Capital/Interior</div>
-                            <div class="stat-change positive" id="localizacaoInfo">
-                                <i class="fas fa-map-marked-alt"></i>
-                                Distribuição geográfica
-                            </div>
-                        </div>
-                        <div class="stat-icon geographic">
+                <!-- Card 3: Capital/Interior -->
+                <div class="stat-card dual-stat-card">
+                    <div class="dual-stat-header">
+                        <div class="dual-stat-title">
                             <i class="fas fa-map-marked-alt"></i>
+                            Distribuição
+                        </div>
+                        <div class="dual-stat-percentage" id="localizacaoPercent">
+                            <i class="fas fa-percentage"></i>
+                            -%/-%
+                        </div>
+                    </div>
+                    <div class="dual-stats-row">
+                        <div class="dual-stat-item capital-item">
+                            <div class="dual-stat-icon capital-icon">
+                                <i class="fas fa-city"></i>
+                            </div>
+                            <div class="dual-stat-info">
+                                <div class="dual-stat-value" id="capitalQuantidade">-</div>
+                                <div class="dual-stat-label">Capital</div>
+                            </div>
+                        </div>
+                        <div class="dual-stats-separator"></div>
+                        <div class="dual-stat-item interior-item">
+                            <div class="dual-stat-icon interior-icon">
+                                <i class="fas fa-tree"></i>
+                            </div>
+                            <div class="dual-stat-info">
+                                <div class="dual-stat-value" id="interiorQuantidade">-</div>
+                                <div class="dual-stat-label">Interior</div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -585,6 +616,7 @@ $headerComponent = HeaderComponent::create([
 
     <!-- CSS e JavaScript inline -->
     <style>
+        /* Estilos melhorados para KPI */
         .stat-icon.birthday {
             background: linear-gradient(135deg, #e91e63 0%, #ad1457 100%);
         }
@@ -602,24 +634,692 @@ $headerComponent = HeaderComponent::create([
             color: #e91e63;
         }
         
-        /* Ajusta grid para 5 cards */
+        /* Ajusta grid para 3 cards - ATUALIZADO */
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
             gap: 1.5rem;
         }
         
         @media (min-width: 1200px) {
             .stats-grid {
-                grid-template-columns: repeat(5, 1fr);
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        @media (max-width: 1199px) and (min-width: 768px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 767px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
             }
         }
         
-        /* Estilo para cards com duas linhas */
-        .stat-card:nth-child(3) .stat-value,
-        .stat-card:nth-child(5) .stat-value {
-            font-size: 1.4rem;
+        /* ========================================
+           ESTILOS DOS CARDS ELEGANTES - NOVOS
+           ======================================== */
+
+        /* Card Elegante Principal */
+        .elegant-stat-card {
+            position: relative;
+            overflow: hidden;
+            background: var(--white);
+            border: 1px solid var(--gray-200);
+            border-radius: 20px;
+            padding: 0;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: var(--shadow-sm);
+            min-height: 180px;
+        }
+
+        .elegant-stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--success) 100%);
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform 0.4s ease;
+        }
+
+        .elegant-stat-card:hover::before {
+            transform: scaleX(1);
+        }
+
+        .elegant-stat-card:hover {
+            transform: translateY(-6px);
+            box-shadow: var(--shadow-lg);
+            border-color: rgba(0, 86, 210, 0.2);
+        }
+
+        /* Header do Card Elegante */
+        .stat-card-header {
+            background: linear-gradient(135deg, var(--gray-100) 0%, var(--gray-200) 100%);
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--gray-200);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .stat-card-title {
+            font-size: 0.8125rem;
+            font-weight: 700;
+            color: var(--gray-700);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        /* Badges dos Cards */
+        .stat-card-badge {
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            gap: 0.375rem;
+        }
+
+        .active-badge {
+            background: rgba(0, 200, 83, 0.15);
+            color: var(--success);
+        }
+
+        .new-badge {
+            background: rgba(255, 149, 0, 0.15);
+            color: var(--warning);
+        }
+
+        /* Conteúdo do Card Elegante */
+        .stat-card-content {
+            padding: 1.5rem 1.25rem;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.5rem;
+            min-height: 100px;
+        }
+
+        /* Valor principal */
+        .stat-main-value {
+            font-size: 2.25rem;
+            font-weight: 800;
+            color: var(--dark);
+            line-height: 1;
+            margin-bottom: 0.25rem;
+            transition: all 0.3s ease;
+        }
+
+        .stat-main-label {
+            font-size: 0.875rem;
+            color: var(--gray-600);
+            font-weight: 600;
             line-height: 1.2;
+            margin-bottom: 0.75rem;
+        }
+
+        /* Ícone principal do card */
+        .stat-icon-main {
+            position: absolute;
+            top: 1.5rem;
+            right: 1.25rem;
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            transition: all 0.3s ease;
+            opacity: 0.8;
+        }
+
+        .stat-icon-main.success {
+            background: linear-gradient(135deg, #00c853 0%, #00a847 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(0, 200, 83, 0.3);
+        }
+
+        .stat-icon-main.warning {
+            background: linear-gradient(135deg, #ff9500 0%, #e8690b 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(255, 149, 0, 0.3);
+        }
+
+        /* Efeitos de hover nos ícones */
+        .elegant-stat-card:hover .stat-icon-main {
+            transform: scale(1.1) rotate(10deg);
+            opacity: 1;
+        }
+
+        .elegant-stat-card:hover .stat-main-value {
+            transform: scale(1.03);
+        }
+
+        /* Elemento de celebração */
+        .stat-celebration {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #e91e63;
+            background: rgba(233, 30, 99, 0.1);
+            padding: 0.375rem 0.75rem;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            gap: 0.375rem;
+            margin-top: auto;
+            animation: heartbeat 2s ease-in-out infinite;
+        }
+
+        @keyframes heartbeat {
+            0%, 100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.05);
+            }
+        }
+
+        /* Gradientes coloridos para os valores */
+        .elegant-stat-card:nth-child(1) .stat-main-value {
+            background: linear-gradient(135deg, #00c853, #00a847);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .elegant-stat-card:nth-child(2) .stat-main-value {
+            background: linear-gradient(135deg, #ff9500, #e8690b);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* Efeito de partículas no hover */
+        .elegant-stat-card::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            transition: left 0.6s ease;
+        }
+
+        .elegant-stat-card:hover::after {
+            left: 100%;
+        }
+
+        /* Responsividade dos cards elegantes */
+        @media (max-width: 768px) {
+            .stat-card-content {
+                padding: 1.25rem 1rem;
+                text-align: left;
+            }
+
+            .stat-main-value {
+                font-size: 1.875rem;
+            }
+
+            .stat-icon-main {
+                width: 40px;
+                height: 40px;
+                font-size: 1rem;
+                top: 1.25rem;
+                right: 1rem;
+            }
+
+            .stat-card-header {
+                padding: 0.875rem 1rem;
+            }
+
+            .stat-card-badge {
+                font-size: 0.6875rem;
+                padding: 0.25rem 0.5rem;
+            }
+        }
+
+        /* Micro animações */
+        .stat-card-badge {
+            transition: all 0.3s ease;
+        }
+
+        .elegant-stat-card:hover .stat-card-badge {
+            transform: scale(1.05);
+        }
+
+        .stat-card-title i {
+            transition: all 0.3s ease;
+        }
+
+        .elegant-stat-card:hover .stat-card-title i {
+            transform: rotate(15deg) scale(1.1);
+        }
+        
+        /* Card Duplo Principal - CORRIGIDO PARA LARGURA */
+        .dual-stat-card {
+            position: relative;
+            overflow: visible;
+            background: var(--white);
+            border: 1px solid var(--gray-200);
+            border-radius: 20px;
+            padding: 0;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: var(--shadow-sm);
+            min-width: 320px;
+            width: 100%;
+        }
+
+        .dual-stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--info) 100%);
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform 0.4s ease;
+        }
+
+        .dual-stat-card:hover::before {
+            transform: scaleX(1);
+        }
+
+        .dual-stat-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
+            border-color: rgba(0, 86, 210, 0.2);
+        }
+
+        /* Header do Card Duplo */
+        .dual-stat-header {
+            background: linear-gradient(135deg, var(--gray-100) 0%, var(--gray-200) 100%);
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--gray-200);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .dual-stat-title {
+            font-size: 0.8125rem;
+            font-weight: 700;
+            color: var(--gray-700);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        .dual-stat-percentage {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--primary);
+            background: var(--primary-light);
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            gap: 0.375rem;
+        }
+
+        /* Row dos Stats - LAYOUT HORIZONTAL CORRIGIDO */
+        .dual-stats-row {
+            display: flex;
+            align-items: stretch;
+            padding: 0;
+            min-height: 120px;
+            width: 100%;
+        }
+
+        /* Item individual do stat - CORRIGIDO */
+        .dual-stat-item {
+            flex: 1;
+            min-width: 0;
+            padding: 1.5rem 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            transition: all 0.3s ease;
+            position: relative;
+            width: 50%;
+        }
+
+        .dual-stat-item:hover {
+            background: rgba(0, 86, 210, 0.02);
+        }
+
+        /* Ícone do item - AJUSTADO */
+        .dual-stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            flex-shrink: 0;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Informações do stat - CORRIGIDO */
+        .dual-stat-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            text-align: left;
+        }
+
+        .dual-stat-value {
+            font-size: 1.75rem;
+            font-weight: 800;
+            color: var(--dark);
+            line-height: 1;
+            margin-bottom: 0.25rem;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+            overflow: visible;
+        }
+
+        .dual-stat-label {
+            font-size: 0.875rem;
+            color: var(--gray-600);
+            font-weight: 600;
+            line-height: 1;
+            white-space: nowrap;
+        }
+
+        /* Separador vertical */
+        .dual-stats-separator {
+            width: 1px;
+            background: linear-gradient(to bottom, transparent, var(--gray-300), transparent);
+            margin: 1.5rem 0;
+            flex-shrink: 0;
+        }
+
+        /* === ESTILOS ESPECÍFICOS ATIVOS === */
+        .ativos-icon {
+            background: linear-gradient(135deg, #00c853 0%, #00a847 100%);
+            color: white;
+        }
+
+        .ativos-item:hover .ativos-icon {
+            transform: scale(1.1) rotate(5deg);
+            box-shadow: 0 8px 25px rgba(0, 200, 83, 0.4);
+        }
+
+        .ativos-item:hover .dual-stat-value {
+            color: #00c853;
+            transform: scale(1.05);
+        }
+
+        /* === ESTILOS ESPECÍFICOS NOVOS === */
+        .novos-icon {
+            background: linear-gradient(135deg, #0d6efd 0%, #084298 100%);
+            color: white;
+        }
+
+        .novos-item:hover .novos-icon {
+            transform: scale(1.1) rotate(-5deg);
+            box-shadow: 0 8px 25px rgba(13, 110, 253, 0.4);
+        }
+
+        .novos-item:hover .dual-stat-value {
+            color: #0d6efd;
+            transform: scale(1.05);
+        }
+
+        /* === ESTILOS ESPECÍFICOS OUTROS === */
+        .outros-icon {
+            background: linear-gradient(135deg, #6f42c1 0%, #5a2d8a 100%);
+            color: white;
+        }
+
+        .outros-item:hover .outros-icon {
+            transform: scale(1.1) rotate(-5deg);
+            box-shadow: 0 8px 25px rgba(111, 66, 193, 0.4);
+        }
+
+        .outros-item:hover .dual-stat-value {
+            color: #6f42c1;
+            transform: scale(1.05);
+        }
+
+        /* === CARD TRIPLO - SUPORTE PARA 3 ITENS === */
+        .triple-stat-card .triple-stats-row {
+            display: flex;
+            align-items: stretch;
+            padding: 0;
+            min-height: 120px;
+            width: 100%;
+        }
+
+        .triple-stats-row .dual-stat-item {
+            flex: 1;
+            min-width: 0;
+            padding: 1.5rem 0.75rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            gap: 0.75rem;
+            transition: all 0.3s ease;
+            position: relative;
+            width: 33.33%;
+        }
+
+        .triple-stats-row .dual-stat-info {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+
+        .triple-stats-row .dual-stat-value {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--dark);
+            line-height: 1;
+            margin-bottom: 0.25rem;
+            transition: all 0.3s ease;
+        }
+
+        .triple-stats-row .dual-stat-icon {
+            width: 44px;
+            height: 44px;
+            font-size: 1.125rem;
+            margin-bottom: 0;
+        }
+
+        @media (min-width: 1200px) {
+            .triple-stats-row .dual-stat-value {
+                font-size: 1.75rem;
+            }
+            
+            .triple-stats-row .dual-stat-icon {
+                width: 48px;
+                height: 48px;
+                font-size: 1.25rem;
+            }
+        }
+
+        /* Responsivo para card triplo */
+        @media (max-width: 768px) {
+            .triple-stats-row {
+                flex-direction: column;
+                min-height: auto;
+            }
+
+            .triple-stats-row .dual-stats-separator {
+                width: 80%;
+                height: 1px;
+                margin: 0.75rem auto;
+                background: linear-gradient(to right, transparent, var(--gray-300), transparent);
+            }
+
+            .triple-stats-row .dual-stat-item {
+                padding: 1.25rem;
+                width: 100%;
+                min-width: 0;
+            }
+        }
+
+        /* === ESTILOS ESPECÍFICOS PM === */
+        .pm-icon {
+            background: linear-gradient(135deg, #dc3545 0%, #b02a37 100%);
+            color: white;
+        }
+
+        .pm-item:hover .pm-icon {
+            transform: scale(1.1) rotate(5deg);
+            box-shadow: 0 8px 25px rgba(220, 53, 69, 0.4);
+        }
+
+        .pm-item:hover .dual-stat-value {
+            color: #dc3545;
+            transform: scale(1.05);
+        }
+
+        /* === ESTILOS ESPECÍFICOS BM === */
+        .bm-icon {
+            background: linear-gradient(135deg, #fd7e14 0%, #e8690b 100%);
+            color: white;
+        }
+
+        .bm-item:hover .bm-icon {
+            transform: scale(1.1) rotate(-5deg);
+            box-shadow: 0 8px 25px rgba(253, 126, 20, 0.4);
+        }
+
+        .bm-item:hover .dual-stat-value {
+            color: #fd7e14;
+            transform: scale(1.05);
+        }
+
+        /* === ESTILOS ESPECÍFICOS CAPITAL === */
+        .capital-icon {
+            background: linear-gradient(135deg, #0d6efd 0%, #084298 100%);
+            color: white;
+        }
+
+        .capital-item:hover .capital-icon {
+            transform: scale(1.1) rotate(5deg);
+            box-shadow: 0 8px 25px rgba(13, 110, 253, 0.4);
+        }
+
+        .capital-item:hover .dual-stat-value {
+            color: #0d6efd;
+            transform: scale(1.05);
+        }
+
+        /* === ESTILOS ESPECÍFICOS INTERIOR === */
+        .interior-icon {
+            background: linear-gradient(135deg, #198754 0%, #146c43 100%);
+            color: white;
+        }
+
+        .interior-item:hover .interior-icon {
+            transform: scale(1.1) rotate(-5deg);
+            box-shadow: 0 8px 25px rgba(25, 135, 84, 0.4);
+        }
+
+        .interior-item:hover .dual-stat-value {
+            color: #198754;
+            transform: scale(1.05);
+        }
+
+        /* === RESPONSIVO MELHORADO === */
+        @media (max-width: 768px) {
+            .dual-stats-row {
+                flex-direction: column;
+                min-height: auto;
+            }
+
+            .dual-stats-separator {
+                width: 80%;
+                height: 1px;
+                margin: 0.75rem auto;
+                background: linear-gradient(to right, transparent, var(--gray-300), transparent);
+            }
+
+            .dual-stat-item {
+                padding: 1.25rem;
+                justify-content: flex-start;
+                text-align: left;
+                width: 100%;
+                min-width: 0;
+            }
+
+            .dual-stat-value {
+                font-size: 1.5rem;
+            }
+
+            .dual-stat-icon {
+                width: 44px;
+                height: 44px;
+                font-size: 1.125rem;
+            }
+        }
+
+        @media (min-width: 769px) {
+            .dual-stat-item {
+                max-width: 50%;
+                overflow: visible;
+            }
+            
+            .dual-stat-value {
+                font-size: 1.5rem;
+            }
+            
+            .dual-stat-icon {
+                width: 44px;
+                height: 44px;
+                font-size: 1.125rem;
+            }
+        }
+
+        @media (min-width: 1200px) {
+            .dual-stat-value {
+                font-size: 1.75rem;
+            }
+            
+            .dual-stat-icon {
+                width: 48px;
+                height: 48px;
+                font-size: 1.25rem;
+            }
+        }
+
+        /* === ANIMAÇÕES === */
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-3px); }
+        }
+
+        .dual-stat-icon {
+            animation: float 4s ease-in-out infinite;
+        }
+
+        .dual-stat-item:hover .dual-stat-icon {
+            animation: none;
         }
     </style>
 
@@ -683,7 +1383,7 @@ $headerComponent = HeaderComponent::create([
             return acoes;
         }
 
-        // Carrega estatísticas via API
+        // Carrega estatísticas via API - ATUALIZADA COM OUTROS
         function carregarEstatisticas() {
             fetch('../api/dashboard_stats.php')
                 .then(response => response.json())
@@ -691,33 +1391,25 @@ $headerComponent = HeaderComponent::create([
                     if (data.status === 'success') {
                         const stats = data.data;
                         
-                        // Atualiza os cards
+                        // Atualiza os cards básicos
                         document.getElementById('associadosAtivos').textContent = 
                             new Intl.NumberFormat('pt-BR').format(stats.associados_ativos);
                         
                         document.getElementById('novosAssociados').textContent = 
                             new Intl.NumberFormat('pt-BR').format(stats.novos_associados);
                         
-                        // PM + Bombeiros
-                        const pmBm = stats.corporacoes_principais;
-                        document.getElementById('corporacoesQtd').innerHTML = 
-                            `<span style="font-size: 0.8em; color: #666;">PM:</span> ${new Intl.NumberFormat('pt-BR').format(pmBm.pm_quantidade)}<br>` +
-                            `<span style="font-size: 0.8em; color: #666;">BM:</span> ${new Intl.NumberFormat('pt-BR').format(pmBm.bm_quantidade)}`;
+                        // NOVO: Calcular corporações incluindo "Outros"
+                        calcularCorporacoes(stats);
                         
-                        document.getElementById('corporacoesPercent').innerHTML = 
-                            `<i class="fas fa-chart-pie"></i> ${pmBm.total_percentual}% do total`;
+                        // Capital/Interior - SEPARADOS
+                        document.getElementById('capitalQuantidade').textContent = 
+                            new Intl.NumberFormat('pt-BR').format(stats.capital);
                         
-                        // Aniversariantes
-                        document.getElementById('aniversariantes').textContent = 
-                            new Intl.NumberFormat('pt-BR').format(stats.aniversariantes_hoje);
+                        document.getElementById('interiorQuantidade').textContent = 
+                            new Intl.NumberFormat('pt-BR').format(stats.interior);
                         
-                        // Capital/Interior
-                        document.getElementById('localizacaoQtd').innerHTML = 
-                            `<span style="font-size: 0.8em; color: #666;">Capital:</span> ${new Intl.NumberFormat('pt-BR').format(stats.capital)}<br>` +
-                            `<span style="font-size: 0.8em; color: #666;">Interior:</span> ${new Intl.NumberFormat('pt-BR').format(stats.interior)}`;
-                        
-                        document.getElementById('localizacaoInfo').innerHTML = 
-                            `<i class="fas fa-map-marked-alt"></i> ${stats.capital_percentual}%/${stats.interior_percentual}%`;
+                        document.getElementById('localizacaoPercent').innerHTML = 
+                            `<i class="fas fa-percentage"></i> ${stats.capital_percentual}%/${stats.interior_percentual}%`;
                         
                         console.log('Estatísticas carregadas:', stats);
                         
@@ -727,12 +1419,149 @@ $headerComponent = HeaderComponent::create([
                 })
                 .catch(error => {
                     console.error('Erro de rede:', error);
+                    // Fallback: calcular com dados locais se disponível
+                    if (todosAssociados && todosAssociados.length > 0) {
+                        calcularEstatisticasLocal();
+                    }
                 });
+        }
+
+        // NOVA FUNÇÃO: Calcular corporações com "Outros"
+        function calcularCorporacoes(stats) {
+            // Se a API já fornece os dados dos "outros", usar diretamente
+            if (stats.corporacoes_principais && stats.corporacoes_principais.outros_quantidade !== undefined) {
+                const corp = stats.corporacoes_principais;
+                
+                document.getElementById('pmQuantidade').textContent = 
+                    new Intl.NumberFormat('pt-BR').format(corp.pm_quantidade);
+                
+                document.getElementById('bmQuantidade').textContent = 
+                    new Intl.NumberFormat('pt-BR').format(corp.bm_quantidade);
+                
+                document.getElementById('outrosQuantidade').textContent = 
+                    new Intl.NumberFormat('pt-BR').format(corp.outros_quantidade);
+                
+                document.getElementById('corporacoesPercent').innerHTML = 
+                    `<i class="fas fa-chart-pie"></i> ${corp.total_percentual}% do total`;
+                    
+            } else {
+                // Fallback: calcular com dados locais
+                calcularCorporacoesLocal(stats);
+            }
+        }
+
+        // NOVA FUNÇÃO: Calcular corporações localmente
+        function calcularCorporacoesLocal(stats) {
+            if (!todosAssociados || todosAssociados.length === 0) {
+                // Se não tem dados locais, usar apenas PM e BM da API
+                const corp = stats.corporacoes_principais || {};
+                
+                document.getElementById('pmQuantidade').textContent = 
+                    new Intl.NumberFormat('pt-BR').format(corp.pm_quantidade || 0);
+                
+                document.getElementById('bmQuantidade').textContent = 
+                    new Intl.NumberFormat('pt-BR').format(corp.bm_quantidade || 0);
+                
+                document.getElementById('outrosQuantidade').textContent = '0';
+                
+                document.getElementById('corporacoesPercent').innerHTML = 
+                    `<i class="fas fa-chart-pie"></i> ${corp.total_percentual || 0}% do total`;
+                return;
+            }
+
+            // Contar corporações nos dados locais
+            let pmCount = 0;
+            let bmCount = 0;
+            let outrosCount = 0;
+            
+            todosAssociados.forEach(associado => {
+                if (!associado.corporacao) return;
+                
+                const corp = associado.corporacao.toLowerCase().trim();
+                
+                if (corp.includes('polícia militar') || corp.includes('policia militar') || 
+                    corp.includes('pm ') || corp === 'pm' || corp.includes('militar')) {
+                    pmCount++;
+                } else if (corp.includes('bombeiro') || corp.includes('cbm') || 
+                          corp.includes('corpo de bombeiro')) {
+                    bmCount++;
+                } else {
+                    outrosCount++;
+                }
+            });
+
+            const totalCorporacoes = pmCount + bmCount + outrosCount;
+            const percentualTotal = todosAssociados.length > 0 ? 
+                ((totalCorporacoes / todosAssociados.length) * 100).toFixed(1) : 0;
+
+            // Atualizar interface
+            document.getElementById('pmQuantidade').textContent = 
+                new Intl.NumberFormat('pt-BR').format(pmCount);
+            
+            document.getElementById('bmQuantidade').textContent = 
+                new Intl.NumberFormat('pt-BR').format(bmCount);
+            
+            document.getElementById('outrosQuantidade').textContent = 
+                new Intl.NumberFormat('pt-BR').format(outrosCount);
+            
+            document.getElementById('corporacoesPercent').innerHTML = 
+                `<i class="fas fa-chart-pie"></i> ${percentualTotal}% do total`;
+        }
+
+        // NOVA FUNÇÃO: Calcular todas as estatísticas localmente (fallback)
+        function calcularEstatisticasLocal() {
+            if (!todosAssociados || todosAssociados.length === 0) return;
+
+            // Associados ativos
+            const ativos = todosAssociados.filter(a => a.situacao === 'Filiado').length;
+            document.getElementById('associadosAtivos').textContent = 
+                new Intl.NumberFormat('pt-BR').format(ativos);
+
+            // Novos (30 dias) - aproximação
+            const agora = new Date();
+            const trintaDiasAtras = new Date(agora.getTime() - (30 * 24 * 60 * 60 * 1000));
+            const novos = todosAssociados.filter(a => {
+                if (!a.data_filiacao || a.data_filiacao === '0000-00-00') return false;
+                const dataFiliacao = new Date(a.data_filiacao);
+                return dataFiliacao >= trintaDiasAtras;
+            }).length;
+            document.getElementById('novosAssociados').textContent = 
+                new Intl.NumberFormat('pt-BR').format(novos);
+
+            // Calcular corporações localmente
+            calcularCorporacoesLocal({});
+
+            // Capital/Interior - aproximação simples
+            const capital = todosAssociados.filter(a => 
+                a.cidade && a.cidade.toLowerCase().includes('goiânia')).length;
+            const interior = todosAssociados.length - capital;
+            
+            document.getElementById('capitalQuantidade').textContent = 
+                new Intl.NumberFormat('pt-BR').format(capital);
+            document.getElementById('interiorQuantidade').textContent = 
+                new Intl.NumberFormat('pt-BR').format(interior);
+                
+            const capitalPerc = todosAssociados.length > 0 ? 
+                ((capital / todosAssociados.length) * 100).toFixed(1) : 0;
+            const interiorPerc = todosAssociados.length > 0 ? 
+                ((interior / todosAssociados.length) * 100).toFixed(1) : 0;
+                
+            document.getElementById('localizacaoPercent').innerHTML = 
+                `<i class="fas fa-percentage"></i> ${capitalPerc}%/${interiorPerc}%`;
+
+            console.log('Estatísticas calculadas localmente');
         }
 
         // Carrega quando a página está pronta
         document.addEventListener('DOMContentLoaded', function() {
             carregarEstatisticas();
+            
+            // Inicializa AOS
+            AOS.init({
+                duration: 800,
+                easing: 'ease-out-cubic',
+                once: true
+            });
         });
     </script>
 
