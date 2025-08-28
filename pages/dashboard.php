@@ -94,175 +94,188 @@ $headerComponent = HeaderComponent::create([
                 <p class="page-subtitle">Gerencie os associados da ASSEGO</p>
             </div>
 
-            <!-- Stats Grid -->
-            <div class="stats-grid" data-aos="fade-up">
-                <!-- Card 1: Associados Ativos + Novos -->
-                <div class="stat-card dual-stat-card">
-                    <div class="dual-stat-header">
-                        <div class="dual-stat-title">
-                            <i class="fas fa-users"></i>
-                            Associados
-                        </div>
-                        <div class="dual-stat-percentage" id="associadosPercent">
-                            <i class="fas fa-chart-line"></i>
-                            Crescimento
-                        </div>
+            <?php
+// Apenas a parte que precisa ser modificada no dashboard.php
+
+// ANTES da seção Stats Grid, adicionar:
+$departamentoComercialId = 10; // AJUSTE CONFORME SEU BANCO
+$departamentoPresidenciaId = 1; // AJUSTE CONFORME SEU BANCO
+
+$podeVerKPIs = $auth->isDiretor() || 
+               (isset($usuarioLogado['departamento_id']) && 
+                $usuarioLogado['departamento_id'] == $departamentoComercialId || $usuarioLogado['departamento_id'] == $departamentoPresidenciaId);
+
+if ($podeVerKPIs): ?>
+    <!-- Stats Grid -->
+    <div class="stats-grid" data-aos="fade-up">
+        <!-- Card 1: Associados Ativos + Novos - LAYOUT VERTICAL -->
+        <div class="stat-card dual-stat-card">
+            <div class="dual-stat-header">
+                <div class="dual-stat-title">
+                    <i class="fas fa-users"></i>
+                    Associados
+                </div>
+                <div class="dual-stat-percentage" id="associadosPercent">
+                    <i class="fas fa-chart-line"></i>
+                    Crescimento
+                </div>
+            </div>
+            <div class="dual-stats-row vertical-layout">
+                <div class="dual-stat-item ativos-item">
+                    <div class="dual-stat-icon ativos-icon">
+                        <i class="fas fa-user-check"></i>
                     </div>
-                    <div class="dual-stats-row">
-                        <div class="dual-stat-item ativos-item">
-                            <div class="dual-stat-icon ativos-icon">
-                                <i class="fas fa-user-check"></i>
-                            </div>
-                            <div class="dual-stat-info">
-                                <div class="dual-stat-value" id="associadosAtivos">-</div>
-                                <div class="dual-stat-label">Ativos</div>
-                            </div>
-                        </div>
-                        <div class="dual-stats-separator"></div>
-                        <div class="dual-stat-item novos-item">
-                            <div class="dual-stat-icon novos-icon">
-                                <i class="fas fa-user-plus"></i>
-                            </div>
-                            <div class="dual-stat-info">
-                                <div class="dual-stat-value" id="novosAssociados">-</div>
-                                <div class="dual-stat-label">Novos (30d)</div>
-                            </div>
-                        </div>
+                    <div class="dual-stat-info">
+                        <div class="dual-stat-value" id="associadosAtivos">-</div>
+                        <div class="dual-stat-label">Ativos</div>
                     </div>
                 </div>
-
-                <!-- Card 2: PM + BM + Outros -->
-                <div class="stat-card dual-stat-card triple-stat-card">
-                    <div class="dual-stat-header">
-                        <div class="dual-stat-title">
-                            <i class="fas fa-shield-alt"></i>
-                            Corporações
-                        </div>
-                        <div class="dual-stat-percentage" id="corporacoesPercent">
-                            <i class="fas fa-chart-pie"></i>
-                            -% do total
-                        </div>
+                <div class="dual-stats-separator"></div>
+                <div class="dual-stat-item novos-item">
+                    <div class="dual-stat-icon novos-icon">
+                        <i class="fas fa-user-plus"></i>
                     </div>
-                    <div class="dual-stats-row triple-stats-row">
-                        <div class="dual-stat-item pm-item">
-                            <div class="dual-stat-icon pm-icon">
-                                <i class="fas fa-shield-alt"></i>
-                            </div>
-                            <div class="dual-stat-info">
-                                <div class="dual-stat-value" id="pmQuantidade">-</div>
-                                <div class="dual-stat-label">PM</div>
-                                <div class="dual-stat-extra">
-                                    <div class="status-breakdown">
-                                        <div class="status-item status-ativa">
-                                            <i class="fas fa-circle"></i>
-                                            <span id="pmAtiva">-</span> Ativa
-                                        </div>
-                                        <div class="status-item status-reserva">
-                                            <i class="fas fa-circle"></i>
-                                            <span id="pmReserva">-</span> Reserva
-                                        </div>
-                                    </div>
+                    <div class="dual-stat-info">
+                        <div class="dual-stat-value" id="novosAssociados">-</div>
+                        <div class="dual-stat-label">Novos (30d)</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card 2: PM + BM + Outros -->
+        <div class="stat-card dual-stat-card triple-stat-card">
+            <div class="dual-stat-header">
+                <div class="dual-stat-title">
+                    <i class="fas fa-shield-alt"></i>
+                    Corporações
+                </div>
+                <div class="dual-stat-percentage" id="corporacoesPercent">
+                    <i class="fas fa-chart-pie"></i>
+                    -% do total
+                </div>
+            </div>
+            <div class="dual-stats-row triple-stats-row">
+                <div class="dual-stat-item pm-item">
+                    <div class="dual-stat-icon pm-icon">
+                        <i class="fas fa-shield-alt"></i>
+                    </div>
+                    <div class="dual-stat-info">
+                        <div class="dual-stat-value" id="pmQuantidade">-</div>
+                        <div class="dual-stat-label">PM</div>
+                        <div class="dual-stat-extra">
+                            <div class="status-breakdown">
+                                <div class="status-item status-ativa">
+                                    <i class="fas fa-circle"></i>
+                                    <span id="pmAtiva">-</span> Ativa
                                 </div>
-                            </div>
-                        </div>
-                        <div class="dual-stats-separator"></div>
-                        <div class="dual-stat-item bm-item">
-                            <div class="dual-stat-icon bm-icon">
-                                <i class="fas fa-fire-extinguisher"></i>
-                            </div>
-                            <div class="dual-stat-info">
-                                <div class="dual-stat-value" id="bmQuantidade">-</div>
-                                <div class="dual-stat-label">BM</div>
-                                <div class="dual-stat-extra">
-                                    <div class="status-breakdown">
-                                        <div class="status-item status-ativa">
-                                            <i class="fas fa-circle"></i>
-                                            <span id="bmAtiva">-</span> Ativa
-                                        </div>
-                                        <div class="status-item status-reserva">
-                                            <i class="fas fa-circle"></i>
-                                            <span id="bmReserva">-</span> Reserva
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="dual-stats-separator"></div>
-                        <div class="dual-stat-item outros-item">
-                            <div class="dual-stat-icon outros-icon">
-                                <i class="fas fa-users"></i>
-                            </div>
-                            <div class="dual-stat-info">
-                                <div class="dual-stat-value" id="outrosQuantidade">-</div>
-                                <div class="dual-stat-label">Outros</div>
-                                <div class="dual-stat-extra">
-                                    <div class="status-breakdown">
-                                        <div class="status-item status-ativa">
-                                            <i class="fas fa-circle"></i>
-                                            <span id="outrosAtiva">-</span> Ativa
-                                        </div>
-                                        <div class="status-item status-reserva">
-                                            <i class="fas fa-circle"></i>
-                                            <span id="outrosReserva">-</span> Reserva
-                                        </div>
-                                    </div>
+                                <div class="status-item status-reserva">
+                                    <i class="fas fa-circle"></i>
+                                    <span id="pmReserva">-</span> Reserva
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-
-                <!-- Card 3: Capital/Interior -->
-                <div class="stat-card dual-stat-card">
-                    <div class="dual-stat-header">
-                        <div class="dual-stat-title">
-                            <i class="fas fa-map-marked-alt"></i>
-                            Distribuição
-                        </div>
-                        <div class="dual-stat-percentage" id="localizacaoPercent">
-                            <i class="fas fa-percentage"></i>
-                            <span id="totalLocalizacao">-</span> Mapeados
-                        </div>
+                <div class="dual-stats-separator"></div>
+                <div class="dual-stat-item bm-item">
+                    <div class="dual-stat-icon bm-icon">
+                        <i class="fas fa-fire-extinguisher"></i>
                     </div>
-                    <div class="dual-stats-row">
-                        <div class="dual-stat-item capital-item">
-                            <div class="dual-stat-icon capital-icon">
-                                <i class="fas fa-city"></i>
-                            </div>
-                            <div class="dual-stat-info">
-                                <div class="dual-stat-value" id="capitalQuantidade">-</div>
-                                <div class="dual-stat-label">Capital (Goiânia)</div>
-                                <div class="dual-stat-extra">
-                                    <div class="status-breakdown">
-                                        <div class="status-item status-capital">
-                                            <i class="fas fa-circle"></i>
-                                            <span id="capitalPercent">-%</span> do total
-                                        </div>
-                                    </div>
+                    <div class="dual-stat-info">
+                        <div class="dual-stat-value" id="bmQuantidade">-</div>
+                        <div class="dual-stat-label">BM</div>
+                        <div class="dual-stat-extra">
+                            <div class="status-breakdown">
+                                <div class="status-item status-ativa">
+                                    <i class="fas fa-circle"></i>
+                                    <span id="bmAtiva">-</span> Ativa
+                                </div>
+                                <div class="status-item status-reserva">
+                                    <i class="fas fa-circle"></i>
+                                    <span id="bmReserva">-</span> Reserva
                                 </div>
                             </div>
                         </div>
-                        <div class="dual-stats-separator"></div>
-                        <div class="dual-stat-item interior-item">
-                            <div class="dual-stat-icon interior-icon">
-                                <i class="fas fa-tree"></i>
-                            </div>
-                            <div class="dual-stat-info">
-                                <div class="dual-stat-value" id="interiorQuantidade">-</div>
-                                <div class="dual-stat-label">Interior</div>
-                                <div class="dual-stat-extra">
-                                    <div class="status-breakdown">
-                                        <div class="status-item status-interior">
-                                            <i class="fas fa-circle"></i>
-                                            <span id="interiorPercent">-%</span> do total
-                                        </div>
-                                    </div>
+                    </div>
+                </div>
+                <div class="dual-stats-separator"></div>
+                <div class="dual-stat-item outros-item">
+                    <div class="dual-stat-icon outros-icon">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div class="dual-stat-info">
+                        <div class="dual-stat-value" id="outrosQuantidade">-</div>
+                        <div class="dual-stat-label">Outros</div>
+                        <div class="dual-stat-extra">
+                            <div class="status-breakdown">
+                                <div class="status-item status-ativa">
+                                    <i class="fas fa-circle"></i>
+                                    <span id="outrosAtiva">-</span> Ativa
+                                </div>
+                                <div class="status-item status-reserva">
+                                    <i class="fas fa-circle"></i>
+                                    <span id="outrosReserva">-</span> Reserva
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
+        </div>
+
+        <!-- Card 3: Capital/Interior - LAYOUT VERTICAL -->
+        <div class="stat-card dual-stat-card">
+            <div class="dual-stat-header">
+                <div class="dual-stat-title">
+                    <i class="fas fa-map-marked-alt"></i>
+                    Distribuição
+                </div>
+                <div class="dual-stat-percentage" id="localizacaoPercent">
+                    <i class="fas fa-percentage"></i>
+                    <span id="totalLocalizacao">-</span> Mapeados
+                </div>
+            </div>
+            <div class="dual-stats-row vertical-layout">
+                <div class="dual-stat-item capital-item">
+                    <div class="dual-stat-icon capital-icon">
+                        <i class="fas fa-city"></i>
+                    </div>
+                    <div class="dual-stat-info">
+                        <div class="dual-stat-value" id="capitalQuantidade">-</div>
+                        <div class="dual-stat-label">Capital (Goiânia)</div>
+                        <div class="dual-stat-extra">
+                            <div class="status-breakdown">
+                                <div class="status-item status-capital">
+                                    <i class="fas fa-circle"></i>
+                                    <span id="capitalPercent">-%</span> do total
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="dual-stats-separator"></div>
+                <div class="dual-stat-item interior-item">
+                    <div class="dual-stat-icon interior-icon">
+                        <i class="fas fa-tree"></i>
+                    </div>
+                    <div class="dual-stat-info">
+                        <div class="dual-stat-value" id="interiorQuantidade">-</div>
+                        <div class="dual-stat-label">Interior</div>
+                        <div class="dual-stat-extra">
+                            <div class="status-breakdown">
+                                <div class="status-item status-interior">
+                                    <i class="fas fa-circle"></i>
+                                    <span id="interiorPercent">-%</span> do total
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+<?php endif; ?>
 
             <!-- Actions Bar with Filters -->
             <div class="actions-bar" data-aos="fade-up" data-aos-delay="100">
@@ -1289,6 +1302,24 @@ $headerComponent = HeaderComponent::create([
             });
         });
     </script>
+
+    <script>
+    // Verifica se deve carregar estatísticas
+    const podeVerKPIs = <?php echo $podeVerKPIs ? 'true' : 'false'; ?>;
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        // Só carrega estatísticas se o usuário tem permissão
+        if (podeVerKPIs) {
+            carregarEstatisticas();
+        }
+        
+        AOS.init({
+            duration: 800,
+            easing: 'ease-out-cubic',
+            once: true
+        });
+    });
+</script>
 
     <script src="js/dashboard.js"></script>
 
