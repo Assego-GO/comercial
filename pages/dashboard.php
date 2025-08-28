@@ -93,6 +93,7 @@ $headerComponent = HeaderComponent::create([
                 <h1 class="page-title">Gestão de Associados</h1>
                 <p class="page-subtitle">Gerencie os associados da ASSEGO</p>
             </div>
+             <?php include 'components/simulation-banner.php'; ?>
 
             <?php
 // Apenas a parte que precisa ser modificada no dashboard.php
