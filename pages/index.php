@@ -575,7 +575,7 @@ if (!empty($_POST['email'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ASSEGO - Sistema de Gestão</title>
+    <title>ASSEGO </title>
     
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -622,6 +622,47 @@ if (!empty($_POST['email'])) {
             justify-content: center;
             min-height: 100vh;
             padding: 1rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Background com imagens sutis */
+        .bg-image {
+            position: fixed;
+            inset: -10%;
+            width: 120%;
+            height: 120%;
+            z-index: -2;
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            opacity: 0;
+            filter: blur(1px);
+            transition: opacity 4.6s ease-in-out;
+            animation: slowFloat 20s ease-in-out infinite alternate;
+        }
+
+        @keyframes slowFloat {
+            0% { transform: scale(1) translate(0, 0); }
+            100% { transform: scale(1.05) translate(-1%, -1%); }
+        }
+
+        .bg-image.active {
+            opacity: 0.4;
+        }
+
+        .bg-image.inactive {
+            opacity: 0;
+        }
+
+        /* Overlay azul sobre as imagens */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(30, 58, 138, 0.6) 0%, rgba(59, 130, 246, 0.5) 100%);
+            z-index: -1;
+            pointer-events: none;
         }
 
         /* Loading inicial */
@@ -1134,7 +1175,7 @@ if (!empty($_POST['email'])) {
     <div class="initial-loading" id="initialLoading">
         <div class="loading-content">
             <div class="loading-logo">
-                <img src="./img/logoassego.png" alt="ASSEGO Logo">
+                <img src="./img/logo-assego.jpeg" alt="ASSEGO Logo">
             </div>
             <h1 class="loading-title">ASSEGO</h1>
             <div class="loading-spinner"></div>
@@ -1147,18 +1188,22 @@ if (!empty($_POST['email'])) {
         </div>
     </div>
 
+    <!-- Sistema de Background com Imagens Sutis -->
+    <div class="bg-image active" id="bg1" style="background-image: url('./img/fundo-1.jpeg')"></div>
+    <div class="bg-image inactive" id="bg2" style="background-image: url('./img/fundo-2.jpeg')"></div>
+
     <!-- Container Principal -->
     <div class="login-container">
         <!-- Header -->
         <div class="login-header">
             <div class="logo-container">
                 <div class="logo-wrapper">
-                    <img src="./img/logoassego.png" alt="ASSEGO Logo">
+                    <img src="./img/logo-assego.jpeg" alt="ASSEGO Logo">
                 </div>
             </div>
             
-            <h1 class="system-title">Sistema De Gestão</h1>
-            <p class="system-subtitle">Área De Gestão Da ASSEGO</p>
+            <h1 class="system-title"></h1>
+            <p class="system-subtitle">ASSEGO</p>
         </div>
         
         <!-- Corpo do formulário -->
@@ -1413,6 +1458,40 @@ if (!empty($_POST['email'])) {
                 }
             });
         }, 5000);
+
+        // Adicione esta função após suas outras funções JavaScript
+
+// Função para alternar as imagens de fundo
+function alternateBackgrounds() {
+    const bg1 = document.getElementById('bg1');
+    const bg2 = document.getElementById('bg2');
+    
+    if (bg1.classList.contains('active')) {
+        bg1.classList.remove('active');
+        bg1.classList.add('inactive');
+        bg2.classList.remove('inactive');
+        bg2.classList.add('active');
+    } else {
+        bg2.classList.remove('active');
+        bg2.classList.add('inactive');
+        bg1.classList.remove('inactive');
+        bg1.classList.add('active');
+    }
+}
+
+// Adicione isto no final do seu DOMContentLoaded ou window load
+window.addEventListener('load', () => {
+    setTimeout(() => {
+        document.getElementById('initialLoading').classList.add('fade-out');
+        
+        // Iniciar alternância das imagens após o loading
+        setTimeout(() => {
+            alternateBackgrounds(); // Primeira troca
+            setInterval(alternateBackgrounds, 4600); // Continuar a cada 3.6s
+        }, 1000); // Aguardar 1s após o loading sumir
+        
+    }, 5000);
+});
     </script>
 </body>
 </html>

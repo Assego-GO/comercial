@@ -2553,7 +2553,7 @@ class HeaderComponent {
                     <a href="dashboard.php" class="logo-container">
                         <?php 
                         // Verifica se existe a imagem da logo
-                        $logoPath = 'img/logoassego.png';
+                        $logoPath = 'img/logo-assego.jpeg';
                         if (file_exists($logoPath)): 
                         ?>
                             <div class="logo-icon">
@@ -2564,7 +2564,8 @@ class HeaderComponent {
                         <?php endif; ?>
                         <div class="logo-text-container">
                             <span class="logo-text">ASSEGO</span>
-                            <span class="logo-subtitle">Sistema de Gestão</span>
+                            
+                            
                         </div>
                     </a>
 
