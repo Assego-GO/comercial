@@ -2583,16 +2583,15 @@ let observacoesPerPage = 5;
 let currentFilterObs = 'all';
 let currentAssociadoIdObs = null;
 
-// Função para carregar observações quando a aba for aberta
-function carregarObservacoes(associadoId) {
+function carregarObservacoes(associadoId, forceReload = false) {
     // Evitar carregar se já estiver carregando
     if (window.carregandoObservacoes) {
         console.log('Já está carregando observações, ignorando...');
         return;
     }
     
-    // Evitar recarregar se já carregou para este associado
-    if (currentAssociadoIdObs === associadoId && observacoesData.length > 0) {
+    // Evitar recarregar se já carregou para este associado E não for reload forçado
+    if (!forceReload && currentAssociadoIdObs === associadoId && observacoesData.length > 0) {
         console.log('Observações já carregadas para este associado');
         renderizarObservacoes();
         return;
@@ -2611,7 +2610,7 @@ function carregarObservacoes(associadoId) {
     container.innerHTML = `
         <div class="observacoes-loading" style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 3rem;">
             <div class="loading-spinner" style="margin-bottom: 1rem;"></div>
-            <p style="color: var(--gray-500);">Carregando observações...</p>
+            <p style="color: var(--gray-500);">${forceReload ? 'Atualizando observações...' : 'Carregando observações...'}</p>
         </div>
     `;
 
@@ -2859,7 +2858,6 @@ function atualizarContadorObservacoes() {
     }
 }
 
-// Função para salvar observação (CORRIGIDA)
 function salvarObservacao() {
     const texto = document.getElementById('observacaoTexto')?.value.trim();
     const categoria = document.getElementById('observacaoCategoria')?.value;
@@ -2884,7 +2882,7 @@ function salvarObservacao() {
         importante: importante ? 1 : 0
     };
 
-    // Se for edição, adicionar o ID (CORREÇÃO PRINCIPAL)
+    // Se for edição, adicionar o ID
     if (isEdicao) {
         dados.id = editId;
     }
@@ -2912,8 +2910,8 @@ function salvarObservacao() {
                 document.getElementById('formNovaObservacao').reset();
                 delete document.getElementById('formNovaObservacao').dataset.editId;
 
-                // Recarregar observações
-                carregarObservacoes(currentAssociadoIdObs);
+                // *** CORREÇÃO PRINCIPAL: Forçar recarregamento das observações ***
+                carregarObservacoes(currentAssociadoIdObs, true); // true = forçar reload
 
                 // Mostrar mensagem de sucesso
                 mostrarNotificacaoObs(response.message || 'Operação realizada com sucesso!', 'success');
@@ -2931,6 +2929,7 @@ function salvarObservacao() {
         }
     });
 }
+
 
 // Função para editar observação
 function editarObservacao(id) {
@@ -3141,7 +3140,8 @@ function toggleImportanteObs(id) {
         dataType: 'json',
         success: function (response) {
             if (response.status === 'success') {
-                carregarObservacoes(currentAssociadoIdObs);
+                // *** CORREÇÃO: Forçar recarregamento após toggle ***
+                carregarObservacoes(currentAssociadoIdObs, true); // true = forçar reload
                 const novoStatus = response.data.importante;
                 mostrarNotificacaoObs(
                     novoStatus ? 'Marcada como importante!' : 'Removida das importantes',
@@ -3153,6 +3153,29 @@ function toggleImportanteObs(id) {
             console.error('Erro ao alterar importância');
         }
     });
+}
+
+function resetarObservacoesCache() {
+    observacoesData = [];
+    currentObservacaoPage = 1;
+    currentFilterObs = 'all';
+    currentAssociadoIdObs = null;
+    window.carregandoObservacoes = false;
+    
+    // Esconder badge
+    const badge = document.getElementById('observacoesCountBadge');
+    if (badge) {
+        badge.style.display = 'none';
+        badge.textContent = '0';
+    }
+    
+    // Limpar container
+    const container = document.getElementById('observacoesContainer');
+    if (container) {
+        container.innerHTML = '';
+    }
+    
+    console.log('Cache de observações resetado completamente');
 }
 
 // Função auxiliar para formatar data e hora
