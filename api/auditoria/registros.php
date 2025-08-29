@@ -1,12 +1,10 @@
 <?php
 /**
- * API para listagem de registros de auditoria - VERSÃO FINAL
+ * API para listagem de registros de auditoria - VERSÃO HÍBRIDA
  * /api/auditoria/registros.php
  * 
- * REGRAS DE ACESSO:
- * - Presidência (dept_id = 1): VÊ TUDO
- * - Diretores (outros depts): VÊ APENAS SEU DEPARTAMENTO
- * - Outros perfis: VÊ APENAS PRÓPRIOS REGISTROS
+ * CORREÇÃO CRÍTICA: Suporte para Funcionários + Associados-Diretores
+ * PROBLEMA: Sistema só consultava tabela Funcionarios, não Associados
  */
 
 error_reporting(E_ALL);
@@ -33,72 +31,63 @@ try {
     require_once '../../config/config.php';
     require_once '../../config/database.php';
     require_once '../../classes/Database.php';
+    require_once '../../classes/Auth.php';
     
     // Conectar ao banco
     $db = Database::getInstance(DB_NAME_CADASTRO)->getConnection();
     
     // ===========================================
-    // OBTER DADOS DO USUÁRIO LOGADO
+    // CORREÇÃO: IDENTIFICAÇÃO HÍBRIDA DO USUÁRIO
     // ===========================================
     
-    $userName = $_SESSION['nome'] ?? null;
-    $userId = null;
-    $userProfile = null;
-    $userDepartmentId = null;
-    
-    // Buscar dados no banco pelo nome da sessão
-    if ($userName) {
-        $stmt = $db->prepare("SELECT id, cargo, departamento_id FROM Funcionarios WHERE nome = ? LIMIT 1");
-        $stmt->execute([$userName]);
-        $userData = $stmt->fetch(PDO::FETCH_ASSOC);
-        
-        if ($userData) {
-            $userId = $userData['id'];
-            $userProfile = strtolower(trim($userData['cargo']));
-            $userDepartmentId = (int)$userData['departamento_id'];
-        }
+    $auth = new Auth();
+    if (!$auth->isLoggedIn()) {
+        throw new Exception('Usuário não autenticado');
     }
+
+    $usuarioLogado = $auth->getUser();
+    $userId = $usuarioLogado['id'];
+    $userName = $usuarioLogado['nome'];
+    $userProfile = strtolower(trim($usuarioLogado['cargo']));
+    $userDepartmentId = (int)($usuarioLogado['departamento_id'] ?? 0);
+    $tipoUsuario = $usuarioLogado['tipo_usuario'] ?? 'funcionario';
     
-    // Fallback para dados de sessão se não encontrou no banco
-    if (!$userId) {
-        $userId = $_SESSION['user_id'] ?? $_SESSION['id'] ?? $_SESSION['funcionario_id'] ?? null;
-        $userProfile = strtolower($_SESSION['cargo'] ?? $_SESSION['user_profile'] ?? 'funcionario');
-        $userDepartmentId = (int)($_SESSION['departamento_id'] ?? $_SESSION['user_department_id'] ?? 0);
-    }
-    
-    // Verificar se tem dados mínimos
-    if (!$userId) {
-        throw new Exception('Usuário não identificado');
-    }
-    
-    error_log("AUDITORIA API - Usuário: $userName (ID: $userId), Perfil: $userProfile, Dept: $userDepartmentId");
+    error_log("=== AUDITORIA API HÍBRIDA ===");
+    error_log("Usuário: $userName (ID: $userId)");
+    error_log("Tipo: $tipoUsuario");
+    error_log("Cargo: $userProfile");
+    error_log("Departamento: $userDepartmentId");
     
     // ===========================================
-    // DEFINIR CONTROLE DE ACESSO
+    // CONTROLE DE ACESSO HÍBRIDO
     // ===========================================
     
     $whereConditions = [];
     $params = [];
     
-    // Identificar se é da presidência
-    $isPresidencia = ($userDepartmentId === 1);
+    // Identificar permissões
+    $isPresidencia = ($userDepartmentId === 1) || 
+                     in_array($userProfile, ['presidente', 'vice-presidente']);
     
-    // Identificar se é diretor
-    $isDiretor = (strpos($userProfile, 'diretor') !== false);
+    $isDiretor = (strpos($userProfile, 'diretor') !== false) || 
+                 ($tipoUsuario === 'associado'); // Associados que fazem login são diretores
     
     if ($isPresidencia) {
-        // PRESIDÊNCIA VÊ TUDO - sem filtros (incluindo registros do Sistema)
-        error_log("ACESSO: Presidência - SEM FILTROS (vê tudo, incluindo Sistema)");
-    } elseif ($isDiretor && $userDepartmentId > 0) {
-        // DIRETOR VÊ APENAS SEU DEPARTAMENTO (SEM registros do Sistema)
+        // PRESIDÊNCIA VÊ TUDO
+        error_log("ACESSO: Presidência - SEM FILTROS");
+    } elseif ($isDiretor && $tipoUsuario === 'funcionario' && $userDepartmentId > 0) {
+        // DIRETOR-FUNCIONÁRIO VÊ APENAS SEU DEPARTAMENTO
         $whereConditions[] = "f.departamento_id = :user_department_id";
         $params[':user_department_id'] = $userDepartmentId;
-        error_log("ACESSO: Diretor - FILTRO ESTRITO POR DEPARTAMENTO: $userDepartmentId (sem Sistema)");
+        error_log("ACESSO: Diretor-Funcionário - DEPARTAMENTO $userDepartmentId");
+    } elseif ($isDiretor && $tipoUsuario === 'associado') {
+        // ASSOCIADO-DIRETOR VÊ TODOS OS REGISTROS (como presidência)
+        error_log("ACESSO: Associado-Diretor - VISUALIZAÇÃO GERAL");
     } else {
-        // OUTROS PERFIS - APENAS PRÓPRIOS REGISTROS
+        // FUNCIONÁRIOS NORMAIS - APENAS PRÓPRIOS REGISTROS
         $whereConditions[] = "a.funcionario_id = :user_id";
         $params[':user_id'] = $userId;
-        error_log("ACESSO: Funcionário - APENAS PRÓPRIOS REGISTROS");
+        error_log("ACESSO: Funcionário Normal - APENAS PRÓPRIOS");
     }
     
     // ===========================================
@@ -137,9 +126,25 @@ try {
     // Filtro por busca
     if (!empty($_GET['search'])) {
         $search = '%' . $_GET['search'] . '%';
-        $whereConditions[] = "(f.nome LIKE :search OR a.tabela LIKE :search2)";
+        $whereConditions[] = "(COALESCE(f.nome, ass.nome) LIKE :search OR a.tabela LIKE :search2)";
         $params[':search'] = $search;
         $params[':search2'] = $search;
+    }
+    
+    // Filtro departamental externo (com validação)
+    if (!empty($_GET['departamento_usuario'])) {
+        $deptFiltro = (int)$_GET['departamento_usuario'];
+        
+        // Validar se pode aplicar este filtro
+        if (!$isPresidencia && $tipoUsuario === 'funcionario' && $deptFiltro !== $userDepartmentId) {
+            throw new Exception('Acesso negado: você não pode visualizar dados de outros departamentos');
+        }
+        
+        // Para associados-diretores, permitir qualquer filtro departamental
+        if ($tipoUsuario === 'funcionario') {
+            $whereConditions[] = "f.departamento_id = :departamento_filtro";
+            $params[':departamento_filtro'] = $deptFiltro;
+        }
     }
     
     // Construir WHERE clause
@@ -149,7 +154,7 @@ try {
     }
     
     // ===========================================
-    // BUSCAR REGISTROS
+    // QUERY PRINCIPAL HÍBRIDA
     // ===========================================
     
     $sql = "
@@ -164,17 +169,32 @@ try {
             a.sessao_id,
             a.alteracoes,
             a.associado_id,
-            f.nome as funcionario_nome,
-            f.email as funcionario_email,
-            f.cargo as funcionario_cargo,
+            a.funcionario_id,
+            
+            -- CORREÇÃO: Buscar nome em AMBAS as tabelas
+            COALESCE(f.nome, ass_user.nome) as funcionario_nome,
+            COALESCE(f.email, ass_user.email) as funcionario_email,
+            CASE 
+                WHEN f.id IS NOT NULL THEN f.cargo
+                WHEN ass_user.id IS NOT NULL THEN 'Associado-Diretor'
+                ELSE 'Sistema'
+            END as funcionario_cargo,
+            CASE 
+                WHEN f.id IS NOT NULL THEN 'Funcionário'
+                WHEN ass_user.id IS NOT NULL THEN 'Associado'
+                ELSE 'Sistema'
+            END as tipo_usuario_registro,
+            
             f.departamento_id,
             d.nome as departamento_nome,
-            ass.nome as associado_nome,
-            ass.cpf as associado_cpf
+            ass_reg.nome as associado_nome,
+            ass_reg.cpf as associado_cpf
+            
         FROM Auditoria a
         LEFT JOIN Funcionarios f ON a.funcionario_id = f.id
+        LEFT JOIN Associados ass_user ON a.funcionario_id = ass_user.id AND f.id IS NULL
         LEFT JOIN Departamentos d ON f.departamento_id = d.id
-        LEFT JOIN Associados ass ON a.associado_id = ass.id
+        LEFT JOIN Associados ass_reg ON a.associado_id = ass_reg.id
         $whereClause
         ORDER BY a.data_hora DESC
         LIMIT :limit OFFSET :offset
@@ -193,15 +213,16 @@ try {
     $registros = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
     // ===========================================
-    // CONTAR TOTAL DE REGISTROS
+    // CONTAR TOTAL COM QUERY HÍBRIDA
     // ===========================================
     
     $sqlCount = "
         SELECT COUNT(*) as total
         FROM Auditoria a
         LEFT JOIN Funcionarios f ON a.funcionario_id = f.id
+        LEFT JOIN Associados ass_user ON a.funcionario_id = ass_user.id AND f.id IS NULL
         LEFT JOIN Departamentos d ON f.departamento_id = d.id
-        LEFT JOIN Associados ass ON a.associado_id = ass.id
+        LEFT JOIN Associados ass_reg ON a.associado_id = ass_reg.id
         $whereClause
     ";
     
@@ -235,6 +256,7 @@ try {
             'funcionario_nome' => $registro['funcionario_nome'] ?: 'Sistema',
             'funcionario_email' => $registro['funcionario_email'],
             'funcionario_cargo' => $registro['funcionario_cargo'],
+            'tipo_usuario_registro' => $registro['tipo_usuario_registro'],
             'departamento_nome' => $registro['departamento_nome'],
             'associado_id' => $registro['associado_id'],
             'associado_nome' => $registro['associado_nome'],
@@ -276,7 +298,7 @@ try {
     ];
     
     $filtrosAplicados = [];
-    foreach (['tabela', 'acao', 'funcionario_id', 'associado_id', 'data_inicio', 'data_fim', 'search'] as $filtro) {
+    foreach (['tabela', 'acao', 'funcionario_id', 'associado_id', 'data_inicio', 'data_fim', 'search', 'departamento_usuario'] as $filtro) {
         if (!empty($_GET[$filtro])) {
             $filtrosAplicados[$filtro] = $_GET[$filtro];
         }
@@ -284,13 +306,16 @@ try {
     
     $infoUsuario = [
         'user_id' => (int)$userId,
+        'user_name' => $userName,
         'user_profile' => $userProfile,
         'user_department_id' => $userDepartmentId,
+        'tipo_usuario' => $tipoUsuario,
         'is_presidencia' => $isPresidencia,
         'is_diretor' => $isDiretor,
-        'pode_ver_todos_funcionarios' => ($isPresidencia || $isDiretor),
-        'nome_usuario' => $userName,
-        'escopo_acesso' => $isPresidencia ? 'GLOBAL' : ($isDiretor ? "DEPARTAMENTO_$userDepartmentId" : 'PRÓPRIOS_REGISTROS')
+        'escopo_acesso' => $isPresidencia ? 'GLOBAL' : 
+                          ($isDiretor && $tipoUsuario === 'associado' ? 'GLOBAL_ASSOCIADO' : 
+                          ($isDiretor ? "DEPARTAMENTO_$userDepartmentId" : 'PRÓPRIOS_REGISTROS')),
+        'fonte_dados' => 'AUTH_HIBRIDA'
     ];
     
     $response = [
@@ -310,39 +335,31 @@ try {
         'meta' => [
             'tempo_execucao' => microtime(true) - $_SERVER['REQUEST_TIME_FLOAT'],
             'timestamp' => time(),
-            'versao_api' => '3.0-final'
+            'versao_api' => '5.0-hibrida'
         ]
     ];
     
     echo json_encode($response, JSON_UNESCAPED_UNICODE | JSON_NUMERIC_CHECK);
 
 } catch (PDOException $e) {
-    error_log("ERRO PDO na API de auditoria: " . $e->getMessage());
+    error_log("ERRO PDO na API híbrida: " . $e->getMessage());
     
     http_response_code(500);
     echo json_encode([
         'status' => 'error',
         'message' => 'Erro de banco de dados',
-        'error_code' => 'DB_ERROR_001',
-        'debug' => [
-            'error_message' => $e->getMessage(),
-            'timestamp' => date('Y-m-d H:i:s')
-        ],
+        'error_code' => 'DB_ERROR_HYBRID',
         'data' => null
     ], JSON_UNESCAPED_UNICODE);
     
 } catch (Exception $e) {
-    error_log("ERRO na API de auditoria: " . $e->getMessage());
+    error_log("ERRO na API híbrida: " . $e->getMessage());
     
     http_response_code(500);
     echo json_encode([
         'status' => 'error',
-        'message' => 'Erro interno do servidor',
-        'error_code' => 'GENERAL_ERROR_001',
-        'debug' => [
-            'error_message' => $e->getMessage(),
-            'timestamp' => date('Y-m-d H:i:s')
-        ],
+        'message' => $e->getMessage(),
+        'error_code' => 'GENERAL_ERROR_HYBRID',
         'data' => null
     ], JSON_UNESCAPED_UNICODE);
 }

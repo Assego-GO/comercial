@@ -93,176 +93,190 @@ $headerComponent = HeaderComponent::create([
                 <h1 class="page-title">Gestão de Associados</h1>
                 <p class="page-subtitle">Gerencie os associados da ASSEGO</p>
             </div>
+             <?php include 'components/simulation-banner.php'; ?>
 
-            <!-- Stats Grid -->
-            <div class="stats-grid" data-aos="fade-up">
-                <!-- Card 1: Associados Ativos + Novos - LAYOUT VERTICAL -->
-                <div class="stat-card dual-stat-card">
-                    <div class="dual-stat-header">
-                        <div class="dual-stat-title">
-                            <i class="fas fa-users"></i>
-                            Associados
-                        </div>
-                        <div class="dual-stat-percentage" id="associadosPercent">
-                            <i class="fas fa-chart-line"></i>
-                            Crescimento
-                        </div>
+            <?php
+// Apenas a parte que precisa ser modificada no dashboard.php
+
+// ANTES da seção Stats Grid, adicionar:
+$departamentoComercialId = 10; // AJUSTE CONFORME SEU BANCO
+$departamentoPresidenciaId = 1; // AJUSTE CONFORME SEU BANCO
+
+$podeVerKPIs = $auth->isDiretor() || 
+               (isset($usuarioLogado['departamento_id']) && 
+                $usuarioLogado['departamento_id'] == $departamentoComercialId || $usuarioLogado['departamento_id'] == $departamentoPresidenciaId);
+
+if ($podeVerKPIs): ?>
+    <!-- Stats Grid -->
+    <div class="stats-grid" data-aos="fade-up">
+        <!-- Card 1: Associados Ativos + Novos - LAYOUT VERTICAL -->
+        <div class="stat-card dual-stat-card">
+            <div class="dual-stat-header">
+                <div class="dual-stat-title">
+                    <i class="fas fa-users"></i>
+                    Associados
+                </div>
+                <div class="dual-stat-percentage" id="associadosPercent">
+                    <i class="fas fa-chart-line"></i>
+                    Crescimento
+                </div>
+            </div>
+            <div class="dual-stats-row vertical-layout">
+                <div class="dual-stat-item ativos-item">
+                    <div class="dual-stat-icon ativos-icon">
+                        <i class="fas fa-user-check"></i>
                     </div>
-                    <div class="dual-stats-row vertical-layout">
-                        <div class="dual-stat-item ativos-item">
-                            <div class="dual-stat-icon ativos-icon">
-                                <i class="fas fa-user-check"></i>
-                            </div>
-                            <div class="dual-stat-info">
-                                <div class="dual-stat-value" id="associadosAtivos">-</div>
-                                <div class="dual-stat-label">Ativos</div>
-                            </div>
-                        </div>
-                        <div class="dual-stats-separator"></div>
-                        <div class="dual-stat-item novos-item">
-                            <div class="dual-stat-icon novos-icon">
-                                <i class="fas fa-user-plus"></i>
-                            </div>
-                            <div class="dual-stat-info">
-                                <div class="dual-stat-value" id="novosAssociados">-</div>
-                                <div class="dual-stat-label">Novos (30d)</div>
-                            </div>
-                        </div>
+                    <div class="dual-stat-info">
+                        <div class="dual-stat-value" id="associadosAtivos">-</div>
+                        <div class="dual-stat-label">Ativos</div>
                     </div>
                 </div>
-
-                <!-- Card 2: PM + BM + Outros -->
-                <div class="stat-card dual-stat-card triple-stat-card">
-                    <div class="dual-stat-header">
-                        <div class="dual-stat-title">
-                            <i class="fas fa-shield-alt"></i>
-                            Corporações
-                        </div>
-                        <div class="dual-stat-percentage" id="corporacoesPercent">
-                            <i class="fas fa-chart-pie"></i>
-                            -% do total
-                        </div>
+                <div class="dual-stats-separator"></div>
+                <div class="dual-stat-item novos-item">
+                    <div class="dual-stat-icon novos-icon">
+                        <i class="fas fa-user-plus"></i>
                     </div>
-                    <div class="dual-stats-row triple-stats-row">
-                        <div class="dual-stat-item pm-item">
-                            <div class="dual-stat-icon pm-icon">
-                                <i class="fas fa-shield-alt"></i>
-                            </div>
-                            <div class="dual-stat-info">
-                                <div class="dual-stat-value" id="pmQuantidade">-</div>
-                                <div class="dual-stat-label">PM</div>
-                                <div class="dual-stat-extra">
-                                    <div class="status-breakdown">
-                                        <div class="status-item status-ativa">
-                                            <i class="fas fa-circle"></i>
-                                            <span id="pmAtiva">-</span> Ativa
-                                        </div>
-                                        <div class="status-item status-reserva">
-                                            <i class="fas fa-circle"></i>
-                                            <span id="pmReserva">-</span> Reserva
-                                        </div>
-                                    </div>
+                    <div class="dual-stat-info">
+                        <div class="dual-stat-value" id="novosAssociados">-</div>
+                        <div class="dual-stat-label">Novos (30d)</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card 2: PM + BM + Outros -->
+        <div class="stat-card dual-stat-card triple-stat-card">
+            <div class="dual-stat-header">
+                <div class="dual-stat-title">
+                    <i class="fas fa-shield-alt"></i>
+                    Corporações
+                </div>
+                <div class="dual-stat-percentage" id="corporacoesPercent">
+                    <i class="fas fa-chart-pie"></i>
+                    -% do total
+                </div>
+            </div>
+            <div class="dual-stats-row triple-stats-row">
+                <div class="dual-stat-item pm-item">
+                    <div class="dual-stat-icon pm-icon">
+                        <i class="fas fa-shield-alt"></i>
+                    </div>
+                    <div class="dual-stat-info">
+                        <div class="dual-stat-value" id="pmQuantidade">-</div>
+                        <div class="dual-stat-label">PM</div>
+                        <div class="dual-stat-extra">
+                            <div class="status-breakdown">
+                                <div class="status-item status-ativa">
+                                    <i class="fas fa-circle"></i>
+                                    <span id="pmAtiva">-</span> Ativa
                                 </div>
-                            </div>
-                        </div>
-                        <div class="dual-stats-separator"></div>
-                        <div class="dual-stat-item bm-item">
-                            <div class="dual-stat-icon bm-icon">
-                                <i class="fas fa-fire-extinguisher"></i>
-                            </div>
-                            <div class="dual-stat-info">
-                                <div class="dual-stat-value" id="bmQuantidade">-</div>
-                                <div class="dual-stat-label">BM</div>
-                                <div class="dual-stat-extra">
-                                    <div class="status-breakdown">
-                                        <div class="status-item status-ativa">
-                                            <i class="fas fa-circle"></i>
-                                            <span id="bmAtiva">-</span> Ativa
-                                        </div>
-                                        <div class="status-item status-reserva">
-                                            <i class="fas fa-circle"></i>
-                                            <span id="bmReserva">-</span> Reserva
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="dual-stats-separator"></div>
-                        <div class="dual-stat-item outros-item">
-                            <div class="dual-stat-icon outros-icon">
-                                <i class="fas fa-users"></i>
-                            </div>
-                            <div class="dual-stat-info">
-                                <div class="dual-stat-value" id="outrosQuantidade">-</div>
-                                <div class="dual-stat-label">Outros</div>
-                                <div class="dual-stat-extra">
-                                    <div class="status-breakdown">
-                                        <div class="status-item status-ativa">
-                                            <i class="fas fa-circle"></i>
-                                            <span id="outrosAtiva">-</span> Ativa
-                                        </div>
-                                        <div class="status-item status-reserva">
-                                            <i class="fas fa-circle"></i>
-                                            <span id="outrosReserva">-</span> Reserva
-                                        </div>
-                                    </div>
+                                <div class="status-item status-reserva">
+                                    <i class="fas fa-circle"></i>
+                                    <span id="pmReserva">-</span> Reserva
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-
-                <!-- Card 3: Capital/Interior - LAYOUT VERTICAL -->
-                <div class="stat-card dual-stat-card">
-                    <div class="dual-stat-header">
-                        <div class="dual-stat-title">
-                            <i class="fas fa-map-marked-alt"></i>
-                            Distribuição
-                        </div>
-                        <div class="dual-stat-percentage" id="localizacaoPercent">
-                            <i class="fas fa-percentage"></i>
-                            <span id="totalLocalizacao">-</span> Mapeados
-                        </div>
+                <div class="dual-stats-separator"></div>
+                <div class="dual-stat-item bm-item">
+                    <div class="dual-stat-icon bm-icon">
+                        <i class="fas fa-fire-extinguisher"></i>
                     </div>
-                    <div class="dual-stats-row vertical-layout">
-                        <div class="dual-stat-item capital-item">
-                            <div class="dual-stat-icon capital-icon">
-                                <i class="fas fa-city"></i>
-                            </div>
-                            <div class="dual-stat-info">
-                                <div class="dual-stat-value" id="capitalQuantidade">-</div>
-                                <div class="dual-stat-label">Capital (Goiânia)</div>
-                                <div class="dual-stat-extra">
-                                    <div class="status-breakdown">
-                                        <div class="status-item status-capital">
-                                            <i class="fas fa-circle"></i>
-                                            <span id="capitalPercent">-%</span> do total
-                                        </div>
-                                    </div>
+                    <div class="dual-stat-info">
+                        <div class="dual-stat-value" id="bmQuantidade">-</div>
+                        <div class="dual-stat-label">BM</div>
+                        <div class="dual-stat-extra">
+                            <div class="status-breakdown">
+                                <div class="status-item status-ativa">
+                                    <i class="fas fa-circle"></i>
+                                    <span id="bmAtiva">-</span> Ativa
+                                </div>
+                                <div class="status-item status-reserva">
+                                    <i class="fas fa-circle"></i>
+                                    <span id="bmReserva">-</span> Reserva
                                 </div>
                             </div>
                         </div>
-                        <div class="dual-stats-separator"></div>
-                        <div class="dual-stat-item interior-item">
-                            <div class="dual-stat-icon interior-icon">
-                                <i class="fas fa-tree"></i>
-                            </div>
-                            <div class="dual-stat-info">
-                                <div class="dual-stat-value" id="interiorQuantidade">-</div>
-                                <div class="dual-stat-label">Interior</div>
-                                <div class="dual-stat-extra">
-                                    <div class="status-breakdown">
-                                        <div class="status-item status-interior">
-                                            <i class="fas fa-circle"></i>
-                                            <span id="interiorPercent">-%</span> do total
-                                        </div>
-                                    </div>
+                    </div>
+                </div>
+                <div class="dual-stats-separator"></div>
+                <div class="dual-stat-item outros-item">
+                    <div class="dual-stat-icon outros-icon">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div class="dual-stat-info">
+                        <div class="dual-stat-value" id="outrosQuantidade">-</div>
+                        <div class="dual-stat-label">Outros</div>
+                        <div class="dual-stat-extra">
+                            <div class="status-breakdown">
+                                <div class="status-item status-ativa">
+                                    <i class="fas fa-circle"></i>
+                                    <span id="outrosAtiva">-</span> Ativa
+                                </div>
+                                <div class="status-item status-reserva">
+                                    <i class="fas fa-circle"></i>
+                                    <span id="outrosReserva">-</span> Reserva
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
+        </div>
+
+        <!-- Card 3: Capital/Interior - LAYOUT VERTICAL -->
+        <div class="stat-card dual-stat-card">
+            <div class="dual-stat-header">
+                <div class="dual-stat-title">
+                    <i class="fas fa-map-marked-alt"></i>
+                    Distribuição
+                </div>
+                <div class="dual-stat-percentage" id="localizacaoPercent">
+                    <i class="fas fa-percentage"></i>
+                    <span id="totalLocalizacao">-</span> Mapeados
+                </div>
+            </div>
+            <div class="dual-stats-row vertical-layout">
+                <div class="dual-stat-item capital-item">
+                    <div class="dual-stat-icon capital-icon">
+                        <i class="fas fa-city"></i>
+                    </div>
+                    <div class="dual-stat-info">
+                        <div class="dual-stat-value" id="capitalQuantidade">-</div>
+                        <div class="dual-stat-label">Capital (Goiânia)</div>
+                        <div class="dual-stat-extra">
+                            <div class="status-breakdown">
+                                <div class="status-item status-capital">
+                                    <i class="fas fa-circle"></i>
+                                    <span id="capitalPercent">-%</span> do total
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="dual-stats-separator"></div>
+                <div class="dual-stat-item interior-item">
+                    <div class="dual-stat-icon interior-icon">
+                        <i class="fas fa-tree"></i>
+                    </div>
+                    <div class="dual-stat-info">
+                        <div class="dual-stat-value" id="interiorQuantidade">-</div>
+                        <div class="dual-stat-label">Interior</div>
+                        <div class="dual-stat-extra">
+                            <div class="status-breakdown">
+                                <div class="status-item status-interior">
+                                    <i class="fas fa-circle"></i>
+                                    <span id="interiorPercent">-%</span> do total
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+<?php endif; ?>
 
             <!-- Actions Bar with Filters -->
             <div class="actions-bar" data-aos="fade-up" data-aos-delay="100">
@@ -686,7 +700,7 @@ $headerComponent = HeaderComponent::create([
             color: #e91e63;
         }
         
-        /* Ajusta grid para 3 cards - ATUALIZADO */
+        /* Ajusta grid para 3 cards */
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
@@ -711,7 +725,7 @@ $headerComponent = HeaderComponent::create([
             }
         }
         
-        /* Card Duplo Principal - CORRIGIDO PARA LARGURA */
+        /* Card Principal */
         .dual-stat-card {
             position: relative;
             overflow: visible;
@@ -748,7 +762,7 @@ $headerComponent = HeaderComponent::create([
             border-color: rgba(0, 86, 210, 0.2);
         }
 
-        /* Header do Card Duplo */
+        /* Header do Card */
         .dual-stat-header {
             background: linear-gradient(135deg, var(--gray-100) 0%, var(--gray-200) 100%);
             padding: 1rem 1.25rem;
@@ -781,7 +795,7 @@ $headerComponent = HeaderComponent::create([
             gap: 0.375rem;
         }
 
-        /* Row dos Stats - LAYOUT HORIZONTAL CORRIGIDO */
+        /* Layout Desktop - Vertical */
         .dual-stats-row {
             display: flex;
             align-items: stretch;
@@ -790,14 +804,15 @@ $headerComponent = HeaderComponent::create([
             width: 100%;
         }
 
-        /* Item individual do stat - CORRIGIDO */
         .dual-stat-item {
             flex: 1;
             min-width: 0;
-            padding: 1.5rem 1rem;
+            padding: 1.5rem 0.75rem;
             display: flex;
+            flex-direction: column;
             align-items: center;
-            gap: 0.75rem;
+            text-align: center;
+            gap: 1rem;
             transition: all 0.3s ease;
             position: relative;
             width: 50%;
@@ -807,7 +822,6 @@ $headerComponent = HeaderComponent::create([
             background: rgba(0, 86, 210, 0.02);
         }
 
-        /* Ícone do item - AJUSTADO */
         .dual-stat-icon {
             width: 48px;
             height: 48px;
@@ -821,13 +835,13 @@ $headerComponent = HeaderComponent::create([
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
         }
 
-        /* Informações do stat - CORRIGIDO */
         .dual-stat-info {
             flex: 1;
             display: flex;
             flex-direction: column;
             min-width: 0;
-            text-align: left;
+            text-align: center;
+            align-items: center;
         }
 
         .dual-stat-value {
@@ -837,8 +851,6 @@ $headerComponent = HeaderComponent::create([
             line-height: 1;
             margin-bottom: 0.25rem;
             transition: all 0.3s ease;
-            white-space: nowrap;
-            overflow: visible;
         }
 
         .dual-stat-label {
@@ -846,7 +858,6 @@ $headerComponent = HeaderComponent::create([
             color: var(--gray-600);
             font-weight: 600;
             line-height: 1;
-            white-space: nowrap;
         }
 
         /* Separador vertical */
@@ -857,39 +868,7 @@ $headerComponent = HeaderComponent::create([
             flex-shrink: 0;
         }
 
-        /* === ESTILOS ESPECÍFICOS ATIVOS === */
-        .ativos-icon {
-            background: linear-gradient(135deg, #00c853 0%, #00a847 100%);
-            color: white;
-        }
-
-        .ativos-item:hover .ativos-icon {
-            transform: scale(1.1) rotate(5deg);
-            box-shadow: 0 8px 25px rgba(0, 200, 83, 0.4);
-        }
-
-        .ativos-item:hover .dual-stat-value {
-            color: #00c853;
-            transform: scale(1.05);
-        }
-
-        /* === ESTILOS ESPECÍFICOS INATIVOS === */
-        .inativos-icon {
-            background: linear-gradient(135deg, #dc3545 0%, #b02a37 100%);
-            color: white;
-        }
-
-        .inativos-item:hover .inativos-icon {
-            transform: scale(1.1) rotate(-5deg);
-            box-shadow: 0 8px 25px rgba(220, 53, 69, 0.4);
-        }
-
-        .inativos-item:hover .dual-stat-value {
-            color: #dc3545;
-            transform: scale(1.05);
-        }
-
-        /* === CARD TRIPLO - LAYOUT VERTICAL CORRIGIDO === */
+        /* Card Triplo */
         .triple-stat-card .triple-stats-row {
             display: flex;
             align-items: stretch;
@@ -912,38 +891,7 @@ $headerComponent = HeaderComponent::create([
             width: 33.33%;
         }
 
-        .triple-stats-row .dual-stat-info {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            text-align: center;
-        }
-
-        .triple-stats-row .dual-stat-value {
-            font-size: 1.75rem;
-            font-weight: 800;
-            color: var(--dark);
-            line-height: 1;
-            margin-bottom: 0.25rem;
-            transition: all 0.3s ease;
-        }
-
-        .triple-stats-row .dual-stat-label {
-            font-size: 0.875rem;
-            color: var(--gray-600);
-            font-weight: 600;
-            line-height: 1;
-            margin-bottom: 0.5rem;
-        }
-
-        .triple-stats-row .dual-stat-icon {
-            width: 48px;
-            height: 48px;
-            font-size: 1.25rem;
-            margin-bottom: 0;
-        }
-
-        /* Informações extras - MELHORADA */
+        /* Informações extras */
         .dual-stat-extra {
             font-size: 0.75rem;
             color: var(--gray-600);
@@ -978,11 +926,6 @@ $headerComponent = HeaderComponent::create([
             color: var(--success);
         }
 
-        .status-inativa {
-            background: rgba(220, 53, 69, 0.15);
-            color: var(--danger);
-        }
-
         .status-reserva {
             background: rgba(255, 149, 0, 0.15);
             color: var(--warning);
@@ -998,16 +941,51 @@ $headerComponent = HeaderComponent::create([
             color: var(--success);
         }
 
-        /* Ícones específicos para status */
-        .status-ativa i, .status-inativa i, .status-reserva i, 
-        .status-capital i, .status-interior i {
-            font-size: 0.625rem;
+        /* Estilos específicos dos ícones */
+        .ativos-icon {
+            background: linear-gradient(135deg, #00c853 0%, #00a847 100%);
+            color: white;
         }
 
-        /* === ESTILOS ESPECÍFICOS PM === */
+        .novos-icon {
+            background: linear-gradient(135deg, #0d6efd 0%, #084298 100%);
+            color: white;
+        }
+
         .pm-icon {
             background: linear-gradient(135deg, #dc3545 0%, #b02a37 100%);
             color: white;
+        }
+
+        .bm-icon {
+            background: linear-gradient(135deg, #fd7e14 0%, #e8690b 100%);
+            color: white;
+        }
+
+        .outros-icon {
+            background: linear-gradient(135deg, #6f42c1 0%, #5a2d8a 100%);
+            color: white;
+        }
+
+        .capital-icon {
+            background: linear-gradient(135deg, #0d6efd 0%, #084298 100%);
+            color: white;
+        }
+
+        .interior-icon {
+            background: linear-gradient(135deg, #198754 0%, #146c43 100%);
+            color: white;
+        }
+
+        /* Efeitos hover */
+        .ativos-item:hover .ativos-icon {
+            transform: scale(1.1) rotate(5deg);
+            box-shadow: 0 8px 25px rgba(0, 200, 83, 0.4);
+        }
+
+        .novos-item:hover .novos-icon {
+            transform: scale(1.1) rotate(-5deg);
+            box-shadow: 0 8px 25px rgba(13, 110, 253, 0.4);
         }
 
         .pm-item:hover .pm-icon {
@@ -1015,31 +993,9 @@ $headerComponent = HeaderComponent::create([
             box-shadow: 0 8px 25px rgba(220, 53, 69, 0.4);
         }
 
-        .pm-item:hover .dual-stat-value {
-            color: #dc3545;
-            transform: scale(1.05);
-        }
-
-        /* === ESTILOS ESPECÍFICOS BM === */
-        .bm-icon {
-            background: linear-gradient(135deg, #fd7e14 0%, #e8690b 100%);
-            color: white;
-        }
-
         .bm-item:hover .bm-icon {
             transform: scale(1.1) rotate(-5deg);
             box-shadow: 0 8px 25px rgba(253, 126, 20, 0.4);
-        }
-
-        .bm-item:hover .dual-stat-value {
-            color: #fd7e14;
-            transform: scale(1.05);
-        }
-
-        /* === ESTILOS ESPECÍFICOS OUTROS === */
-        .outros-icon {
-            background: linear-gradient(135deg, #6f42c1 0%, #5a2d8a 100%);
-            color: white;
         }
 
         .outros-item:hover .outros-icon {
@@ -1047,31 +1003,9 @@ $headerComponent = HeaderComponent::create([
             box-shadow: 0 8px 25px rgba(111, 66, 193, 0.4);
         }
 
-        .outros-item:hover .dual-stat-value {
-            color: #6f42c1;
-            transform: scale(1.05);
-        }
-
-        /* === ESTILOS ESPECÍFICOS CAPITAL === */
-        .capital-icon {
-            background: linear-gradient(135deg, #0d6efd 0%, #084298 100%);
-            color: white;
-        }
-
         .capital-item:hover .capital-icon {
             transform: scale(1.1) rotate(5deg);
             box-shadow: 0 8px 25px rgba(13, 110, 253, 0.4);
-        }
-
-        .capital-item:hover .dual-stat-value {
-            color: #0d6efd;
-            transform: scale(1.05);
-        }
-
-        /* === ESTILOS ESPECÍFICOS INTERIOR === */
-        .interior-icon {
-            background: linear-gradient(135deg, #198754 0%, #146c43 100%);
-            color: white;
         }
 
         .interior-item:hover .interior-icon {
@@ -1079,40 +1013,7 @@ $headerComponent = HeaderComponent::create([
             box-shadow: 0 8px 25px rgba(25, 135, 84, 0.4);
         }
 
-        .interior-item:hover .dual-stat-value {
-            color: #198754;
-            transform: scale(1.05);
-        }
-
-        /* === LAYOUT VERTICAL PARA ASSOCIADOS E DISTRIBUIÇÃO === */
-        .dual-stats-row.vertical-layout .dual-stat-item,
-        .dual-stats-row .dual-stat-item.ativos-item,
-        .dual-stats-row .dual-stat-item.novos-item,
-        .dual-stats-row .dual-stat-item.capital-item,
-        .dual-stats-row .dual-stat-item.interior-item {
-            flex: 1;
-            min-width: 0;
-            padding: 1.5rem 0.75rem;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            text-align: center;
-            gap: 1rem;
-            transition: all 0.3s ease;
-            position: relative;
-            width: 50%;
-        }
-
-        .dual-stats-row.vertical-layout .dual-stat-info,
-        .dual-stats-row .ativos-item .dual-stat-info,
-        .dual-stats-row .novos-item .dual-stat-info,
-        .dual-stats-row .capital-item .dual-stat-info,
-        .dual-stats-row .interior-item .dual-stat-info {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            text-align: center;
-        }
+        /* === RESPONSIVO - LAYOUT HORIZONTAL NO MOBILE === */
         @media (max-width: 768px) {
             .dual-stats-row {
                 flex-direction: column;
@@ -1126,24 +1027,37 @@ $headerComponent = HeaderComponent::create([
                 background: linear-gradient(to right, transparent, var(--gray-300), transparent);
             }
 
+            /* LAYOUT HORIZONTAL NO MOBILE - TODOS OS CARDS */
             .dual-stat-item {
                 padding: 1.25rem;
-                justify-content: flex-start;
-                text-align: left;
                 width: 100%;
                 min-width: 0;
+                flex-direction: row !important;
+                align-items: center !important;
+                text-align: left !important;
+                gap: 1rem !important;
+                justify-content: flex-start !important;
+            }
+
+            .dual-stat-info {
+                display: flex !important;
+                flex-direction: column !important;
+                align-items: flex-start !important;
+                text-align: left !important;
             }
 
             .dual-stat-value {
-                font-size: 1.5rem;
+                font-size: 1.75rem;
             }
 
             .dual-stat-icon {
-                width: 44px;
-                height: 44px;
-                font-size: 1.125rem;
+                width: 48px;
+                height: 48px;
+                font-size: 1.25rem;
+                flex-shrink: 0;
             }
 
+            /* Card triplo também horizontal no mobile */
             .triple-stats-row {
                 flex-direction: column;
                 min-height: auto;
@@ -1160,9 +1074,22 @@ $headerComponent = HeaderComponent::create([
                 padding: 1.25rem;
                 width: 100%;
                 min-width: 0;
+                flex-direction: row !important;
+                align-items: center !important;
+                text-align: left !important;
+                gap: 1rem !important;
+                justify-content: flex-start !important;
+            }
+
+            .triple-stats-row .dual-stat-info {
+                display: flex !important;
+                flex-direction: column !important;
+                align-items: flex-start !important;
+                text-align: left !important;
             }
         }
 
+        /* Responsivo desktop */
         @media (min-width: 769px) {
             .dual-stat-item {
                 max-width: 50%;
@@ -1202,7 +1129,7 @@ $headerComponent = HeaderComponent::create([
             }
         }
 
-        /* === ANIMAÇÕES === */
+        /* Animações */
         @keyframes float {
             0%, 100% { transform: translateY(0); }
             50% { transform: translateY(-3px); }
@@ -1277,7 +1204,7 @@ $headerComponent = HeaderComponent::create([
             return acoes;
         }
 
-        // Carrega estatísticas via API - ORIGINAL RESTAURADO
+        // Carrega estatísticas via API
         function carregarEstatisticas() {
             fetch('../api/dashboard_stats.php')
                 .then(response => response.json())
@@ -1376,6 +1303,24 @@ $headerComponent = HeaderComponent::create([
             });
         });
     </script>
+
+    <script>
+    // Verifica se deve carregar estatísticas
+    const podeVerKPIs = <?php echo $podeVerKPIs ? 'true' : 'false'; ?>;
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        // Só carrega estatísticas se o usuário tem permissão
+        if (podeVerKPIs) {
+            carregarEstatisticas();
+        }
+        
+        AOS.init({
+            duration: 800,
+            easing: 'ease-out-cubic',
+            once: true
+        });
+    });
+</script>
 
     <script src="js/dashboard.js"></script>
 
