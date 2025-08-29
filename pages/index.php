@@ -575,7 +575,7 @@ if (!empty($_POST['email'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    
+    <title>ASSEGO - Sistema de Gestão</title>
     
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -649,6 +649,17 @@ if (!empty($_POST['email'])) {
 
         .bg-image.inactive {
             opacity: 0;
+        }
+
+        /* Canvas de partículas */
+        #particles-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -3;
+            pointer-events: none;
         }
 
         /* Overlay azul sobre as imagens */
@@ -1113,6 +1124,9 @@ if (!empty($_POST['email'])) {
         </div>
     </div>
 
+    <!-- Background com partículas interativas -->
+    <canvas id="particles-canvas"></canvas>
+    
     <!-- Background sutil -->
     <div class="bg-image active" id="bg1" style="background-image: url('./img/fundo-1.jpeg')"></div>
     <div class="bg-image inactive" id="bg2" style="background-image: url('./img/fundo-2.jpeg')"></div>
@@ -1299,8 +1313,7 @@ if (!empty($_POST['email'])) {
                 }, 1000);
             }, 3000);
         });
-        
-        // JavaScript habilitado
+         // JavaScript habilitado
         document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('js_enabled').value = '1';
         });
@@ -1357,6 +1370,191 @@ if (!empty($_POST['email'])) {
                 }
             });
         }, 5000);
+
+        // Sistema de partículas interativas
+        class ParticleNetwork {
+            constructor() {
+                this.canvas = document.getElementById('particles-canvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.particles = [];
+                this.mouse = { x: null, y: null };
+                this.animationId = null;
+                
+                this.settings = {
+                    particleCount: 150,        // Quantidade de partículas (aumente para mais)
+                    particleSize: 5,           // Tamanho das partículas (aumente para maiores)
+                    connectionDistance: 140,   
+                    mouseDistance: 200,        
+                    particleSpeed: 0.5,        
+                    lineOpacity: 0.75,         // Opacidade das linhas (aumente para mais visíveis)
+                    mouseLineOpacity: 1.0,     // Opacidade das linhas com mouse (máximo)
+                    particleOpacity: 1.0       // Opacidade das partículas (máximo)
+                };
+                
+                this.init();
+            }
+            
+            init() {
+                this.resizeCanvas();
+                this.createParticles();
+                this.addEventListeners();
+                this.animate();
+            }
+            
+            resizeCanvas() {
+                this.canvas.width = window.innerWidth;
+                this.canvas.height = window.innerHeight;
+            }
+            
+            createParticles() {
+                this.particles = [];
+                for (let i = 0; i < this.settings.particleCount; i++) {
+                    this.particles.push({
+                        x: Math.random() * this.canvas.width,
+                        y: Math.random() * this.canvas.height,
+                        vx: (Math.random() - 0.5) * this.settings.particleSpeed,
+                        vy: (Math.random() - 0.5) * this.settings.particleSpeed,
+                        size: Math.random() * this.settings.particleSize + 1
+                    });
+                }
+            }
+            
+            addEventListeners() {
+                window.addEventListener('resize', () => {
+                    this.resizeCanvas();
+                    this.createParticles();
+                });
+                
+                document.addEventListener('mousemove', (e) => {
+                    this.mouse.x = e.clientX;
+                    this.mouse.y = e.clientY;
+                });
+                
+                document.addEventListener('mouseleave', () => {
+                    this.mouse.x = null;
+                    this.mouse.y = null;
+                });
+            }
+            
+            updateParticles() {
+                this.particles.forEach(particle => {
+                    particle.x += particle.vx;
+                    particle.y += particle.vy;
+                    
+                    // Rebote nas bordas
+                    if (particle.x < 0 || particle.x > this.canvas.width) {
+                        particle.vx *= -1;
+                        particle.x = Math.max(0, Math.min(this.canvas.width, particle.x));
+                    }
+                    if (particle.y < 0 || particle.y > this.canvas.height) {
+                        particle.vy *= -1;
+                        particle.y = Math.max(0, Math.min(this.canvas.height, particle.y));
+                    }
+                });
+            }
+            
+            drawParticles() {
+                this.particles.forEach(particle => {
+                    this.ctx.globalAlpha = 1.0; // Forçar máxima opacidade
+                    
+                    // Primeiro desenho: shadow/glow forte
+                    this.ctx.shadowColor = '#FFFFFF';
+                    this.ctx.shadowBlur = 15; // Brilho muito forte
+                    this.ctx.fillStyle = '#FFFFFF';
+                    this.ctx.beginPath();
+                    this.ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+                    this.ctx.fill();
+                    
+                    // Segundo desenho: partícula sólida por cima
+                    this.ctx.shadowBlur = 0;
+                    this.ctx.fillStyle = '#FFFFFF';
+                    this.ctx.beginPath();
+                    this.ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+                    this.ctx.fill();
+                    
+                    // Terceiro desenho: centro super brilhante
+                    this.ctx.fillStyle = '#FFFFFF';
+                    this.ctx.beginPath();
+                    this.ctx.arc(particle.x, particle.y, particle.size * 0.7, 0, Math.PI * 2);
+                    this.ctx.fill();
+                });
+            }
+            
+            drawConnections() {
+                for (let i = 0; i < this.particles.length; i++) {
+                    for (let j = i + 1; j < this.particles.length; j++) {
+                        const dx = this.particles[i].x - this.particles[j].x;
+                        const dy = this.particles[i].y - this.particles[j].y;
+                        const distance = Math.sqrt(dx * dx + dy * dy);
+                        
+                        if (distance < this.settings.connectionDistance) {
+                            const opacity = (1 - distance / this.settings.connectionDistance) * this.settings.lineOpacity;
+                            this.ctx.globalAlpha = opacity;
+                            this.ctx.strokeStyle = 'rgba(255, 255, 255, 1)';
+                            this.ctx.lineWidth = 0.8;
+                            this.ctx.beginPath();
+                            this.ctx.moveTo(this.particles[i].x, this.particles[i].y);
+                            this.ctx.lineTo(this.particles[j].x, this.particles[j].y);
+                            this.ctx.stroke();
+                        }
+                    }
+                }
+            }
+            
+            drawMouseConnections() {
+                if (this.mouse.x === null || this.mouse.y === null) return;
+                
+                this.particles.forEach(particle => {
+                    const dx = particle.x - this.mouse.x;
+                    const dy = particle.y - this.mouse.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (distance < this.settings.mouseDistance) {
+                        const opacity = (1 - distance / this.settings.mouseDistance) * this.settings.mouseLineOpacity;
+                        this.ctx.globalAlpha = opacity;
+                        this.ctx.strokeStyle = 'rgba(255, 255, 255, 1)';
+                        this.ctx.lineWidth = 1.2;
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(particle.x, particle.y);
+                        this.ctx.lineTo(this.mouse.x, this.mouse.y);
+                        this.ctx.stroke();
+                    }
+                });
+            }
+            
+            animate() {
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                this.updateParticles();
+                this.drawConnections();
+                this.drawMouseConnections();
+                this.drawParticles();
+                
+                this.animationId = requestAnimationFrame(() => this.animate());
+            }
+            
+            destroy() {
+                if (this.animationId) {
+                    cancelAnimationFrame(this.animationId);
+                }
+            }
+        }
+        
+        // Inicializar partículas após o loading
+        let particleNetwork;
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                document.getElementById('initialLoading').classList.add('fade-out');
+                setTimeout(() => {
+                    // Inicializar sistema de partículas
+                    particleNetwork = new ParticleNetwork();
+                    
+                    alternateBackgrounds();
+                    setInterval(alternateBackgrounds, 6000);
+                }, 1000);
+            }, 3000);
+        });
     </script>
+        
 </body>
 </html>
