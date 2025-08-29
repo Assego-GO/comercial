@@ -47,6 +47,7 @@ echo "</script>";
 $page_title = 'Relatórios - ASSEGO';
 
 // NOVO SISTEMA DE PERMISSÕES POR DEPARTAMENTO
+// Função atualizada com permissões para aniversariantes
 function getPermissoesDepartamento($departamentoId) {
     $departamentoId = (int)$departamentoId;
     
@@ -56,7 +57,7 @@ function getPermissoesDepartamento($departamentoId) {
             'acesso_total' => true,
             'criar_personalizado' => true,
             'relatorios_permitidos' => [
-                'associados', 'financeiro', 'militar', 'servicos', 'documentos', 'estatisticas'
+                'associados', 'financeiro', 'militar', 'servicos', 'documentos', 'estatisticas', 'aniversariantes'
             ]
         ],
         2 => [ // Financeiro (ID correto: 2)
@@ -64,7 +65,7 @@ function getPermissoesDepartamento($departamentoId) {
             'acesso_total' => false,
             'criar_personalizado' => false,
             'relatorios_permitidos' => [
-                'financeiro', 'servicos', 'estatisticas' // REMOVIDO 'documentos'
+                'financeiro', 'servicos', 'estatisticas'
             ]
         ],
         10 => [ // Comercial (ID correto: 10)
@@ -72,12 +73,11 @@ function getPermissoesDepartamento($departamentoId) {
             'acesso_total' => false,
             'criar_personalizado' => false,
             'relatorios_permitidos' => [
-                'associados', 'militar', 'documentos' // MANTIDO 'documentos'
+                'associados', 'militar', 'documentos', 'aniversariantes'
             ]
         ]
     ];
     
-    // Retorna apenas se o departamento estiver mapeado, senão null
     return $permissoes[$departamentoId] ?? null;
 }
 
@@ -491,6 +491,37 @@ $headerComponent = HeaderComponent::create([
                     </div>
                     <?php endif; ?>
 
+                    <!-- Relatório de Aniversariantes - Presidência e Comercial -->
+                    <?php if (podeAcessarRelatorio('aniversariantes', $permissoesDept)): ?>
+                    <div class="report-card" onclick="executarRelatorioRapido('aniversariantes')">
+                        <div class="report-icon pink">
+                            <i class="fas fa-birthday-cake"></i>
+                        </div>
+                        <h4 class="report-title">Aniversariantes</h4>
+                        <p class="report-description">
+                            Lista de associados aniversariantes por período para envio de felicitações.
+                        </p>
+                        <div class="quick-report-actions">
+                            <a class="quick-report-action" onclick="executarRelatorioRapido('aniversariantes', 'hoje'); event.stopPropagation();">
+                                <i class="fas fa-calendar-day"></i>
+                                <span>Hoje</span>
+                            </a>
+                            <a class="quick-report-action" onclick="executarRelatorioRapido('aniversariantes', 'semana'); event.stopPropagation();">
+                                <i class="fas fa-calendar-week"></i>
+                                <span>Esta Semana</span>
+                            </a>
+                            <a class="quick-report-action" onclick="executarRelatorioRapido('aniversariantes', 'mes'); event.stopPropagation();">
+                                <i class="fas fa-calendar-alt"></i>
+                                <span>Este Mês</span>
+                            </a>
+                            <a class="quick-report-action" onclick="executarRelatorioRapido('aniversariantes', 'personalizar'); event.stopPropagation();">
+                                <i class="fas fa-sliders-h"></i>
+                                <span>Filtrar</span>
+                            </a>
+                        </div>
+                    </div>
+                    <?php endif; ?>
+
                     <!-- Estatísticas Financeiras - Presidência e Financeiro -->
                     <?php if (podeAcessarRelatorio('estatisticas', $permissoesDept)): ?>
                     <div class="report-card" onclick="window.location.href='estatisticas.php'">
@@ -732,6 +763,7 @@ $headerComponent = HeaderComponent::create([
                             <select class="form-control-custom form-select-custom" id="tipoRelatorio" name="tipo" required>
                                 <option value="">Selecione o tipo</option>
                                 <option value="associados">Associados</option>
+                                <option value="aniversariantes">🎂 Aniversariantes</option>
                                 <option value="financeiro">Financeiro</option>
                                 <option value="militar">Militar</option>
                                 <option value="servicos">Serviços</option>
@@ -812,12 +844,12 @@ $headerComponent = HeaderComponent::create([
                         
                         <div class="form-group mt-3">
                             <label class="form-label">Ordenar por</label>
-                            <select class="form-control-custom form-select-custom" name="ordenacao">
+                            <select class="form-control-custom form-select-custom" name="ordenacao" id="selectOrdenacao">
                                 <option value="">Padrão</option>
-                                <option value="nome ASC">Nome (A-Z)</option>
-                                <option value="nome DESC">Nome (Z-A)</option>
-                                <option value="id DESC">Mais recentes</option>
-                                <option value="id ASC">Mais antigos</option>
+                                <option value="nome_asc">Nome (A-Z)</option>
+                                <option value="nome_desc">Nome (Z-A)</option>
+                                <option value="id_desc">Mais recentes</option>
+                                <option value="id_asc">Mais antigos</option>
                             </select>
                         </div>
                     </div>
@@ -891,6 +923,7 @@ $headerComponent = HeaderComponent::create([
         let camposOrdenados = [];
         let camposBasicos = {
             'associados': ['nome', 'cpf', 'telefone', 'email', 'situacao'],
+            'aniversariantes': ['nome', 'nasc', 'telefone', 'email', 'idade'],
             'financeiro': ['nome', 'cpf', 'tipoAssociado', 'situacaoFinanceira'],
             'militar': ['nome', 'cpf', 'corporacao', 'patente'],
             'servicos': ['nome', 'cpf', 'servico_nome', 'valor_aplicado', 'ativo'],
@@ -1023,6 +1056,7 @@ $headerComponent = HeaderComponent::create([
                         tipoRelatorioAtual = this.value;
                         carregarCamposPersonalizados(this.value);
                         carregarFiltrosPersonalizados(this.value);
+                        atualizarOpcoesOrdenacao(this.value);
                         alternarTabCampos('selecao', null);
                     } else {
                         document.getElementById('secaoCampos').style.display = 'none';
@@ -1121,35 +1155,49 @@ $headerComponent = HeaderComponent::create([
         }
 
         // Retorna filtros predefinidos para relatórios rápidos
-        function getFiltrosPreset(tipo, preset) {
-            const hoje = new Date().toISOString().split('T')[0];
-            const inicioMes = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
-            
-            const filtros = {
-                'associados': {
-                    'hoje': { data_inicio: hoje, data_fim: hoje },
-                    'mes': { data_inicio: inicioMes, data_fim: hoje }
-                },
-                'financeiro': {
-                    'adimplentes': { situacaoFinanceira: 'Regular' },
-                    'inadimplentes': { situacaoFinanceira: 'Inadimplente' }
-                },
-                'militar': {
-                    'patente': { ordenacao: 'patente ASC, nome ASC' },
-                    'corporacao': { ordenacao: 'corporacao ASC, patente ASC, nome ASC' }
-                },
-                'servicos': {
-                    'ativos': { ativo: '1' },
-                    'todos': {}
-                },
-                'documentos': {
-                    'pendentes': { verificado: '0' },
-                    'verificados': { verificado: '1' }
-                }
-            };
-
-            return filtros[tipo]?.[preset] || {};
+       function getFiltrosPreset(tipo, preset) {
+    const hoje = new Date().toISOString().split('T')[0];
+    const inicioMes = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
+    
+    // Calcular data de uma semana à frente
+    const umaSemana = new Date();
+    umaSemana.setDate(umaSemana.getDate() + 7);
+    const fimSemana = umaSemana.toISOString().split('T')[0];
+    
+    // Calcular fim do mês
+    const fimMes = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().split('T')[0];
+    
+    const filtros = {
+        'associados': {
+            'hoje': { data_inicio: hoje, data_fim: hoje },
+            'mes': { data_inicio: inicioMes, data_fim: hoje }
+        },
+        'aniversariantes': {
+    'default': { periodo_aniversario: 'hoje' },
+    'hoje': { periodo_aniversario: 'hoje' },
+    'semana': { periodo_aniversario: 'semana' },  
+    'mes': { periodo_aniversario: 'mes' }
+},
+        'financeiro': {
+            'adimplentes': { situacaoFinanceira: 'Regular' },
+            'inadimplentes': { situacaoFinanceira: 'Inadimplente' }
+        },
+        'militar': {
+            'patente': { ordenacao: 'patente ASC, nome ASC' },
+            'corporacao': { ordenacao: 'corporacao ASC, patente ASC, nome ASC' }
+        },
+        'servicos': {
+            'ativos': { ativo: '1' },
+            'todos': {}
+        },
+        'documentos': {
+            'pendentes': { verificado: '0' },
+            'verificados': { verificado: '1' }
         }
+    };
+
+    return filtros[tipo]?.[preset] || {};
+}
 
         // Abre modal de filtros rápidos COM VERIFICAÇÃO DE PERMISSÃO
         function abrirModalFiltrosRapidos(tipo) {
@@ -1175,85 +1223,115 @@ $headerComponent = HeaderComponent::create([
         }
 
         // Carrega filtros específicos para modal rápido
-        function carregarFiltrosRapidos(tipo) {
-            const container = document.getElementById('filtrosEspecificosRapidos');
-            let html = '<div class="form-section"><h3 class="form-section-title">Filtros Específicos</h3>';
+       function carregarFiltrosRapidos(tipo) {
+    const container = document.getElementById('filtrosEspecificosRapidos');
+    let html = '<div class="form-section"><h3 class="form-section-title">Filtros Específicos</h3>';
+    
+    switch(tipo) {
+        case 'associados':
+            html += `
+                <div class="form-group">
+                    <label class="form-label">Situação</label>
+                    <select class="form-control-custom form-select-custom" name="situacao">
+                        <option value="">Todos</option>
+                        <option value="Filiado">Filiado</option>
+                        <option value="Desfiliado">Desfiliado</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Buscar</label>
+                    <input type="text" class="form-control-custom" name="busca" placeholder="Nome, CPF ou RG">
+                </div>
+            `;
+            break;
             
-            switch(tipo) {
-                case 'associados':
-                    html += `
-                        <div class="form-group">
-                            <label class="form-label">Situação</label>
-                            <select class="form-control-custom form-select-custom" name="situacao">
-                                <option value="">Todos</option>
-                                <option value="Filiado">Filiado</option>
-                                <option value="Desfiliado">Desfiliado</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Buscar</label>
-                            <input type="text" class="form-control-custom" name="busca" placeholder="Nome, CPF ou RG">
-                        </div>
-                    `;
-                    break;
-                    
-                case 'financeiro':
-                    html += `
-                        <div class="form-group">
-                            <label class="form-label">Situação Financeira</label>
-                            <select class="form-control-custom form-select-custom" name="situacaoFinanceira">
-                                <option value="">Todas</option>
-                                <option value="Regular">Regular</option>
-                                <option value="Inadimplente">Inadimplente</option>
-                            </select>
-                        </div>
-                    `;
-                    break;
-                    
-                case 'militar':
-                    html += `
-                        <div class="form-group">
-                            <label class="form-label">Corporação</label>
-                            <select class="form-control-custom form-select-custom" name="corporacao">
-                                <option value="">Todas</option>
-                                <option value="PM">Polícia Militar</option>
-                                <option value="CBM">Corpo de Bombeiros</option>
-                                <option value="PC">Polícia Civil</option>
-                            </select>
-                        </div>
-                    `;
-                    break;
-                    
-                case 'servicos':
-                    html += `
-                        <div class="form-group">
-                            <label class="form-label">Status do Serviço</label>
-                            <select class="form-control-custom form-select-custom" name="ativo">
-                                <option value="">Todos</option>
-                                <option value="1">Ativo</option>
-                                <option value="0">Inativo</option>
-                            </select>
-                        </div>
-                    `;
-                    break;
-                    
-                case 'documentos':
-                    html += `
-                        <div class="form-group">
-                            <label class="form-label">Status de Verificação</label>
-                            <select class="form-control-custom form-select-custom" name="verificado">
-                                <option value="">Todos</option>
-                                <option value="1">Verificado</option>
-                                <option value="0">Não Verificado</option>
-                            </select>
-                        </div>
-                    `;
-                    break;
-            }
+        case 'aniversariantes':
+            html += `
+                <div class="form-group">
+                    <label class="form-label">Período dos Aniversários</label>
+                    <select class="form-control-custom form-select-custom" name="periodo_aniversario">
+                        <option value="hoje">Apenas hoje</option>
+                        <option value="semana">Próximos 7 dias</option>
+                        <option value="mes">Este mês</option>
+                        <option value="customizado">Período personalizado</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Corporação</label>
+                    <select class="form-control-custom form-select-custom" name="corporacao">
+                        <option value="">Todas</option>
+                        <option value="PM">Polícia Militar</option>
+                        <option value="CBM">Corpo de Bombeiros</option>
+                        <option value="PC">Polícia Civil</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Incluir idade na listagem</label>
+                    <select class="form-control-custom form-select-custom" name="incluir_idade">
+                        <option value="1">Sim</option>
+                        <option value="0">Não</option>
+                    </select>
+                </div>
+            `;
+            break;
             
-            html += '</div>';
-            container.innerHTML = html;
-        }
+        case 'financeiro':
+            html += `
+                <div class="form-group">
+                    <label class="form-label">Situação Financeira</label>
+                    <select class="form-control-custom form-select-custom" name="situacaoFinanceira">
+                        <option value="">Todas</option>
+                        <option value="Regular">Regular</option>
+                        <option value="Inadimplente">Inadimplente</option>
+                    </select>
+                </div>
+            `;
+            break;
+            
+        case 'militar':
+            html += `
+                <div class="form-group">
+                    <label class="form-label">Corporação</label>
+                    <select class="form-control-custom form-select-custom" name="corporacao">
+                        <option value="">Todas</option>
+                        <option value="PM">Polícia Militar</option>
+                        <option value="CBM">Corpo de Bombeiros</option>
+                        <option value="PC">Polícia Civil</option>
+                    </select>
+                </div>
+            `;
+            break;
+            
+        case 'servicos':
+            html += `
+                <div class="form-group">
+                    <label class="form-label">Status do Serviço</label>
+                    <select class="form-control-custom form-select-custom" name="ativo">
+                        <option value="">Todos</option>
+                        <option value="1">Ativo</option>
+                        <option value="0">Inativo</option>
+                    </select>
+                </div>
+            `;
+            break;
+            
+        case 'documentos':
+            html += `
+                <div class="form-group">
+                    <label class="form-label">Status de Verificação</label>
+                    <select class="form-control-custom form-select-custom" name="verificado">
+                        <option value="">Todos</option>
+                        <option value="1">Verificado</option>
+                        <option value="0">Não Verificado</option>
+                    </select>
+                </div>
+            `;
+            break;
+    }
+    
+    html += '</div>';
+    container.innerHTML = html;
+}
 
         // Aplica filtros rápidos
         function aplicarFiltrosRapidos(e) {
@@ -1415,82 +1493,289 @@ $headerComponent = HeaderComponent::create([
         }
 
         // Carrega filtros para relatório personalizado
-        function carregarFiltrosPersonalizados(tipo) {
-            const container = document.getElementById('filtrosPersonalizados');
-            let html = '';
-            
+        // Atualizar a função carregarFiltrosPersonalizados no relatorios.php
+function carregarFiltrosPersonalizados(tipo) {
+    const container = document.getElementById('filtrosPersonalizados');
+    let html = '';
+    
+    html += `
+        <div class="date-range-simple mb-3">
+            <input type="date" class="form-control-custom" name="data_inicio" placeholder="Data inicial">
+            <span style="color: var(--gray-500);">até</span>
+            <input type="date" class="form-control-custom" name="data_fim" placeholder="Data final">
+        </div>
+    `;
+    
+    switch(tipo) {
+        case 'associados':
             html += `
-                <div class="date-range-simple mb-3">
-                    <input type="date" class="form-control-custom" name="data_inicio" placeholder="Data inicial">
-                    <span style="color: var(--gray-500);">até</span>
-                    <input type="date" class="form-control-custom" name="data_fim" placeholder="Data final">
-                </div>
-            `;
-            
-            switch(tipo) {
-                case 'associados':
-                    html += `
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label class="form-label">Situação</label>
-                                    <select class="form-control-custom form-select-custom" name="situacao">
-                                        <option value="">Todos</option>
-                                        <option value="Filiado">Filiado</option>
-                                        <option value="Desfiliado">Desfiliado</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label class="form-label">Buscar</label>
-                                    <input type="text" class="form-control-custom" name="busca" placeholder="Nome, CPF ou RG">
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                    break;
-                    
-                case 'financeiro':
-                    html += `
+                <div class="row">
+                    <div class="col-md-6">
                         <div class="form-group">
-                            <label class="form-label">Situação Financeira</label>
-                            <select class="form-control-custom form-select-custom" name="situacaoFinanceira">
-                                <option value="">Todas</option>
-                                <option value="Regular">Regular</option>
-                                <option value="Inadimplente">Inadimplente</option>
+                            <label class="form-label">Situação</label>
+                            <select class="form-control-custom form-select-custom" name="situacao">
+                                <option value="">Todos</option>
+                                <option value="Filiado">Filiado</option>
+                                <option value="Desfiliado">Desfiliado</option>
                             </select>
                         </div>
-                    `;
-                    break;
-                    
-                case 'militar':
-                    html += `
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label class="form-label">Corporação</label>
-                                    <select class="form-control-custom form-select-custom" name="corporacao">
-                                        <option value="">Todas</option>
-                                        <option value="PM">Polícia Militar</option>
-                                        <option value="CBM">Corpo de Bombeiros</option>
-                                        <option value="PC">Polícia Civil</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label class="form-label">Patente</label>
-                                    <input type="text" class="form-control-custom" name="patente" placeholder="Ex: Coronel">
-                                </div>
-                            </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label class="form-label">Buscar</label>
+                            <input type="text" class="form-control-custom" name="busca" placeholder="Nome, CPF ou RG">
                         </div>
-                    `;
-                    break;
-            }
+                    </div>
+                </div>
+            `;
+            break;
             
-            container.innerHTML = html;
+        case 'aniversariantes':
+            html += `
+                <div class="form-group">
+                    <label class="form-label">Período dos Aniversários</label>
+                    <select class="form-control-custom form-select-custom" name="periodo_aniversario" onchange="toggleCustomDateRange(this.value)">
+                        <option value="hoje">Apenas hoje</option>
+                        <option value="semana">Próximos 7 dias</option>
+                        <option value="mes">Este mês</option>
+                        <option value="customizado">Período personalizado (usar datas acima)</option>
+                    </select>
+                    <div class="form-text">
+                        <small><strong>Dica:</strong> Para período personalizado, use as datas de início e fim acima.</small>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label class="form-label">Corporação</label>
+                            <select class="form-control-custom form-select-custom" name="corporacao">
+                                <option value="">Todas</option>
+                                <option value="PM">Polícia Militar</option>
+                                <option value="CBM">Corpo de Bombeiros</option>
+                                <option value="PC">Polícia Civil</option>
+                                <option value="PRF">Polícia Rodoviária Federal</option>
+                                <option value="PF">Polícia Federal</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label class="form-label">Sexo</label>
+                            <select class="form-control-custom form-select-custom" name="sexo">
+                                <option value="">Todos</option>
+                                <option value="M">Masculino</option>
+                                <option value="F">Feminino</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label class="form-label">Idade Mínima</label>
+                            <input type="number" class="form-control-custom" name="idade_min" min="18" max="100" placeholder="Ex: 30">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label class="form-label">Idade Máxima</label>
+                            <input type="number" class="form-control-custom" name="idade_max" min="18" max="100" placeholder="Ex: 65">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Situação</label>
+                    <select class="form-control-custom form-select-custom" name="situacao">
+                        <option value="Filiado">Apenas Filiados</option>
+                        <option value="">Todos (incluir desfiliados)</option>
+                        <option value="Desfiliado">Apenas Desfiliados</option>
+                    </select>
+                </div>
+            `;
+            break;
+            
+        case 'financeiro':
+            html += `
+                <div class="form-group">
+                    <label class="form-label">Situação Financeira</label>
+                    <select class="form-control-custom form-select-custom" name="situacaoFinanceira">
+                        <option value="">Todas</option>
+                        <option value="Regular">Regular</option>
+                        <option value="Inadimplente">Inadimplente</option>
+                    </select>
+                </div>
+            `;
+            break;
+            
+        case 'militar':
+            html += `
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label class="form-label">Corporação</label>
+                            <select class="form-control-custom form-select-custom" name="corporacao">
+                                <option value="">Todas</option>
+                                <option value="PM">Polícia Militar</option>
+                                <option value="CBM">Corpo de Bombeiros</option>
+                                <option value="PC">Polícia Civil</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label class="form-label">Patente</label>
+                            <input type="text" class="form-control-custom" name="patente" placeholder="Ex: Coronel">
+                        </div>
+                    </div>
+                </div>
+            `;
+            break;
+            
+        case 'servicos':
+            html += `
+                <div class="form-group">
+                    <label class="form-label">Status do Serviço</label>
+                    <select class="form-control-custom form-select-custom" name="ativo">
+                        <option value="">Todos</option>
+                        <option value="1">Ativo</option>
+                        <option value="0">Inativo</option>
+                    </select>
+                </div>
+            `;
+            break;
+            
+        case 'documentos':
+            html += `
+                <div class="form-group">
+                    <label class="form-label">Status de Verificação</label>
+                    <select class="form-control-custom form-select-custom" name="verificado">
+                        <option value="">Todos</option>
+                        <option value="1">Verificado</option>
+                        <option value="0">Não Verificado</option>
+                    </select>
+                </div>
+            `;
+            break;
+    }
+    
+    container.innerHTML = html;
+}
+
+function atualizarOpcoesOrdenacao(tipo) {
+    const selectOrdenacao = document.getElementById('selectOrdenacao');
+    if (!selectOrdenacao) return;
+    
+    // Opções base (sempre disponíveis)
+    let opcoes = [
+        { value: '', text: 'Padrão' },
+        { value: 'nome_asc', text: 'Nome (A-Z)' },
+        { value: 'nome_desc', text: 'Nome (Z-A)' }
+    ];
+    
+    // Opções específicas por tipo
+    switch(tipo) {
+        case 'aniversariantes':
+            opcoes = [
+                { value: '', text: 'Padrão (proximidade do aniversário)' },
+                { value: 'aniversario_asc', text: 'Data do aniversário (janeiro → dezembro)' },
+                { value: 'dias_ate_aniversario', text: 'Dias até o aniversário (mais próximos primeiro)' },
+                { value: 'idade_desc', text: 'Idade (mais velho → mais novo)' },
+                { value: 'idade_asc', text: 'Idade (mais novo → mais velho)' },
+                { value: 'nome_asc', text: 'Nome (A-Z)' },
+                { value: 'nome_desc', text: 'Nome (Z-A)' },
+                { value: 'corporacao_asc', text: 'Corporação e Patente' }
+            ];
+            break;
+            
+        case 'associados':
+            opcoes.push(
+                { value: 'id_desc', text: 'Mais recentes' },
+                { value: 'id_asc', text: 'Mais antigos' },
+                { value: 'corporacao_asc', text: 'Corporação' },
+                { value: 'patente_asc', text: 'Patente' }
+            );
+            break;
+            
+        case 'financeiro':
+            opcoes.push(
+                { value: 'situacao_financeira', text: 'Situação Financeira' },
+                { value: 'tipo_associado', text: 'Tipo de Associado' }
+            );
+            break;
+            
+        case 'militar':
+            opcoes.push(
+                { value: 'corporacao_asc', text: 'Corporação' },
+                { value: 'patente_asc', text: 'Patente' },
+                { value: 'unidade_asc', text: 'Unidade' }
+            );
+            break;
+            
+        case 'servicos':
+            opcoes.push(
+                { value: 'valor_desc', text: 'Maior valor' },
+                { value: 'valor_asc', text: 'Menor valor' },
+                { value: 'data_adesao_desc', text: 'Adesão mais recente' },
+                { value: 'data_adesao_asc', text: 'Adesão mais antiga' }
+            );
+            break;
+            
+        case 'documentos':
+            opcoes.push(
+                { value: 'data_upload_desc', text: 'Upload mais recente' },
+                { value: 'data_upload_asc', text: 'Upload mais antigo' },
+                { value: 'tipo_documento', text: 'Tipo de documento' }
+            );
+            break;
+    }
+    
+    // Limpar e recriar as opções
+    selectOrdenacao.innerHTML = '';
+    opcoes.forEach(opcao => {
+        const option = document.createElement('option');
+        option.value = opcao.value;
+        option.textContent = opcao.text;
+        selectOrdenacao.appendChild(option);
+    });
+}
+
+// Função auxiliar para mostrar/ocultar campos de data quando for período customizado
+function toggleCustomDateRange(periodo) {
+    const dateRange = document.querySelector('.date-range-simple');
+    const dateInputs = document.querySelectorAll('.date-range-simple input[type="date"]');
+    
+    if (periodo === 'customizado') {
+        if (dateRange) {
+            dateRange.style.border = '2px solid #3b82f6';
+            dateRange.style.background = '#eff6ff';
         }
+        dateInputs.forEach(input => {
+            input.required = true;
+            input.style.borderColor = '#3b82f6';
+        });
+    } else {
+        if (dateRange) {
+            dateRange.style.border = '1px solid #e5e7eb';
+            dateRange.style.background = '#f9fafb';
+        }
+        dateInputs.forEach(input => {
+            input.required = false;
+            input.style.borderColor = '#e5e7eb';
+            input.value = ''; // Limpa os valores
+        });
+    }
+}
+
+
+
+// Também atualizar a opção de aniversariantes no select do tipo de relatório personalizado
+// No modal personalizado, onde tem:
+// <option value="documentos">Documentos</option>
+// Adicionar:
+// <option value="aniversariantes">Aniversariantes</option>
 
         // Funções de seleção de campos
         function selecionarTodosCampos() {
@@ -1907,51 +2192,43 @@ $headerComponent = HeaderComponent::create([
         });
 
         // Retorna campos padrão (fallback)
-        function getCamposPadrao(tipo) {
-            const campos = {
+        // Atualizar a função getCamposPreset para incluir aniversariantes
+        function getCamposPreset(tipo, preset) {
+            const presets = {
                 'associados': {
-                    'Dados Pessoais': [
-                        { nome_campo: 'nome', nome_exibicao: 'Nome Completo' },
-                        { nome_campo: 'cpf', nome_exibicao: 'CPF' },
-                        { nome_campo: 'rg', nome_exibicao: 'RG' },
-                        { nome_campo: 'telefone', nome_exibicao: 'Telefone' },
-                        { nome_campo: 'email', nome_exibicao: 'E-mail' }
-                    ],
-                    'Informações Militares': [
-                        { nome_campo: 'corporacao', nome_exibicao: 'Corporação' },
-                        { nome_campo: 'patente', nome_exibicao: 'Patente' }
-                    ]
+                    'default': ['nome', 'cpf', 'telefone', 'email', 'situacao', 'corporacao', 'patente'],
+                    'hoje': ['nome', 'cpf', 'telefone', 'email', 'dataFiliacao'],
+                    'mes': ['nome', 'cpf', 'telefone', 'email', 'situacao', 'dataFiliacao']
+                },
+                'aniversariantes': {
+                    'default': ['nome', 'nasc', 'telefone', 'email', 'corporacao', 'patente', 'idade'],
+                    'hoje': ['nome', 'nasc', 'telefone', 'email', 'idade'],
+                    'semana': ['nome', 'nasc', 'telefone', 'email', 'corporacao', 'patente', 'idade', 'dias_ate_aniversario'],
+                    'mes': ['nome', 'nasc', 'telefone', 'email', 'corporacao', 'patente', 'idade']
                 },
                 'financeiro': {
-                    'Dados Financeiros': [
-                        { nome_campo: 'tipoAssociado', nome_exibicao: 'Tipo de Associado' },
-                        { nome_campo: 'situacaoFinanceira', nome_exibicao: 'Situação Financeira' }
-                    ]
+                    'default': ['nome', 'cpf', 'tipoAssociado', 'situacaoFinanceira', 'localDebito'],
+                    'adimplentes': ['nome', 'cpf', 'tipoAssociado', 'situacaoFinanceira'],
+                    'inadimplentes': ['nome', 'cpf', 'tipoAssociado', 'situacaoFinanceira', 'telefone', 'email']
                 },
                 'militar': {
-                    'Informações Militares': [
-                        { nome_campo: 'corporacao', nome_exibicao: 'Corporação' },
-                        { nome_campo: 'patente', nome_exibicao: 'Patente' },
-                        { nome_campo: 'unidade', nome_exibicao: 'Unidade' }
-                    ]
+                    'default': ['nome', 'cpf', 'corporacao', 'patente', 'categoria', 'unidade'],
+                    'patente': ['patente', 'nome', 'cpf', 'corporacao', 'unidade'],
+                    'corporacao': ['corporacao', 'nome', 'cpf', 'patente', 'unidade']
                 },
                 'servicos': {
-                    'Serviços': [
-                        { nome_campo: 'servico_nome', nome_exibicao: 'Nome do Serviço' },
-                        { nome_campo: 'valor_aplicado', nome_exibicao: 'Valor' },
-                        { nome_campo: 'ativo', nome_exibicao: 'Status' }
-                    ]
+                    'default': ['nome', 'cpf', 'servico_nome', 'valor_aplicado', 'data_adesao', 'ativo'],
+                    'ativos': ['nome', 'cpf', 'servico_nome', 'valor_aplicado', 'data_adesao'],
+                    'todos': ['nome', 'cpf', 'servico_nome', 'valor_aplicado', 'data_adesao', 'ativo']
                 },
                 'documentos': {
-                    'Documentos': [
-                        { nome_campo: 'tipo_documento', nome_exibicao: 'Tipo' },
-                        { nome_campo: 'data_upload', nome_exibicao: 'Data' },
-                        { nome_campo: 'verificado', nome_exibicao: 'Status' }
-                    ]
+                    'default': ['nome', 'cpf', 'tipo_documento', 'data_upload', 'verificado'],
+                    'pendentes': ['nome', 'cpf', 'tipo_documento', 'data_upload'],
+                    'verificados': ['nome', 'cpf', 'tipo_documento', 'data_upload', 'funcionario_nome']
                 }
             };
-            
-            return campos[tipo] || {};
+
+            return presets[tipo]?.[preset] || presets[tipo]?.['default'] || [];
         }
 
         // Alternância entre tabs de campos

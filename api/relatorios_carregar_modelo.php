@@ -151,6 +151,39 @@ function getCamposPadrao($tipo) {
                 ]
             ];
             break;
+
+        case 'aniversariantes':
+            $campos = [
+                'Dados Pessoais' => [
+                    ['nome_campo' => 'nome', 'nome_exibicao' => 'Nome Completo', 'tipo_dado' => 'texto'],
+                    ['nome_campo' => 'cpf', 'nome_exibicao' => 'CPF', 'tipo_dado' => 'texto'],
+                    ['nome_campo' => 'rg', 'nome_exibicao' => 'RG', 'tipo_dado' => 'texto'],
+                    ['nome_campo' => 'nasc', 'nome_exibicao' => 'Data de Nascimento', 'tipo_dado' => 'data'],
+                    ['nome_campo' => 'idade', 'nome_exibicao' => 'Idade Atual', 'tipo_dado' => 'numero'],
+                    ['nome_campo' => 'sexo', 'nome_exibicao' => 'Sexo', 'tipo_dado' => 'texto'],
+                    ['nome_campo' => 'email', 'nome_exibicao' => 'E-mail', 'tipo_dado' => 'texto'],
+                    ['nome_campo' => 'telefone', 'nome_exibicao' => 'Telefone', 'tipo_dado' => 'texto']
+                ],
+                'Informações de Aniversário' => [
+                    ['nome_campo' => 'dias_ate_aniversario', 'nome_exibicao' => 'Dias até o Aniversário', 'tipo_dado' => 'numero'],
+                    ['nome_campo' => 'proximo_aniversario', 'nome_exibicao' => 'Próximo Aniversário', 'tipo_dado' => 'data'],
+                    ['nome_campo' => 'data_nascimento_formatada', 'nome_exibicao' => 'Nascimento (dd/mm)', 'tipo_dado' => 'texto'],
+                    ['nome_campo' => 'signo', 'nome_exibicao' => 'Signo', 'tipo_dado' => 'texto']
+                ],
+                'Informações Militares' => [
+                    ['nome_campo' => 'corporacao', 'nome_exibicao' => 'Corporação', 'tipo_dado' => 'texto'],
+                    ['nome_campo' => 'patente', 'nome_exibicao' => 'Patente', 'tipo_dado' => 'texto'],
+                    ['nome_campo' => 'categoria', 'nome_exibicao' => 'Categoria', 'tipo_dado' => 'texto'],
+                    ['nome_campo' => 'unidade', 'nome_exibicao' => 'Unidade', 'tipo_dado' => 'texto']
+                ],
+                'Endereço e Contato' => [
+                    ['nome_campo' => 'cep', 'nome_exibicao' => 'CEP', 'tipo_dado' => 'texto'],
+                    ['nome_campo' => 'endereco', 'nome_exibicao' => 'Endereço', 'tipo_dado' => 'texto'],
+                    ['nome_campo' => 'bairro', 'nome_exibicao' => 'Bairro', 'tipo_dado' => 'texto'],
+                    ['nome_campo' => 'cidade', 'nome_exibicao' => 'Cidade', 'tipo_dado' => 'texto']
+                ]
+            ];
+            break;
             
         case 'financeiro':
             $campos = [
