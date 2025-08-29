@@ -26,6 +26,93 @@ if (!$auth->isLoggedIn()) {
 // Pega dados do usuário logado
 $usuarioLogado = $auth->getUser();
 
+
+/**
+ * CÓDIGO DE DEBUG - Adicione temporariamente no início do funcionarios.php
+ * Logo após: $usuarioLogado = $auth->getUser();
+ */
+
+// DEBUG: Mostrar estado atual da sessão
+error_log("=== DEBUG SIMULAÇÃO ===");
+error_log("Usuário atual: " . ($usuarioLogado['nome'] ?? 'NULL'));
+error_log("Está simulando: " . ($auth->estaSimulando() ? 'SIM' : 'NÃO'));
+error_log("É admin: " . ($auth->isAdmin() ? 'SIM' : 'NÃO'));
+
+if (isset($_SESSION['admin_original'])) {
+    error_log("Admin original salvo: " . print_r($_SESSION['admin_original'], true));
+} else {
+    error_log("Admin original: NÃO EXISTE");
+}
+
+// DEBUG: Verificar se POST está chegando
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    error_log("POST recebido: " . print_r($_POST, true));
+    
+    if (isset($_POST['action']) && $_POST['action'] === 'simular') {
+        error_log("AÇÃO SIMULAR DETECTADA");
+        $funcionario_id = $_POST['funcionario_id'] ?? 'NULL';
+        error_log("Funcionário ID: " . $funcionario_id);
+    }
+    
+    if (isset($_POST['voltar_simulacao'])) {
+        error_log("VOLTAR SIMULAÇÃO DETECTADO");
+    }
+}
+
+// Processar ação de simular funcionário
+if (isset($_POST['action']) && $_POST['action'] === 'simular' && isset($_POST['funcionario_id'])) {
+    error_log("PROCESSANDO SIMULAÇÃO...");
+    
+    if ($auth->isAdmin()) {
+        error_log("USUÁRIO É ADMIN - PROSSEGUINDO");
+        $funcionario_id = $_POST['funcionario_id'];
+        
+        error_log("Chamando assumirFuncionario($funcionario_id)");
+        $resultado = $auth->assumirFuncionario($funcionario_id);
+        
+        error_log("Resultado assumirFuncionario: " . print_r($resultado, true));
+        
+        if ($resultado['success']) {
+            error_log("SIMULAÇÃO SUCESSO - REDIRECIONANDO");
+            header('Location: ./dashboard.php?mensagem=' . urlencode('Simulando funcionário!') . '&tipo=success');
+            exit;
+        } else {
+            error_log("ERRO NA SIMULAÇÃO: " . $resultado['message']);
+            $erro_simulacao = $resultado['message'];
+        }
+    } else {
+        error_log("USUÁRIO NÃO É ADMIN");
+    }
+}
+
+// Processar volta da simulação
+if (isset($_POST['voltar_simulacao']) || isset($_GET['voltar_simulacao'])) {
+    error_log("PROCESSANDO VOLTA DA SIMULAÇÃO...");
+    
+    if ($auth->estaSimulando()) {
+        error_log("ESTÁ SIMULANDO - CHAMANDO voltarParaAdmin()");
+        $resultado = $auth->voltarParaAdmin();
+        error_log("Resultado voltarParaAdmin: " . ($resultado ? 'TRUE' : 'FALSE'));
+        
+        if ($resultado) {
+            if (isset($_POST['voltar_simulacao'])) {
+                error_log("RETORNANDO JSON PARA AJAX");
+                http_response_code(200);
+                echo json_encode(['status' => 'success']);
+                exit;
+            }
+            
+            error_log("REDIRECIONANDO APÓS VOLTA");
+            header('Location: ' . $_SERVER['PHP_SELF']);
+            exit;
+        }
+    } else {
+        error_log("NÃO ESTÁ SIMULANDO");
+    }
+}
+
+
+
 // NOVA LÓGICA: Sistema flexível de permissões
 $temPermissaoFuncionarios = true; // Todos têm acesso à página
 $motivoNegacao = '';
@@ -981,6 +1068,9 @@ $headerComponent = HeaderComponent::create([
         const podeEditar = <?php echo json_encode($podeEditar); ?>;
         const podeCriar = <?php echo json_encode($podeCriar); ?>;
         const usuarioLogadoId = <?php echo json_encode($usuarioLogado['id']); ?>;
+        const isAdmin = <?php echo json_encode($auth->isAdmin()); ?>;
+        const userDepartamento = <?php echo json_encode($usuarioLogado["departamento_id"]); ?>;
+        const estaSimulando = <?php echo json_encode($auth->estaSimulando()); ?>;
         
         console.log('=== CONFIG FUNCIONÁRIOS ===');
         console.log('Escopo:', escopoVisualizacao);
@@ -1607,42 +1697,52 @@ $headerComponent = HeaderComponent::create([
                     rowHtml += `<td>${funcionario.departamento_nome || '-'}</td>`;
                 }
                 
-                rowHtml += `
-                    <td>${cargoBadge}</td>
-                    <td>${badgesHtml}</td>
-                    <td>${statusBadge}</td>
-                    <td>${formatarData(funcionario.criado_em)}</td>
-                    <td>
-                        <div class="action-buttons-table">
-                            <button class="btn-icon view" onclick="visualizarFuncionario(${funcionario.id})" title="Visualizar">
-                                <i class="fas fa-eye"></i>
-                            </button>
-                `;
-                
-                if (podeEditarEste) {
-                    rowHtml += `
-                            <button class="btn-icon edit" onclick="editarFuncionario(${funcionario.id})" title="Editar">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <button class="btn-icon delete" onclick="desativarFuncionario(${funcionario.id})" title="Desativar">
-                                <i class="fas fa-ban"></i>
-                            </button>
-                    `;
-                } else {
-                    rowHtml += `
-                            <button class="btn-icon edit action-disabled" disabled title="Sem permissão">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <button class="btn-icon delete action-disabled" disabled title="Sem permissão">
-                                <i class="fas fa-ban"></i>
-                            </button>
-                    `;
-                }
-                
-                rowHtml += `
-                        </div>
-                    </td>
-                `;
+rowHtml += `
+            <td>${cargoBadge}</td>
+            <td>${badgesHtml}</td>
+            <td>${statusBadge}</td>
+            <td>${formatarData(funcionario.criado_em)}</td>
+            <td>
+                <div class="action-buttons-table">
+                    <button class="btn-icon view" onclick="visualizarFuncionario(${funcionario.id})" title="Visualizar">
+                        <i class="fas fa-eye"></i>
+                    </button>
+        `;
+        
+        // Botão de simular (apenas para admins e não para si mesmo)
+        if (isAdmin && funcionario.id != usuarioLogadoId || userDepartamento == 15 || userDepartamento == 1) {
+            rowHtml += `
+                    <button class="btn-icon simulate" onclick="simularFuncionario(${funcionario.id}, '${funcionario.nome.replace(/'/g, "\\'")}', '${funcionario.cargo}', '${funcionario.departamento_nome}')" title="Simular este funcionário">
+                        <i class="fas fa-user-secret"></i>
+                    </button>
+            `;
+        }
+        
+        // Botões de editar e desativar
+        if (podeEditarEste) {
+            rowHtml += `
+                    <button class="btn-icon edit" onclick="editarFuncionario(${funcionario.id})" title="Editar">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn-icon delete" onclick="desativarFuncionario(${funcionario.id})" title="Desativar">
+                        <i class="fas fa-ban"></i>
+                    </button>
+            `;
+        } else {
+            rowHtml += `
+                    <button class="btn-icon edit action-disabled" disabled title="Sem permissão">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn-icon delete action-disabled" disabled title="Sem permissão">
+                        <i class="fas fa-ban"></i>
+                    </button>
+            `;
+        }
+        
+        rowHtml += `
+                </div>
+            </td>
+        `;
                 
                 row.innerHTML = rowHtml;
                 tbody.appendChild(row);
@@ -2102,6 +2202,27 @@ $headerComponent = HeaderComponent::create([
             if (modal) modal.classList.remove('show');
             if (form) form.reset();
         }
+
+        // ADICIONAR NO FINAL DOS SCRIPTS:
+
+// Simular funcionário
+function simularFuncionario(id, nome, cargo) {
+    const confirmMsg = `🎭 SIMULAR: ${nome} (${cargo})\n\nVocê assumirá as permissões deste funcionário. Continuar?`;
+    
+    if (confirm(confirmMsg)) {
+        showLoading();
+        
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '';
+        form.innerHTML = `
+            <input type="hidden" name="action" value="simular">
+            <input type="hidden" name="funcionario_id" value="${id}">
+        `;
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
 
         // Fecha modal ao clicar fora
         window.addEventListener('click', function(event) {
