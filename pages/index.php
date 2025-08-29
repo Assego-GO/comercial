@@ -575,25 +575,25 @@ if (!empty($_POST['email'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ASSEGO </title>
+    
     
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700&display=swap" rel="stylesheet">
     
     <!-- Cloudflare Turnstile -->
     <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
     
     <style>
-        /* Reset */
+        /* Reset minimalista */
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
 
-        /* Honeypot styles - campos completamente ocultos */
+        /* Honeypot - campos ocultos */
         .honeypot {
             position: absolute !important;
             left: -9999px !important;
@@ -602,17 +602,12 @@ if (!empty($_POST['email'])) {
             opacity: 0 !important;
             width: 0 !important;
             height: 0 !important;
-            padding: 0 !important;
-            margin: 0 !important;
-            border: none !important;
-            font-size: 0 !important;
-            tab-index: -1;
-            z-index: -1;
         }
 
         html, body {
             height: 100%;
-            font-family: 'Inter', system-ui, sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            font-weight: 400;
         }
 
         body {
@@ -622,6 +617,7 @@ if (!empty($_POST['email'])) {
             justify-content: center;
             min-height: 100vh;
             padding: 1rem;
+            color: #334155;
             position: relative;
             overflow: hidden;
         }
@@ -638,7 +634,7 @@ if (!empty($_POST['email'])) {
             background-repeat: no-repeat;
             opacity: 0;
             filter: blur(1px);
-            transition: opacity 4.6s ease-in-out;
+            transition: opacity 4s ease-in-out;
             animation: slowFloat 20s ease-in-out infinite alternate;
         }
 
@@ -684,18 +680,8 @@ if (!empty($_POST['email'])) {
 
         .loading-content {
             text-align: center;
-            animation: loadingPulse 1.5s ease-in-out infinite;
             max-width: 500px;
             padding: 0 1.5rem;
-        }
-
-        @keyframes loadingPulse {
-            0%, 100% { transform: scale(1); opacity: 1; }
-            50% { transform: scale(1.05); opacity: 0.8; }
-        }
-
-        .loading-logo {
-            margin-bottom: 2rem;
         }
 
         .loading-logo img {
@@ -704,6 +690,7 @@ if (!empty($_POST['email'])) {
             object-fit: contain;
             border-radius: 50%;
             box-shadow: 0 0 30px rgba(255, 255, 255, 0.3);
+            margin-bottom: 1.5rem;
         }
 
         .loading-title {
@@ -721,14 +708,14 @@ if (!empty($_POST['email'])) {
             border-top-color: white;
             border-radius: 50%;
             animation: spin 1s linear infinite;
-            margin: 0 auto;
+            margin: 1.5rem auto;
         }
 
         .loading-text {
             color: rgba(255, 255, 255, 0.9);
             font-size: 0.875rem;
-            margin-top: 1rem;
             font-weight: 500;
+            margin-bottom: 1rem;
         }
 
         .loading-quote {
@@ -749,15 +736,12 @@ if (!empty($_POST['email'])) {
         /* Container principal */
         .login-container {
             background: white;
-            border-radius: 24px;
+            border-radius: 20px;
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
             width: 100%;
             max-width: 400px;
             overflow: hidden;
             animation: fadeInUp 0.6s ease-out;
-            opacity: 0;
-            animation-delay: 0.3s;
-            animation-fill-mode: forwards;
         }
 
         @keyframes fadeInUp {
@@ -775,46 +759,46 @@ if (!empty($_POST['email'])) {
             to { transform: rotate(360deg); }
         }
 
-        /* Header com logo */
+        /* Header minimalista e limpo */
         .login-header {
             background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
-            padding: 2.5rem 2rem 2rem;
+            padding: 1.5rem 2rem;
             text-align: center;
             position: relative;
-        }
-
-        .logo-container {
-            margin-bottom: 1rem;
-        }
-
-        .logo-wrapper {
-            display: inline-flex;
+            display: flex;
             align-items: center;
             justify-content: center;
-            margin-bottom: 1rem;
+            gap: 0.875rem;
         }
 
-        .logo-wrapper img {
-            width: 80px;
-            height: 80px;
+        .header-logo {
+            width: 44px;
+            height: 44px;
+            border-radius: 8px;
             object-fit: contain;
-            border-radius: 50%;
             background: rgba(255, 255, 255, 0.1);
-            padding: 10px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            padding: 6px;
+            flex-shrink: 0;
+        }
+
+        .header-content {
+            text-align: left;
         }
 
         .system-title {
-            font-size: 1.25rem;
-            font-weight: 600;
+            font-size: 1.375rem;
+            font-weight: 700;
             color: white;
-            margin-bottom: 0.25rem;
+            margin: 0;
+            letter-spacing: -0.025em;
+            line-height: 1.1;
         }
 
         .system-subtitle {
-            font-size: 0.875rem;
-            color: rgba(255, 255, 255, 0.8);
+            font-size: 0.8125rem;
+            color: rgba(255, 255, 255, 0.75);
             font-weight: 400;
+            margin-top: 0.125rem;
         }
 
         /* Corpo do formulário */
@@ -822,81 +806,68 @@ if (!empty($_POST['email'])) {
             padding: 2rem;
         }
 
-        /* Alertas */
+        /* Alertas minimalistas */
         .alert {
-            padding: 1rem;
-            border-radius: 12px;
+            padding: 0.875rem 1rem;
+            border-radius: 8px;
             margin-bottom: 1.5rem;
             font-size: 0.875rem;
-            font-weight: 500;
+            font-weight: 400;
             display: flex;
             align-items: flex-start;
-            gap: 0.75rem;
-            animation: slideDown 0.3s ease-out;
-        }
-
-        @keyframes slideDown {
-            from {
-                opacity: 0;
-                transform: translateY(-10px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            gap: 0.5rem;
+            border: 1px solid;
         }
 
         .alert-success {
-            background: #dcfce7;
+            background: #f0fdf4;
             color: #166534;
-            border: 1px solid #bbf7d0;
+            border-color: #bbf7d0;
         }
 
         .alert-error {
-            background: #fee2e2;
+            background: #fef2f2;
             color: #dc2626;
-            border: 1px solid #fecaca;
+            border-color: #fecaca;
         }
 
         .alert-warning {
-            background: #fef3c7;
+            background: #fffbeb;
             color: #d97706;
-            border: 1px solid #fed7aa;
+            border-color: #fed7aa;
         }
 
         .alert svg {
-            width: 18px;
-            height: 18px;
+            width: 16px;
+            height: 16px;
             flex-shrink: 0;
             margin-top: 1px;
         }
 
-        /* Formulário */
+        /* Formulário limpo */
         .form-group {
-            margin-bottom: 1.5rem;
+            margin-bottom: 1.25rem;
         }
 
         .form-input {
             width: 100%;
-            padding: 1rem 1rem 1rem 3rem;
-            background: #f9fafb;
-            border: 2px solid #e5e7eb;
-            border-radius: 12px;
-            font-size: 1rem;
-            color: #1f2937;
-            transition: all 0.3s ease;
-            position: relative;
+            padding: 0.875rem 1rem;
+            background: #ffffff;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 0.9375rem;
+            color: #374151;
+            transition: all 0.15s ease;
         }
 
         .form-input:focus {
             outline: none;
             border-color: #3b82f6;
-            background: white;
             box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
         }
 
         .form-input::placeholder {
-            color: #6b7280;
+            color: #9ca3af;
             font-weight: 400;
         }
 
@@ -904,54 +875,36 @@ if (!empty($_POST['email'])) {
             position: relative;
         }
 
-        .input-icon {
-            position: absolute;
-            left: 1rem;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 18px;
-            height: 18px;
-            color: #6b7280;
-            pointer-events: none;
-            transition: color 0.3s;
-            z-index: 2;
-        }
-
-        .form-input:focus + .input-icon {
-            color: #3b82f6;
-        }
-
-        /* Toggle de senha */
+        /* Toggle de senha minimalista */
         .password-toggle {
             position: absolute;
-            right: 1rem;
+            right: 0.75rem;
             top: 50%;
             transform: translateY(-50%);
             background: none;
             border: none;
-            color: #6b7280;
+            color: #9ca3af;
             cursor: pointer;
             padding: 0.25rem;
-            transition: color 0.3s;
-            z-index: 2;
+            transition: color 0.15s;
         }
 
         .password-toggle:hover {
-            color: #3b82f6;
+            color: #6b7280;
         }
 
         /* Turnstile */
         .turnstile-container {
             background: #f9fafb;
-            border: 2px solid #e5e7eb;
-            border-radius: 12px;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
             padding: 1rem;
             display: flex;
             justify-content: center;
-            margin-bottom: 1rem;
+            margin-bottom: 1.25rem;
         }
 
-        /* Checkbox e link */
+        /* Opções do formulário */
         .form-options {
             display: flex;
             align-items: center;
@@ -968,59 +921,54 @@ if (!empty($_POST['email'])) {
         }
 
         .checkbox-input {
-            width: 18px;
-            height: 18px;
+            width: 16px;
+            height: 16px;
             accent-color: #3b82f6;
-            cursor: pointer;
         }
 
         .checkbox-label {
             font-size: 0.875rem;
-            color: #1f2937;
+            color: #374151;
+            font-weight: 400;
             cursor: pointer;
-            font-weight: 500;
-            user-select: none;
         }
 
         .forgot-link {
             font-size: 0.875rem;
             color: #3b82f6;
             text-decoration: none;
-            font-weight: 500;
-            transition: color 0.3s;
+            font-weight: 400;
+            transition: color 0.15s;
         }
 
         .forgot-link:hover {
-            color: #1e40af;
-            text-decoration: underline;
+            color: #2563eb;
         }
 
-        /* Botão de submit */
+        /* Botão minimalista */
         .submit-btn {
             width: 100%;
-            padding: 1rem;
+            padding: 0.875rem;
             background: #3b82f6;
             border: none;
-            border-radius: 12px;
+            border-radius: 8px;
             color: white;
-            font-size: 1rem;
-            font-weight: 700;
+            font-size: 0.9375rem;
+            font-weight: 500;
             cursor: pointer;
-            transition: all 0.3s ease;
-            text-transform: uppercase;
-            letter-spacing: 0.025em;
+            transition: all 0.15s ease;
             position: relative;
-            overflow: hidden;
         }
 
-        .submit-btn:not(:disabled):hover {
-            background: #1e40af;
+        .submit-btn:hover:not(:disabled) {
+            background: #2563eb;
             transform: translateY(-1px);
-            box-shadow: 0 10px 25px rgba(59, 130, 246, 0.3);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
         }
 
         .submit-btn:disabled {
-            opacity: 0.5;
+            background: #e5e7eb;
+            color: #9ca3af;
             cursor: not-allowed;
             transform: none;
             box-shadow: none;
@@ -1029,43 +977,45 @@ if (!empty($_POST['email'])) {
         .submit-btn.loading::after {
             content: '';
             position: absolute;
-            width: 20px;
-            height: 20px;
+            width: 16px;
+            height: 16px;
             top: 50%;
             left: 50%;
-            margin: -10px 0 0 -10px;
+            margin: -8px 0 0 -8px;
             border: 2px solid rgba(255, 255, 255, 0.3);
             border-top-color: white;
             border-radius: 50%;
             animation: spin 0.8s linear infinite;
         }
 
-        /* Footer */
+        /* Footer minimalista */
         .login-footer {
-            padding: 1.5rem 2rem 2rem;
+            padding: 1.5rem 2rem;
             text-align: center;
-            border-top: 1px solid #e5e7eb;
+            border-top: 1px solid #f1f5f9;
             background: #fafafa;
         }
 
         .copyright {
             font-size: 0.75rem;
-            color: #6b7280;
-            margin-bottom: 0.5rem;
+            color: #64748b;
+            margin-bottom: 0.25rem;
+            font-weight: 400;
         }
 
         .protection {
             font-size: 0.6875rem;
-            color: #6b7280;
+            color: #94a3b8;
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 0.25rem;
+            font-weight: 400;
         }
 
         .protection svg {
-            width: 12px;
-            height: 12px;
+            width: 11px;
+            height: 11px;
         }
 
         /* Loading overlay */
@@ -1073,6 +1023,7 @@ if (!empty($_POST['email'])) {
             position: fixed;
             inset: 0;
             background: rgba(30, 58, 138, 0.95);
+            backdrop-filter: blur(4px);
             display: none;
             align-items: center;
             justify-content: center;
@@ -1095,28 +1046,29 @@ if (!empty($_POST['email'])) {
         /* Responsividade */
         @media (max-width: 480px) {
             body {
-                padding: 0;
+                padding: 1rem;
             }
 
             .login-container {
-                border-radius: 0;
-                min-height: 100vh;
-                display: flex;
-                flex-direction: column;
-                justify-content: center;
+                border-radius: 12px;
             }
 
             .login-header {
-                padding: 2rem 1.5rem;
+                padding: 1.25rem 1.5rem;
+                gap: 0.75rem;
             }
 
-            .logo-wrapper img {
-                width: 60px;
-                height: 60px;
+            .header-logo {
+                width: 40px;
+                height: 40px;
             }
 
             .system-title {
-                font-size: 1.125rem;
+                font-size: 1.25rem;
+            }
+
+            .system-subtitle {
+                font-size: 0.75rem;
             }
 
             .login-body {
@@ -1125,8 +1077,7 @@ if (!empty($_POST['email'])) {
 
             .form-input {
                 font-size: 16px; /* Previne zoom no iOS */
-                padding: 1rem;
-                padding-left: 3rem;
+                padding: 0.875rem;
             }
 
             .form-options {
@@ -1136,36 +1087,11 @@ if (!empty($_POST['email'])) {
             }
 
             .submit-btn {
-                padding: 1.125rem;
-                font-size: 1rem;
+                padding: 1rem;
             }
 
             .login-footer {
-                padding: 1.5rem;
-            }
-
-            /* Loading mobile */
-            .loading-logo img {
-                width: 60px;
-                height: 60px;
-            }
-
-            .loading-title {
-                font-size: 1.75rem;
-            }
-
-            .loading-spinner {
-                width: 35px;
-                height: 35px;
-            }
-
-            .loading-quote {
-                margin-top: 1.5rem;
-                padding: 0.875rem;
-            }
-
-            .loading-quote-text {
-                font-size: 0.75rem;
+                padding: 1.25rem 1.5rem;
             }
         }
     </style>
@@ -1175,35 +1101,31 @@ if (!empty($_POST['email'])) {
     <div class="initial-loading" id="initialLoading">
         <div class="loading-content">
             <div class="loading-logo">
-                <img src="./img/logo-assego.jpeg" alt="ASSEGO Logo">
+                <img src="./img/logo-assego.jpeg" alt="ASSEGO">
             </div>
             <h1 class="loading-title">ASSEGO</h1>
             <div class="loading-spinner"></div>
-            <p class="loading-text">Preparando o sistema...</p>
+            <p class="loading-text">Carregando sistema...</p>
             
-            <!-- Frase Motivacional no Loading -->
             <div class="loading-quote">
                 <p class="loading-quote-text"><?= htmlspecialchars($fraseAleatoria) ?></p>
             </div>
         </div>
     </div>
 
-    <!-- Sistema de Background com Imagens Sutis -->
+    <!-- Background sutil -->
     <div class="bg-image active" id="bg1" style="background-image: url('./img/fundo-1.jpeg')"></div>
     <div class="bg-image inactive" id="bg2" style="background-image: url('./img/fundo-2.jpeg')"></div>
 
     <!-- Container Principal -->
     <div class="login-container">
-        <!-- Header -->
+        <!-- Header minimalista e limpo -->
         <div class="login-header">
-            <div class="logo-container">
-                <div class="logo-wrapper">
-                    <img src="./img/logo-assego.jpeg" alt="ASSEGO Logo">
-                </div>
+            <img src="./img/logo-assego.jpeg" alt="ASSEGO" class="header-logo">
+            <div class="header-content">
+                <h1 class="system-title">ASSEGO</h1>
+                <p class="system-subtitle">Sistema de Gestão</p>
             </div>
-            
-            <h1 class="system-title"></h1>
-            <p class="system-subtitle">ASSEGO</p>
         </div>
         
         <!-- Corpo do formulário -->
@@ -1251,73 +1173,43 @@ if (!empty($_POST['email'])) {
             <?php endif; ?>
             
             <form method="POST" action="" id="loginForm">
-                <!-- Campos Honeypot (Ocultos) -->
+                <!-- Campos Honeypot -->
                 <div class="honeypot">
-                    <label for="username">Nome de usuário (não preencha)</label>
-                    <input type="text" id="username" name="username" tabindex="-1" autocomplete="off">
+                    <input type="text" name="username" tabindex="-1" autocomplete="off">
+                    <input type="tel" name="phone" tabindex="-1" autocomplete="off">
+                    <input type="url" name="website" tabindex="-1" autocomplete="off">
+                    <input type="text" name="company" tabindex="-1" autocomplete="off">
+                    <input type="text" name="address" tabindex="-1" autocomplete="off">
                 </div>
                 
-                <div class="honeypot">
-                    <label for="phone">Telefone (não preencha)</label>
-                    <input type="tel" id="phone" name="phone" tabindex="-1" autocomplete="off">
-                </div>
-                
-                <div class="honeypot">
-                    <label for="website">Website (não preencha)</label>
-                    <input type="url" id="website" name="website" tabindex="-1" autocomplete="off">
-                </div>
-                
-                <div class="honeypot">
-                    <label for="company">Empresa (não preencha)</label>
-                    <input type="text" id="company" name="company" tabindex="-1" autocomplete="off">
-                </div>
-                
-                <div class="honeypot">
-                    <label for="address">Endereço (não preencha)</label>
-                    <input type="text" id="address" name="address" tabindex="-1" autocomplete="off">
-                </div>
-                
-                <!-- Campo de tempo oculto -->
                 <input type="hidden" name="form_time" value="<?php echo time(); ?>">
-                
-                <!-- Campo para verificar se JavaScript está habilitado -->
                 <input type="hidden" name="js_enabled" id="js_enabled" value="0">
-                
-                <!-- Token de segurança -->
                 <input type="hidden" name="honeypot_token" value="<?php echo $_SESSION['honeypot_token']; ?>">
                 
-                <!-- Email Field -->
+                <!-- Email -->
                 <div class="form-group">
                     <div class="input-wrapper">
                         <input type="email" 
                             class="form-input"
-                            id="email" 
                             name="email" 
-                            placeholder="Seu Email"
+                            placeholder="Email"
                             value="<?php echo htmlspecialchars($_POST['email'] ?? ''); ?>"
                             required 
                             autofocus>
-                        <svg class="input-icon" fill="currentColor" viewBox="0 0 20 20">
-                            <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"/>
-                            <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"/>
-                        </svg>
                     </div>
                 </div>
                 
-                <!-- Password Field -->
+                <!-- Senha -->
                 <div class="form-group">
                     <div class="input-wrapper">
                         <input type="password" 
                             class="form-input"
                             id="senha" 
                             name="senha" 
-                            placeholder="Sua Senha"
+                            placeholder="Senha"
                             required>
-                        <svg class="input-icon" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"/>
-                        </svg>
                         <button type="button" class="password-toggle" onclick="togglePassword()">
-                            <svg fill="currentColor" viewBox="0 0 20 20" style="width: 18px; height: 18px;">
+                            <svg width="16" height="16" fill="currentColor" viewBox="0 0 20 20">
                                 <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/>
                                 <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"/>
                             </svg>
@@ -1325,7 +1217,7 @@ if (!empty($_POST['email'])) {
                     </div>
                 </div>
                 
-                <!-- Cloudflare Turnstile -->
+                <!-- Turnstile -->
                 <div class="form-group">
                     <div class="turnstile-container">
                         <div class="cf-turnstile" 
@@ -1339,25 +1231,20 @@ if (!empty($_POST['email'])) {
                     </div>
                 </div>
                 
-                <!-- Checkbox e forgot password -->
+                <!-- Opções -->
                 <div class="form-options">
                     <div class="checkbox-wrapper">
-                        <input type="checkbox" 
-                            id="lembrar" 
-                            name="lembrar"
-                            class="checkbox-input">
-                        <label for="lembrar" class="checkbox-label">
-                            Lembrar meu acesso
-                        </label>
+                        <input type="checkbox" id="lembrar" name="lembrar" class="checkbox-input">
+                        <label for="lembrar" class="checkbox-label">Lembrar acesso</label>
                     </div>
                     <a href="<?php echo BASE_URL ?? ''; ?>/pages/recuperar-senha.php" class="forgot-link">
-                        Esqueceu sua senha?
+                        Esqueceu a senha?
                     </a>
                 </div>
                 
-                <!-- Submit Button -->
+                <!-- Botão -->
                 <button type="submit" id="submitBtn" class="submit-btn" disabled>
-                    ACESSAR SISTEMA
+                    Entrar
                 </button>
             </form>
         </div>
@@ -1365,16 +1252,13 @@ if (!empty($_POST['email'])) {
         <!-- Footer -->
         <div class="login-footer">
             <p class="copyright">
-                &copy; <?php echo date('Y'); ?> <?php echo SISTEMA_EMPRESA ?? 'ASSEGO'; ?>. Todos os direitos reservados.
-            </p>
-            <p class="copyright">
-                Versão <?php echo SISTEMA_VERSAO ?? '1.0.0'; ?>
+                &copy; <?php echo date('Y'); ?> ASSEGO. Todos os direitos reservados.
             </p>
             <div class="protection">
                 <svg fill="currentColor" viewBox="0 0 20 20">
                     <path fill-rule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
                 </svg>
-               
+                <span>Sistema protegido</span>
             </div>
         </div>
     </div>
@@ -1387,31 +1271,51 @@ if (!empty($_POST['email'])) {
     <script>
         let turnstileVerified = false;
         
-        // Loading inicial de 5 segundos
+        // Função para alternar as imagens de fundo
+        function alternateBackgrounds() {
+            const bg1 = document.getElementById('bg1');
+            const bg2 = document.getElementById('bg2');
+            
+            if (bg1.classList.contains('active')) {
+                bg1.classList.remove('active');
+                bg1.classList.add('inactive');
+                bg2.classList.remove('inactive');
+                bg2.classList.add('active');
+            } else {
+                bg2.classList.remove('active');
+                bg2.classList.add('inactive');
+                bg1.classList.remove('inactive');
+                bg1.classList.add('active');
+            }
+        }
+
+        // Loading e alternância de imagens
         window.addEventListener('load', () => {
             setTimeout(() => {
                 document.getElementById('initialLoading').classList.add('fade-out');
-            }, 5000);
+                setTimeout(() => {
+                    alternateBackgrounds();
+                    setInterval(alternateBackgrounds, 6000);
+                }, 1000);
+            }, 3000);
         });
         
-        // Marcar que JavaScript está habilitado
+        // JavaScript habilitado
         document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('js_enabled').value = '1';
         });
         
-        // Callback para sucesso do Turnstile
+        // Callbacks do Turnstile
         function onTurnstileSuccess(token) {
             turnstileVerified = true;
             document.getElementById('submitBtn').disabled = false;
         }
         
-        // Callback para erro do Turnstile
         function onTurnstileError(error) {
             turnstileVerified = false;
             document.getElementById('submitBtn').disabled = true;
         }
         
-        // Callback para expiração do Turnstile
         function onTurnstileExpired() {
             turnstileVerified = false;
             document.getElementById('submitBtn').disabled = true;
@@ -1425,73 +1329,34 @@ if (!empty($_POST['email'])) {
                 return false;
             }
             
-            // Mostrar loading overlay
             document.getElementById('loadingOverlay').classList.add('active');
             document.getElementById('submitBtn').classList.add('loading');
         });
         
-        // Função para alternar visibilidade da senha
+        // Toggle da senha
         function togglePassword() {
-            const passwordInput = document.getElementById('senha');
-            const toggleBtn = passwordInput.nextElementSibling;
-            const icon = toggleBtn.querySelector('svg');
+            const input = document.getElementById('senha');
+            const icon = document.querySelector('.password-toggle svg');
             
-            if (passwordInput.type === 'password') {
-                passwordInput.type = 'text';
+            if (input.type === 'password') {
+                input.type = 'text';
                 icon.innerHTML = '<path d="M17.94 17.94A10.07 10.07 0 01.66 10C2.36 6.91 6 4.5 10 4.5c1.2 0 2.37.18 3.5.5M9.9 4.24A9.12 9.12 0 01.66 10a14.5 14.5 0 006.58 6.58"/><path d="M6.61 6.61A13.526 13.526 0 00.41 10a13.526 13.526 0 0019.18 0A13.526 13.526 0 0013.39 13.39M9.9 4.24A9.12 9.12 0 0119.34 10"/><path d="m15 9l-6 6m0-6l6 6"/>';
             } else {
-                passwordInput.type = 'password';
+                input.type = 'password';
                 icon.innerHTML = '<path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/><path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"/>';
             }
         }
         
-        // Auto-hide messages after 5 seconds
+        // Auto-hide de alertas
         setTimeout(function() {
             const alerts = document.querySelectorAll('.alert');
             alerts.forEach(function(alert) {
                 if (!alert.classList.contains('alert-error')) {
-                    alert.style.transition = 'opacity 0.5s ease-out';
                     alert.style.opacity = '0';
-                    setTimeout(function() {
-                        alert.style.display = 'none';
-                    }, 500);
+                    setTimeout(() => alert.remove(), 300);
                 }
             });
         }, 5000);
-
-        // Adicione esta função após suas outras funções JavaScript
-
-// Função para alternar as imagens de fundo
-function alternateBackgrounds() {
-    const bg1 = document.getElementById('bg1');
-    const bg2 = document.getElementById('bg2');
-    
-    if (bg1.classList.contains('active')) {
-        bg1.classList.remove('active');
-        bg1.classList.add('inactive');
-        bg2.classList.remove('inactive');
-        bg2.classList.add('active');
-    } else {
-        bg2.classList.remove('active');
-        bg2.classList.add('inactive');
-        bg1.classList.remove('inactive');
-        bg1.classList.add('active');
-    }
-}
-
-// Adicione isto no final do seu DOMContentLoaded ou window load
-window.addEventListener('load', () => {
-    setTimeout(() => {
-        document.getElementById('initialLoading').classList.add('fade-out');
-        
-        // Iniciar alternância das imagens após o loading
-        setTimeout(() => {
-            alternateBackgrounds(); // Primeira troca
-            setInterval(alternateBackgrounds, 4600); // Continuar a cada 3.6s
-        }, 1000); // Aguardar 1s após o loading sumir
-        
-    }, 5000);
-});
     </script>
 </body>
 </html>
