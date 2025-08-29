@@ -2,21 +2,31 @@
 /**
  * Componente Header Premium do Sistema ASSEGO
  * components/Header.php
- * VERSÃO ATUALIZADA COM SISTEMA DE NOTIFICAÇÕES INTEGRADO
+ * VERSÃO ATUALIZADA COM SISTEMA DE NOTIFICAÇÕES E PERMISSÕES INTEGRADO
  * Versão com cores oficiais ASSEGO: Azul Royal (#003C8F) e Dourado (#FFB800)
- * Detecção automática de página ativa + Alerta de senha padrão + Sistema de Notificações
+ * Detecção automática de página ativa + Alerta de senha padrão + Sistema de Notificações + Permissões
  */
+
+// Inclui as classes de permissões
+// Ajusta o caminho baseado na estrutura: /comercial/pages/components/header.php -> /comercial/classes/
+$basePath = dirname(dirname(__DIR__)); // Volta 2 níveis: components -> pages -> comercial
+require_once $basePath . '/classes/Permissoes.php';
+require_once $basePath . '/classes/PermissoesManager.php';
 
 class HeaderComponent {
     private $usuario;
     private $isDiretor;
     private $activePage;
     private $notificationCount;
+    private $permManager;
 
     public function __construct($config = []) {
         $this->usuario = $config['usuario'] ?? ['nome' => 'Usuário', 'cargo' => 'Funcionário'];
         $this->isDiretor = $config['isDiretor'] ?? false;
         $this->notificationCount = $config['notificationCount'] ?? 0;
+        
+        // Inicializa o gerenciador de permissões
+        $this->permManager = PermissoesManager::getInstance();
         
         // Detecta automaticamente a página ativa se não foi especificada
         if (isset($config['activePage'])) {
@@ -1677,26 +1687,32 @@ class HeaderComponent {
 
     /**
      * Gera os itens de navegação baseado em permissões
+     * MÉTODO MODIFICADO PARA USAR O SISTEMA DE PERMISSÕES
      */
     private function getNavigationItems() {
         $items = [];
         
-        // Verifica permissões
-        $ehDaPresidencia = isset($this->usuario['departamento_id']) && $this->usuario['departamento_id'] == 1;
-        $ehDoFinanceiro = isset($this->usuario['departamento_id']) && $this->usuario['departamento_id'] == 2;
-        $ehDoRH = isset($this->usuario['departamento_id']) && $this->usuario['departamento_id'] == 9;
-        $ehDoComercial = isset($this->usuario['departamento_id']) && $this->usuario['departamento_id'] == 10;
+        // Pega as informações do usuário da sessão
+        $funcionario_id = $_SESSION['funcionario_id'] ?? null;
+        $departamento_id = $_SESSION['departamento_id'] ?? null;
+        $cargo = $_SESSION['funcionario_cargo'] ?? null;
+        
+        // ========================================
+        // ASSOCIADOS (Dashboard) - Todos têm acesso
+        // ========================================
+        if (Permissoes::tem('associados.visualizar')) {
+            $items[] = [
+                'id' => 'associados',
+                'label' => 'Associados',
+                'icon' => 'fas fa-users',
+                'href' => 'dashboard.php'
+            ];
+        }
 
-        // Associados - todos podem ver
-        $items[] = [
-            'id' => 'associados',
-            'label' => 'Associados',
-            'icon' => 'fas fa-users',
-            'href' => 'dashboard.php'
-        ];
-
-        // Funcionários
-        if ($this->isDiretor || $ehDaPresidencia || $ehDoRH || $ehDoComercial) {
+        // ========================================
+        // FUNCIONÁRIOS (RH) - Apenas RH, Presidência ou Diretor do RH
+        // ========================================
+        if (Permissoes::podeVerRH()) {
             $items[] = [
                 'id' => 'funcionarios',
                 'label' => 'Funcionários',
@@ -1705,8 +1721,10 @@ class HeaderComponent {
             ];
         }
 
-        // Comercial
-        if ($ehDaPresidencia || $ehDoComercial) {
+        // ========================================
+        // COMERCIAL - Apenas Comercial, Presidência ou Diretor do Comercial
+        // ========================================
+        if (Permissoes::podeVerComercial()) {
             $items[] = [
                 'id' => 'comercial',
                 'label' => 'Comercial',
@@ -1715,8 +1733,10 @@ class HeaderComponent {
             ];
         }
 
-        // Financeiro
-        if ($ehDaPresidencia || $ehDoFinanceiro) {
+        // ========================================
+        // FINANCEIRO - Apenas Financeiro, Presidência ou Diretor do Financeiro
+        // ========================================
+        if (Permissoes::podeVerFinanceiro()) {
             $items[] = [
                 'id' => 'financeiro',
                 'label' => 'Financeiro',
@@ -1725,8 +1745,10 @@ class HeaderComponent {
             ];
         }
 
-        // Auditoria
-        if ($this->isDiretor || $ehDaPresidencia) {
+        // ========================================
+        // AUDITORIA - Presidência e todos os Diretores
+        // ========================================
+        if (Permissoes::tem('sistema.auditoria')) {
             $items[] = [
                 'id' => 'auditoria',
                 'label' => 'Auditoria',
@@ -1735,8 +1757,10 @@ class HeaderComponent {
             ];
         }
 
-        // Presidência
-        if ($ehDaPresidencia) {
+        // ========================================
+        // PRESIDÊNCIA - Apenas pessoal da Presidência
+        // ========================================
+        if (Permissoes::ehPresidencia()) {
             $items[] = [
                 'id' => 'presidencia',
                 'label' => 'Presidência',
@@ -1745,8 +1769,10 @@ class HeaderComponent {
             ];
         }
 
-        // Relatórios - todos podem ver
-        if ($ehDaPresidencia || $ehDoComercial || $ehDoFinanceiro){
+        // ========================================
+        // RELATÓRIOS - Todos têm acesso
+        // ========================================
+        if (Permissoes::tem('relatorios.visualizar')) {
             $items[] = [
                 'id' => 'relatorios',
                 'label' => 'Relatórios',
@@ -1755,14 +1781,17 @@ class HeaderComponent {
             ];
         }
 
-        if ($ehDaPresidencia || $ehDoComercial){
-        $items[] = [
-            'id' => 'documentos',
-            'label' => 'Documentos',
-            'icon' => 'fas fa-folder-open',
-            'href' => 'documentos.php'
-        ];
-    }
+        // ========================================
+        // DOCUMENTOS - Todos têm acesso
+        // ========================================
+        if (Permissoes::tem('documentos.visualizar')) {
+            $items[] = [
+                'id' => 'documentos',
+                'label' => 'Documentos',
+                'icon' => 'fas fa-folder-open',
+                'href' => 'documentos.php'
+            ];
+        }
 
         return $items;
     }
@@ -2624,8 +2653,6 @@ class HeaderComponent {
                                 <span>Meu Perfil</span>
                             </a>
                             
-                            
-                            
                             <div class="dropdown-divider"></div>
                             
                             <a href="logout.php" class="dropdown-item">
@@ -2660,10 +2687,6 @@ class HeaderComponent {
                 <i class="fas fa-user-circle"></i>
                 <span>Meu Perfil</span>
             </a>
-            
-           
-            
-           
             
             <div class="mobile-nav-divider"></div>
             
