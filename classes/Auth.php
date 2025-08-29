@@ -456,5 +456,124 @@ class Auth
     {
         return isset($_SESSION['notificado_senha_padrao']) && $_SESSION['notificado_senha_padrao'];
     }
+
+
+    public function isAdmin()
+{
+    return $this->isDiretor();
 }
-?>
+
+/**
+ * Assume a identidade de outro funcionário
+ */
+public function assumirFuncionario($funcionario_id)
+{
+    if (!$this->isAdmin()) {
+        return ['success' => false, 'message' => 'Acesso negado.'];
+    }
+
+    try {
+        $stmt = $this->db->prepare("
+            SELECT f.*, d.nome as departamento_nome 
+            FROM Funcionarios f
+            LEFT JOIN Departamentos d ON f.departamento_id = d.id
+            WHERE f.id = ? AND f.ativo = 1
+        ");
+        $stmt->execute([$funcionario_id]);
+        $funcionario = $stmt->fetch();
+
+        if (!$funcionario) {
+            return ['success' => false, 'message' => 'Funcionário não encontrado.'];
+        }
+
+        // Salvar TODOS os dados do admin original - CORRIGIDO
+        if (!isset($_SESSION['admin_original'])) {
+            $_SESSION['admin_original'] = [
+                'id' => $_SESSION['funcionario_id'],
+                'nome' => $_SESSION['funcionario_nome'],
+                'email' => $_SESSION['funcionario_email'],
+                'cargo' => $_SESSION['funcionario_cargo'],
+                'departamento_id' => $_SESSION['departamento_id'],
+                'departamento_nome' => $_SESSION['departamento_nome'],
+                'is_diretor' => $_SESSION['is_diretor'],
+                'login_time' => $_SESSION['login_time'],
+                'last_activity' => $_SESSION['last_activity']
+            ];
+        }
+
+        // Assumir identidade do funcionário
+        $_SESSION['funcionario_id'] = $funcionario['id'];
+        $_SESSION['funcionario_nome'] = $funcionario['nome'];
+        $_SESSION['funcionario_email'] = $funcionario['email'];
+        $_SESSION['funcionario_cargo'] = $funcionario['cargo'];
+        $_SESSION['departamento_id'] = $funcionario['departamento_id'];
+        $_SESSION['departamento_nome'] = $funcionario['departamento_nome'];
+        $_SESSION['is_diretor'] = ($funcionario['cargo'] == 'Diretor');
+        $_SESSION['simulando'] = true;
+
+        return ['success' => true];
+
+    } catch (PDOException $e) {
+        return ['success' => false, 'message' => 'Erro interno.'];
+    }
+}
+
+/**
+ * Volta para a conta do admin original - VERSÃO CORRIGIDA
+ */
+public function voltarParaAdmin()
+{
+    if (!isset($_SESSION['admin_original'])) {
+        return false;
+    }
+
+    // Restaurar TODOS os dados originais do admin
+    $_SESSION['funcionario_id'] = $_SESSION['admin_original']['id'];
+    $_SESSION['funcionario_nome'] = $_SESSION['admin_original']['nome'];
+    $_SESSION['funcionario_email'] = $_SESSION['admin_original']['email'];
+    $_SESSION['funcionario_cargo'] = $_SESSION['admin_original']['cargo'];
+    $_SESSION['departamento_id'] = $_SESSION['admin_original']['departamento_id'];
+    $_SESSION['departamento_nome'] = $_SESSION['admin_original']['departamento_nome'];
+    $_SESSION['is_diretor'] = $_SESSION['admin_original']['is_diretor'];
+    $_SESSION['login_time'] = $_SESSION['admin_original']['login_time'];
+    $_SESSION['last_activity'] = time(); // Apenas atualizar atividade
+
+    // Limpar dados de simulação
+    unset($_SESSION['simulando']);
+    unset($_SESSION['admin_original']);
+    
+    return true;
+}
+
+/**
+ * Verifica se está simulando
+ */
+public function estaSimulando()
+{
+    return isset($_SESSION['simulando']) && $_SESSION['simulando'] === true;
+}
+
+/**
+ * Lista funcionários para seleção
+ */
+public function listarFuncionarios()
+{
+    try {
+        $stmt = $this->db->prepare("
+            SELECT f.id, f.nome, f.email, f.cargo, d.nome as departamento_nome
+            FROM Funcionarios f
+            LEFT JOIN Departamentos d ON f.departamento_id = d.id
+            WHERE f.ativo = 1
+            ORDER BY d.nome, f.cargo, f.nome
+        ");
+        $stmt->execute();
+        return $stmt->fetchAll();
+    } catch (PDOException $e) {
+        return [];
+    }
+}
+
+
+    
+}
+

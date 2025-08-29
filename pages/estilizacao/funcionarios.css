@@ -1030,3 +1030,18 @@
                 margin: 1rem;
             }
         }
+
+
+/* Botão de simular */
+.btn-icon.simulate {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    color: white;
+    border: 1px solid #d97706;
+}
+
+.btn-icon.simulate:hover {
+    background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+    border-color: #b45309;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(217, 119, 6, 0.3);
+}

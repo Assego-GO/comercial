@@ -1686,6 +1686,7 @@ class HeaderComponent {
         $ehDoFinanceiro = isset($this->usuario['departamento_id']) && $this->usuario['departamento_id'] == 2;
         $ehDoRH = isset($this->usuario['departamento_id']) && $this->usuario['departamento_id'] == 9;
         $ehDoComercial = isset($this->usuario['departamento_id']) && $this->usuario['departamento_id'] == 10;
+        $ehDoTI = isset($this->usuario['departamento_id']) && $this->usuario['departamento_id'] == 15;
 
         // Associados - todos podem ver
         $items[] = [
@@ -1696,7 +1697,7 @@ class HeaderComponent {
         ];
 
         // Funcionários
-        if ($this->isDiretor || $ehDaPresidencia || $ehDoRH || $ehDoComercial) {
+        if ($this->isDiretor || $ehDaPresidencia || $ehDoRH || $ehDoComercial || $ehDoTI) {
             $items[] = [
                 'id' => 'funcionarios',
                 'label' => 'Funcionários',
@@ -1706,7 +1707,7 @@ class HeaderComponent {
         }
 
         // Comercial
-        if ($ehDaPresidencia || $ehDoComercial) {
+        if ($ehDaPresidencia || $ehDoComercial || $ehDoTI) {
             $items[] = [
                 'id' => 'comercial',
                 'label' => 'Comercial',
@@ -1716,7 +1717,7 @@ class HeaderComponent {
         }
 
         // Financeiro
-        if ($ehDaPresidencia || $ehDoFinanceiro) {
+        if ($ehDaPresidencia || $ehDoFinanceiro || $ehDoTI) {
             $items[] = [
                 'id' => 'financeiro',
                 'label' => 'Financeiro',
@@ -1726,7 +1727,7 @@ class HeaderComponent {
         }
 
         // Auditoria
-        if ($this->isDiretor || $ehDaPresidencia) {
+        if ($this->isDiretor || $ehDaPresidencia || $ehDoTI) {
             $items[] = [
                 'id' => 'auditoria',
                 'label' => 'Auditoria',
@@ -1736,7 +1737,7 @@ class HeaderComponent {
         }
 
         // Presidência
-        if ($ehDaPresidencia) {
+        if ($ehDaPresidencia || $ehDoTI) {
             $items[] = [
                 'id' => 'presidencia',
                 'label' => 'Presidência',
@@ -1746,7 +1747,7 @@ class HeaderComponent {
         }
 
         // Relatórios - todos podem ver
-        if ($ehDaPresidencia || $ehDoComercial || $ehDoFinanceiro){
+        if ($ehDaPresidencia || $ehDoComercial || $ehDoFinanceiro || $ehDoTI) {
             $items[] = [
                 'id' => 'relatorios',
                 'label' => 'Relatórios',
@@ -1755,7 +1756,7 @@ class HeaderComponent {
             ];
         }
 
-        if ($ehDaPresidencia || $ehDoComercial){
+        if ($ehDaPresidencia || $ehDoComercial || $ehDoTI){
         $items[] = [
             'id' => 'documentos',
             'label' => 'Documentos',
