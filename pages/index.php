@@ -575,7 +575,7 @@ if (!empty($_POST['email'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    
+    <title>ASSEGO</title>
     
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -622,7 +622,7 @@ if (!empty($_POST['email'])) {
             overflow: hidden;
         }
 
-        /* Background com imagens sutis */
+        /* Background com imagens sutis - TRANSIÇÃO CORRIGIDA */
         .bg-image {
             position: fixed;
             inset: -10%;
@@ -695,17 +695,8 @@ if (!empty($_POST['email'])) {
             padding: 0 1.5rem;
         }
 
-        .loading-logo img {
-            width: 80px;
-            height: 80px;
-            object-fit: contain;
-            border-radius: 50%;
-            box-shadow: 0 0 30px rgba(255, 255, 255, 0.3);
-            margin-bottom: 1.5rem;
-        }
-
         .loading-title {
-            font-size: 2rem;
+            font-size: 2.5rem;
             font-weight: 800;
             color: white;
             letter-spacing: -0.02em;
@@ -773,43 +764,17 @@ if (!empty($_POST['email'])) {
         /* Header minimalista e limpo */
         .login-header {
             background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
-            padding: 1.5rem 2rem;
+            padding: 2rem 2rem;
             text-align: center;
             position: relative;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.875rem;
-        }
-
-        .header-logo {
-            width: 44px;
-            height: 44px;
-            border-radius: 8px;
-            object-fit: contain;
-            background: rgba(255, 255, 255, 0.1);
-            padding: 6px;
-            flex-shrink: 0;
-        }
-
-        .header-content {
-            text-align: left;
         }
 
         .system-title {
-            font-size: 1.375rem;
+            font-size: 2rem;
             font-weight: 700;
             color: white;
             margin: 0;
             letter-spacing: -0.025em;
-            line-height: 1.1;
-        }
-
-        .system-subtitle {
-            font-size: 0.8125rem;
-            color: rgba(255, 255, 255, 0.75);
-            font-weight: 400;
-            margin-top: 0.125rem;
         }
 
         /* Corpo do formulário */
@@ -1065,21 +1030,11 @@ if (!empty($_POST['email'])) {
             }
 
             .login-header {
-                padding: 1.25rem 1.5rem;
-                gap: 0.75rem;
-            }
-
-            .header-logo {
-                width: 40px;
-                height: 40px;
+                padding: 1.5rem;
             }
 
             .system-title {
-                font-size: 1.25rem;
-            }
-
-            .system-subtitle {
-                font-size: 0.75rem;
+                font-size: 1.75rem;
             }
 
             .login-body {
@@ -1111,7 +1066,6 @@ if (!empty($_POST['email'])) {
     <!-- Loading Inicial -->
     <div class="initial-loading" id="initialLoading">
         <div class="loading-content">
-            
             <h1 class="loading-title">ASSEGO</h1>
             <div class="loading-spinner"></div>
             <p class="loading-text">Carregando sistema...</p>
@@ -1125,7 +1079,7 @@ if (!empty($_POST['email'])) {
     <!-- Background com partículas interativas -->
     <canvas id="particles-canvas"></canvas>
     
-    <!-- Background sutil -->
+    <!-- Background sutil com transição corrigida -->
     <div class="bg-image active" id="bg1" style="background-image: url('./img/fundo-1.jpeg')"></div>
     <div class="bg-image inactive" id="bg2" style="background-image: url('./img/fundo-2.jpeg')"></div>
 
@@ -1133,11 +1087,7 @@ if (!empty($_POST['email'])) {
     <div class="login-container">
         <!-- Header minimalista e limpo -->
         <div class="login-header">
-            
-            <div class="header-content">
-                <h1 class="system-title">ASSEGO</h1>
-               
-            </div>
+            <h1 class="system-title">ASSEGO</h1>
         </div>
         
         <!-- Corpo do formulário -->
@@ -1282,8 +1232,9 @@ if (!empty($_POST['email'])) {
     
     <script>
         let turnstileVerified = false;
+        let backgroundTransitionInterval = null;
         
-        // Função para alternar as imagens de fundo
+        // Função para alternar as imagens de fundo - CORRIGIDA
         function alternateBackgrounds() {
             const bg1 = document.getElementById('bg1');
             const bg2 = document.getElementById('bg2');
@@ -1300,75 +1251,20 @@ if (!empty($_POST['email'])) {
                 bg1.classList.add('active');
             }
         }
-
-        // Loading e alternância de imagens
-        window.addEventListener('load', () => {
+        
+        // Inicialização única após o loading - CORRIGIDA
+        function initializeSystem() {
+            // Inicializar sistema de partículas
+            const particleNetwork = new ParticleNetwork();
+            
+            // Iniciar transição de fundo após 1 segundo do sistema carregado
             setTimeout(() => {
-                document.getElementById('initialLoading').classList.add('fade-out');
-                setTimeout(() => {
-                    alternateBackgrounds();
-                    setInterval(alternateBackgrounds, 6000);
-                }, 1000);
-            }, 3000);
-        });
-         // JavaScript habilitado
-        document.addEventListener('DOMContentLoaded', function() {
-            document.getElementById('js_enabled').value = '1';
-        });
-        
-        // Callbacks do Turnstile
-        function onTurnstileSuccess(token) {
-            turnstileVerified = true;
-            document.getElementById('submitBtn').disabled = false;
+                alternateBackgrounds();
+                // Alternar a cada 6 segundos
+                backgroundTransitionInterval = setInterval(alternateBackgrounds, 6000);
+            }, 1000);
         }
         
-        function onTurnstileError(error) {
-            turnstileVerified = false;
-            document.getElementById('submitBtn').disabled = true;
-        }
-        
-        function onTurnstileExpired() {
-            turnstileVerified = false;
-            document.getElementById('submitBtn').disabled = true;
-        }
-        
-        // Validação do formulário
-        document.getElementById('loginForm').addEventListener('submit', function(e) {
-            if (!turnstileVerified) {
-                e.preventDefault();
-                alert('Complete a verificação de segurança');
-                return false;
-            }
-            
-            document.getElementById('loadingOverlay').classList.add('active');
-            document.getElementById('submitBtn').classList.add('loading');
-        });
-        
-        // Toggle da senha
-        function togglePassword() {
-            const input = document.getElementById('senha');
-            const icon = document.querySelector('.password-toggle svg');
-            
-            if (input.type === 'password') {
-                input.type = 'text';
-                icon.innerHTML = '<path d="M17.94 17.94A10.07 10.07 0 01.66 10C2.36 6.91 6 4.5 10 4.5c1.2 0 2.37.18 3.5.5M9.9 4.24A9.12 9.12 0 01.66 10a14.5 14.5 0 006.58 6.58"/><path d="M6.61 6.61A13.526 13.526 0 00.41 10a13.526 13.526 0 0019.18 0A13.526 13.526 0 0013.39 13.39M9.9 4.24A9.12 9.12 0 0119.34 10"/><path d="m15 9l-6 6m0-6l6 6"/>';
-            } else {
-                input.type = 'password';
-                icon.innerHTML = '<path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/><path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"/>';
-            }
-        }
-        
-        // Auto-hide de alertas
-        setTimeout(function() {
-            const alerts = document.querySelectorAll('.alert');
-            alerts.forEach(function(alert) {
-                if (!alert.classList.contains('alert-error')) {
-                    alert.style.opacity = '0';
-                    setTimeout(() => alert.remove(), 300);
-                }
-            });
-        }, 5000);
-
         // Sistema de partículas interativas
         class ParticleNetwork {
             constructor() {
@@ -1379,14 +1275,14 @@ if (!empty($_POST['email'])) {
                 this.animationId = null;
                 
                 this.settings = {
-                    particleCount: 150,        // Quantidade de partículas (aumente para mais)
-                    particleSize: 5,           // Tamanho das partículas (aumente para maiores)
-                    connectionDistance: 140,   
-                    mouseDistance: 200,        
-                    particleSpeed: 0.5,        
-                    lineOpacity: 0.75,         // Opacidade das linhas (aumente para mais visíveis)
-                    mouseLineOpacity: 1.0,     // Opacidade das linhas com mouse (máximo)
-                    particleOpacity: 1.0       // Opacidade das partículas (máximo)
+                    particleCount: 150,
+                    particleSize: 5,
+                    connectionDistance: 140,
+                    mouseDistance: 200,
+                    particleSpeed: 0.5,
+                    lineOpacity: 0.75,
+                    mouseLineOpacity: 1.0,
+                    particleOpacity: 1.0
                 };
                 
                 this.init();
@@ -1453,27 +1349,10 @@ if (!empty($_POST['email'])) {
             
             drawParticles() {
                 this.particles.forEach(particle => {
-                    this.ctx.globalAlpha = 1.0; // Forçar máxima opacidade
-                    
-                    // Primeiro desenho: shadow/glow forte
-                    this.ctx.shadowColor = '#FFFFFF';
-                    this.ctx.shadowBlur = 15; // Brilho muito forte
-                    this.ctx.fillStyle = '#FFFFFF';
+                    this.ctx.globalAlpha = this.settings.particleOpacity;
+                    this.ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
                     this.ctx.beginPath();
                     this.ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
-                    this.ctx.fill();
-                    
-                    // Segundo desenho: partícula sólida por cima
-                    this.ctx.shadowBlur = 0;
-                    this.ctx.fillStyle = '#FFFFFF';
-                    this.ctx.beginPath();
-                    this.ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
-                    this.ctx.fill();
-                    
-                    // Terceiro desenho: centro super brilhante
-                    this.ctx.fillStyle = '#FFFFFF';
-                    this.ctx.beginPath();
-                    this.ctx.arc(particle.x, particle.y, particle.size * 0.7, 0, Math.PI * 2);
                     this.ctx.fill();
                 });
             }
@@ -1530,29 +1409,83 @@ if (!empty($_POST['email'])) {
                 
                 this.animationId = requestAnimationFrame(() => this.animate());
             }
-            
-            destroy() {
-                if (this.animationId) {
-                    cancelAnimationFrame(this.animationId);
-                }
-            }
         }
+
+        // JavaScript habilitado
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('js_enabled').value = '1';
+        });
         
-        // Inicializar partículas após o loading
-        let particleNetwork;
+        // Controle único de loading e inicialização - CORRIGIDO
         window.addEventListener('load', () => {
             setTimeout(() => {
                 document.getElementById('initialLoading').classList.add('fade-out');
                 setTimeout(() => {
-                    // Inicializar sistema de partículas
-                    particleNetwork = new ParticleNetwork();
-                    
-                    alternateBackgrounds();
-                    setInterval(alternateBackgrounds, 6000);
+                    // Inicializar todo o sistema apenas uma vez
+                    initializeSystem();
                 }, 1000);
             }, 3000);
         });
-    </script>
         
+        // Callbacks do Turnstile
+        function onTurnstileSuccess(token) {
+            turnstileVerified = true;
+            document.getElementById('submitBtn').disabled = false;
+        }
+        
+        function onTurnstileError(error) {
+            turnstileVerified = false;
+            document.getElementById('submitBtn').disabled = true;
+        }
+        
+        function onTurnstileExpired() {
+            turnstileVerified = false;
+            document.getElementById('submitBtn').disabled = true;
+        }
+        
+        // Validação do formulário
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            if (!turnstileVerified) {
+                e.preventDefault();
+                alert('Complete a verificação de segurança');
+                return false;
+            }
+            
+            document.getElementById('loadingOverlay').classList.add('active');
+            document.getElementById('submitBtn').classList.add('loading');
+        });
+        
+        // Toggle da senha
+        function togglePassword() {
+            const input = document.getElementById('senha');
+            const icon = document.querySelector('.password-toggle svg');
+            
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.innerHTML = '<path d="M17.94 17.94A10.07 10.07 0 01.66 10C2.36 6.91 6 4.5 10 4.5c1.2 0 2.37.18 3.5.5M9.9 4.24A9.12 9.12 0 01.66 10a14.5 14.5 0 006.58 6.58"/><path d="M6.61 6.61A13.526 13.526 0 00.41 10a13.526 13.526 0 0019.18 0A13.526 13.526 0 0013.39 13.39M9.9 4.24A9.12 9.12 0 0119.34 10"/><path d="m15 9l-6 6m0-6l6 6"/>';
+            } else {
+                input.type = 'password';
+                icon.innerHTML = '<path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/><path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"/>';
+            }
+        }
+        
+        // Auto-hide de alertas
+        setTimeout(function() {
+            const alerts = document.querySelectorAll('.alert');
+            alerts.forEach(function(alert) {
+                if (!alert.classList.contains('alert-error')) {
+                    alert.style.opacity = '0';
+                    setTimeout(() => alert.remove(), 300);
+                }
+            });
+        }, 5000);
+        
+        // Cleanup ao sair da página
+        window.addEventListener('beforeunload', () => {
+            if (backgroundTransitionInterval) {
+                clearInterval(backgroundTransitionInterval);
+            }
+        });
+    </script>
 </body>
 </html>
