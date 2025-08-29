@@ -1111,9 +1111,7 @@ if (!empty($_POST['email'])) {
     <!-- Loading Inicial -->
     <div class="initial-loading" id="initialLoading">
         <div class="loading-content">
-            <div class="loading-logo">
-                <img src="./img/logo-assego.jpeg" alt="ASSEGO">
-            </div>
+            
             <h1 class="loading-title">ASSEGO</h1>
             <div class="loading-spinner"></div>
             <p class="loading-text">Carregando sistema...</p>
@@ -1135,7 +1133,7 @@ if (!empty($_POST['email'])) {
     <div class="login-container">
         <!-- Header minimalista e limpo -->
         <div class="login-header">
-            <img src="./img/logo-assego.jpeg" alt="ASSEGO" class="header-logo">
+            
             <div class="header-content">
                 <h1 class="system-title">ASSEGO</h1>
                 <p class="system-subtitle">Sistema de Gestão</p>
