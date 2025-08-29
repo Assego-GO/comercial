@@ -2,21 +2,31 @@
 /**
  * Componente Header Premium do Sistema ASSEGO
  * components/Header.php
- * VERSÃO ATUALIZADA COM SISTEMA DE NOTIFICAÇÕES INTEGRADO
+ * VERSÃO ATUALIZADA COM SISTEMA DE NOTIFICAÇÕES E PERMISSÕES INTEGRADO
  * Versão com cores oficiais ASSEGO: Azul Royal (#003C8F) e Dourado (#FFB800)
- * Detecção automática de página ativa + Alerta de senha padrão + Sistema de Notificações
+ * Detecção automática de página ativa + Alerta de senha padrão + Sistema de Notificações + Permissões
  */
+
+// Inclui as classes de permissões
+// Ajusta o caminho baseado na estrutura: /comercial/pages/components/header.php -> /comercial/classes/
+$basePath = dirname(dirname(__DIR__)); // Volta 2 níveis: components -> pages -> comercial
+require_once $basePath . '/classes/Permissoes.php';
+require_once $basePath . '/classes/PermissoesManager.php';
 
 class HeaderComponent {
     private $usuario;
     private $isDiretor;
     private $activePage;
     private $notificationCount;
+    private $permManager;
 
     public function __construct($config = []) {
         $this->usuario = $config['usuario'] ?? ['nome' => 'Usuário', 'cargo' => 'Funcionário'];
         $this->isDiretor = $config['isDiretor'] ?? false;
         $this->notificationCount = $config['notificationCount'] ?? 0;
+        
+        // Inicializa o gerenciador de permissões
+        $this->permManager = PermissoesManager::getInstance();
         
         // Detecta automaticamente a página ativa se não foi especificada
         if (isset($config['activePage'])) {
@@ -704,53 +714,6 @@ class HeaderComponent {
                 color: var(--assego-blue);
             }
 
-            /* Responsive Design */
-            @media (max-width: 1200px) {
-                .nav-link {
-                    padding: 10px 12px;
-                    font-size: 13px;
-                }
-                
-                .nav-link i {
-                    font-size: 15px;
-                }
-            }
-
-            @media (max-width: 992px) {
-                .nav-menu {
-                    display: none;
-                }
-
-                .mobile-menu-toggle {
-                    display: flex;
-                }
-
-                .header-left {
-                    gap: 16px;
-                }
-            }
-
-            @media (max-width: 768px) {
-                .notification-btn::before,
-                .notification-btn::after {
-                    display: none;
-                }
-            }
-
-            @media (max-width: 576px) {
-                .header-content {
-                    padding: 0 16px;
-                }
-
-                .user-info {
-                    display: none;
-                }
-
-                .logo-subtitle {
-                    display: none;
-                }
-            }
-
             /* Mobile Navigation */
             .mobile-nav {
                 position: fixed;
@@ -1079,57 +1042,6 @@ class HeaderComponent {
                 0%, 100% { transform: translateX(-50%) translateX(0); }
                 10%, 30%, 50%, 70%, 90% { transform: translateX(-50%) translateX(-5px); }
                 20%, 40%, 60%, 80% { transform: translateX(-50%) translateX(5px); }
-            }
-
-            /* Responsivo para o alerta */
-            @media (max-width: 768px) {
-                .alerta-senha-padrao {
-                    width: 95%;
-                    top: calc(var(--header-height) + 5px);
-                }
-                
-                .alerta-senha-container {
-                    flex-direction: column;
-                    text-align: center;
-                    padding: 15px;
-                }
-                
-                .alerta-senha-content {
-                    padding-right: 0;
-                }
-                
-                .alerta-senha-actions {
-                    flex-direction: row;
-                    width: 100%;
-                    justify-content: space-between;
-                    margin-top: 10px;
-                }
-                
-                .alerta-senha-instrucoes {
-                    font-size: 12px;
-                    text-align: left;
-                }
-                
-                .btn-alerta-perfil {
-                    flex: 1;
-                    justify-content: center;
-                }
-            }
-
-            @media (max-width: 480px) {
-                .alerta-senha-titulo {
-                    font-size: 16px;
-                }
-                
-                .alerta-senha-mensagem {
-                    font-size: 13px;
-                }
-                
-                .alerta-senha-icon {
-                    width: 50px;
-                    height: 50px;
-                    font-size: 24px;
-                }
             }
 
             /* ===== SISTEMA DE NOTIFICAÇÕES - CSS INTEGRADO ===== */
@@ -1620,8 +1532,70 @@ class HeaderComponent {
                 color: var(--info);
             }
 
-            /* Responsivo para notificações */
+            /* Responsive Design */
+            @media (max-width: 1200px) {
+                .nav-link {
+                    padding: 10px 12px;
+                    font-size: 13px;
+                }
+                
+                .nav-link i {
+                    font-size: 15px;
+                }
+            }
+
+            @media (max-width: 992px) {
+                .nav-menu {
+                    display: none;
+                }
+
+                .mobile-menu-toggle {
+                    display: flex;
+                }
+
+                .header-left {
+                    gap: 16px;
+                }
+            }
+
             @media (max-width: 768px) {
+                .notification-btn::before,
+                .notification-btn::after {
+                    display: none;
+                }
+                
+                .alerta-senha-padrao {
+                    width: 95%;
+                    top: calc(var(--header-height) + 5px);
+                }
+                
+                .alerta-senha-container {
+                    flex-direction: column;
+                    text-align: center;
+                    padding: 15px;
+                }
+                
+                .alerta-senha-content {
+                    padding-right: 0;
+                }
+                
+                .alerta-senha-actions {
+                    flex-direction: row;
+                    width: 100%;
+                    justify-content: space-between;
+                    margin-top: 10px;
+                }
+                
+                .alerta-senha-instrucoes {
+                    font-size: 12px;
+                    text-align: left;
+                }
+                
+                .btn-alerta-perfil {
+                    flex: 1;
+                    justify-content: center;
+                }
+                
                 .painel-notificacoes {
                     width: calc(100vw - 40px);
                     max-width: 380px;
@@ -1655,7 +1629,35 @@ class HeaderComponent {
                 }
             }
 
+            @media (max-width: 576px) {
+                .header-content {
+                    padding: 0 16px;
+                }
+
+                .user-info {
+                    display: none;
+                }
+
+                .logo-subtitle {
+                    display: none;
+                }
+            }
+
             @media (max-width: 480px) {
+                .alerta-senha-titulo {
+                    font-size: 16px;
+                }
+                
+                .alerta-senha-mensagem {
+                    font-size: 13px;
+                }
+                
+                .alerta-senha-icon {
+                    width: 50px;
+                    height: 50px;
+                    font-size: 24px;
+                }
+                
                 .painel-notificacoes {
                     width: calc(100vw - 20px);
                     left: 10px !important;
@@ -1677,93 +1679,213 @@ class HeaderComponent {
 
     /**
      * Gera os itens de navegação baseado em permissões
+     * VERSÃO INTEGRADA COM SISTEMA DE PERMISSÕES
      */
     private function getNavigationItems() {
         $items = [];
         
-        // Verifica permissões
-        $ehDaPresidencia = isset($this->usuario['departamento_id']) && $this->usuario['departamento_id'] == 1;
-        $ehDoFinanceiro = isset($this->usuario['departamento_id']) && $this->usuario['departamento_id'] == 2;
-        $ehDoRH = isset($this->usuario['departamento_id']) && $this->usuario['departamento_id'] == 9;
-        $ehDoComercial = isset($this->usuario['departamento_id']) && $this->usuario['departamento_id'] == 10;
-        $ehDoTI = isset($this->usuario['departamento_id']) && $this->usuario['departamento_id'] == 15;
-
-        // Associados - todos podem ver
-        $items[] = [
-            'id' => 'associados',
-            'label' => 'Associados',
-            'icon' => 'fas fa-users',
-            'href' => 'dashboard.php'
-        ];
-
-        // Funcionários
-        if ($this->isDiretor || $ehDaPresidencia || $ehDoRH || $ehDoComercial || $ehDoTI) {
+        // Pega as informações do usuário da sessão
+        $funcionario_id = $_SESSION['funcionario_id'] ?? null;
+        $departamento_id = $_SESSION['departamento_id'] ?? null;
+        $cargo = $_SESSION['funcionario_cargo'] ?? null;
+        
+        // Verifica também pelos IDs de departamento para compatibilidade
+        $ehDaPresidencia = $departamento_id == 1;
+        $ehDoFinanceiro = $departamento_id == 2;
+        $ehDoRH = $departamento_id == 9;
+        $ehDoComercial = $departamento_id == 10;
+        $ehDoTI = $departamento_id == 15;
+        
+        // ========================================
+        // ASSOCIADOS (Dashboard) - Todos têm acesso
+        // ========================================
+        // Verifica se existe a classe Permissoes, senão usa lógica básica
+        if (class_exists('Permissoes') && method_exists('Permissoes', 'tem')) {
+            if (Permissoes::tem('associados.visualizar')) {
+                $items[] = [
+                    'id' => 'associados',
+                    'label' => 'Associados',
+                    'icon' => 'fas fa-users',
+                    'href' => 'dashboard.php'
+                ];
+            }
+        } else {
+            // Fallback: todos podem ver associados
             $items[] = [
-                'id' => 'funcionarios',
-                'label' => 'Funcionários',
-                'icon' => 'fas fa-user-tie',
-                'href' => 'funcionarios.php'
+                'id' => 'associados',
+                'label' => 'Associados',
+                'icon' => 'fas fa-users',
+                'href' => 'dashboard.php'
             ];
         }
 
-        // Comercial
-        if ($ehDaPresidencia || $ehDoComercial || $ehDoTI) {
-            $items[] = [
-                'id' => 'comercial',
-                'label' => 'Comercial',
-                'icon' => 'fas fa-briefcase',
-                'href' => 'comercial.php'
-            ];
+        // ========================================
+        // FUNCIONÁRIOS (RH)
+        // ========================================
+        if (class_exists('Permissoes') && method_exists('Permissoes', 'podeVerRH')) {
+            if (Permissoes::podeVerRH()) {
+                $items[] = [
+                    'id' => 'funcionarios',
+                    'label' => 'Funcionários',
+                    'icon' => 'fas fa-user-tie',
+                    'href' => 'funcionarios.php'
+                ];
+            }
+        } else {
+            // Fallback: usa verificação por departamento
+            if ($this->isDiretor || $ehDaPresidencia || $ehDoRH || $ehDoComercial || $ehDoTI) {
+                $items[] = [
+                    'id' => 'funcionarios',
+                    'label' => 'Funcionários',
+                    'icon' => 'fas fa-user-tie',
+                    'href' => 'funcionarios.php'
+                ];
+            }
         }
 
-        // Financeiro
-        if ($ehDaPresidencia || $ehDoFinanceiro || $ehDoTI) {
-            $items[] = [
-                'id' => 'financeiro',
-                'label' => 'Financeiro',
-                'icon' => 'fas fa-dollar-sign',
-                'href' => 'financeiro.php'
-            ];
+        // ========================================
+        // COMERCIAL
+        // ========================================
+        if (class_exists('Permissoes') && method_exists('Permissoes', 'podeVerComercial')) {
+            if (Permissoes::podeVerComercial()) {
+                $items[] = [
+                    'id' => 'comercial',
+                    'label' => 'Comercial',
+                    'icon' => 'fas fa-briefcase',
+                    'href' => 'comercial.php'
+                ];
+            }
+        } else {
+            // Fallback: usa verificação por departamento
+            if ($ehDaPresidencia || $ehDoComercial || $ehDoTI) {
+                $items[] = [
+                    'id' => 'comercial',
+                    'label' => 'Comercial',
+                    'icon' => 'fas fa-briefcase',
+                    'href' => 'comercial.php'
+                ];
+            }
         }
 
-        // Auditoria
-        if ($this->isDiretor || $ehDaPresidencia || $ehDoTI) {
-            $items[] = [
-                'id' => 'auditoria',
-                'label' => 'Auditoria',
-                'icon' => 'fas fa-user-shield',
-                'href' => 'auditoria.php'
-            ];
+        // ========================================
+        // FINANCEIRO
+        // ========================================
+        if (class_exists('Permissoes') && method_exists('Permissoes', 'podeVerFinanceiro')) {
+            if (Permissoes::podeVerFinanceiro()) {
+                $items[] = [
+                    'id' => 'financeiro',
+                    'label' => 'Financeiro',
+                    'icon' => 'fas fa-dollar-sign',
+                    'href' => 'financeiro.php'
+                ];
+            }
+        } else {
+            // Fallback: usa verificação por departamento
+            if ($ehDaPresidencia || $ehDoFinanceiro || $ehDoTI) {
+                $items[] = [
+                    'id' => 'financeiro',
+                    'label' => 'Financeiro',
+                    'icon' => 'fas fa-dollar-sign',
+                    'href' => 'financeiro.php'
+                ];
+            }
         }
 
-        // Presidência
-        if ($ehDaPresidencia || $ehDoTI) {
-            $items[] = [
-                'id' => 'presidencia',
-                'label' => 'Presidência',
-                'icon' => 'fas fa-landmark',
-                'href' => 'presidencia.php'
-            ];
+        // ========================================
+        // AUDITORIA
+        // ========================================
+        if (class_exists('Permissoes') && method_exists('Permissoes', 'tem')) {
+            if (Permissoes::tem('sistema.auditoria')) {
+                $items[] = [
+                    'id' => 'auditoria',
+                    'label' => 'Auditoria',
+                    'icon' => 'fas fa-user-shield',
+                    'href' => 'auditoria.php'
+                ];
+            }
+        } else {
+            // Fallback: usa verificação por departamento
+            if ($this->isDiretor || $ehDaPresidencia || $ehDoTI) {
+                $items[] = [
+                    'id' => 'auditoria',
+                    'label' => 'Auditoria',
+                    'icon' => 'fas fa-user-shield',
+                    'href' => 'auditoria.php'
+                ];
+            }
         }
 
-        // Relatórios - todos podem ver
-        if ($ehDaPresidencia || $ehDoComercial || $ehDoFinanceiro || $ehDoTI) {
-            $items[] = [
-                'id' => 'relatorios',
-                'label' => 'Relatórios',
-                'icon' => 'fas fa-chart-line',
-                'href' => 'relatorios.php'
-            ];
+        // ========================================
+        // PRESIDÊNCIA
+        // ========================================
+        if (class_exists('Permissoes') && method_exists('Permissoes', 'ehPresidencia')) {
+            if (Permissoes::ehPresidencia()) {
+                $items[] = [
+                    'id' => 'presidencia',
+                    'label' => 'Presidência',
+                    'icon' => 'fas fa-landmark',
+                    'href' => 'presidencia.php'
+                ];
+            }
+        } else {
+            // Fallback: usa verificação por departamento
+            if ($ehDaPresidencia || $ehDoTI) {
+                $items[] = [
+                    'id' => 'presidencia',
+                    'label' => 'Presidência',
+                    'icon' => 'fas fa-landmark',
+                    'href' => 'presidencia.php'
+                ];
+            }
         }
 
-        if ($ehDaPresidencia || $ehDoComercial || $ehDoTI){
-        $items[] = [
-            'id' => 'documentos',
-            'label' => 'Documentos',
-            'icon' => 'fas fa-folder-open',
-            'href' => 'documentos.php'
-        ];
-    }
+        // ========================================
+        // RELATÓRIOS
+        // ========================================
+        if (class_exists('Permissoes') && method_exists('Permissoes', 'tem')) {
+            if (Permissoes::tem('relatorios.visualizar')) {
+                $items[] = [
+                    'id' => 'relatorios',
+                    'label' => 'Relatórios',
+                    'icon' => 'fas fa-chart-line',
+                    'href' => 'relatorios.php'
+                ];
+            }
+        } else {
+            // Fallback: usa verificação por departamento
+            if ($ehDaPresidencia || $ehDoComercial || $ehDoFinanceiro || $ehDoTI) {
+                $items[] = [
+                    'id' => 'relatorios',
+                    'label' => 'Relatórios',
+                    'icon' => 'fas fa-chart-line',
+                    'href' => 'relatorios.php'
+                ];
+            }
+        }
+
+        // ========================================
+        // DOCUMENTOS
+        // ========================================
+        if (class_exists('Permissoes') && method_exists('Permissoes', 'tem')) {
+            if (Permissoes::tem('documentos.visualizar')) {
+                $items[] = [
+                    'id' => 'documentos',
+                    'label' => 'Documentos',
+                    'icon' => 'fas fa-folder-open',
+                    'href' => 'documentos.php'
+                ];
+            }
+        } else {
+            // Fallback: usa verificação por departamento
+            if ($ehDaPresidencia || $ehDoComercial || $ehDoTI) {
+                $items[] = [
+                    'id' => 'documentos',
+                    'label' => 'Documentos',
+                    'icon' => 'fas fa-folder-open',
+                    'href' => 'documentos.php'
+                ];
+            }
+        }
 
         return $items;
     }
@@ -2564,8 +2686,6 @@ class HeaderComponent {
                         <?php endif; ?>
                         <div class="logo-text-container">
                             <span class="logo-text">ASSEGO</span>
-                            
-                            
                         </div>
                     </a>
 
@@ -2626,8 +2746,6 @@ class HeaderComponent {
                                 <span>Meu Perfil</span>
                             </a>
                             
-                            
-                            
                             <div class="dropdown-divider"></div>
                             
                             <a href="logout.php" class="dropdown-item">
@@ -2662,10 +2780,6 @@ class HeaderComponent {
                 <i class="fas fa-user-circle"></i>
                 <span>Meu Perfil</span>
             </a>
-            
-           
-            
-           
             
             <div class="mobile-nav-divider"></div>
             
