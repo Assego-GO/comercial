@@ -575,7 +575,7 @@ if (!empty($_POST['email'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ASSEGO - Sistema de Gestão</title>
+    
     
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1136,7 +1136,7 @@ if (!empty($_POST['email'])) {
             
             <div class="header-content">
                 <h1 class="system-title">ASSEGO</h1>
-                <p class="system-subtitle">Sistema de Gestão</p>
+               
             </div>
         </div>
         
