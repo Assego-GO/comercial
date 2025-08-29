@@ -1013,3 +1013,15 @@ body {
                 flex-direction: column;
             }
         }
+
+
+        /* Estilo para o ícone de Aniversariantes */
+.report-icon.pink {
+    background: linear-gradient(135deg, #ec4899, #f97316);
+    color: white;
+}
+
+.report-icon.pink:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(236, 72, 153, 0.4);
+}

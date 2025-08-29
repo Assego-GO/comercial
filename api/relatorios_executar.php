@@ -192,6 +192,7 @@ function construirQueryCount($config) {
     // Mapear tabelas principais
     $tabelasPrincipais = [
         'associados' => 'Associados a',
+        'aniversariantes' => 'Associados a',
         'financeiro' => 'Financeiro f',
         'militar' => 'Militar m',
         'servicos' => 'Servicos_Associado sa',
@@ -471,6 +472,7 @@ function construirQuery($config) {
     // Mapear tabelas principais
     $tabelasPrincipais = [
         'associados' => 'Associados a',
+        'aniversariantes' => 'Associados a',
         'financeiro' => 'Financeiro f',
         'militar' => 'Militar m',
         'servicos' => 'Servicos_Associado sa',
@@ -521,6 +523,11 @@ function construirQuery($config) {
     // Aplica filtros
     $whereFiltros = aplicarFiltros($tipo, $filtros, $params);
     $where = array_merge($where, $whereFiltros);
+
+    if ($tipo === 'aniversariantes') {
+    $where[] = "DATE_FORMAT(a.nasc, '%m-%d') = DATE_FORMAT(CURDATE(), '%m-%d')";
+    $where[] = "a.nasc IS NOT NULL";
+}
     
     // Monta SQL
     $sql = "SELECT DISTINCT " . implode(", ", $selectCampos) . "\n";
@@ -602,8 +609,16 @@ function mapearCampo($campo, $tipo) {
         'funcionario_nome' => 'func.nome as funcionario_nome',
         'observacao' => 'da.observacao',
         'lote_id' => 'da.lote_id',
-        'lote_status' => 'ld.status as lote_status'
+        'lote_status' => 'ld.status as lote_status',
+
+        // No array $mapeamento, adicionar no final:
+        'data_nascimento' => "DATE_FORMAT(a.nasc, '%d/%m/%Y') as data_nascimento",
+        'idade' => "(YEAR(CURDATE()) - YEAR(a.nasc)) as idade",
+
+        
     ];
+
+    
     
     return $mapeamento[$campo] ?? null;
 }
@@ -644,6 +659,9 @@ function obterJoins($tipo, $campos) {
         case 'documentos':
             $joins[] = "JOIN Associados a ON da.associado_id = a.id";
             $tabelasAdicionadas['Associados'] = true;
+            break;
+        case 'aniversariantes':
+            // Sempre associado como base, igual ao 'associados'
             break;
     }
     
@@ -733,6 +751,50 @@ function aplicarFiltros($tipo, $filtros, &$params) {
             case 'documentos':
                 $campoData = 'da.data_upload';
                 break;
+            // Filtros específicos de aniversariantes
+            if ($tipo === 'aniversariantes') {
+    $where[] = "a.nasc IS NOT NULL";
+    $where[] = "a.situacao = 'Filiado'";
+    
+    // Filtro por período
+    $periodo = $filtros['periodo_aniversario'] ?? 'hoje';
+    
+    switch($periodo) {
+        case 'hoje':
+            $where[] = "DATE_FORMAT(a.nasc, '%m-%d') = DATE_FORMAT(CURDATE(), '%m-%d')";
+            break;
+            
+        case 'semana':
+            // Próximos 7 dias
+            $where[] = "
+                CASE 
+                    WHEN DATE_FORMAT(a.nasc, '%m-%d') >= DATE_FORMAT(CURDATE(), '%m-%d') THEN 
+                        DATEDIFF(STR_TO_DATE(CONCAT(YEAR(CURDATE()), '-', DATE_FORMAT(a.nasc, '%m-%d')), '%Y-%m-%d'), CURDATE())
+                    ELSE 
+                        DATEDIFF(STR_TO_DATE(CONCAT(YEAR(CURDATE()) + 1, '-', DATE_FORMAT(a.nasc, '%m-%d')), '%Y-%m-%d'), CURDATE())
+                END <= 7
+            ";
+            break;
+            
+        case 'mes':
+            $where[] = "DATE_FORMAT(a.nasc, '%m') = DATE_FORMAT(CURDATE(), '%m')";
+            break;
+            
+        case 'customizado':
+            if (!empty($filtros['data_inicio']) && !empty($filtros['data_fim'])) {
+                $dataInicio = date('m-d', strtotime($filtros['data_inicio']));
+                $dataFim = date('m-d', strtotime($filtros['data_fim']));
+                $where[] = "DATE_FORMAT(a.nasc, '%m-%d') BETWEEN ? AND ?";
+                $params[] = $dataInicio;
+                $params[] = $dataFim;
+            }
+            break;
+            
+        default: // Se não especificou período, assume hoje
+            $where[] = "DATE_FORMAT(a.nasc, '%m-%d') = DATE_FORMAT(CURDATE(), '%m-%d')";
+            break;
+    }
+}
         }
         
         if ($campoData) {
@@ -818,6 +880,12 @@ function aplicarFiltros($tipo, $filtros, &$params) {
         $params[] = $busca;
         $params[] = $busca;
     }
+
+    if ($tipo === 'aniversariantes') {
+    $where[] = "DATE_FORMAT(a.nasc, '%m-%d') = DATE_FORMAT(CURDATE(), '%m-%d')";
+    $where[] = "a.nasc IS NOT NULL";
+    $where[] = "a.situacao = 'Filiado'";
+}
     
     return $where;
 }
@@ -850,6 +918,7 @@ function gerarHTML($resultado) {
             $headerComponent = null;
         }
     }
+  
     
     // Preparar parâmetros seguros para JavaScript
     $parametrosSegurosPHP = [];
@@ -2908,4 +2977,338 @@ function formatarCEP($cep) {
     }
     return $cep;
 }
+
+
+function gerarRelatorioAniversariantes($parametros) {
+    try {
+        $db = Database::getInstance(DB_NAME_CADASTRO)->getConnection();
+        
+        // Construir a query base com campos calculados
+        $sql = "
+            SELECT 
+                a.id,
+                a.nome,
+                a.cpf,
+                a.rg,
+                a.nasc,
+                DATE_FORMAT(a.nasc, '%d/%m/%Y') as data_nascimento,
+                DATE_FORMAT(a.nasc, '%d/%m') as data_nascimento_formatada,
+                a.sexo,
+                a.email,
+                a.telefone,
+                a.situacao,
+                
+                -- Cálculo da idade
+                YEAR(CURDATE()) - YEAR(a.nasc) - (DATE_FORMAT(CURDATE(), '%m%d') < DATE_FORMAT(a.nasc, '%m%d')) as idade,
+                
+                -- Dias até o próximo aniversário
+                CASE 
+                    WHEN DATE_FORMAT(a.nasc, '%m-%d') = DATE_FORMAT(CURDATE(), '%m-%d') THEN 0
+                    WHEN DATE_FORMAT(a.nasc, '%m-%d') > DATE_FORMAT(CURDATE(), '%m-%d') THEN 
+                        DATEDIFF(STR_TO_DATE(CONCAT(YEAR(CURDATE()), '-', DATE_FORMAT(a.nasc, '%m-%d')), '%Y-%m-%d'), CURDATE())
+                    ELSE 
+                        DATEDIFF(STR_TO_DATE(CONCAT(YEAR(CURDATE()) + 1, '-', DATE_FORMAT(a.nasc, '%m-%d')), '%Y-%m-%d'), CURDATE())
+                END as dias_ate_aniversario,
+                
+                -- Data do próximo aniversário
+                CASE 
+                    WHEN DATE_FORMAT(a.nasc, '%m-%d') >= DATE_FORMAT(CURDATE(), '%m-%d') THEN 
+                        DATE_FORMAT(STR_TO_DATE(CONCAT(YEAR(CURDATE()), '-', DATE_FORMAT(a.nasc, '%m-%d')), '%Y-%m-%d'), '%d/%m/%Y')
+                    ELSE 
+                        DATE_FORMAT(STR_TO_DATE(CONCAT(YEAR(CURDATE()) + 1, '-', DATE_FORMAT(a.nasc, '%m-%d')), '%Y-%m-%d'), '%d/%m/%Y')
+                END as proximo_aniversario,
+                
+                -- Informações militares
+                m.corporacao,
+                m.patente,
+                m.categoria,
+                m.lotacao,
+                m.unidade,
+                
+                -- Informações de endereço
+                e.cep,
+                e.endereco,
+                e.numero,
+                e.bairro,
+                e.cidade,
+                
+                -- Informações de filiação
+                c.dataFiliacao,
+                c.dataDesfiliacao
+                
+            FROM Associados a
+            LEFT JOIN Militar m ON a.id = m.associado_id
+            LEFT JOIN Endereco e ON a.id = e.associado_id
+            LEFT JOIN Contrato c ON a.id = c.associado_id
+            WHERE a.situacao = 'Filiado' 
+            AND a.nasc IS NOT NULL
+        ";
+        
+        $params = [];
+        $conditions = [];
+        
+        // Filtro por período de aniversário
+        $periodo = $parametros['periodo_aniversario'] ?? 'hoje';
+        
+        switch($periodo) {
+            case 'hoje':
+                $conditions[] = "DATE_FORMAT(a.nasc, '%m-%d') = DATE_FORMAT(CURDATE(), '%m-%d')";
+                break;
+                
+            case 'semana':
+                // Próximos 7 dias (incluindo hoje)
+                $conditions[] = "
+                    CASE 
+                        WHEN DATE_FORMAT(a.nasc, '%m-%d') >= DATE_FORMAT(CURDATE(), '%m-%d') THEN 
+                            DATEDIFF(STR_TO_DATE(CONCAT(YEAR(CURDATE()), '-', DATE_FORMAT(a.nasc, '%m-%d')), '%Y-%m-%d'), CURDATE())
+                        ELSE 
+                            DATEDIFF(STR_TO_DATE(CONCAT(YEAR(CURDATE()) + 1, '-', DATE_FORMAT(a.nasc, '%m-%d')), '%Y-%m-%d'), CURDATE())
+                    END <= 7
+                ";
+                break;
+                
+            case 'mes':
+                $conditions[] = "DATE_FORMAT(a.nasc, '%m') = DATE_FORMAT(CURDATE(), '%m')";
+                break;
+                
+            case 'customizado':
+                if (!empty($parametros['data_inicio']) && !empty($parametros['data_fim'])) {
+                    $dataInicio = date('m-d', strtotime($parametros['data_inicio']));
+                    $dataFim = date('m-d', strtotime($parametros['data_fim']));
+                    
+                    // Verificar se o período cruza o ano
+                    if ($dataInicio <= $dataFim) {
+                        $conditions[] = "DATE_FORMAT(a.nasc, '%m-%d') BETWEEN ? AND ?";
+                        $params[] = $dataInicio;
+                        $params[] = $dataFim;
+                    } else {
+                        // Período cruza o ano (ex: dezembro para janeiro)
+                        $conditions[] = "(DATE_FORMAT(a.nasc, '%m-%d') >= ? OR DATE_FORMAT(a.nasc, '%m-%d') <= ?)";
+                        $params[] = $dataInicio;
+                        $params[] = $dataFim;
+                    }
+                }
+                break;
+        }
+        
+        // Filtro por corporação
+        if (!empty($parametros['corporacao'])) {
+            $conditions[] = "m.corporacao = ?";
+            $params[] = $parametros['corporacao'];
+        }
+        
+        // Filtro por situação (permitir override)
+        if (isset($parametros['situacao']) && $parametros['situacao'] !== '') {
+            // Remove a condição padrão se um filtro específico foi aplicado
+            $sql = str_replace("AND a.situacao = 'Filiado'", "", $sql);
+            $conditions[] = "a.situacao = ?";
+            $params[] = $parametros['situacao'];
+        }
+        
+        // Filtro por sexo
+        if (!empty($parametros['sexo'])) {
+            $conditions[] = "a.sexo = ?";
+            $params[] = $parametros['sexo'];
+        }
+        
+        // Filtro por faixa etária
+        if (!empty($parametros['idade_min'])) {
+            $conditions[] = "(YEAR(CURDATE()) - YEAR(a.nasc) - (DATE_FORMAT(CURDATE(), '%m%d') < DATE_FORMAT(a.nasc, '%m%d'))) >= ?";
+            $params[] = intval($parametros['idade_min']);
+        }
+        
+        if (!empty($parametros['idade_max'])) {
+            $conditions[] = "(YEAR(CURDATE()) - YEAR(a.nasc) - (DATE_FORMAT(CURDATE(), '%m%d') < DATE_FORMAT(a.nasc, '%m%d'))) <= ?";
+            $params[] = intval($parametros['idade_max']);
+        }
+        
+        // Aplicar condições adicionais
+        if (!empty($conditions)) {
+            $sql .= " AND " . implode(" AND ", $conditions);
+        }
+        
+        // Ordenação
+        $ordenacao = $parametros['ordenacao'] ?? '';
+        switch($ordenacao) {
+            case 'aniversario_asc':
+                $sql .= " ORDER BY DATE_FORMAT(a.nasc, '%m-%d') ASC, a.nome ASC";
+                break;
+            case 'idade_desc':
+                $sql .= " ORDER BY idade DESC, a.nome ASC";
+                break;
+            case 'idade_asc':
+                $sql .= " ORDER BY idade ASC, a.nome ASC";
+                break;
+            case 'nome_asc':
+                $sql .= " ORDER BY a.nome ASC";
+                break;
+            case 'corporacao_asc':
+                $sql .= " ORDER BY m.corporacao ASC, m.patente ASC, a.nome ASC";
+                break;
+            default:
+                // Para aniversariantes, ordem padrão é por proximidade do aniversário
+                if ($periodo === 'hoje') {
+                    $sql .= " ORDER BY a.nome ASC";
+                } else {
+                    $sql .= " ORDER BY dias_ate_aniversario ASC, a.nome ASC";
+                }
+        }
+        
+        // Executar query
+        $stmt = $db->prepare($sql);
+        $stmt->execute($params);
+        $resultados = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Processar dados adicionais (signo, formatações)
+        foreach ($resultados as &$linha) {
+            // Calcular signo zodiacal
+            $linha['signo'] = calcularSigno($linha['nasc']);
+            
+            // Formatações adicionais
+            if ($linha['cpf']) {
+                $linha['cpf_formatado'] = formatarCPF($linha['cpf']);
+            }
+            
+            if ($linha['telefone']) {
+                $linha['telefone_formatado'] = formatarTelefone($linha['telefone']);
+            }
+            
+            // Status do aniversário
+            if ($linha['dias_ate_aniversario'] == 0) {
+                $linha['status_aniversario'] = 'HOJE';
+                $linha['status_class'] = 'hoje';
+            } elseif ($linha['dias_ate_aniversario'] <= 3) {
+                $linha['status_aniversario'] = 'PRÓXIMO';
+                $linha['status_class'] = 'proximo';
+            } else {
+                $linha['status_aniversario'] = 'FUTURO';
+                $linha['status_class'] = 'futuro';
+            }
+        }
+        
+        // Filtrar campos conforme solicitado
+        $campos = $parametros['campos'] ?? [
+            'nome', 'data_nascimento', 'idade', 'telefone', 'email', 'corporacao', 'patente'
+        ];
+        
+        $dadosFiltrados = [];
+        foreach ($resultados as $linha) {
+            $linhafiltrada = [];
+            foreach ($campos as $campo) {
+                $linhafiltrada[$campo] = $linha[$campo] ?? '';
+            }
+            $dadosFiltrados[] = $linhafiltrada;
+        }
+        
+        // Estatísticas do relatório
+        $estatisticas = [
+            'total' => count($resultados),
+            'hoje' => count(array_filter($resultados, fn($p) => $p['dias_ate_aniversario'] == 0)),
+            'proximos_7_dias' => count(array_filter($resultados, fn($p) => $p['dias_ate_aniversario'] <= 7)),
+            'idade_media' => count($resultados) > 0 ? round(array_sum(array_column($resultados, 'idade')) / count($resultados), 1) : 0,
+            'corporacoes' => array_count_values(array_filter(array_column($resultados, 'corporacao')))
+        ];
+        
+        // Informações do relatório
+        $info = [
+            'titulo' => 'Relatório de Aniversariantes',
+            'subtitulo' => getSubtituloAniversariantes($periodo, count($dadosFiltrados), $parametros),
+            'data_geracao' => date('d/m/Y H:i'),
+            'total_registros' => count($dadosFiltrados),
+            'parametros' => $parametros,
+            'estatisticas' => $estatisticas
+        ];
+        
+        return [
+            'dados' => $dadosFiltrados,
+            'dados_completos' => $resultados, // Para templates que precisam de mais informações
+            'info' => $info,
+            'campos' => $campos
+        ];
+        
+    } catch (Exception $e) {
+        error_log("Erro no relatório de aniversariantes: " . $e->getMessage());
+        throw new Exception("Erro ao gerar relatório de aniversariantes: " . $e->getMessage());
+    }
+}
+
+function getSubtituloAniversariantes($periodo, $total, $parametros = []) {
+    $hoje = date('d/m/Y');
+    
+    switch($periodo) {
+        case 'hoje':
+            return "Aniversariantes do dia {$hoje} • {$total} pessoa(s)";
+        case 'semana':
+            $fimSemana = date('d/m/Y', strtotime('+7 days'));
+            return "Aniversariantes de {$hoje} até {$fimSemana} • {$total} pessoa(s)";
+        case 'mes':
+            $mesAtual = date('F', mktime(0, 0, 0, date('m'), 1, date('Y')));
+            $meses = [
+                'January' => 'Janeiro', 'February' => 'Fevereiro', 'March' => 'Março',
+                'April' => 'Abril', 'May' => 'Maio', 'June' => 'Junho',
+                'July' => 'Julho', 'August' => 'Agosto', 'September' => 'Setembro',
+                'October' => 'Outubro', 'November' => 'Novembro', 'December' => 'Dezembro'
+            ];
+            $mesPortugues = $meses[$mesAtual] ?? $mesAtual;
+            return "Aniversariantes de {$mesPortugues} de " . date('Y') . " • {$total} pessoa(s)";
+        case 'customizado':
+            if (!empty($parametros['data_inicio']) && !empty($parametros['data_fim'])) {
+                $inicio = date('d/m', strtotime($parametros['data_inicio']));
+                $fim = date('d/m', strtotime($parametros['data_fim']));
+                return "Aniversariantes de {$inicio} até {$fim} • {$total} pessoa(s)";
+            }
+            return "Aniversariantes do período selecionado • {$total} pessoa(s)";
+        default:
+            return "Aniversariantes • {$total} pessoa(s)";
+    }
+}
+
+/**
+ * Calcula o signo zodiacal baseado na data de nascimento
+ */
+function calcularSigno($dataNascimento) {
+    if (!$dataNascimento) return '';
+    
+    $data = new DateTime($dataNascimento);
+    $mes = (int)$data->format('m');
+    $dia = (int)$data->format('d');
+    
+    $signos = [
+        ['inicio' => [3, 21], 'fim' => [4, 19], 'nome' => 'Áries'],
+        ['inicio' => [4, 20], 'fim' => [5, 20], 'nome' => 'Touro'],
+        ['inicio' => [5, 21], 'fim' => [6, 20], 'nome' => 'Gêmeos'],
+        ['inicio' => [6, 21], 'fim' => [7, 22], 'nome' => 'Câncer'],
+        ['inicio' => [7, 23], 'fim' => [8, 22], 'nome' => 'Leão'],
+        ['inicio' => [8, 23], 'fim' => [9, 22], 'nome' => 'Virgem'],
+        ['inicio' => [9, 23], 'fim' => [10, 22], 'nome' => 'Libra'],
+        ['inicio' => [10, 23], 'fim' => [11, 21], 'nome' => 'Escorpião'],
+        ['inicio' => [11, 22], 'fim' => [12, 21], 'nome' => 'Sagitário'],
+        ['inicio' => [12, 22], 'fim' => [1, 19], 'nome' => 'Capricórnio'],
+        ['inicio' => [1, 20], 'fim' => [2, 18], 'nome' => 'Aquário'],
+        ['inicio' => [2, 19], 'fim' => [3, 20], 'nome' => 'Peixes']
+    ];
+    
+    foreach ($signos as $signo) {
+        $inicioMes = $signo['inicio'][0];
+        $inicioDia = $signo['inicio'][1];
+        $fimMes = $signo['fim'][0];
+        $fimDia = $signo['fim'][1];
+        
+        if ($inicioMes == $fimMes) {
+            // Mesmo mês
+            if ($mes == $inicioMes && $dia >= $inicioDia && $dia <= $fimDia) {
+                return $signo['nome'];
+            }
+        } else {
+            // Cruza mês (como Capricórnio)
+            if (($mes == $inicioMes && $dia >= $inicioDia) || 
+                ($mes == $fimMes && $dia <= $fimDia)) {
+                return $signo['nome'];
+            }
+        }
+    }
+    
+    return '';
+}
+
 ?>
