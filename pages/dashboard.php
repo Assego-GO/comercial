@@ -93,194 +93,194 @@ $headerComponent = HeaderComponent::create([
                 <h1 class="page-title">Gestão de Associados</h1>
                 <p class="page-subtitle">Gerencie os associados da ASSEGO</p>
             </div>
-             <?php include 'components/simulation-banner.php'; ?>
+            <?php include 'components/simulation-banner.php'; ?>
 
             <?php
-// Apenas a parte que precisa ser modificada no dashboard.php
+            // Apenas a parte que precisa ser modificada no dashboard.php
+            
+            // ANTES da seção Stats Grid, adicionar:
+            $departamentoComercialId = 10; // AJUSTE CONFORME SEU BANCO
+            $departamentoPresidenciaId = 1; // AJUSTE CONFORME SEU BANCO
+            
+            $podeVerKPIs = $auth->isDiretor() ||
+                (isset($usuarioLogado['departamento_id']) &&
+                    $usuarioLogado['departamento_id'] == $departamentoComercialId || $usuarioLogado['departamento_id'] == $departamentoPresidenciaId);
 
-// ANTES da seção Stats Grid, adicionar:
-$departamentoComercialId = 10; // AJUSTE CONFORME SEU BANCO
-$departamentoPresidenciaId = 1; // AJUSTE CONFORME SEU BANCO
-
-$podeVerKPIs = $auth->isDiretor() || 
-               (isset($usuarioLogado['departamento_id']) && 
-                $usuarioLogado['departamento_id'] == $departamentoComercialId || $usuarioLogado['departamento_id'] == $departamentoPresidenciaId);
-
-if ($podeVerKPIs): ?>
-    <!-- Stats Grid -->
-    <div class="stats-grid" data-aos="fade-up">
-        <!-- Card 1: Associados Ativos + Novos - LAYOUT VERTICAL -->
-        <div class="stat-card dual-stat-card">
-            <div class="dual-stat-header">
-                <div class="dual-stat-title">
-                    <i class="fas fa-users"></i>
-                    Associados
-                </div>
-                <div class="dual-stat-percentage" id="associadosPercent">
-                    <i class="fas fa-chart-line"></i>
-                    Crescimento
-                </div>
-            </div>
-            <div class="dual-stats-row vertical-layout">
-                <div class="dual-stat-item ativos-item">
-                    <div class="dual-stat-icon ativos-icon">
-                        <i class="fas fa-user-check"></i>
-                    </div>
-                    <div class="dual-stat-info">
-                        <div class="dual-stat-value" id="associadosAtivos">-</div>
-                        <div class="dual-stat-label">Ativos</div>
-                    </div>
-                </div>
-                <div class="dual-stats-separator"></div>
-                <div class="dual-stat-item novos-item">
-                    <div class="dual-stat-icon novos-icon">
-                        <i class="fas fa-user-plus"></i>
-                    </div>
-                    <div class="dual-stat-info">
-                        <div class="dual-stat-value" id="novosAssociados">-</div>
-                        <div class="dual-stat-label">Novos (30d)</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Card 2: PM + BM + Outros -->
-        <div class="stat-card dual-stat-card triple-stat-card">
-            <div class="dual-stat-header">
-                <div class="dual-stat-title">
-                    <i class="fas fa-shield-alt"></i>
-                    Corporações
-                </div>
-                <div class="dual-stat-percentage" id="corporacoesPercent">
-                    <i class="fas fa-chart-pie"></i>
-                    -% do total
-                </div>
-            </div>
-            <div class="dual-stats-row triple-stats-row">
-                <div class="dual-stat-item pm-item">
-                    <div class="dual-stat-icon pm-icon">
-                        <i class="fas fa-shield-alt"></i>
-                    </div>
-                    <div class="dual-stat-info">
-                        <div class="dual-stat-value" id="pmQuantidade">-</div>
-                        <div class="dual-stat-label">PM</div>
-                        <div class="dual-stat-extra">
-                            <div class="status-breakdown">
-                                <div class="status-item status-ativa">
-                                    <i class="fas fa-circle"></i>
-                                    <span id="pmAtiva">-</span> Ativa
+            if ($podeVerKPIs): ?>
+                <!-- Stats Grid -->
+                <div class="stats-grid" data-aos="fade-up">
+                    <!-- Card 1: Associados Ativos + Novos - LAYOUT VERTICAL -->
+                    <div class="stat-card dual-stat-card">
+                        <div class="dual-stat-header">
+                            <div class="dual-stat-title">
+                                <i class="fas fa-users"></i>
+                                Associados
+                            </div>
+                            <div class="dual-stat-percentage" id="associadosPercent">
+                                <i class="fas fa-chart-line"></i>
+                                Crescimento
+                            </div>
+                        </div>
+                        <div class="dual-stats-row vertical-layout">
+                            <div class="dual-stat-item ativos-item">
+                                <div class="dual-stat-icon ativos-icon">
+                                    <i class="fas fa-user-check"></i>
                                 </div>
-                                <div class="status-item status-reserva">
-                                    <i class="fas fa-circle"></i>
-                                    <span id="pmReserva">-</span> Reserva
+                                <div class="dual-stat-info">
+                                    <div class="dual-stat-value" id="associadosAtivos">-</div>
+                                    <div class="dual-stat-label">Ativos</div>
+                                </div>
+                            </div>
+                            <div class="dual-stats-separator"></div>
+                            <div class="dual-stat-item novos-item">
+                                <div class="dual-stat-icon novos-icon">
+                                    <i class="fas fa-user-plus"></i>
+                                </div>
+                                <div class="dual-stat-info">
+                                    <div class="dual-stat-value" id="novosAssociados">-</div>
+                                    <div class="dual-stat-label">Novos (30d)</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card 2: PM + BM + Outros -->
+                    <div class="stat-card dual-stat-card triple-stat-card">
+                        <div class="dual-stat-header">
+                            <div class="dual-stat-title">
+                                <i class="fas fa-shield-alt"></i>
+                                Corporações
+                            </div>
+                            <div class="dual-stat-percentage" id="corporacoesPercent">
+                                <i class="fas fa-chart-pie"></i>
+                                -% do total
+                            </div>
+                        </div>
+                        <div class="dual-stats-row triple-stats-row">
+                            <div class="dual-stat-item pm-item">
+                                <div class="dual-stat-icon pm-icon">
+                                    <i class="fas fa-shield-alt"></i>
+                                </div>
+                                <div class="dual-stat-info">
+                                    <div class="dual-stat-value" id="pmQuantidade">-</div>
+                                    <div class="dual-stat-label">PM</div>
+                                    <div class="dual-stat-extra">
+                                        <div class="status-breakdown">
+                                            <div class="status-item status-ativa">
+                                                <i class="fas fa-circle"></i>
+                                                <span id="pmAtiva">-</span> Ativa
+                                            </div>
+                                            <div class="status-item status-reserva">
+                                                <i class="fas fa-circle"></i>
+                                                <span id="pmReserva">-</span> Reserva
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="dual-stats-separator"></div>
+                            <div class="dual-stat-item bm-item">
+                                <div class="dual-stat-icon bm-icon">
+                                    <i class="fas fa-fire-extinguisher"></i>
+                                </div>
+                                <div class="dual-stat-info">
+                                    <div class="dual-stat-value" id="bmQuantidade">-</div>
+                                    <div class="dual-stat-label">BM</div>
+                                    <div class="dual-stat-extra">
+                                        <div class="status-breakdown">
+                                            <div class="status-item status-ativa">
+                                                <i class="fas fa-circle"></i>
+                                                <span id="bmAtiva">-</span> Ativa
+                                            </div>
+                                            <div class="status-item status-reserva">
+                                                <i class="fas fa-circle"></i>
+                                                <span id="bmReserva">-</span> Reserva
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="dual-stats-separator"></div>
+                            <div class="dual-stat-item outros-item">
+                                <div class="dual-stat-icon outros-icon">
+                                    <i class="fas fa-users"></i>
+                                </div>
+                                <div class="dual-stat-info">
+                                    <div class="dual-stat-value" id="outrosQuantidade">-</div>
+                                    <div class="dual-stat-label">Outros</div>
+                                    <div class="dual-stat-extra">
+                                        <div class="status-breakdown">
+                                            <div class="status-item status-ativa">
+                                                <i class="fas fa-circle"></i>
+                                                <span id="outrosAtiva">-</span> Ativa
+                                            </div>
+                                            <div class="status-item status-reserva">
+                                                <i class="fas fa-circle"></i>
+                                                <span id="outrosReserva">-</span> Reserva
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card 3: Capital/Interior - LAYOUT VERTICAL -->
+                    <div class="stat-card dual-stat-card">
+                        <div class="dual-stat-header">
+                            <div class="dual-stat-title">
+                                <i class="fas fa-map-marked-alt"></i>
+                                Distribuição
+                            </div>
+                            <div class="dual-stat-percentage" id="localizacaoPercent">
+                                <i class="fas fa-percentage"></i>
+                                <span id="totalLocalizacao">-</span> Mapeados
+                            </div>
+                        </div>
+                        <div class="dual-stats-row vertical-layout">
+                            <div class="dual-stat-item capital-item">
+                                <div class="dual-stat-icon capital-icon">
+                                    <i class="fas fa-city"></i>
+                                </div>
+                                <div class="dual-stat-info">
+                                    <div class="dual-stat-value" id="capitalQuantidade">-</div>
+                                    <div class="dual-stat-label">Capital (Goiânia)</div>
+                                    <div class="dual-stat-extra">
+                                        <div class="status-breakdown">
+                                            <div class="status-item status-capital">
+                                                <i class="fas fa-circle"></i>
+                                                <span id="capitalPercent">-%</span> do total
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="dual-stats-separator"></div>
+                            <div class="dual-stat-item interior-item">
+                                <div class="dual-stat-icon interior-icon">
+                                    <i class="fas fa-tree"></i>
+                                </div>
+                                <div class="dual-stat-info">
+                                    <div class="dual-stat-value" id="interiorQuantidade">-</div>
+                                    <div class="dual-stat-label">Interior</div>
+                                    <div class="dual-stat-extra">
+                                        <div class="status-breakdown">
+                                            <div class="status-item status-interior">
+                                                <i class="fas fa-circle"></i>
+                                                <span id="interiorPercent">-%</span> do total
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="dual-stats-separator"></div>
-                <div class="dual-stat-item bm-item">
-                    <div class="dual-stat-icon bm-icon">
-                        <i class="fas fa-fire-extinguisher"></i>
-                    </div>
-                    <div class="dual-stat-info">
-                        <div class="dual-stat-value" id="bmQuantidade">-</div>
-                        <div class="dual-stat-label">BM</div>
-                        <div class="dual-stat-extra">
-                            <div class="status-breakdown">
-                                <div class="status-item status-ativa">
-                                    <i class="fas fa-circle"></i>
-                                    <span id="bmAtiva">-</span> Ativa
-                                </div>
-                                <div class="status-item status-reserva">
-                                    <i class="fas fa-circle"></i>
-                                    <span id="bmReserva">-</span> Reserva
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="dual-stats-separator"></div>
-                <div class="dual-stat-item outros-item">
-                    <div class="dual-stat-icon outros-icon">
-                        <i class="fas fa-users"></i>
-                    </div>
-                    <div class="dual-stat-info">
-                        <div class="dual-stat-value" id="outrosQuantidade">-</div>
-                        <div class="dual-stat-label">Outros</div>
-                        <div class="dual-stat-extra">
-                            <div class="status-breakdown">
-                                <div class="status-item status-ativa">
-                                    <i class="fas fa-circle"></i>
-                                    <span id="outrosAtiva">-</span> Ativa
-                                </div>
-                                <div class="status-item status-reserva">
-                                    <i class="fas fa-circle"></i>
-                                    <span id="outrosReserva">-</span> Reserva
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Card 3: Capital/Interior - LAYOUT VERTICAL -->
-        <div class="stat-card dual-stat-card">
-            <div class="dual-stat-header">
-                <div class="dual-stat-title">
-                    <i class="fas fa-map-marked-alt"></i>
-                    Distribuição
-                </div>
-                <div class="dual-stat-percentage" id="localizacaoPercent">
-                    <i class="fas fa-percentage"></i>
-                    <span id="totalLocalizacao">-</span> Mapeados
-                </div>
-            </div>
-            <div class="dual-stats-row vertical-layout">
-                <div class="dual-stat-item capital-item">
-                    <div class="dual-stat-icon capital-icon">
-                        <i class="fas fa-city"></i>
-                    </div>
-                    <div class="dual-stat-info">
-                        <div class="dual-stat-value" id="capitalQuantidade">-</div>
-                        <div class="dual-stat-label">Capital (Goiânia)</div>
-                        <div class="dual-stat-extra">
-                            <div class="status-breakdown">
-                                <div class="status-item status-capital">
-                                    <i class="fas fa-circle"></i>
-                                    <span id="capitalPercent">-%</span> do total
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="dual-stats-separator"></div>
-                <div class="dual-stat-item interior-item">
-                    <div class="dual-stat-icon interior-icon">
-                        <i class="fas fa-tree"></i>
-                    </div>
-                    <div class="dual-stat-info">
-                        <div class="dual-stat-value" id="interiorQuantidade">-</div>
-                        <div class="dual-stat-label">Interior</div>
-                        <div class="dual-stat-extra">
-                            <div class="status-breakdown">
-                                <div class="status-item status-interior">
-                                    <i class="fas fa-circle"></i>
-                                    <span id="interiorPercent">-%</span> do total
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-<?php endif; ?>
+            <?php endif; ?>
 
             <!-- Actions Bar with Filters -->
             <div class="actions-bar" data-aos="fade-up" data-aos-delay="100">
-                
+
                 <div class="filters-row">
                     <div class="search-box">
                         <label class="filter-label">Buscar</label>
@@ -349,8 +349,7 @@ if ($podeVerKPIs): ?>
                                 <th>Corporação</th>
                                 <th>Patente</th>
                                 <th>Dt. Filiação</th>
-                                <th>Contato</th>
-                                <th style="width: 120px;">Ações</th>
+                                <th style="width: 150px;">Ações</th>
                             </tr>
                         </thead>
                         <tbody id="tableBody">
@@ -531,7 +530,8 @@ if ($podeVerKPIs): ?>
                     <div class="observacoes-filters">
                         <div class="observacoes-search">
                             <i class="fas fa-search"></i>
-                            <input type="text" id="searchObservacoes" placeholder="Buscar nas observações..." class="observacoes-search-input">
+                            <input type="text" id="searchObservacoes" placeholder="Buscar nas observações..."
+                                class="observacoes-search-input">
                         </div>
                         <div class="observacoes-filter-buttons">
                             <button class="filter-btn active" data-filter="all">
@@ -552,7 +552,7 @@ if ($podeVerKPIs): ?>
                     <!-- Container de Observações -->
                     <div class="observacoes-container" id="observacoesContainer">
                         <!-- As observações serão carregadas dinamicamente aqui -->
-                        
+
                         <!-- Estado vazio -->
                         <div class="empty-observacoes-state" style="display: none;">
                             <div class="empty-observacoes-icon">
@@ -570,7 +570,8 @@ if ($podeVerKPIs): ?>
                     <!-- Paginação das Observações -->
                     <div class="observacoes-pagination">
                         <div class="pagination-info">
-                            Mostrando <span id="observacoesShowing">1-5</span> de <span id="observacoesTotal">12</span> observações
+                            Mostrando <span id="observacoesShowing">1-5</span> de <span id="observacoesTotal">12</span>
+                            observações
                         </div>
                         <div class="pagination-controls">
                             <button class="pagination-btn" id="prevObservacoes">
@@ -605,7 +606,7 @@ if ($podeVerKPIs): ?>
                                 <i class="fas fa-pen me-1"></i>
                                 Observação
                             </label>
-                            <textarea class="form-control observacao-textarea" id="observacaoTexto" rows="6" 
+                            <textarea class="form-control observacao-textarea" id="observacaoTexto" rows="6"
                                 placeholder="Digite aqui a observação sobre o associado..." required></textarea>
                             <div class="form-text">Seja claro e objetivo em suas anotações.</div>
                         </div>
@@ -673,6 +674,125 @@ if ($podeVerKPIs): ?>
         </div>
     </div>
 
+    <!-- Modal de Edição de Contato -->
+    <div class="modal fade" id="modalEditarContato" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header" style="background: linear-gradient(135deg, #0056D2, #003d94); color: white;">
+                    <h5 class="modal-title">
+                        <i class="fas fa-edit me-2"></i>
+                        Editar Informações de Contato
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Você pode editar apenas as informações de contato deste associado.
+                    </div>
+
+                    <form id="formEditarContato">
+                        <input type="hidden" id="editContatoId" name="id">
+
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <h6 class="text-primary mb-3">
+                                    <i class="fas fa-user me-2"></i>
+                                    <span id="editContatoNome"></span>
+                                </h6>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">
+                                        <i class="fas fa-phone me-1"></i>
+                                        Telefone
+                                    </label>
+                                    <input type="text" class="form-control" id="editContatoTelefone" name="telefone"
+                                        placeholder="(00) 00000-0000">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">
+                                        <i class="fas fa-envelope me-1"></i>
+                                        E-mail
+                                    </label>
+                                    <input type="email" class="form-control" id="editContatoEmail" name="email"
+                                        placeholder="email@exemplo.com">
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr>
+
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label class="form-label">
+                                        <i class="fas fa-map-marker-alt me-1"></i>
+                                        CEP
+                                    </label>
+                                    <input type="text" class="form-control" id="editContatoCep" name="cep"
+                                        placeholder="00000-000">
+                                </div>
+                            </div>
+                            <div class="col-md-8">
+                                <div class="mb-3">
+                                    <label class="form-label">Endereço</label>
+                                    <input type="text" class="form-control" id="editContatoEndereco" name="endereco">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label class="form-label">Número</label>
+                                    <input type="text" class="form-control" id="editContatoNumero" name="numero">
+                                </div>
+                            </div>
+                            <div class="col-md-5">
+                                <div class="mb-3">
+                                    <label class="form-label">Complemento</label>
+                                    <input type="text" class="form-control" id="editContatoComplemento"
+                                        name="complemento">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label class="form-label">Bairro</label>
+                                    <input type="text" class="form-control" id="editContatoBairro" name="bairro">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="mb-3">
+                                    <label class="form-label">Cidade</label>
+                                    <input type="text" class="form-control" id="editContatoCidade" name="cidade">
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i>
+                        Cancelar
+                    </button>
+                    <button type="button" class="btn btn-primary" onclick="salvarContatoEditado()">
+                        <i class="fas fa-save me-1"></i>
+                        Salvar Alterações
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
@@ -686,27 +806,27 @@ if ($podeVerKPIs): ?>
         .stat-icon.birthday {
             background: linear-gradient(135deg, #e91e63 0%, #ad1457 100%);
         }
-        
+
         .stat-icon.geographic {
             background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
         }
-        
+
         .stat-change.neutral {
             background: rgba(156, 39, 176, 0.1);
             color: #9c27b0;
         }
-        
+
         .stat-change.neutral i {
             color: #e91e63;
         }
-        
+
         /* Ajusta grid para 3 cards */
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
             gap: 1.5rem;
         }
-        
+
         @media (min-width: 1200px) {
             .stats-grid {
                 grid-template-columns: repeat(3, 1fr);
@@ -724,7 +844,7 @@ if ($podeVerKPIs): ?>
                 grid-template-columns: 1fr;
             }
         }
-        
+
         /* Card Principal */
         .dual-stat-card {
             position: relative;
@@ -1095,11 +1215,11 @@ if ($podeVerKPIs): ?>
                 max-width: 50%;
                 overflow: visible;
             }
-            
+
             .dual-stat-value {
                 font-size: 1.5rem;
             }
-            
+
             .dual-stat-icon {
                 width: 44px;
                 height: 44px;
@@ -1111,7 +1231,7 @@ if ($podeVerKPIs): ?>
             .dual-stat-value {
                 font-size: 1.75rem;
             }
-            
+
             .dual-stat-icon {
                 width: 48px;
                 height: 48px;
@@ -1121,7 +1241,7 @@ if ($podeVerKPIs): ?>
             .triple-stats-row .dual-stat-value {
                 font-size: 2rem;
             }
-            
+
             .triple-stats-row .dual-stat-icon {
                 width: 52px;
                 height: 52px;
@@ -1131,8 +1251,15 @@ if ($podeVerKPIs): ?>
 
         /* Animações */
         @keyframes float {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-3px); }
+
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-3px);
+            }
         }
 
         .dual-stat-icon {
@@ -1182,7 +1309,7 @@ if ($podeVerKPIs): ?>
 
                 case 'AGUARDANDO_ASSINATURA':
                     <?php if ($auth->isDiretor() || $usuarioLogado['departamento_id'] == 2): ?>
-                    acoes = `
+                        acoes = `
                             <button class="btn-modern btn-success btn-sm" onclick="abrirModalAssinaturaModal(${doc.id})" title="Assinar">
                                 <i class="fas fa-signature"></i>
                                 Assinar
@@ -1211,24 +1338,24 @@ if ($podeVerKPIs): ?>
                 .then(data => {
                     if (data.status === 'success') {
                         const stats = data.data;
-                        
+
                         // === CARD 1: ASSOCIADOS ATIVOS + NOVOS ===
-                        document.getElementById('associadosAtivos').textContent = 
+                        document.getElementById('associadosAtivos').textContent =
                             new Intl.NumberFormat('pt-BR').format(stats.associados_ativos);
-                        
-                        document.getElementById('novosAssociados').textContent = 
+
+                        document.getElementById('novosAssociados').textContent =
                             new Intl.NumberFormat('pt-BR').format(stats.novos_associados);
-                        
+
                         // === CARD 2: CORPORAÇÕES (PM/BM/OUTROS) ===
                         const corp = stats.corporacoes_principais;
-                        
-                        document.getElementById('pmQuantidade').textContent = 
+
+                        document.getElementById('pmQuantidade').textContent =
                             new Intl.NumberFormat('pt-BR').format(corp.pm_quantidade);
-                        document.getElementById('bmQuantidade').textContent = 
+                        document.getElementById('bmQuantidade').textContent =
                             new Intl.NumberFormat('pt-BR').format(corp.bm_quantidade);
-                        document.getElementById('outrosQuantidade').textContent = 
+                        document.getElementById('outrosQuantidade').textContent =
                             new Intl.NumberFormat('pt-BR').format(corp.outros_quantidade);
-                        
+
                         // Atualizar detalhes Ativa/Reserva
                         document.getElementById('pmAtiva').textContent = corp.pm_ativa || 0;
                         document.getElementById('pmReserva').textContent = corp.pm_reserva || 0;
@@ -1236,25 +1363,25 @@ if ($podeVerKPIs): ?>
                         document.getElementById('bmReserva').textContent = corp.bm_reserva || 0;
                         document.getElementById('outrosAtiva').textContent = corp.outros_ativa || 0;
                         document.getElementById('outrosReserva').textContent = corp.outros_reserva || 0;
-                        
-                        document.getElementById('corporacoesPercent').innerHTML = 
+
+                        document.getElementById('corporacoesPercent').innerHTML =
                             `<i class="fas fa-chart-pie"></i> ${corp.total_percentual}% do total`;
-                        
+
                         // === CARD 3: DISTRIBUIÇÃO (CAPITAL/INTERIOR) ===
                         const totalMapeados = stats.capital + stats.interior;
-                        
-                        document.getElementById('capitalQuantidade').textContent = 
+
+                        document.getElementById('capitalQuantidade').textContent =
                             new Intl.NumberFormat('pt-BR').format(stats.capital);
-                        document.getElementById('interiorQuantidade').textContent = 
+                        document.getElementById('interiorQuantidade').textContent =
                             new Intl.NumberFormat('pt-BR').format(stats.interior);
-                        document.getElementById('totalLocalizacao').textContent = 
+                        document.getElementById('totalLocalizacao').textContent =
                             new Intl.NumberFormat('pt-BR').format(totalMapeados);
-                        
+
                         document.getElementById('capitalPercent').textContent = `${stats.capital_percentual}%`;
                         document.getElementById('interiorPercent').textContent = `${stats.interior_percentual}%`;
-                        
+
                         console.log('Estatísticas carregadas:', stats);
-                        
+
                     } else {
                         console.error('Erro ao carregar estatísticas:', data.message);
                     }
@@ -1274,7 +1401,7 @@ if ($podeVerKPIs): ?>
 
             // Associados ativos
             const ativos = todosAssociados.filter(a => a.situacao === 'Filiado').length;
-            document.getElementById('associadosAtivos').textContent = 
+            document.getElementById('associadosAtivos').textContent =
                 new Intl.NumberFormat('pt-BR').format(ativos);
 
             // Novos (30 dias) - aproximação
@@ -1285,16 +1412,16 @@ if ($podeVerKPIs): ?>
                 const dataFiliacao = new Date(a.data_filiacao);
                 return dataFiliacao >= trintaDiasAtras;
             }).length;
-            document.getElementById('novosAssociados').textContent = 
+            document.getElementById('novosAssociados').textContent =
                 new Intl.NumberFormat('pt-BR').format(novos);
 
             console.log('Estatísticas calculadas localmente');
         }
 
         // Carrega quando a página está pronta
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             carregarEstatisticas();
-            
+
             // Inicializa AOS
             AOS.init({
                 duration: 800,
@@ -1305,22 +1432,55 @@ if ($podeVerKPIs): ?>
     </script>
 
     <script>
-    // Verifica se deve carregar estatísticas
-    const podeVerKPIs = <?php echo $podeVerKPIs ? 'true' : 'false'; ?>;
-    
-    document.addEventListener('DOMContentLoaded', function() {
-        // Só carrega estatísticas se o usuário tem permissão
-        if (podeVerKPIs) {
-            carregarEstatisticas();
-        }
-        
-        AOS.init({
-            duration: 800,
-            easing: 'ease-out-cubic',
-            once: true
+        // Verifica se deve carregar estatísticas
+        const podeVerKPIs = <?php echo $podeVerKPIs ? 'true' : 'false'; ?>;
+
+        document.addEventListener('DOMContentLoaded', function () {
+            // Só carrega estatísticas se o usuário tem permissão
+            if (podeVerKPIs) {
+                carregarEstatisticas();
+            }
+
+            AOS.init({
+                duration: 800,
+                easing: 'ease-out-cubic',
+                once: true
+            });
         });
-    });
-</script>
+    </script>
+
+    <script>
+        // Passar permissões do PHP para o JavaScript
+        const permissoesUsuario = {
+            podeExcluir: <?php
+            $podeExcluir = false;
+            if (isset($usuarioLogado['departamento_id'])) {
+                // Presidência pode excluir
+                if ($usuarioLogado['departamento_id'] == 1) {
+                    $podeExcluir = true;
+                }
+                // Diretor do Comercial pode excluir
+                if ($usuarioLogado['cargo'] == 'Diretor' && $usuarioLogado['departamento_id'] == 10) {
+                    $podeExcluir = true;
+                }
+            }
+            echo $podeExcluir ? 'true' : 'false';
+            ?>,
+            podeEditarCompleto: <?php
+            $podeEditarCompleto = false;
+            if (isset($usuarioLogado['departamento_id'])) {
+                // Presidência, Comercial e RH podem editar completo
+                if (in_array($usuarioLogado['departamento_id'], [1, 9, 10])) {
+                    $podeEditarCompleto = true;
+                }
+            }
+            echo $podeEditarCompleto ? 'true' : 'false';
+            ?>,
+            departamentoId: <?php echo $usuarioLogado['departamento_id'] ?? 'null'; ?>,
+            cargo: '<?php echo $usuarioLogado['cargo'] ?? ''; ?>'
+        };
+    </script>
+
 
     <script src="js/dashboard.js"></script>
 
