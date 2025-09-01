@@ -609,6 +609,558 @@ $headerComponent = HeaderComponent::create([
                 width: 100%;
             }
         }
+        .dual-stat-card {
+    position: relative;
+    overflow: visible;
+    background: var(--white);
+    border: 1px solid var(--gray-200);
+    border-radius: 20px;
+    padding: 0;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: var(--shadow-sm);
+    min-width: 320px;
+    width: 100%;
+}
+
+.dual-stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--info) 100%);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.4s ease;
+}
+
+.dual-stat-card:hover::before {
+    transform: scaleX(1);
+}
+
+.dual-stat-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+    border-color: rgba(0, 86, 210, 0.2);
+}
+
+/* Header do Card */
+.dual-stat-header {
+    background: linear-gradient(135deg, var(--gray-100) 0%, var(--gray-200) 100%);
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--gray-200);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.dual-stat-title {
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: var(--gray-700);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.dual-stat-percentage {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--primary);
+    background: var(--primary-light);
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+}
+
+/* Layout Desktop - Vertical */
+.dual-stats-row {
+    display: flex;
+    align-items: stretch;
+    padding: 0;
+    min-height: 120px;
+    width: 100%;
+}
+
+.dual-stat-item {
+    flex: 1;
+    min-width: 0;
+    padding: 1.5rem 0.75rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 1rem;
+    transition: all 0.3s ease;
+    position: relative;
+    width: 50%;
+}
+
+.dual-stat-item:hover {
+    background: rgba(0, 86, 210, 0.02);
+}
+
+.dual-stat-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    flex-shrink: 0;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.dual-stat-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    text-align: center;
+    align-items: center;
+}
+
+.dual-stat-value {
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: var(--dark);
+    line-height: 1;
+    margin-bottom: 0.25rem;
+    transition: all 0.3s ease;
+}
+
+.dual-stat-label {
+    font-size: 0.875rem;
+    color: var(--gray-600);
+    font-weight: 600;
+    line-height: 1;
+}
+
+/* Separador vertical */
+.dual-stats-separator {
+    width: 1px;
+    background: linear-gradient(to bottom, transparent, var(--gray-300), transparent);
+    margin: 1.5rem 0;
+    flex-shrink: 0;
+}
+
+/* Cores específicas dos ícones */
+.pendentes-icon {
+    background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
+    color: white;
+}
+
+.assinados-icon {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    color: white;
+}
+
+.hoje-icon {
+    background: linear-gradient(135deg, #17a2b8 0%, #007bff 100%);
+    color: white;
+}
+
+.mes-icon {
+    background: linear-gradient(135deg, #007bff 0%, #6610f2 100%);
+    color: white;
+}
+
+.tempo-icon {
+    background: linear-gradient(135deg, #dc3545 0%, #e83e8c 100%);
+    color: white;
+}
+
+.velocidade-icon {
+    background: linear-gradient(135deg, #fd7e14 0%, #ffc107 100%);
+    color: white;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .dual-stats-row {
+        flex-direction: column;
+        min-height: auto;
+    }
+
+    .dual-stats-separator {
+        width: 80%;
+        height: 1px;
+        margin: 0.75rem auto;
+        background: linear-gradient(to right, transparent, var(--gray-300), transparent);
+    }
+
+    .dual-stat-item {
+        padding: 1.25rem;
+        width: 100%;
+        min-width: 0;
+        flex-direction: row !important;
+        align-items: center !important;
+        text-align: left !important;
+        gap: 1rem !important;
+        justify-content: flex-start !important;
+    }
+
+    .dual-stat-info {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        text-align: left !important;
+    }
+
+    .dual-stat-value {
+        font-size: 1.75rem;
+    }
+
+    .dual-stat-icon {
+        width: 48px;
+        height: 48px;
+        font-size: 1.25rem;
+        flex-shrink: 0;
+    }
+}
+/* === MODAL VALORES BASE - DESIGN MODERNO === */
+
+#modalEditarValoresBase .modal-dialog {
+    max-width: 1000px;
+    margin: 2rem auto;
+}
+
+#modalEditarValoresBase .modal-content {
+    border: none;
+    border-radius: 20px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+    overflow: hidden;
+    background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+}
+
+#modalEditarValoresBase .modal-header {
+    background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+    color: white;
+    border: none;
+    padding: 2rem;
+    position: relative;
+    overflow: hidden;
+}
+
+#modalEditarValoresBase .modal-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 100px;
+    height: 100px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    transform: translate(30px, -30px);
+}
+
+#modalEditarValoresBase .modal-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    position: relative;
+    z-index: 1;
+}
+
+#modalEditarValoresBase .modal-title i {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 0.75rem;
+    border-radius: 12px;
+    backdrop-filter: blur(10px);
+}
+
+#modalEditarValoresBase .modal-body {
+    padding: 2.5rem;
+    background: white;
+}
+
+#modalEditarValoresBase .alert {
+    border-radius: 12px;
+    border: none;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    background: linear-gradient(135deg, rgba(13, 202, 240, 0.1) 0%, rgba(13, 202, 240, 0.05) 100%);
+    border-left: 4px solid #0dcaf0;
+}
+
+#modalEditarValoresBase .alert i {
+    font-size: 1.2rem;
+    margin-right: 0.75rem;
+    color: #0dcaf0;
+}
+
+/* Cards dos Serviços */
+#modalEditarValoresBase .card {
+    border-radius: 16px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    margin-bottom: 1.5rem;
+}
+
+#modalEditarValoresBase .card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+}
+
+#modalEditarValoresBase .card-header {
+    background: linear-gradient(135deg, var(--color-start) 0%, var(--color-end) 100%);
+    color: white;
+    border: none;
+    padding: 1.5rem;
+    position: relative;
+    overflow: hidden;
+}
+
+#modalEditarValoresBase .card-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 60px;
+    height: 60px;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 50%;
+    transform: translate(20px, -20px);
+}
+
+#modalEditarValoresBase .border-success .card-header {
+    --color-start: #28a745;
+    --color-end: #20c997;
+}
+
+#modalEditarValoresBase .border-warning .card-header {
+    --color-start: #ffc107;
+    --color-end: #fd7e14;
+    color: #212529 !important;
+}
+
+#modalEditarValoresBase .card-header h6 {
+    margin: 0;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    position: relative;
+    z-index: 1;
+}
+
+#modalEditarValoresBase .card-header i {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 0.5rem;
+    border-radius: 8px;
+    backdrop-filter: blur(5px);
+}
+
+#modalEditarValoresBase .card-body {
+    padding: 2rem;
+    background: white;
+}
+
+/* Inputs modernos */
+#modalEditarValoresBase .input-group {
+    margin-bottom: 1.5rem;
+}
+
+#modalEditarValoresBase .input-group-text {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border: 2px solid #e9ecef;
+    border-right: none;
+    font-weight: 700;
+    color: #495057;
+    border-radius: 12px 0 0 12px;
+    padding: 0.75rem 1rem;
+}
+
+#modalEditarValoresBase .form-control {
+    border: 2px solid #e9ecef;
+    border-left: none;
+    border-radius: 0 12px 12px 0;
+    padding: 0.75rem 1rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+#modalEditarValoresBase .form-control:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.15);
+    transform: translateY(-1px);
+}
+
+/* Área de impacto */
+#modalEditarValoresBase .bg-light {
+    background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%) !important;
+    border-radius: 12px;
+    padding: 1.5rem;
+    border: 2px solid #e9ecef;
+    margin-top: 1rem;
+}
+
+#modalEditarValoresBase .bg-light h6 {
+    color: #495057;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+#modalEditarValoresBase .bg-light .d-flex {
+    padding: 0.5rem 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    margin-bottom: 0.5rem;
+}
+
+#modalEditarValoresBase .bg-light .d-flex:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+
+#modalEditarValoresBase .fw-bold {
+    font-weight: 700 !important;
+    color: #007bff;
+}
+
+/* Card de Resumo */
+#modalEditarValoresBase .border-info .card-header {
+    --color-start: #17a2b8;
+    --color-end: #007bff;
+}
+
+#modalEditarValoresBase .text-center .row > div {
+    padding: 1rem;
+    border-radius: 12px;
+    margin: 0.25rem;
+    background: rgba(0, 123, 255, 0.03);
+    transition: all 0.3s ease;
+}
+
+#modalEditarValoresBase .text-center .row > div:hover {
+    background: rgba(0, 123, 255, 0.08);
+    transform: translateY(-2px);
+}
+
+#modalEditarValoresBase .text-info {
+    color: #007bff !important;
+    font-size: 1.8rem;
+    font-weight: 800;
+}
+
+#modalEditarValoresBase .text-success {
+    color: #28a745 !important;
+    font-size: 1.8rem;
+    font-weight: 800;
+}
+
+#modalEditarValoresBase .text-primary {
+    color: #007bff !important;
+    font-size: 1.8rem;
+    font-weight: 800;
+}
+
+/* Footer do Modal */
+#modalEditarValoresBase .modal-footer {
+    background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+    border: none;
+    padding: 2rem;
+    gap: 1rem;
+}
+
+#modalEditarValoresBase .modal-footer .btn {
+    padding: 0.75rem 2rem;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 1rem;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border: none;
+    position: relative;
+    overflow: hidden;
+}
+
+#modalEditarValoresBase .modal-footer .btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s;
+}
+
+#modalEditarValoresBase .modal-footer .btn:hover::before {
+    left: 100%;
+}
+
+#modalEditarValoresBase .modal-footer .btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+#modalEditarValoresBase .btn-secondary {
+    background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+    color: white;
+}
+
+#modalEditarValoresBase .btn-primary {
+    background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+    color: white;
+}
+
+/* Animações */
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-50px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+#modalEditarValoresBase .modal-content {
+    animation: modalSlideIn 0.4s ease-out;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    #modalEditarValoresBase .modal-dialog {
+        margin: 1rem;
+        max-width: calc(100vw - 2rem);
+    }
+    
+    #modalEditarValoresBase .modal-header,
+    #modalEditarValoresBase .modal-body,
+    #modalEditarValoresBase .modal-footer {
+        padding: 1.5rem;
+    }
+    
+    #modalEditarValoresBase .modal-title {
+        font-size: 1.25rem;
+    }
+    
+    #modalEditarValoresBase .row {
+        margin: 0;
+    }
+    
+    #modalEditarValoresBase .row > div {
+        padding: 0.5rem;
+        margin-bottom: 1rem;
+    }
+}
+
+
     </style>
 </head>
 
@@ -696,71 +1248,113 @@ $headerComponent = HeaderComponent::create([
                 </div>
             </div>
 
-            <!-- Stats Grid -->
-            <div class="stats-grid" data-aos="fade-up">
-                <div class="stat-card">
-                    <div class="stat-header">
-                        <div>
-                            <div class="stat-value"><?php echo $aguardandoAssinatura; ?></div>
-                            <div class="stat-label">Aguardando Assinatura</div>
-                            <?php if ($aguardandoAssinatura > 0): ?>
-                            <div class="stat-change negative">
-                                <i class="fas fa-exclamation-triangle"></i>
-                                Requer atenção
-                            </div>
-                            <?php else: ?>
-                            <div class="stat-change positive">
-                                <i class="fas fa-check-circle"></i>
-                                Tudo em dia
-                            </div>
-                            <?php endif; ?>
-                        </div>
-                        <div class="stat-icon <?php echo $aguardandoAssinatura > 5 ? 'danger' : ($aguardandoAssinatura > 0 ? 'warning' : 'success'); ?>">
-                            <i class="fas fa-clock"></i>
-                        </div>
-                    </div>
+            <!-- Stats Grid com Gráficos de Pizza - Presidência -->
+<div class="stats-grid" data-aos="fade-up">
+    <!-- Card 1: Documentos Pendentes + Assinados -->
+    <div class="stat-card dual-stat-card documentos-pie">
+        <div class="dual-stat-header">
+            <div class="dual-stat-title">
+                <i class="fas fa-file-signature"></i>
+                Documentos
+            </div>
+            <div class="dual-stat-percentage" id="documentosPercent">
+                <i class="fas fa-chart-line"></i>
+                Status
+            </div>
+        </div>
+        <div class="dual-stats-row vertical-layout">
+            <div class="dual-stat-item pendentes-item">
+                <div class="dual-stat-icon pendentes-icon">
+                    <i class="fas fa-clock"></i>
                 </div>
-
-                <div class="stat-card">
-                    <div class="stat-header">
-                        <div>
-                            <div class="stat-value"><?php echo $assinadosHoje; ?></div>
-                            <div class="stat-label">Assinados Hoje</div>
-                            <div class="stat-change positive">
-                                <i class="fas fa-arrow-up"></i>
-                                Produtividade
-                            </div>
-                        </div>
-                        <div class="stat-icon success">
-                            <i class="fas fa-check-circle"></i>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="stat-card">
-                    <div class="stat-header">
-                        <div>
-                            <div class="stat-value"><?php echo $assinadosMes; ?></div>
-                            <div class="stat-label">Assinados no Mês</div>
-                        </div>
-                        <div class="stat-icon primary">
-                            <i class="fas fa-calendar-check"></i>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="stat-card">
-                    <div class="stat-header">
-                        <div>
-                            <div class="stat-value"><?php echo $tempoMedio; ?>h</div>
-                            <div class="stat-label">Tempo Médio de Assinatura</div>
-                        </div>
-                        <div class="stat-icon info">
-                            <i class="fas fa-hourglass-half"></i>
-                        </div>
-                    </div>
+                <div class="dual-stat-info">
+                    <div class="dual-stat-value"><?php echo $aguardandoAssinatura; ?></div>
+                    <div class="dual-stat-label">Pendentes</div>
                 </div>
             </div>
+            <div class="dual-stats-separator"></div>
+            <div class="dual-stat-item assinados-item">
+                <div class="dual-stat-icon assinados-icon">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <div class="dual-stat-info">
+                    <div class="dual-stat-value"><?php echo $assinadosMes; ?></div>
+                    <div class="dual-stat-label">Assinados</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Card 2: Performance Diária + Mensal -->
+    <div class="stat-card dual-stat-card performance-pie">
+        <div class="dual-stat-header">
+            <div class="dual-stat-title">
+                <i class="fas fa-chart-line"></i>
+                Performance
+            </div>
+            <div class="dual-stat-percentage" id="performancePercent">
+                <i class="fas fa-trending-up"></i>
+                Produtividade
+            </div>
+        </div>
+        <div class="dual-stats-row vertical-layout">
+            <div class="dual-stat-item hoje-item">
+                <div class="dual-stat-icon hoje-icon">
+                    <i class="fas fa-calendar-day"></i>
+                </div>
+                <div class="dual-stat-info">
+                    <div class="dual-stat-value"><?php echo $assinadosHoje; ?></div>
+                    <div class="dual-stat-label">Hoje</div>
+                </div>
+            </div>
+            <div class="dual-stats-separator"></div>
+            <div class="dual-stat-item mes-item">
+                <div class="dual-stat-icon mes-icon">
+                    <i class="fas fa-calendar-alt"></i>
+                </div>
+                <div class="dual-stat-info">
+                    <div class="dual-stat-value"><?php echo $assinadosMes; ?></div>
+                    <div class="dual-stat-label">Este Mês</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Card 3: Eficiência + Tempo Médio -->
+    <div class="stat-card dual-stat-card eficiencia-pie">
+        <div class="dual-stat-header">
+            <div class="dual-stat-title">
+                <i class="fas fa-stopwatch"></i>
+                Eficiência
+            </div>
+            <div class="dual-stat-percentage" id="eficienciaPercent">
+                <i class="fas fa-tachometer-alt"></i>
+                Tempo
+            </div>
+        </div>
+        <div class="dual-stats-row vertical-layout">
+            <div class="dual-stat-item tempo-item">
+                <div class="dual-stat-icon tempo-icon">
+                    <i class="fas fa-hourglass-half"></i>
+                </div>
+                <div class="dual-stat-info">
+                    <div class="dual-stat-value"><?php echo $tempoMedio; ?>h</div>
+                    <div class="dual-stat-label">Tempo Médio</div>
+                </div>
+            </div>
+            <div class="dual-stats-separator"></div>
+            <div class="dual-stat-item velocidade-item">
+                <div class="dual-stat-icon velocidade-icon">
+                    <i class="fas fa-rocket"></i>
+                </div>
+                <div class="dual-stat-info">
+                    <div class="dual-stat-value"><?php echo $aguardandoAssinatura > 0 ? round($assinadosHoje / max($aguardandoAssinatura, 1), 1) : 0; ?>x</div>
+                    <div class="dual-stat-label">Velocidade</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
             <!-- Quick Actions -->
             <div class="quick-actions" data-aos="fade-up" data-aos-delay="100">
@@ -775,18 +1369,9 @@ $headerComponent = HeaderComponent::create([
                         <i class="fas fa-chart-line quick-action-icon"></i>
                         Relatórios
                     </button>
-                    <button class="quick-action-btn" onclick="verHistoricoGeral()">
-                        <i class="fas fa-history quick-action-icon"></i>
-                        Histórico
-                    </button>
-                    <button class="quick-action-btn" onclick="configurarAssinatura()">
-                        <i class="fas fa-cog quick-action-icon"></i>
-                        Configurações
-                    </button>
-                    <button class="quick-action-btn" onclick="assinarTodos()">
-                        <i class="fas fa-layer-group quick-action-icon"></i>
-                        Assinar em Lote
-                    </button>
+                    
+                    
+                   
                 </div>
             </div>
 

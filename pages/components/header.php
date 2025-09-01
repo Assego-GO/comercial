@@ -2651,7 +2651,7 @@ class HeaderComponent {
             </div>
         </header>
 
-        <!-- Mobile Navigation -->
+        <!-- Mobile Navigation kkkkkkkkkkkkkkkkkkkkkk-->
         <nav class="mobile-nav" id="mobileNav">
             <div class="mobile-nav-header">
                 <div class="user-dropdown-name"><?php echo htmlspecialchars($this->usuario['nome']); ?></div>
@@ -2705,6 +2705,7 @@ class HeaderComponent {
         return $header;
     }
 }
+
 
 /**
  * Função helper para renderização rápida
