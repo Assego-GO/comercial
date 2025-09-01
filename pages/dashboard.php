@@ -129,6 +129,11 @@ $headerComponent = HeaderComponent::create([
                                     <div class="dual-stat-value" id="associadosAtivos">-</div>
                                     <div class="dual-stat-label">Ativos</div>
                                 </div>
+                                <!-- BOTÃO PARA MOBILE -->
+                                <button class="chart-toggle-btn d-md-none" onclick="toggleChart(this, 'ativos')">
+                                    <i class="fas fa-chart-pie"></i>
+                                    Ver Gráfico
+                                </button>
                                 <!-- Gráfico Pizza para Ativos com 3 categorias -->
                                 <div class="pie-chart-container">
                                     <svg class="pie-chart" width="120" height="120" viewBox="0 0 42 42">
@@ -165,6 +170,11 @@ $headerComponent = HeaderComponent::create([
                                     <div class="dual-stat-value" id="novosAssociados">-</div>
                                     <div class="dual-stat-label">Novos (30d)</div>
                                 </div>
+                                <!-- BOTÃO PARA MOBILE -->
+                                <button class="chart-toggle-btn d-md-none" onclick="toggleChart(this, 'novos')">
+                                    <i class="fas fa-chart-pie"></i>
+                                    Ver Gráfico
+                                </button>
                                 <!-- Gráfico Pizza para Novos com 3 categorias -->
                                 <div class="pie-chart-container">
                                     <svg class="pie-chart" width="120" height="120" viewBox="0 0 42 42">
@@ -216,6 +226,11 @@ $headerComponent = HeaderComponent::create([
                                     <div class="dual-stat-value" id="pmQuantidade">-</div>
                                     <div class="dual-stat-label">PM</div>
                                 </div>
+                                <!-- BOTÃO PARA MOBILE -->
+                                <button class="chart-toggle-btn d-md-none" onclick="toggleChart(this, 'pm')">
+                                    <i class="fas fa-chart-pie"></i>
+                                    Ver Gráfico
+                                </button>
                                 <!-- Gráfico Pizza PM -->
                                 <div class="pie-chart-container">
                                     <svg class="pie-chart" width="120" height="120" viewBox="0 0 42 42">
@@ -252,6 +267,11 @@ $headerComponent = HeaderComponent::create([
                                     <div class="dual-stat-value" id="bmQuantidade">-</div>
                                     <div class="dual-stat-label">BM</div>
                                 </div>
+                                <!-- BOTÃO PARA MOBILE -->
+                                <button class="chart-toggle-btn d-md-none" onclick="toggleChart(this, 'bm')">
+                                    <i class="fas fa-chart-pie"></i>
+                                    Ver Gráfico
+                                </button>
                                 <!-- Gráfico Pizza BM -->
                                 <div class="pie-chart-container">
                                     <svg class="pie-chart" width="120" height="120" viewBox="0 0 42 42">
@@ -288,6 +308,11 @@ $headerComponent = HeaderComponent::create([
                                     <div class="dual-stat-value" id="outrosQuantidade">-</div>
                                     <div class="dual-stat-label">Outros</div>
                                 </div>
+                                <!-- BOTÃO PARA MOBILE -->
+                                <button class="chart-toggle-btn d-md-none" onclick="toggleChart(this, 'outros')">
+                                    <i class="fas fa-chart-pie"></i>
+                                    Ver Gráfico
+                                </button>
                                 <!-- Gráfico Pizza Outros -->
                                 <div class="pie-chart-container">
                                     <svg class="pie-chart" width="120" height="120" viewBox="0 0 42 42">
@@ -347,6 +372,11 @@ $headerComponent = HeaderComponent::create([
                                         </div>
                                     </div>
                                 </div>
+                                <!-- BOTÃO PARA MOBILE -->
+                                <button class="chart-toggle-btn d-md-none" onclick="toggleChart(this, 'capital')">
+                                    <i class="fas fa-chart-pie"></i>
+                                    Ver Gráfico
+                                </button>
                                 <!-- Gráfico Pizza Capital -->
                                 <div class="pie-chart-container">
                                     <svg class="pie-chart" width="120" height="120" viewBox="0 0 42 42">
@@ -391,6 +421,11 @@ $headerComponent = HeaderComponent::create([
                                         </div>
                                     </div>
                                 </div>
+                                <!-- BOTÃO PARA MOBILE -->
+                                <button class="chart-toggle-btn d-md-none" onclick="toggleChart(this, 'interior')">
+                                    <i class="fas fa-chart-pie"></i>
+                                    Ver Gráfico
+                                </button>
                                 <!-- Gráfico Pizza Interior -->
                                 <div class="pie-chart-container">
                                     <svg class="pie-chart" width="120" height="120" viewBox="0 0 42 42">
@@ -946,7 +981,7 @@ $headerComponent = HeaderComponent::create([
 
     <!-- CSS e JavaScript inline -->
     <style>
-        /* === ESTILOS COMPLETOS DOS CARDS COM GRÁFICOS DE PIZZA === */
+        /* === ESTILOS COMPLETOS DOS CARDS COM GRÁFICOS DE PIZZA RESPONSIVOS === */
         
         /* Card Principal */
         .dual-stat-card {
@@ -1114,15 +1149,8 @@ $headerComponent = HeaderComponent::create([
             width: 33.33%;
         }
 
-        /* === GRÁFICOS DE PIZZA COM HOVER PARA TODOS OS KPIs - 3 FATIAS === */
+        /* === GRÁFICOS DE PIZZA RESPONSIVOS === */
         
-        /* Card gráficos de pizza - todos os KPIs */
-        .corporacoes-pie .triple-stats-row,
-        .associados-pie .dual-stats-row,
-        .distribuicao-pie .dual-stats-row {
-            min-height: 140px;
-        }
-
         /* Container do gráfico pizza - escondido por padrão */
         .pie-chart-container {
             position: absolute;
@@ -1140,26 +1168,40 @@ $headerComponent = HeaderComponent::create([
             border: 2px solid var(--gray-200);
             pointer-events: none;
             width: 200px;
-        }
-
-        /* Mostrar gráfico no hover */
-        .dual-stat-item:hover .pie-chart-container {
-            opacity: 1;
-            visibility: visible;
-            pointer-events: auto;
-            transform: translate(-50%, -50%) scale(1);
-        }
-
-        /* Gráfico SVG */
-        .pie-chart {
-            width: 100%;
+            min-width: 200px;
+            max-width: 200px;
             height: auto;
-            margin-bottom: 0.5rem;
+            overflow: hidden;
+        }
+
+        /* Desktop: mostrar gráfico no hover */
+        @media (min-width: 769px) {
+            .dual-stat-item:hover .pie-chart-container {
+                opacity: 1;
+                visibility: visible;
+                pointer-events: auto;
+                transform: translate(-50%, -50%) scale(1);
+            }
+        }
+
+        /* Gráfico SVG - DIMENSÕES CONTROLADAS */
+        .pie-chart {
+            width: 120px !important;
+            height: 120px !important;
+            max-width: 120px !important;
+            max-height: 120px !important;
+            margin: 0 auto 0.5rem auto;
+            display: block;
+            overflow: visible;
+            viewBox: 0 0 42 42;
+            preserveAspectRatio: xMidYMid meet;
         }
 
         /* Círculos do gráfico */
         .pie-chart circle {
             transition: stroke-dasharray 1s ease-in-out;
+            vector-effect: non-scaling-stroke;
+            overflow: visible;
         }
 
         .pie-background {
@@ -1183,7 +1225,9 @@ $headerComponent = HeaderComponent::create([
             display: flex;
             flex-direction: column;
             gap: 0.25rem;
-            font-size: 0.75rem;
+            font-size: 0.7rem;
+            width: 100%;
+            box-sizing: border-box;
         }
 
         .pie-legend .legend-item {
@@ -1192,6 +1236,9 @@ $headerComponent = HeaderComponent::create([
             gap: 0.5rem;
             font-weight: 600;
             color: var(--gray-700);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .color-dot {
@@ -1211,6 +1258,235 @@ $headerComponent = HeaderComponent::create([
 
         .color-dot.pensionista {
             background: #8b5cf6;
+        }
+
+        /* BOTÃO TOGGLE PARA MOBILE */
+        .chart-toggle-btn {
+            display: none; /* Escondido por padrão */
+            align-items: center;
+            gap: 0.5rem;
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.375rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .chart-toggle-btn:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+        }
+
+        .chart-toggle-btn.active {
+            background: var(--success);
+        }
+
+        .chart-toggle-btn i {
+            font-size: 0.75rem;
+            transition: transform 0.3s ease;
+        }
+
+        .chart-toggle-btn.active i {
+            transform: rotate(180deg);
+        }
+
+        /* === MOBILE: GRÁFICOS CLICÁVEIS === */
+        @media (max-width: 768px) {
+            /* Mostrar botões toggle apenas no mobile */
+            .chart-toggle-btn {
+                display: inline-flex !important;
+            }
+            
+            /* Esconder gráficos por padrão no mobile */
+            .pie-chart-container {
+                position: static !important;
+                transform: none !important;
+                opacity: 0 !important;
+                visibility: hidden !important;
+                pointer-events: none !important;
+                margin-top: 0;
+                width: 100% !important;
+                max-width: 180px !important;
+                min-width: 180px !important;
+                background: var(--gray-50);
+                border: 1px solid var(--gray-300);
+                box-shadow: none;
+                padding: 0.75rem;
+                margin-left: auto;
+                margin-right: auto;
+                box-sizing: border-box;
+                overflow: hidden;
+                height: 0;
+                transition: all 0.3s ease;
+            }
+            
+            /* Mostrar gráfico quando ativo */
+            .pie-chart-container.active {
+                opacity: 1 !important;
+                visibility: visible !important;
+                pointer-events: auto !important;
+                height: auto;
+                margin-top: 0.75rem;
+            }
+            
+            /* SVG no mobile */
+            .pie-chart {
+                width: 100px !important;
+                height: 100px !important;
+                max-width: 100px !important;
+                max-height: 100px !important;
+                min-width: 100px !important;
+                min-height: 100px !important;
+                margin: 0 auto 0.5rem auto !important;
+                display: block !important;
+                flex-shrink: 0;
+            }
+            
+            /* Layout dos items no mobile */
+            .dual-stat-item {
+                padding: 1.25rem !important;
+                width: 100% !important;
+                min-width: 0 !important;
+                flex-direction: column !important;
+                align-items: center !important;
+                text-align: center !important;
+                gap: 0.75rem !important;
+                justify-content: center !important;
+                overflow: hidden;
+                box-sizing: border-box;
+                position: relative;
+            }
+            
+            .dual-stat-info {
+                display: flex !important;
+                flex-direction: column !important;
+                align-items: center !important;
+                text-align: center !important;
+                width: 100%;
+                margin-bottom: 0.5rem;
+            }
+            
+            .dual-stats-row {
+                flex-direction: column;
+                min-height: auto;
+            }
+
+            .dual-stats-separator {
+                width: 80%;
+                height: 1px;
+                margin: 0.75rem auto;
+                background: linear-gradient(to right, transparent, var(--gray-300), transparent);
+            }
+
+            /* Card triplo também em coluna no mobile */
+            .triple-stats-row {
+                flex-direction: column;
+                min-height: auto;
+            }
+
+            .triple-stats-row .dual-stats-separator {
+                width: 80%;
+                height: 1px;
+                margin: 0.75rem auto;
+                background: linear-gradient(to right, transparent, var(--gray-300), transparent);
+            }
+
+            .triple-stats-row .dual-stat-item {
+                padding: 1.25rem;
+                width: 100%;
+                min-width: 0;
+                flex-direction: column !important;
+                align-items: center !important;
+                text-align: center !important;
+                gap: 0.75rem !important;
+                justify-content: center !important;
+            }
+
+            .triple-stats-row .dual-stat-info {
+                display: flex !important;
+                flex-direction: column !important;
+                align-items: center !important;
+                text-align: center !important;
+            }
+            
+            /* Containers dos stats no mobile */
+            .stats-grid {
+                grid-template-columns: 1fr !important;
+                gap: 1rem !important;
+                padding: 0 0.5rem;
+            }
+            
+            .dual-stat-card, .triple-stat-card {
+                margin: 0 auto;
+                max-width: 100%;
+                overflow: hidden;
+            }
+        }
+
+        /* Mobile muito pequeno */
+        @media (max-width: 480px) {
+            .pie-chart-container {
+                max-width: 160px !important;
+                min-width: 160px !important;
+                padding: 0.5rem !important;
+            }
+            
+            .pie-chart {
+                width: 90px !important;
+                height: 90px !important;
+                max-width: 90px !important;
+                max-height: 90px !important;
+                min-width: 90px !important;
+                min-height: 90px !important;
+            }
+            
+            .dual-stat-value {
+                font-size: 1.25rem !important;
+            }
+            
+            .dual-stat-icon {
+                width: 40px !important;
+                height: 40px !important;
+                font-size: 1rem !important;
+            }
+        }
+
+        /* Mobile extra pequeno */
+        @media (max-width: 375px) {
+            .pie-chart-container {
+                max-width: 140px !important;
+                min-width: 140px !important;
+                padding: 0.375rem !important;
+            }
+            
+            .pie-chart {
+                width: 80px !important;
+                height: 80px !important;
+                max-width: 80px !important;
+                max-height: 80px !important;
+                min-width: 80px !important;
+                min-height: 80px !important;
+            }
+            
+            .pie-legend {
+                font-size: 0.65rem !important;
+            }
+            
+            .legend-item {
+                gap: 0.25rem !important;
+            }
+            
+            .color-dot {
+                width: 6px !important;
+                height: 6px !important;
+            }
         }
 
         /* Informações extras para outros cards (Capital/Interior) */
@@ -1325,145 +1601,6 @@ $headerComponent = HeaderComponent::create([
             box-shadow: 0 8px 25px rgba(25, 135, 84, 0.4);
         }
 
-        /* Mobile: sempre mostrar gráficos */
-        @media (max-width: 768px) {
-            .pie-chart-container {
-                position: static;
-                transform: none;
-                opacity: 1;
-                visibility: visible;
-                pointer-events: auto;
-                margin-top: 0.75rem;
-                width: 100%;
-                background: var(--gray-50);
-                border: 1px solid var(--gray-300);
-                box-shadow: none;
-            }
-
-            .dual-stat-item {
-                padding-bottom: 1rem;
-            }
-            
-            .corporacoes-pie .triple-stats-row,
-            .associados-pie .dual-stats-row,
-            .distribuicao-pie .dual-stats-row {
-                min-height: auto;
-            }
-
-            .dual-stats-row {
-                flex-direction: column;
-                min-height: auto;
-            }
-
-            .dual-stats-separator {
-                width: 80%;
-                height: 1px;
-                margin: 0.75rem auto;
-                background: linear-gradient(to right, transparent, var(--gray-300), transparent);
-            }
-
-            /* LAYOUT HORIZONTAL NO MOBILE - TODOS OS CARDS */
-            .dual-stat-item {
-                padding: 1.25rem;
-                width: 100%;
-                min-width: 0;
-                flex-direction: row !important;
-                align-items: center !important;
-                text-align: left !important;
-                gap: 1rem !important;
-                justify-content: flex-start !important;
-            }
-
-            .dual-stat-info {
-                display: flex !important;
-                flex-direction: column !important;
-                align-items: flex-start !important;
-                text-align: left !important;
-            }
-
-            .dual-stat-value {
-                font-size: 1.75rem;
-            }
-
-            .dual-stat-icon {
-                width: 48px;
-                height: 48px;
-                font-size: 1.25rem;
-                flex-shrink: 0;
-            }
-
-            /* Card triplo também horizontal no mobile */
-            .triple-stats-row {
-                flex-direction: column;
-                min-height: auto;
-            }
-
-            .triple-stats-row .dual-stats-separator {
-                width: 80%;
-                height: 1px;
-                margin: 0.75rem auto;
-                background: linear-gradient(to right, transparent, var(--gray-300), transparent);
-            }
-
-            .triple-stats-row .dual-stat-item {
-                padding: 1.25rem;
-                width: 100%;
-                min-width: 0;
-                flex-direction: row !important;
-                align-items: center !important;
-                text-align: left !important;
-                gap: 1rem !important;
-                justify-content: flex-start !important;
-            }
-
-            .triple-stats-row .dual-stat-info {
-                display: flex !important;
-                flex-direction: column !important;
-                align-items: flex-start !important;
-                text-align: left !important;
-            }
-        }
-
-        /* Responsivo desktop */
-        @media (min-width: 769px) {
-            .dual-stat-item {
-                max-width: 50%;
-                overflow: visible;
-            }
-
-            .dual-stat-value {
-                font-size: 1.5rem;
-            }
-
-            .dual-stat-icon {
-                width: 44px;
-                height: 44px;
-                font-size: 1.125rem;
-            }
-        }
-
-        @media (min-width: 1200px) {
-            .dual-stat-value {
-                font-size: 1.75rem;
-            }
-
-            .dual-stat-icon {
-                width: 48px;
-                height: 48px;
-                font-size: 1.25rem;
-            }
-
-            .triple-stats-row .dual-stat-value {
-                font-size: 2rem;
-            }
-
-            .triple-stats-row .dual-stat-icon {
-                width: 52px;
-                height: 52px;
-                font-size: 1.375rem;
-            }
-        }
-
         /* Animações */
         @keyframes float {
             0%, 100% {
@@ -1509,6 +1646,60 @@ $headerComponent = HeaderComponent::create([
     </style>
 
     <script>
+        // === SISTEMA DE TOGGLE PARA GRÁFICOS NO MOBILE ===
+
+        function toggleChart(button, chartType) {
+            const chartContainer = button.parentElement.querySelector('.pie-chart-container');
+            const isActive = chartContainer.classList.contains('active');
+            
+            if (isActive) {
+                // Esconder gráfico
+                chartContainer.classList.remove('active');
+                button.classList.remove('active');
+                button.innerHTML = '<i class="fas fa-chart-pie"></i> Ver Gráfico';
+            } else {
+                // Mostrar gráfico
+                chartContainer.classList.add('active');
+                button.classList.add('active');
+                button.innerHTML = '<i class="fas fa-eye-slash"></i> Ocultar';
+                
+                // Animar o gráfico quando mostrar
+                setTimeout(() => {
+                    const chartData = getChartData(chartType);
+                    if (chartData) {
+                        animarGraficoPizza(chartType, chartData.ativa, chartData.reserva, chartData.pensionista);
+                    }
+                }, 300);
+            }
+        }
+
+        // Função auxiliar para pegar dados do gráfico
+        function getChartData(chartType) {
+            const ativa = parseInt(document.getElementById(`${chartType}Ativa`)?.textContent || '0');
+            const reserva = parseInt(document.getElementById(`${chartType}Reserva`)?.textContent || '0');
+            const pensionista = parseInt(document.getElementById(`${chartType}Pensionista`)?.textContent || '0');
+            
+            return { ativa, reserva, pensionista };
+        }
+
+        // Fechar todos os gráficos abertos
+        function closeAllCharts() {
+            document.querySelectorAll('.pie-chart-container.active').forEach(container => {
+                container.classList.remove('active');
+            });
+            document.querySelectorAll('.chart-toggle-btn.active').forEach(btn => {
+                btn.classList.remove('active');
+                btn.innerHTML = '<i class="fas fa-chart-pie"></i> Ver Gráfico';
+            });
+        }
+
+        // Fechar gráficos ao redimensionar para desktop
+        window.addEventListener('resize', () => {
+            if (window.innerWidth > 768) {
+                closeAllCharts();
+            }
+        });
+
         // Funções auxiliares
         function toggleSearch() {
             console.log('Busca global ativada');
@@ -1697,23 +1888,25 @@ $headerComponent = HeaderComponent::create([
                         document.getElementById('capitalPercent').textContent = `${stats.capital_percentual}%`;
                         document.getElementById('interiorPercent').textContent = `${stats.interior_percentual}%`;
                         
-                        // ANIMAR TODOS OS GRÁFICOS DE PIZZA COM 3 FATIAS
-                        setTimeout(() => {
-                            // Card 1: Associados
-                            animarGraficoPizza('ativos', associadosAtiva, associadosReserva, associadosPensionista);
-                            animarGraficoPizza('novos', novosAtiva, novosReserva, novosPensionista);
-                            
-                            // Card 2: Corporações
-                            animarGraficoPizza('pm', pmAtiva, pmReserva, pmPensionista);
-                            animarGraficoPizza('bm', bmAtiva, bmReserva, bmPensionista);
-                            animarGraficoPizza('outros', outrosAtiva, outrosReserva, outrosPensionista);
-                            
-                            // Card 3: Distribuição
-                            animarGraficoPizza('capital', capitalAtiva, capitalReserva, capitalPensionista);
-                            animarGraficoPizza('interior', interiorAtiva, interiorReserva, interiorPensionista);
-                        }, 500);
+                        // ANIMAR TODOS OS GRÁFICOS DE PIZZA COM 3 FATIAS (APENAS NO DESKTOP)
+                        if (window.innerWidth > 768) {
+                            setTimeout(() => {
+                                // Card 1: Associados
+                                animarGraficoPizza('ativos', associadosAtiva, associadosReserva, associadosPensionista);
+                                animarGraficoPizza('novos', novosAtiva, novosReserva, novosPensionista);
+                                
+                                // Card 2: Corporações
+                                animarGraficoPizza('pm', pmAtiva, pmReserva, pmPensionista);
+                                animarGraficoPizza('bm', bmAtiva, bmReserva, bmPensionista);
+                                animarGraficoPizza('outros', outrosAtiva, outrosReserva, outrosPensionista);
+                                
+                                // Card 3: Distribuição
+                                animarGraficoPizza('capital', capitalAtiva, capitalReserva, capitalPensionista);
+                                animarGraficoPizza('interior', interiorAtiva, interiorReserva, interiorPensionista);
+                            }, 500);
+                        }
                         
-                        console.log('Estatísticas carregadas com gráficos de pizza 3 fatias:', stats);
+                        console.log('Estatísticas carregadas com gráficos de pizza 3 fatias responsivos:', stats);
                         
                     } else {
                         console.error('Erro ao carregar estatísticas:', data.message);
