@@ -2,47 +2,98 @@
 /**
  * Componente Header Premium do Sistema ASSEGO
  * components/Header.php
- * VERSÃO ATUALIZADA COM SISTEMA DE NOTIFICAÇÕES E PERMISSÕES INTEGRADO
+ * VERSÃO COM SISTEMA DE PERMISSÕES DO BANCO DE DADOS
  * Versão com cores oficiais ASSEGO: Azul Royal (#003C8F) e Dourado (#FFB800)
- * Detecção automática de página ativa + Alerta de senha padrão + Sistema de Notificações + Permissões
  */
 
-// Inclui as classes de permissões
-// Ajusta o caminho baseado na estrutura: /comercial/pages/components/header.php -> /comercial/classes/
+// Evita redeclaração usando require_once e verificação de classe
 $basePath = dirname(dirname(__DIR__)); // Volta 2 níveis: components -> pages -> comercial
-require_once $basePath . '/classes/Permissoes.php';
-require_once $basePath . '/classes/PermissoesManager.php';
+
+// Carrega apenas a classe Permissoes (que já inclui o PermissoesManager internamente)
+if (!class_exists('Permissoes')) {
+    require_once $basePath . '/classes/Permissoes.php';
+}
+
+// Se Auth existir, carrega também
+if (!class_exists('Auth') && file_exists($basePath . '/classes/Auth.php')) {
+    require_once $basePath . '/classes/Auth.php';
+}
 
 class HeaderComponent {
     private $usuario;
     private $isDiretor;
     private $activePage;
     private $notificationCount;
-    private $permManager;
+    private $funcionario_id;
+    private $departamento_id;
+    private $cargo;
 
     public function __construct($config = []) {
-        $this->usuario = $config['usuario'] ?? ['nome' => 'Usuário', 'cargo' => 'Funcionário'];
-        $this->isDiretor = $config['isDiretor'] ?? false;
-        $this->notificationCount = $config['notificationCount'] ?? 0;
+        // Pega dados da sessão
+        $this->funcionario_id = $_SESSION['funcionario_id'] ?? null;
+        $this->departamento_id = $_SESSION['departamento_id'] ?? null;
+        $this->cargo = $_SESSION['funcionario_cargo'] ?? null;
         
-        // Inicializa o gerenciador de permissões
-        $this->permManager = PermissoesManager::getInstance();
+        // Configura dados do usuário
+        $this->usuario = $config['usuario'] ?? [
+            'nome' => $_SESSION['funcionario_nome'] ?? 'Usuário',
+            'cargo' => $this->cargo ?? 'Funcionário',
+            'email' => $_SESSION['funcionario_email'] ?? 'usuario@assego.com.br',
+            'avatar' => $_SESSION['funcionario_foto'] ?? null
+        ];
         
-        // Detecta automaticamente a página ativa se não foi especificada
-        if (isset($config['activePage'])) {
-            $this->activePage = $config['activePage'];
-        } else {
-            $this->activePage = $this->detectActivePage();
-        }
+        // Verifica se é diretor
+        $this->isDiretor = $config['isDiretor'] ?? ($this->cargo === 'Diretor');
+        
+        // Conta notificações
+        $this->notificationCount = $config['notificationCount'] ?? $this->contarNotificacoes();
+        
+        // Detecta página ativa
+        $this->activePage = $config['activePage'] ?? $this->detectActivePage();
     }
     
     /**
-     * Detecta automaticamente qual é a página ativa baseada no arquivo atual
+     * Conta notificações não lidas do banco
+     */
+    private function contarNotificacoes() {
+        if (!$this->funcionario_id || !$this->departamento_id) {
+            return 0;
+        }
+        
+        try {
+            global $mysqli;
+            if (!isset($mysqli) || !$mysqli) {
+                return 0;
+            }
+            
+            $sql = "SELECT COUNT(*) as total 
+                    FROM Notificacoes 
+                    WHERE lida = 0 
+                    AND ativo = 1 
+                    AND (departamento_id = ? OR funcionario_id = ?)";
+            
+            $stmt = $mysqli->prepare($sql);
+            if ($stmt) {
+                $stmt->bind_param("ii", $this->departamento_id, $this->funcionario_id);
+                $stmt->execute();
+                $result = $stmt->get_result();
+                $row = $result->fetch_assoc();
+                $stmt->close();
+                return $row['total'] ?? 0;
+            }
+        } catch (Exception $e) {
+            error_log("Erro ao contar notificações: " . $e->getMessage());
+        }
+        
+        return 0;
+    }
+    
+    /**
+     * Detecta automaticamente qual é a página ativa
      */
     private function detectActivePage() {
         $currentFile = basename($_SERVER['PHP_SELF']);
         
-        // Mapeamento de arquivos para IDs de página
         $pageMap = [
             'dashboard.php' => 'associados',
             'index.php' => 'associados',
@@ -55,7 +106,8 @@ class HeaderComponent {
             'relatorios.php' => 'relatorios',
             'relatorio_financeiro.php' => 'relatorios',
             'estatisticas.php' => 'relatorios',
-            'documentos.php' => 'documentos'
+            'documentos.php' => 'documentos',
+            'notificacoes.php' => 'notificacoes'
         ];
         
         return $pageMap[$currentFile] ?? 'associados';
@@ -65,6 +117,7 @@ class HeaderComponent {
      * Renderiza o CSS do componente
      */
     public function renderCSS() {
+        
         ?>
         <style>
             @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
@@ -128,6 +181,7 @@ class HeaderComponent {
                 padding: 0;
                 box-sizing: border-box;
             }
+            
 
             body {
                 font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -1678,213 +1732,126 @@ class HeaderComponent {
     }
 
     /**
-     * Gera os itens de navegação baseado em permissões
-     * VERSÃO INTEGRADA COM SISTEMA DE PERMISSÕES
+     * Gera os itens de navegação baseado em permissões do banco de dados
      */
     private function getNavigationItems() {
         $items = [];
         
-        // Pega as informações do usuário da sessão
-        $funcionario_id = $_SESSION['funcionario_id'] ?? null;
-        $departamento_id = $_SESSION['departamento_id'] ?? null;
-        $cargo = $_SESSION['funcionario_cargo'] ?? null;
-        
-        // Verifica também pelos IDs de departamento para compatibilidade
-        $ehDaPresidencia = $departamento_id == 1;
-        $ehDoFinanceiro = $departamento_id == 2;
-        $ehDoRH = $departamento_id == 9;
-        $ehDoComercial = $departamento_id == 10;
-        $ehDoTI = $departamento_id == 15;
-        
         // ========================================
-        // ASSOCIADOS (Dashboard) - Todos têm acesso
+        // ASSOCIADOS - Verifica permissão
         // ========================================
-        // Verifica se existe a classe Permissoes, senão usa lógica básica
-        if (class_exists('Permissoes') && method_exists('Permissoes', 'tem')) {
-            if (Permissoes::tem('associados.visualizar')) {
-                $items[] = [
-                    'id' => 'associados',
-                    'label' => 'Associados',
-                    'icon' => 'fas fa-users',
-                    'href' => 'dashboard.php'
-                ];
-            }
-        } else {
-            // Fallback: todos podem ver associados
+        if (Permissoes::tem('associados.visualizar')) {
             $items[] = [
                 'id' => 'associados',
                 'label' => 'Associados',
                 'icon' => 'fas fa-users',
-                'href' => 'dashboard.php'
+                'href' => 'dashboard.php',
+                'badge' => null
             ];
         }
 
         // ========================================
-        // FUNCIONÁRIOS (RH)
+        // FUNCIONÁRIOS - Verifica permissão
         // ========================================
-        if (class_exists('Permissoes') && method_exists('Permissoes', 'podeVerRH')) {
-            if (Permissoes::podeVerRH()) {
-                $items[] = [
-                    'id' => 'funcionarios',
-                    'label' => 'Funcionários',
-                    'icon' => 'fas fa-user-tie',
-                    'href' => 'funcionarios.php'
-                ];
-            }
-        } else {
-            // Fallback: usa verificação por departamento
-            if ($this->isDiretor || $ehDaPresidencia || $ehDoRH || $ehDoComercial || $ehDoTI) {
-                $items[] = [
-                    'id' => 'funcionarios',
-                    'label' => 'Funcionários',
-                    'icon' => 'fas fa-user-tie',
-                    'href' => 'funcionarios.php'
-                ];
-            }
+        if (Permissoes::tem('funcionarios.visualizar')) {
+            $items[] = [
+                'id' => 'funcionarios',
+                'label' => 'Funcionários',
+                'icon' => 'fas fa-user-tie',
+                'href' => 'funcionarios.php',
+                'badge' => null
+            ];
         }
 
         // ========================================
-        // COMERCIAL
+        // COMERCIAL - Verifica permissão
         // ========================================
-        if (class_exists('Permissoes') && method_exists('Permissoes', 'podeVerComercial')) {
-            if (Permissoes::podeVerComercial()) {
-                $items[] = [
-                    'id' => 'comercial',
-                    'label' => 'Comercial',
-                    'icon' => 'fas fa-briefcase',
-                    'href' => 'comercial.php'
-                ];
-            }
-        } else {
-            // Fallback: usa verificação por departamento
-            if ($ehDaPresidencia || $ehDoComercial || $ehDoTI) {
-                $items[] = [
-                    'id' => 'comercial',
-                    'label' => 'Comercial',
-                    'icon' => 'fas fa-briefcase',
-                    'href' => 'comercial.php'
-                ];
-            }
+        if (Permissoes::tem('comercial.visualizar')) {
+            $items[] = [
+                'id' => 'comercial',
+                'label' => 'Comercial',
+                'icon' => 'fas fa-briefcase',
+                'href' => 'comercial.php',
+                'badge' => null
+            ];
         }
 
         // ========================================
-        // FINANCEIRO
+        // FINANCEIRO - Verifica permissão
         // ========================================
-        if (class_exists('Permissoes') && method_exists('Permissoes', 'podeVerFinanceiro')) {
-            if (Permissoes::podeVerFinanceiro()) {
-                $items[] = [
-                    'id' => 'financeiro',
-                    'label' => 'Financeiro',
-                    'icon' => 'fas fa-dollar-sign',
-                    'href' => 'financeiro.php'
-                ];
-            }
-        } else {
-            // Fallback: usa verificação por departamento
-            if ($ehDaPresidencia || $ehDoFinanceiro || $ehDoTI) {
-                $items[] = [
-                    'id' => 'financeiro',
-                    'label' => 'Financeiro',
-                    'icon' => 'fas fa-dollar-sign',
-                    'href' => 'financeiro.php'
-                ];
-            }
+        if (Permissoes::tem('financeiro.visualizar')) {
+            $items[] = [
+                'id' => 'financeiro',
+                'label' => 'Financeiro',
+                'icon' => 'fas fa-dollar-sign',
+                'href' => 'financeiro.php',
+                'badge' => null
+            ];
         }
 
         // ========================================
-        // AUDITORIA
+        // DOCUMENTOS - Verifica permissão
         // ========================================
-        if (class_exists('Permissoes') && method_exists('Permissoes', 'tem')) {
-            if (Permissoes::tem('sistema.auditoria')) {
-                $items[] = [
-                    'id' => 'auditoria',
-                    'label' => 'Auditoria',
-                    'icon' => 'fas fa-user-shield',
-                    'href' => 'auditoria.php'
-                ];
-            }
-        } else {
-            // Fallback: usa verificação por departamento
-            if ($this->isDiretor || $ehDaPresidencia || $ehDoTI) {
-                $items[] = [
-                    'id' => 'auditoria',
-                    'label' => 'Auditoria',
-                    'icon' => 'fas fa-user-shield',
-                    'href' => 'auditoria.php'
-                ];
-            }
+        if (Permissoes::tem('documentos.visualizar')) {
+            $items[] = [
+                'id' => 'documentos',
+                'label' => 'Documentos',
+                'icon' => 'fas fa-folder-open',
+                'href' => 'documentos.php',
+                'badge' => null
+            ];
         }
 
         // ========================================
-        // PRESIDÊNCIA
+        // RELATÓRIOS - Verifica permissão
         // ========================================
-        if (class_exists('Permissoes') && method_exists('Permissoes', 'ehPresidencia')) {
-            if (Permissoes::ehPresidencia()) {
-                $items[] = [
-                    'id' => 'presidencia',
-                    'label' => 'Presidência',
-                    'icon' => 'fas fa-landmark',
-                    'href' => 'presidencia.php'
-                ];
-            }
-        } else {
-            // Fallback: usa verificação por departamento
-            if ($ehDaPresidencia || $ehDoTI) {
-                $items[] = [
-                    'id' => 'presidencia',
-                    'label' => 'Presidência',
-                    'icon' => 'fas fa-landmark',
-                    'href' => 'presidencia.php'
-                ];
-            }
+        if (Permissoes::tem('relatorios.visualizar')) {
+            $items[] = [
+                'id' => 'relatorios',
+                'label' => 'Relatórios',
+                'icon' => 'fas fa-chart-line',
+                'href' => 'relatorios.php',
+                'badge' => null
+            ];
         }
 
         // ========================================
-        // RELATÓRIOS
+        // AUDITORIA - Verifica permissão
         // ========================================
-        if (class_exists('Permissoes') && method_exists('Permissoes', 'tem')) {
-            if (Permissoes::tem('relatorios.visualizar')) {
-                $items[] = [
-                    'id' => 'relatorios',
-                    'label' => 'Relatórios',
-                    'icon' => 'fas fa-chart-line',
-                    'href' => 'relatorios.php'
-                ];
-            }
-        } else {
-            // Fallback: usa verificação por departamento
-            if ($ehDaPresidencia || $ehDoComercial || $ehDoFinanceiro || $ehDoTI) {
-                $items[] = [
-                    'id' => 'relatorios',
-                    'label' => 'Relatórios',
-                    'icon' => 'fas fa-chart-line',
-                    'href' => 'relatorios.php'
-                ];
-            }
+        if (Permissoes::tem('sistema.auditoria')) {
+            $items[] = [
+                'id' => 'auditoria',
+                'label' => 'Auditoria',
+                'icon' => 'fas fa-user-shield',
+                'href' => 'auditoria.php',
+                'badge' => null
+            ];
         }
 
         // ========================================
-        // DOCUMENTOS
+        // PRESIDÊNCIA - Verifica permissão
         // ========================================
-        if (class_exists('Permissoes') && method_exists('Permissoes', 'tem')) {
-            if (Permissoes::tem('documentos.visualizar')) {
-                $items[] = [
-                    'id' => 'documentos',
-                    'label' => 'Documentos',
-                    'icon' => 'fas fa-folder-open',
-                    'href' => 'documentos.php'
-                ];
-            }
-        } else {
-            // Fallback: usa verificação por departamento
-            if ($ehDaPresidencia || $ehDoComercial || $ehDoTI) {
-                $items[] = [
-                    'id' => 'documentos',
-                    'label' => 'Documentos',
-                    'icon' => 'fas fa-folder-open',
-                    'href' => 'documentos.php'
-                ];
-            }
+        if (Permissoes::tem('presidencia.visualizar')) {
+            $items[] = [
+                'id' => 'presidencia',
+                'label' => 'Presidência',
+                'icon' => 'fas fa-landmark',
+                'href' => 'presidencia.php',
+                'badge' => null
+            ];
+        }
+
+        // ========================================
+        // NOTIFICAÇÕES - Todos têm acesso
+        // ========================================
+        if (Permissoes::tem('notificacoes.visualizar')) {
+            $items[] = [
+                'id' => 'notificacoes',
+                'label' => 'Notificações',
+                'icon' => 'fas fa-bell',
+                'href' => 'notificacoes.php',
+                'badge' => $this->notificationCount > 0 ? $this->notificationCount : null
+            ];
         }
 
         return $items;
@@ -1910,6 +1877,27 @@ class HeaderComponent {
     }
 
     /**
+     * Verifica se deve mostrar alerta de senha padrão
+     */
+    private function verificarSenhaPadrao() {
+        if (!class_exists('Auth')) {
+            return false;
+        }
+        
+        try {
+            $auth = new Auth();
+            if ($auth->isUsingSenhaDefault() && !$auth->foiNotificadoSenhaPadrao()) {
+                $auth->setNotificadoSenhaPadrao();
+                return true;
+            }
+        } catch (Exception $e) {
+            error_log("Erro ao verificar senha padrão: " . $e->getMessage());
+        }
+        
+        return false;
+    }
+
+    /**
      * Renderiza o JavaScript
      */
     public function renderJS() {
@@ -1929,7 +1917,6 @@ class HeaderComponent {
                         userDropdown.classList.toggle('show');
                     });
 
-                    // Fecha ao clicar fora
                     document.addEventListener('click', function() {
                         userDropdown.classList.remove('show');
                     });
@@ -1949,7 +1936,6 @@ class HeaderComponent {
                         mobileNav.classList.toggle('show');
                         mobileNavOverlay.classList.toggle('show');
                         
-                        // Anima o ícone do menu
                         const icon = this.querySelector('i');
                         if (mobileNav.classList.contains('show')) {
                             icon.classList.remove('fa-bars');
@@ -1981,26 +1967,22 @@ class HeaderComponent {
                     
                     if (currentScroll > 100) {
                         header.style.boxShadow = '0 4px 20px rgba(0, 60, 143, 0.1)';
-                        header.style.borderTopColor = 'var(--assego-gold-dark)';
                     } else {
                         header.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.05)';
-                        header.style.borderTopColor = 'var(--assego-gold)';
                     }
                     
                     lastScroll = currentScroll;
                 });
 
-                // ===== NOTIFICAÇÃO DE SENHA PADRÃO =====
+                // Alerta de senha padrão
                 const alertaSenha = document.getElementById('alertaSenhaPadrao');
                 if (alertaSenha) {
-                    // Auto-fechar após 30 segundos
                     setTimeout(() => {
                         if (alertaSenha && alertaSenha.style.display !== 'none') {
                             fecharAlertaSenha();
                         }
                     }, 30000);
                     
-                    // Shake a cada 10 segundos para chamar atenção
                     setInterval(() => {
                         if (alertaSenha && alertaSenha.style.display !== 'none' && !alertaSenha.classList.contains('hiding')) {
                             alertaSenha.style.animation = 'none';
@@ -2011,16 +1993,16 @@ class HeaderComponent {
                     }, 10000);
                 }
 
-                // ===== SISTEMA DE NOTIFICAÇÕES =====
-                console.log('🔔 Iniciando Sistema de Notificações ASSEGO...');
-                
-                // Aguarda um pouco para garantir que tudo foi carregado
+                // Sistema de Notificações
+                console.log('🔔 Iniciando Sistema de Notificações...');
                 setTimeout(() => {
-                    window.notificacaoSystem = new NotificacaoSystem();
+                    if (typeof NotificacaoSystem !== 'undefined') {
+                        window.notificacaoSystem = new NotificacaoSystem();
+                    }
                 }, 500);
             });
 
-            // Função para garantir que o conteúdo não fique sob o header
+            // Ajusta padding do body baseado na altura do header
             window.addEventListener('load', function() {
                 const header = document.querySelector('.header-container');
                 if (header) {
@@ -2029,17 +2011,14 @@ class HeaderComponent {
                 }
             });
 
-            // ===== FUNÇÕES DO ALERTA DE SENHA PADRÃO =====
+            // Funções do alerta de senha
             function fecharAlertaSenha() {
                 const alerta = document.getElementById('alertaSenhaPadrao');
                 if (alerta) {
                     alerta.classList.add('hiding');
-                    
                     setTimeout(() => {
                         alerta.style.display = 'none';
                     }, 400);
-                    
-                    console.log('✓ Alerta de senha fechado temporariamente');
                 }
             }
 
@@ -2047,12 +2026,12 @@ class HeaderComponent {
                 window.location.href = 'perfil.php';
             }
 
-            // ===== SISTEMA DE NOTIFICAÇÕES - CLASSE PRINCIPAL =====
+            // Sistema de Notificações
             class NotificacaoSystem {
                 constructor() {
                     this.isInitialized = false;
                     this.updateInterval = null;
-                    this.refreshRate = 60000; // 1 minuto
+                    this.refreshRate = 60000;
                     this.panelAberto = false;
                     this.notificacoes = [];
                     this.totalNaoLidas = 0;
@@ -2063,14 +2042,11 @@ class HeaderComponent {
                 init() {
                     if (this.isInitialized) return;
                     
-                    console.log('🔔 Iniciando Sistema de Notificações ASSEGO...');
-                    
-                    // Verifica se os elementos existem
                     this.botaoNotificacao = document.getElementById('notificationBtn');
                     this.badgeNotificacao = this.botaoNotificacao?.querySelector('.notification-badge');
                     
                     if (!this.botaoNotificacao) {
-                        console.log('⚠️ Botão de notificação não encontrado. Sistema desabilitado.');
+                        console.log('⚠️ Botão de notificação não encontrado.');
                         return;
                     }
                     
@@ -2080,17 +2056,15 @@ class HeaderComponent {
                     this.iniciarAtualizacaoAutomatica();
                     
                     this.isInitialized = true;
-                    console.log('✅ Sistema de Notificações inicializado com sucesso!');
+                    console.log('✅ Sistema de Notificações inicializado!');
                 }
                 
                 criarPainelNotificacoes() {
-                    // Remove painel existente se houver
                     const painelExistente = document.getElementById('painelNotificacoes');
                     if (painelExistente) {
                         painelExistente.remove();
                     }
                     
-                    // Cria o painel
                     const painel = document.createElement('div');
                     painel.id = 'painelNotificacoes';
                     painel.className = 'painel-notificacoes';
@@ -2132,21 +2106,16 @@ class HeaderComponent {
                         </div>
                     `;
                     
-                    // Adiciona o painel ao body
                     document.body.appendChild(painel);
-                    
-                    // Configura filtros
                     this.configurarFiltros();
                 }
                 
                 configurarEventos() {
-                    // Click no botão de notificação
                     this.botaoNotificacao.addEventListener('click', (e) => {
                         e.stopPropagation();
                         this.togglePainel();
                     });
                     
-                    // Fecha painel ao clicar fora
                     document.addEventListener('click', (e) => {
                         const painel = document.getElementById('painelNotificacoes');
                         if (painel && !painel.contains(e.target) && !this.botaoNotificacao.contains(e.target)) {
@@ -2154,14 +2123,6 @@ class HeaderComponent {
                         }
                     });
                     
-                    // Previne fechamento ao clicar dentro do painel
-                    document.addEventListener('click', (e) => {
-                        if (e.target.closest('#painelNotificacoes')) {
-                            e.stopPropagation();
-                        }
-                    });
-                    
-                    // Atalho de teclado (Ctrl + N)
                     document.addEventListener('keydown', (e) => {
                         if (e.ctrlKey && e.key === 'n') {
                             e.preventDefault();
@@ -2169,13 +2130,12 @@ class HeaderComponent {
                         }
                     });
                     
-                    // Visibilidade da página para pausar/retomar atualizações
                     document.addEventListener('visibilitychange', () => {
                         if (document.hidden) {
                             this.pararAtualizacaoAutomatica();
                         } else {
                             this.iniciarAtualizacaoAutomatica();
-                            this.buscarNotificacoes(); // Atualiza imediatamente
+                            this.buscarNotificacoes();
                         }
                     });
                 }
@@ -2184,9 +2144,7 @@ class HeaderComponent {
                     const filtros = document.querySelectorAll('.filtro-btn');
                     filtros.forEach(filtro => {
                         filtro.addEventListener('click', () => {
-                            // Remove active de todos
                             filtros.forEach(f => f.classList.remove('active'));
-                            // Adiciona active no clicado
                             filtro.classList.add('active');
                             
                             const tipoFiltro = filtro.dataset.filtro;
@@ -2207,18 +2165,12 @@ class HeaderComponent {
                     const painel = document.getElementById('painelNotificacoes');
                     if (!painel) return;
                     
-                    // Posiciona o painel
                     this.posicionarPainel();
-                    
-                    // Mostra o painel
                     painel.classList.add('show');
                     this.botaoNotificacao.classList.add('active');
                     this.panelAberto = true;
                     
-                    // Busca notificações atualizadas
                     this.buscarNotificacoes();
-                    
-                    console.log('📱 Painel de notificações aberto');
                 }
                 
                 fecharPainel() {
@@ -2228,8 +2180,6 @@ class HeaderComponent {
                     painel.classList.remove('show');
                     this.botaoNotificacao.classList.remove('active');
                     this.panelAberto = false;
-                    
-                    console.log('📱 Painel de notificações fechado');
                 }
                 
                 posicionarPainel() {
@@ -2242,11 +2192,9 @@ class HeaderComponent {
                     const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
                     const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
                     
-                    // Posição inicial (canto inferior direito do botão)
                     let top = rect.bottom + scrollTop + 8;
-                    let left = rect.right + scrollLeft - 380; // 380px é a largura do painel
+                    let left = rect.right + scrollLeft - 380;
                     
-                    // Verifica se não sai da tela
                     if (left < 20) left = 20;
                     if (left + 380 > window.innerWidth - 20) {
                         left = window.innerWidth - 400;
@@ -2264,17 +2212,10 @@ class HeaderComponent {
                         if (data.status === 'success') {
                             this.notificacoes = data.data;
                             this.atualizarPainel();
-                            
-                            // Busca contagem separadamente para maior precisão
                             this.buscarContagem();
-                            
-                            console.log(`📊 ${this.notificacoes.length} notificações carregadas`);
-                        } else {
-                            console.error('❌ Erro ao buscar notificações:', data.message);
-                            this.mostrarErro('Erro ao carregar notificações');
                         }
                     } catch (error) {
-                        console.error('❌ Erro de rede ao buscar notificações:', error);
+                        console.error('❌ Erro ao buscar notificações:', error);
                         this.mostrarErro('Erro de conexão');
                     }
                 }
@@ -2295,7 +2236,6 @@ class HeaderComponent {
                 
                 atualizarBadge() {
                     if (!this.badgeNotificacao) {
-                        // Cria o badge se não existir
                         this.badgeNotificacao = document.createElement('span');
                         this.badgeNotificacao.className = 'notification-badge';
                         this.botaoNotificacao.appendChild(this.badgeNotificacao);
@@ -2304,11 +2244,8 @@ class HeaderComponent {
                     if (this.totalNaoLidas > 0) {
                         this.badgeNotificacao.textContent = this.totalNaoLidas > 9 ? '9+' : this.totalNaoLidas;
                         this.badgeNotificacao.style.display = 'flex';
-                        
-                        // Adiciona classe visual
                         this.botaoNotificacao.classList.add('has-notifications');
                         
-                        // Adiciona animação de pulse
                         this.badgeNotificacao.classList.add('pulse');
                         setTimeout(() => {
                             this.badgeNotificacao?.classList.remove('pulse');
@@ -2318,7 +2255,6 @@ class HeaderComponent {
                         this.botaoNotificacao.classList.remove('has-notifications');
                     }
                     
-                    // Atualiza contador no painel
                     const badgeContador = document.getElementById('badgeContador');
                     if (badgeContador) {
                         badgeContador.textContent = this.totalNaoLidas;
@@ -2336,7 +2272,7 @@ class HeaderComponent {
                                     <i class="fas fa-bell-slash"></i>
                                 </div>
                                 <h4>Nenhuma notificação</h4>
-                                <p>Você está em dia! Não há notificações pendentes.</p>
+                                <p>Você está em dia!</p>
                             </div>
                         `;
                         return;
@@ -2356,14 +2292,14 @@ class HeaderComponent {
                              data-tipo="${notif.tipo}"
                              onclick="notificacaoSystem.marcarComoLida(${notif.id})">
                             
-                            <div class="notif-icon" style="color: ${notif.cor}">
-                                <i class="${notif.icone}"></i>
+                            <div class="notif-icon" style="color: ${notif.cor || '#003C8F'}">
+                                <i class="${notif.icone || 'fas fa-bell'}"></i>
                             </div>
                             
                             <div class="notif-content">
                                 <div class="notif-header">
                                     <span class="notif-titulo">${notif.titulo}</span>
-                                    <span class="notif-tempo">${notif.tempo_atras}</span>
+                                    <span class="notif-tempo">${notif.tempo_atras || ''}</span>
                                 </div>
                                 
                                 <div class="notif-mensagem">${notif.mensagem}</div>
@@ -2371,21 +2307,7 @@ class HeaderComponent {
                                 ${notif.associado_nome ? `
                                     <div class="notif-associado">
                                         <i class="fas fa-user"></i>
-                                        ${notif.associado_nome} ${notif.associado_cpf ? `(${notif.associado_cpf})` : ''}
-                                    </div>
-                                ` : ''}
-                                
-                                ${notif.criado_por_nome ? `
-                                    <div class="notif-autor">
-                                        <i class="fas fa-user-edit"></i>
-                                        Por: ${notif.criado_por_nome}
-                                    </div>
-                                ` : ''}
-                                
-                                ${notif.prioridade === 'ALTA' || notif.prioridade === 'URGENTE' ? `
-                                    <div class="notif-prioridade ${notif.prioridade.toLowerCase()}">
-                                        <i class="fas fa-exclamation-triangle"></i>
-                                        ${notif.prioridade}
+                                        ${notif.associado_nome}
                                     </div>
                                 ` : ''}
                             </div>
@@ -2409,13 +2331,11 @@ class HeaderComponent {
                         const data = await response.json();
                         
                         if (data.status === 'success') {
-                            // Atualiza o item na lista local
                             const notif = this.notificacoes.find(n => n.id == notificacaoId);
                             if (notif) {
                                 notif.lida = true;
                             }
                             
-                            // Atualiza visualmente
                             const item = document.querySelector(`[data-id="${notificacaoId}"]`);
                             if (item) {
                                 item.classList.add('lida');
@@ -2424,12 +2344,7 @@ class HeaderComponent {
                                 if (indicator) indicator.remove();
                             }
                             
-                            // Atualiza contagem
                             this.buscarContagem();
-                            
-                            console.log('✅ Notificação marcada como lida:', notificacaoId);
-                        } else {
-                            console.error('❌ Erro ao marcar como lida:', data.message);
                         }
                     } catch (error) {
                         console.error('❌ Erro ao marcar notificação:', error);
@@ -2454,12 +2369,10 @@ class HeaderComponent {
                         const data = await response.json();
                         
                         if (data.status === 'success') {
-                            // Atualiza todas as notificações localmente
                             this.notificacoes.forEach(notif => {
                                 notif.lida = true;
                             });
                             
-                            // Atualiza visualmente
                             document.querySelectorAll('.notificacao-item.nao-lida').forEach(item => {
                                 item.classList.add('lida');
                                 item.classList.remove('nao-lida');
@@ -2467,18 +2380,13 @@ class HeaderComponent {
                                 if (indicator) indicator.remove();
                             });
                             
-                            // Atualiza contagem
                             this.totalNaoLidas = 0;
                             this.atualizarBadge();
                             
-                            this.mostrarToast(data.message, 'success');
-                            console.log('✅ Todas as notificações marcadas como lidas');
-                        } else {
-                            console.error('❌ Erro ao marcar todas como lidas:', data.message);
-                            this.mostrarToast('Erro ao marcar notificações', 'error');
+                            this.mostrarToast(data.message || 'Notificações marcadas como lidas', 'success');
                         }
                     } catch (error) {
-                        console.error('❌ Erro ao marcar todas as notificações:', error);
+                        console.error('❌ Erro ao marcar todas:', error);
                         this.mostrarToast('Erro de conexão', 'error');
                     }
                 }
@@ -2514,14 +2422,11 @@ class HeaderComponent {
                         if (!document.hidden) {
                             this.buscarContagem();
                             
-                            // Se o painel estiver aberto, atualiza as notificações também
                             if (this.panelAberto) {
                                 this.buscarNotificacoes();
                             }
                         }
                     }, this.refreshRate);
-                    
-                    console.log(`🔄 Atualização automática iniciada (${this.refreshRate/1000}s)`);
                 }
                 
                 pararAtualizacaoAutomatica() {
@@ -2557,7 +2462,6 @@ class HeaderComponent {
                 }
                 
                 mostrarToast(mensagem, tipo = 'info') {
-                    // Remove toasts existentes
                     document.querySelectorAll('.toast-notificacao').forEach(toast => toast.remove());
                     
                     const toast = document.createElement('div');
@@ -2569,10 +2473,8 @@ class HeaderComponent {
                     
                     document.body.appendChild(toast);
                     
-                    // Mostra o toast
                     setTimeout(() => toast.classList.add('show'), 100);
                     
-                    // Remove após 3 segundos
                     setTimeout(() => {
                         toast.classList.remove('show');
                         setTimeout(() => toast.remove(), 300);
@@ -2583,12 +2485,9 @@ class HeaderComponent {
                     this.pararAtualizacaoAutomatica();
                     const painel = document.getElementById('painelNotificacoes');
                     if (painel) painel.remove();
-                    
-                    console.log('🧹 Sistema de notificações limpo');
                 }
             }
 
-            // Cleanup ao sair da página
             window.addEventListener('beforeunload', () => {
                 if (window.notificacaoSystem) {
                     window.notificacaoSystem.destruir();
@@ -2599,27 +2498,12 @@ class HeaderComponent {
     }
 
     /**
-     * Renderiza o componente
+     * Renderiza o componente HTML
      */
     public function render() {
-        // NOVA VERIFICAÇÃO DE SENHA PADRÃO
-        $mostrarAlertaSenha = false;
-        $authInstance = null;
-        
-        // Verifica se deve mostrar alerta de senha padrão
-        if (class_exists('Auth')) {
-            $authInstance = new Auth();
-            if ($authInstance->isUsingSenhaDefault() && !$authInstance->foiNotificadoSenhaPadrao()) {
-                $mostrarAlertaSenha = true;
-                $authInstance->setNotificadoSenhaPadrao();
-            }
-        }
-        
+        $mostrarAlertaSenha = $this->verificarSenhaPadrao();
         $navigationItems = $this->getNavigationItems();
         $userInitials = $this->getUserInitials($this->usuario['nome']);
-        
-        // Debug para verificar página ativa
-        echo "<!-- Página Ativa: " . $this->activePage . " -->";
         ?>
         
         <!-- NOTIFICAÇÃO DE SENHA PADRÃO -->
@@ -2674,7 +2558,6 @@ class HeaderComponent {
                     <!-- Logo -->
                     <a href="dashboard.php" class="logo-container">
                         <?php 
-                        // Verifica se existe a imagem da logo
                         $logoPath = 'img/logo-assego.jpeg';
                         if (file_exists($logoPath)): 
                         ?>
@@ -2698,6 +2581,9 @@ class HeaderComponent {
                                    class="nav-link <?php echo $isActive ? 'active' : ''; ?>">
                                     <i class="<?php echo htmlspecialchars($item['icon']); ?>"></i>
                                     <span><?php echo htmlspecialchars($item['label']); ?></span>
+                                    <?php if (!empty($item['badge'])): ?>
+                                        <span class="nav-badge"><?php echo $item['badge']; ?></span>
+                                    <?php endif; ?>
                                 </a>
                             </div>
                         <?php endforeach; ?>
@@ -2721,10 +2607,10 @@ class HeaderComponent {
                         <button class="user-menu-trigger" id="userMenuTrigger">
                             <div class="user-info">
                                 <div class="user-name"><?php echo htmlspecialchars($this->usuario['nome']); ?></div>
-                                <div class="user-role"><?php echo htmlspecialchars($this->usuario['cargo'] ?? 'Funcionário'); ?></div>
+                                <div class="user-role"><?php echo htmlspecialchars($this->usuario['cargo']); ?></div>
                             </div>
                             <div class="user-avatar">
-                                <?php if (isset($this->usuario['avatar']) && !empty($this->usuario['avatar'])): ?>
+                                <?php if (!empty($this->usuario['avatar'])): ?>
                                     <img src="<?php echo htmlspecialchars($this->usuario['avatar']); ?>" 
                                          alt="<?php echo htmlspecialchars($this->usuario['nome']); ?>">
                                 <?php else: ?>
@@ -2738,13 +2624,20 @@ class HeaderComponent {
                         <div class="user-dropdown" id="userDropdown">
                             <div class="user-dropdown-header">
                                 <div class="user-dropdown-name"><?php echo htmlspecialchars($this->usuario['nome']); ?></div>
-                                <div class="user-dropdown-email"><?php echo htmlspecialchars($this->usuario['email'] ?? 'usuario@assego.com.br'); ?></div>
+                                <div class="user-dropdown-email"><?php echo htmlspecialchars($this->usuario['email']); ?></div>
                             </div>
                             
                             <a href="perfil.php" class="dropdown-item">
                                 <i class="fas fa-user-circle"></i>
                                 <span>Meu Perfil</span>
                             </a>
+                            
+                            <?php if (Permissoes::tem('sistema.configuracoes')): ?>
+                            <a href="configuracoes.php" class="dropdown-item">
+                                <i class="fas fa-cog"></i>
+                                <span>Configurações</span>
+                            </a>
+                            <?php endif; ?>
                             
                             <div class="dropdown-divider"></div>
                             
@@ -2762,7 +2655,7 @@ class HeaderComponent {
         <nav class="mobile-nav" id="mobileNav">
             <div class="mobile-nav-header">
                 <div class="user-dropdown-name"><?php echo htmlspecialchars($this->usuario['nome']); ?></div>
-                <div class="user-dropdown-email"><?php echo htmlspecialchars($this->usuario['cargo'] ?? 'Funcionário'); ?></div>
+                <div class="user-dropdown-email"><?php echo htmlspecialchars($this->usuario['cargo']); ?></div>
             </div>
             
             <?php foreach ($navigationItems as $item): ?>
@@ -2771,6 +2664,9 @@ class HeaderComponent {
                    class="mobile-nav-item <?php echo $isActive ? 'active' : ''; ?>">
                     <i class="<?php echo htmlspecialchars($item['icon']); ?>"></i>
                     <span><?php echo htmlspecialchars($item['label']); ?></span>
+                    <?php if (!empty($item['badge'])): ?>
+                        <span class="mobile-nav-badge"><?php echo $item['badge']; ?></span>
+                    <?php endif; ?>
                 </a>
             <?php endforeach; ?>
             
@@ -2780,6 +2676,13 @@ class HeaderComponent {
                 <i class="fas fa-user-circle"></i>
                 <span>Meu Perfil</span>
             </a>
+            
+            <?php if (Permissoes::tem('sistema.configuracoes')): ?>
+            <a href="configuracoes.php" class="mobile-nav-item">
+                <i class="fas fa-cog"></i>
+                <span>Configurações</span>
+            </a>
+            <?php endif; ?>
             
             <div class="mobile-nav-divider"></div>
             
