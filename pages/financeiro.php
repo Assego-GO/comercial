@@ -884,22 +884,10 @@ $headerComponent = HeaderComponent::create([
             <?php else: ?>
                 <!-- Com Permissão - Conteúdo Normal -->
 
-                <!-- Page Header -->
-                <div class="page-header" data-aos="fade-right">
-                    <h1 class="page-title">
-                        <div class="page-title-icon">
-                            <i class="fas fa-dollar-sign"></i>
-                        </div>
-                        Serviços Financeiros
-                        <?php if ($isFinanceiro): ?>
-                            <small class="text-muted">- Setor Financeiro</small>
-                        <?php elseif ($isPresidencia): ?>
-                            <small class="text-muted">- Presidência</small>
-                        <?php endif; ?>
-                    </h1>
-                    <p class="page-subtitle">
-                        Gerencie mensalidades, inadimplência, relatórios financeiros e arrecadação da ASSEGO
-                    </p>
+                <!-- Page Header - TÍTULO MINIMALISTA -->
+                <div class="mb-4">
+                    <h1 style="font-size: 2.5rem; font-weight: 700; color: #212529; margin-bottom: 0.5rem;">Serviços Financeiros</h1>
+                    <p class="text-muted mb-0" style="font-size: 1rem; color: #6c757d;">Gerencie mensalidades, inadimplência, relatórios financeiros e arrecadação da ASSEGO</p>
                 </div>
 
                 <!-- Estatísticas Financeiras -->
@@ -1546,15 +1534,6 @@ $headerComponent = HeaderComponent::create([
 
             // Dados pessoais
             const pessoais = dados.dados_pessoais || {};
-            grid.innerHTML += criarDadosItemFinanceiro('Nome Completo', pessoais.nome, 'fa-user');
-            grid.innerHTML += criarDadosItemFinanceiro('RG Militar', pessoais.rg, 'fa-id-card');
-            grid.innerHTML += criarDadosItemFinanceiro('CPF', pessoais.cpf, 'fa-id-badge');
-            grid.innerHTML += criarDadosItemFinanceiro('Email', pessoais.email, 'fa-envelope');
-            grid.innerHTML += criarDadosItemFinanceiro('Telefone', formatarTelefone(pessoais.telefone), 'fa-phone');
-
-            // Situação financeira
-            const financeiro = dados.situacao_financeira || {};
-            grid.innerHTML += criarDadosItemFinanceiro('Situação Atual', financeiro.situacao, 'fa-flag', 'situacao');
             grid.innerHTML += criarDadosItemFinanceiro('Tipo de Associado', financeiro.tipo_associado, 'fa-user-tag');
             grid.innerHTML += criarDadosItemFinanceiro('Valor Mensalidade', financeiro.valor_mensalidade, 'fa-dollar-sign', 'monetario');
 
