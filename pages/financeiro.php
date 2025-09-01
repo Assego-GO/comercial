@@ -855,6 +855,230 @@ $headerComponent = HeaderComponent::create([
                 grid-template-columns: 1fr;
             }
         }
+        /* === KPIs MODERNOS FINANCEIRO === */
+
+/* Card Principal */
+.dual-stat-card {
+    position: relative;
+    overflow: visible;
+    background: var(--white, white);
+    border: 1px solid #e9ecef;
+    border-radius: 20px;
+    padding: 0;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 2px 10px rgba(40, 167, 69, 0.08);
+    min-width: 320px;
+    width: 100%;
+}
+
+.dual-stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(135deg, var(--primary, #0056d2) 0%, var(--info, #17a2b8) 100%);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.4s ease;
+}
+
+.dual-stat-card:hover::before {
+    transform: scaleX(1);
+}
+
+.dual-stat-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 4px 15px rgba(40, 167, 69, 0.12);
+    border-color: rgba(0, 86, 210, 0.2);
+}
+
+/* Header do Card */
+.dual-stat-header {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid #e9ecef;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.dual-stat-title {
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: var(--dark, #343a40);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.dual-stat-percentage {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--primary, #0056d2);
+    background: rgba(0, 86, 210, 0.1);
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+}
+
+/* Layout Desktop - Vertical */
+.dual-stats-row {
+    display: flex;
+    align-items: stretch;
+    padding: 0;
+    min-height: 120px;
+    width: 100%;
+}
+
+.dual-stat-item {
+    flex: 1;
+    min-width: 0;
+    padding: 1.5rem 0.75rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 1rem;
+    transition: all 0.3s ease;
+    position: relative;
+    width: 50%;
+}
+
+.dual-stat-item:hover {
+    background: rgba(0, 86, 210, 0.02);
+}
+
+.dual-stat-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    flex-shrink: 0;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.dual-stat-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    text-align: center;
+    align-items: center;
+}
+
+.dual-stat-value {
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: var(--dark, #343a40);
+    line-height: 1;
+    margin-bottom: 0.25rem;
+    transition: all 0.3s ease;
+}
+
+.dual-stat-label {
+    font-size: 0.875rem;
+    color: var(--secondary, #6c757d);
+    font-weight: 600;
+    line-height: 1;
+}
+
+/* Separador vertical */
+.dual-stats-separator {
+    width: 1px;
+    background: linear-gradient(to bottom, transparent, #dee2e6, transparent);
+    margin: 1.5rem 0;
+    flex-shrink: 0;
+}
+
+/* Cores específicas dos ícones FINANCEIRO */
+.ativos-icon {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    color: white;
+}
+
+.inadimplentes-icon {
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    color: white;
+}
+
+.arrecadacao-icon {
+    background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+    color: white;
+}
+
+.pagamentos-icon {
+    background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
+    color: white;
+}
+
+/* Ajuste do grid para 2 cards lado a lado */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+/* Responsividade */
+@media (max-width: 1200px) {
+    .stats-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .dual-stats-row {
+        flex-direction: column;
+        min-height: auto;
+    }
+
+    .dual-stats-separator {
+        width: 80%;
+        height: 1px;
+        margin: 0.75rem auto;
+        background: linear-gradient(to right, transparent, #dee2e6, transparent);
+    }
+
+    .dual-stat-item {
+        padding: 1.25rem;
+        width: 100%;
+        min-width: 0;
+        flex-direction: row !important;
+        align-items: center !important;
+        text-align: left !important;
+        gap: 1rem !important;
+        justify-content: flex-start !important;
+    }
+
+    .dual-stat-info {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        text-align: left !important;
+    }
+
+    .dual-stat-value {
+        font-size: 1.75rem;
+    }
+
+    .dual-stat-icon {
+        width: 48px;
+        height: 48px;
+        font-size: 1.25rem;
+        flex-shrink: 0;
+    }
+}
     </style>
 </head>
 
@@ -890,68 +1114,74 @@ $headerComponent = HeaderComponent::create([
                     <p class="text-muted mb-0" style="font-size: 1rem; color: #6c757d;">Gerencie mensalidades, inadimplência, relatórios financeiros e arrecadação da ASSEGO</p>
                 </div>
 
-                <!-- Estatísticas Financeiras -->
+                <!-- Estatísticas Financeiras - KPIs Modernos -->
                 <div class="stats-grid" data-aos="fade-up">
-                    <div class="stat-card primary">
-                        <div class="stat-header">
-                            <div>
-                                <div class="stat-value"><?php echo number_format($totalAssociadosAtivos, 0, ',', '.'); ?></div>
-                                <div class="stat-label">Associados Ativos</div>
-                                <div class="stat-change neutral">
-                                    <i class="fas fa-users"></i>
-                                    Base de contribuintes
-                                </div>
-                            </div>
-                            <div class="stat-icon primary">
+                    <!-- Card 1: Associados + Inadimplentes -->
+                    <div class="stat-card dual-stat-card associados-financeiro-pie">
+                        <div class="dual-stat-header">
+                            <div class="dual-stat-title">
                                 <i class="fas fa-users"></i>
+                                Base de Associados
+                            </div>
+                            <div class="dual-stat-percentage" id="associadosFinanceiroPercent">
+                                <i class="fas fa-chart-pie"></i>
+                                Status
                             </div>
                         </div>
-                    </div>
-
-                    <div class="stat-card success">
-                        <div class="stat-header">
-                            <div>
-                                <div class="stat-value">R$ <?php echo number_format($arrecadacaoMes, 2, ',', '.'); ?></div>
-                                <div class="stat-label">Arrecadação Potencial do Mês</div>
-                                <div class="stat-change positive">
-                                    <i class="fas fa-arrow-up"></i>
-                                    Receita atual
+                        <div class="dual-stats-row vertical-layout">
+                            <div class="dual-stat-item ativos-item">
+                                <div class="dual-stat-icon ativos-icon">
+                                    <i class="fas fa-user-check"></i>
+                                </div>
+                                <div class="dual-stat-info">
+                                    <div class="dual-stat-value"><?php echo number_format($totalAssociadosAtivos, 0, ',', '.'); ?></div>
+                                    <div class="dual-stat-label">Ativos</div>
                                 </div>
                             </div>
-                            <div class="stat-icon success">
-                                <i class="fas fa-dollar-sign"></i>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="stat-card warning">
-                        <div class="stat-header">
-                            <div>
-                                <div class="stat-value"><?php echo number_format($pagamentosHoje, 0, ',', '.'); ?></div>
-                                <div class="stat-label">Pagamentos Hoje</div>
-                                <div class="stat-change neutral">
-                                    <i class="fas fa-calendar-day"></i>
-                                    Recebimentos diários
-                                </div>
-                            </div>
-                            <div class="stat-icon warning">
-                                <i class="fas fa-credit-card"></i>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="stat-card danger">
-                        <div class="stat-header">
-                            <div>
-                                <div class="stat-value"><?php echo number_format($associadosInadimplentes, 0, ',', '.'); ?></div>
-                                <div class="stat-label">Associados em Débito</div>
-                                <div class="stat-change negative">
+                            <div class="dual-stats-separator"></div>
+                            <div class="dual-stat-item inadimplentes-item">
+                                <div class="dual-stat-icon inadimplentes-icon">
                                     <i class="fas fa-exclamation-triangle"></i>
-                                    Requer atenção
+                                </div>
+                                <div class="dual-stat-info">
+                                    <div class="dual-stat-value"><?php echo number_format($associadosInadimplentes, 0, ',', '.'); ?></div>
+                                    <div class="dual-stat-label">Em Débito</div>
                                 </div>
                             </div>
-                            <div class="stat-icon danger">
-                                <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                    </div>
+
+                    <!-- Card 2: Arrecadação + Pagamentos -->
+                    <div class="stat-card dual-stat-card financeiro-receita-pie">
+                        <div class="dual-stat-header">
+                            <div class="dual-stat-title">
+                                <i class="fas fa-dollar-sign"></i>
+                                Movimentação Financeira
+                            </div>
+                            <div class="dual-stat-percentage" id="receitaPercent">
+                                <i class="fas fa-trending-up"></i>
+                                Receita
+                            </div>
+                        </div>
+                        <div class="dual-stats-row vertical-layout">
+                            <div class="dual-stat-item arrecadacao-item">
+                                <div class="dual-stat-icon arrecadacao-icon">
+                                    <i class="fas fa-coins"></i>
+                                </div>
+                                <div class="dual-stat-info">
+                                    <div class="dual-stat-value">R$ <?php echo number_format($arrecadacaoMes, 0, ',', '.'); ?></div>
+                                    <div class="dual-stat-label">Arrecadação Mês</div>
+                                </div>
+                            </div>
+                            <div class="dual-stats-separator"></div>
+                            <div class="dual-stat-item pagamentos-item">
+                                <div class="dual-stat-icon pagamentos-icon">
+                                    <i class="fas fa-credit-card"></i>
+                                </div>
+                                <div class="dual-stat-info">
+                                    <div class="dual-stat-value"><?php echo number_format($pagamentosHoje, 0, ',', '.'); ?></div>
+                                    <div class="dual-stat-label">Pagamentos Hoje</div>
+                                </div>
                             </div>
                         </div>
                     </div>

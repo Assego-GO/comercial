@@ -528,6 +528,337 @@ $headerComponent = HeaderComponent::create([
         .table-info .info-item i {
             color: var(--primary);
         }
+        /* === KPIs MODERNOS - FUNCIONÁRIOS === */
+
+/* Card Principal */
+.dual-stat-card {
+    position: relative;
+    overflow: visible;
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 20px;
+    padding: 0;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+    min-width: 320px;
+    width: 100%;
+}
+
+.dual-stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(135deg, #007bff 0%, #17a2b8 100%);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.4s ease;
+}
+
+.dual-stat-card:hover::before {
+    transform: scaleX(1);
+}
+
+.dual-stat-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.12);
+    border-color: rgba(0, 123, 255, 0.2);
+}
+
+/* Header do Card */
+.dual-stat-header {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid #e9ecef;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.dual-stat-title {
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: #343a40;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.dual-stat-percentage {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #007bff;
+    background: rgba(0, 123, 255, 0.1);
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+}
+
+/* Layout Desktop - Vertical */
+.dual-stats-row {
+    display: flex;
+    align-items: stretch;
+    padding: 0;
+    min-height: 120px;
+    width: 100%;
+}
+
+.dual-stats-row.horizontal-layout {
+    justify-content: center;
+    min-height: 100px;
+}
+
+.dual-stat-item {
+    flex: 1;
+    min-width: 0;
+    padding: 1.5rem 0.75rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 1rem;
+    transition: all 0.3s ease;
+    position: relative;
+    width: 50%;
+}
+
+.dual-stats-row.horizontal-layout .dual-stat-item {
+    max-width: 300px;
+}
+
+.dual-stat-item:hover {
+    background: rgba(0, 123, 255, 0.02);
+}
+
+.dual-stat-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    flex-shrink: 0;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.dual-stat-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    text-align: center;
+    align-items: center;
+}
+
+.dual-stat-value {
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: #343a40;
+    line-height: 1;
+    margin-bottom: 0.25rem;
+    transition: all 0.3s ease;
+}
+
+.dual-stat-label {
+    font-size: 0.875rem;
+    color: #6c757d;
+    font-weight: 600;
+    line-height: 1;
+}
+
+/* Separador vertical */
+.dual-stats-separator {
+    width: 1px;
+    background: linear-gradient(to bottom, transparent, #dee2e6, transparent);
+    margin: 1.5rem 0;
+    flex-shrink: 0;
+}
+
+/* Cores específicas dos ícones - FUNCIONÁRIOS */
+.total-icon {
+    background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+    color: white;
+}
+
+.ativos-icon {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    color: white;
+}
+
+.novos-icon {
+    background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
+    color: white;
+}
+
+.departamentos-icon {
+    background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+    color: white;
+}
+
+.perfil-icon {
+    background: linear-gradient(135deg, #6610f2 0%, #6f42c1 100%);
+    color: white;
+}
+
+/* Card simples para inativos */
+.simple-stat-card {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-left: 4px solid #dc3545;
+    border-radius: 16px;
+    padding: 0;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(220, 53, 69, 0.1);
+}
+
+.simple-stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(220, 53, 69, 0.15);
+}
+
+.simple-stat-header {
+    padding: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.simple-stat-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    flex-shrink: 0;
+}
+
+.inativos-simple-icon {
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    color: white;
+}
+
+.simple-stat-info {
+    flex: 1;
+}
+
+.simple-stat-value {
+    font-size: 2rem;
+    font-weight: 800;
+    color: #343a40;
+    line-height: 1;
+    margin-bottom: 0.25rem;
+}
+
+.simple-stat-label {
+    font-size: 0.875rem;
+    color: #6c757d;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.simple-stat-change {
+    font-size: 0.75rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.simple-stat-change.negative {
+    color: #dc3545;
+}
+
+/* Ajuste do grid */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+/* Para visualização própria */
+.stats-grid .funcionario-proprio-pie {
+    grid-column: 1 / -1;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+/* Responsividade */
+@media (max-width: 1200px) {
+    .stats-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .stats-grid .funcionario-proprio-pie {
+        grid-column: 1;
+    }
+}
+
+@media (max-width: 768px) {
+    .dual-stats-row {
+        flex-direction: column;
+        min-height: auto;
+    }
+
+    .dual-stats-separator {
+        width: 80%;
+        height: 1px;
+        margin: 0.75rem auto;
+        background: linear-gradient(to right, transparent, #dee2e6, transparent);
+    }
+
+    .dual-stat-item {
+        padding: 1.25rem;
+        width: 100%;
+        min-width: 0;
+        flex-direction: row !important;
+        align-items: center !important;
+        text-align: left !important;
+        gap: 1rem !important;
+        justify-content: flex-start !important;
+    }
+
+    .dual-stat-info {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        text-align: left !important;
+    }
+
+    .dual-stat-value {
+        font-size: 1.75rem;
+    }
+
+    .dual-stat-icon {
+        width: 48px;
+        height: 48px;
+        font-size: 1.25rem;
+        flex-shrink: 0;
+    }
+    
+    .simple-stat-header {
+        padding: 1.25rem;
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .simple-stat-icon {
+        width: 48px;
+        height: 48px;
+        font-size: 1.25rem;
+    }
+}
     </style>
 </head>
 
@@ -578,102 +909,128 @@ $headerComponent = HeaderComponent::create([
                 <?php endif; ?>
             </div>
 
-            <!-- Stats Grid -->
-            <div class="stats-grid" data-aos="fade-up">
-                <div class="stat-card">
-                    <div class="stat-header">
-                        <div>
-                            <div class="stat-value"><?php echo number_format($totalFuncionarios, 0, ',', '.'); ?></div>
-                            <div class="stat-label">
-                                <?php 
-                                if ($escopoVisualizacao === 'TODOS') {
-                                    echo 'Total de Funcionários';
-                                } elseif ($escopoVisualizacao === 'DEPARTAMENTO') {
-                                    echo 'Funcionários do Departamento';
-                                } else {
-                                    echo 'Seu Perfil';
-                                }
-                                ?>
-                            </div>
-                            <?php if ($escopoVisualizacao !== 'PROPRIO'): ?>
-                            <div class="stat-change positive">
-                                <i class="fas fa-arrow-up"></i>
-                                12% este mês
-                            </div>
-                            <?php endif; ?>
-                        </div>
-                        <div class="stat-icon primary">
-                            <i class="fas fa-user-tie"></i>
-                        </div>
-                    </div>
+            <!-- Stats Grid - KPIs Modernos Funcionários -->
+<div class="stats-grid" data-aos="fade-up">
+    <?php if ($escopoVisualizacao === 'PROPRIO'): ?>
+        <!-- Visualização própria - Card único -->
+        <div class="stat-card dual-stat-card funcionario-proprio-pie" style="grid-column: span 2;">
+            <div class="dual-stat-header">
+                <div class="dual-stat-title">
+                    <i class="fas fa-user-circle"></i>
+                    Meu Perfil
                 </div>
-
-                <?php if ($escopoVisualizacao !== 'PROPRIO'): ?>
-                <div class="stat-card">
-                    <div class="stat-header">
-                        <div>
-                            <div class="stat-value"><?php echo number_format($funcionariosAtivos, 0, ',', '.'); ?></div>
-                            <div class="stat-label">Funcionários Ativos</div>
-                            <div class="stat-change positive">
-                                <i class="fas fa-arrow-up"></i>
-                                5% este mês
-                            </div>
-                        </div>
-                        <div class="stat-icon success">
-                            <i class="fas fa-user-check"></i>
-                        </div>
-                    </div>
+                <div class="dual-stat-percentage" id="perfilPercent">
+                    <i class="fas fa-id-badge"></i>
+                    Pessoal
                 </div>
-
-                <div class="stat-card">
-                    <div class="stat-header">
-                        <div>
-                            <div class="stat-value"><?php echo number_format($funcionariosInativos, 0, ',', '.'); ?></div>
-                            <div class="stat-label">Inativos</div>
-                            <div class="stat-change negative">
-                                <i class="fas fa-arrow-down"></i>
-                                2% este mês
-                            </div>
-                        </div>
-                        <div class="stat-icon danger">
-                            <i class="fas fa-user-times"></i>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="stat-card">
-                    <div class="stat-header">
-                        <div>
-                            <div class="stat-value"><?php echo number_format($totalDepartamentos, 0, ',', '.'); ?></div>
-                            <div class="stat-label">Departamentos</div>
-                            <div class="stat-change positive">
-                                <i class="fas fa-plus"></i>
-                                +1 este mês
-                            </div>
-                        </div>
-                        <div class="stat-icon info">
-                            <i class="fas fa-building"></i>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="stat-card">
-                    <div class="stat-header">
-                        <div>
-                            <div class="stat-value"><?php echo number_format($novosFuncionarios, 0, ',', '.'); ?></div>
-                            <div class="stat-label">Novos (30 dias)</div>
-                            <div class="stat-change positive">
-                                <i class="fas fa-arrow-up"></i>
-                                15% este mês
-                            </div>
-                        </div>
-                        <div class="stat-icon warning">
-                            <i class="fas fa-user-plus"></i>
-                        </div>
-                    </div>
-                </div>
-                <?php endif; ?>
             </div>
+            <div class="dual-stats-row horizontal-layout">
+                <div class="dual-stat-item perfil-item">
+                    <div class="dual-stat-icon perfil-icon">
+                        <i class="fas fa-user-tie"></i>
+                    </div>
+                    <div class="dual-stat-info">
+                        <div class="dual-stat-value">1</div>
+                        <div class="dual-stat-label">Meus Dados</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    <?php else: ?>
+        <!-- Card 1: Total + Ativos -->
+        <div class="stat-card dual-stat-card funcionarios-base-pie">
+            <div class="dual-stat-header">
+                <div class="dual-stat-title">
+                    <i class="fas fa-users"></i>
+                    Base de Funcionários
+                </div>
+                <div class="dual-stat-percentage" id="funcionariosPercent">
+                    <i class="fas fa-chart-pie"></i>
+                    Status Geral
+                </div>
+            </div>
+            <div class="dual-stats-row vertical-layout">
+                <div class="dual-stat-item total-item">
+                    <div class="dual-stat-icon total-icon">
+                        <i class="fas fa-user-tie"></i>
+                    </div>
+                    <div class="dual-stat-info">
+                        <div class="dual-stat-value"><?php echo number_format($totalFuncionarios, 0, ',', '.'); ?></div>
+                        <div class="dual-stat-label">
+                            <?php 
+                            echo $escopoVisualizacao === 'DEPARTAMENTO' ? 'Do Departamento' : 'Total';
+                            ?>
+                        </div>
+                    </div>
+                </div>
+                <div class="dual-stats-separator"></div>
+                <div class="dual-stat-item ativos-item">
+                    <div class="dual-stat-icon ativos-icon">
+                        <i class="fas fa-user-check"></i>
+                    </div>
+                    <div class="dual-stat-info">
+                        <div class="dual-stat-value"><?php echo number_format($funcionariosAtivos, 0, ',', '.'); ?></div>
+                        <div class="dual-stat-label">Ativos</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card 2: Novos + Departamentos -->
+        <div class="stat-card dual-stat-card funcionarios-crescimento-pie">
+            <div class="dual-stat-header">
+                <div class="dual-stat-title">
+                    <i class="fas fa-chart-line"></i>
+                    Crescimento & Estrutura
+                </div>
+                <div class="dual-stat-percentage" id="crescimentoPercent">
+                    <i class="fas fa-trending-up"></i>
+                    Expansão
+                </div>
+            </div>
+            <div class="dual-stats-row vertical-layout">
+                <div class="dual-stat-item novos-item">
+                    <div class="dual-stat-icon novos-icon">
+                        <i class="fas fa-user-plus"></i>
+                    </div>
+                    <div class="dual-stat-info">
+                        <div class="dual-stat-value"><?php echo number_format($novosFuncionarios, 0, ',', '.'); ?></div>
+                        <div class="dual-stat-label">Novos (30d)</div>
+                    </div>
+                </div>
+                <div class="dual-stats-separator"></div>
+                <div class="dual-stat-item departamentos-item">
+                    <div class="dual-stat-icon departamentos-icon">
+                        <i class="fas fa-building"></i>
+                    </div>
+                    <div class="dual-stat-info">
+                        <div class="dual-stat-value"><?php echo number_format($totalDepartamentos, 0, ',', '.'); ?></div>
+                        <div class="dual-stat-label">Departamentos</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card 3: Inativos (card simples para destacar) -->
+        <?php if ($funcionariosInativos > 0): ?>
+        <div class="stat-card simple-stat-card inativos-card">
+            <div class="simple-stat-header">
+                <div class="simple-stat-icon inativos-simple-icon">
+                    <i class="fas fa-user-times"></i>
+                </div>
+                <div class="simple-stat-info">
+                    <div class="simple-stat-value"><?php echo number_format($funcionariosInativos, 0, ',', '.'); ?></div>
+                    <div class="simple-stat-label">Funcionários Inativos</div>
+                    <div class="simple-stat-change negative">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        Requer atenção
+                    </div>
+                </div>
+            </div>
+        </div>
+        <?php endif; ?>
+    <?php endif; ?>
+</div>
 
             <!-- Actions Bar with Filters -->
             <?php if ($escopoVisualizacao !== 'PROPRIO'): ?>
