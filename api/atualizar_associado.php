@@ -1,6 +1,6 @@
 <?php
 /**
- * API para atualizar associado - VERSÃO COM INDICAÇÕES INTEGRADAS
+ * API para atualizar associado - VERSÃO COM INDICAÇÕES INTEGRADAS E CORREÇÃO DE DUPLICATAS
  * api/atualizar_associado.php
  */
 ob_start();
@@ -304,32 +304,42 @@ try {
         $db->beginTransaction();
         $transacaoAtiva = true;
 
-        // 3. PROCESSA OS SERVIÇOS
+        // =====================================
+        // ✅ 3. PROCESSA OS SERVIÇOS - VERSÃO CORRIGIDA
+        // =====================================
         $servicosAlterados = false;
         $detalhesServicos = [];
         $tipoAssociadoServico = trim($_POST['tipoAssociadoServico'] ?? '');
 
-        // Busca serviços atuais
+        error_log("=== PROCESSANDO SERVIÇOS ===");
+        error_log("Tipo Associado Serviço: '$tipoAssociadoServico'");
+
+        // Busca TODOS os serviços do associado (ativos e inativos)
         $stmt = $db->prepare("
             SELECT sa.*, s.nome as servico_nome 
             FROM Servicos_Associado sa
             INNER JOIN Servicos s ON sa.servico_id = s.id
-            WHERE sa.associado_id = ? AND sa.ativo = 1
+            WHERE sa.associado_id = ?
         ");
         $stmt->execute([$associadoId]);
-        $servicosAtivos = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $servicosExistentes = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        // Organiza serviços ativos por ID
-        $servicosAtivosMap = [];
-        foreach ($servicosAtivos as $servico) {
-            $servicosAtivosMap[$servico['servico_id']] = $servico;
+        // Organiza serviços existentes por ID
+        $servicosExistentesMap = [];
+        foreach ($servicosExistentes as $servico) {
+            $servicosExistentesMap[$servico['servico_id']] = $servico;
+        }
+
+        error_log("Serviços existentes no banco: " . count($servicosExistentes));
+        foreach ($servicosExistentes as $serv) {
+            error_log("  - Serviço ID {$serv['servico_id']} ({$serv['servico_nome']}): Ativo={$serv['ativo']}, Valor={$serv['valor_aplicado']}");
         }
 
         // DEFINE OS NOVOS SERVIÇOS
         $novosServicos = [];
 
         if (!empty($tipoAssociadoServico)) {
-            // SERVIÇO SOCIAL (ID = 1)
+            // SERVIÇO SOCIAL (ID = 1) - SEMPRE OBRIGATÓRIO
             $valorSocialStr = trim($_POST['valorSocial'] ?? '0');
             $valorSocial = floatval($valorSocialStr);
 
@@ -340,55 +350,79 @@ try {
                     'percentual_aplicado' => floatval($_POST['percentualAplicadoSocial'] ?? 0),
                     'observacao' => "Atualizado - Tipo: $tipoAssociadoServico"
                 ];
+                error_log("✓ Serviço Social definido: R$ $valorSocial");
             }
 
-            // SERVIÇO JURÍDICO (ID = 2)
-            if (!empty($_POST['servicoJuridico']) && !empty($_POST['valorJuridico']) && floatval($_POST['valorJuridico']) > 0) {
+            // SERVIÇO JURÍDICO (ID = 2) - OPCIONAL
+            $servicoJuridicoMarcado = !empty($_POST['servicoJuridico']);
+            $valorJuridicoStr = trim($_POST['valorJuridico'] ?? '0');
+            $valorJuridico = floatval($valorJuridicoStr);
+
+            if ($servicoJuridicoMarcado && $valorJuridico > 0) {
                 $novosServicos[2] = [
                     'tipo_associado' => $tipoAssociadoServico,
-                    'valor_aplicado' => floatval($_POST['valorJuridico']),
+                    'valor_aplicado' => $valorJuridico,
                     'percentual_aplicado' => floatval($_POST['percentualAplicadoJuridico'] ?? 100),
                     'observacao' => "Atualizado - Tipo: $tipoAssociadoServico"
                 ];
+                error_log("✓ Serviço Jurídico definido: R$ $valorJuridico");
+            } else {
+                error_log("⚠ Serviço Jurídico não será adicionado (marcado: " . ($servicoJuridicoMarcado ? 'sim' : 'não') . ", valor: $valorJuridico)");
             }
         }
 
-        // PROCESSA CADA SERVIÇO
+        // PROCESSA CADA SERVIÇO (1=Social, 2=Jurídico)
         foreach ([1, 2] as $servicoId) {
             $servicoNome = ($servicoId == 1) ? 'Social' : 'Jurídico';
-            $servicoAtivo = isset($servicosAtivosMap[$servicoId]) ? $servicosAtivosMap[$servicoId] : null;
+            $servicoExistente = isset($servicosExistentesMap[$servicoId]) ? $servicosExistentesMap[$servicoId] : null;
             $novoServico = isset($novosServicos[$servicoId]) ? $novosServicos[$servicoId] : null;
 
+            error_log("--- Processando Serviço $servicoNome (ID: $servicoId) ---");
+            error_log("Existe no banco: " . ($servicoExistente ? 'sim (ID: ' . $servicoExistente['id'] . ', Ativo: ' . $servicoExistente['ativo'] . ')' : 'não'));
+            error_log("Novo serviço definido: " . ($novoServico ? 'sim (Valor: ' . $novoServico['valor_aplicado'] . ')' : 'não'));
+
             if ($novoServico) {
-                if ($servicoAtivo) {
-                    // JÁ EXISTE - VERIFICAR SE PRECISA ATUALIZAR
-                    $valorMudou = abs($servicoAtivo['valor_aplicado'] - $novoServico['valor_aplicado']) > 0.01;
-                    $percentualMudou = abs($servicoAtivo['percentual_aplicado'] - $novoServico['percentual_aplicado']) > 0.01;
-                    $tipoMudou = ($servicoAtivo['tipo_associado'] ?? '') !== ($novoServico['tipo_associado'] ?? '');
+                // QUER ESTE SERVIÇO
+                if ($servicoExistente) {
+                    // JÁ EXISTE NO BANCO - ATUALIZAR OU REATIVAR
+                    $valorMudou = abs($servicoExistente['valor_aplicado'] - $novoServico['valor_aplicado']) > 0.01;
+                    $percentualMudou = abs($servicoExistente['percentual_aplicado'] - $novoServico['percentual_aplicado']) > 0.01;
+                    $tipoMudou = ($servicoExistente['tipo_associado'] ?? '') !== ($novoServico['tipo_associado'] ?? '');
+                    $precisaReativar = $servicoExistente['ativo'] == 0;
 
-                    if ($valorMudou || $percentualMudou || $tipoMudou) {
-                        // Registra histórico
-                        $stmt = $db->prepare("
-                            INSERT INTO Historico_Servicos_Associado (
-                                servico_associado_id, tipo_alteracao, valor_anterior, valor_novo,
-                                percentual_anterior, percentual_novo, motivo, funcionario_id
-                            ) VALUES (?, 'ALTERACAO_VALOR', ?, ?, ?, ?, ?, ?)
-                        ");
+                    if ($valorMudou || $percentualMudou || $tipoMudou || $precisaReativar) {
+                        // Registra histórico se não estiver apenas reativando
+                        if ($valorMudou || $percentualMudou || $tipoMudou) {
+                            try {
+                                $stmt = $db->prepare("
+                                    INSERT INTO Historico_Servicos_Associado (
+                                        servico_associado_id, tipo_alteracao, valor_anterior, valor_novo,
+                                        percentual_anterior, percentual_novo, motivo, funcionario_id, data_alteracao
+                                    ) VALUES (?, 'ALTERACAO_VALOR', ?, ?, ?, ?, ?, ?, NOW())
+                                ");
 
-                        $stmt->execute([
-                            $servicoAtivo['id'],
-                            $servicoAtivo['valor_aplicado'],
-                            $novoServico['valor_aplicado'],
-                            $servicoAtivo['percentual_aplicado'],
-                            $novoServico['percentual_aplicado'],
-                            'Alteração via edição do associado',
-                            $usuarioLogado['id']
-                        ]);
+                                $stmt->execute([
+                                    $servicoExistente['id'],
+                                    $servicoExistente['valor_aplicado'],
+                                    $novoServico['valor_aplicado'],
+                                    $servicoExistente['percentual_aplicado'],
+                                    $novoServico['percentual_aplicado'],
+                                    'Alteração via edição do associado',
+                                    $usuarioLogado['id']
+                                ]);
 
-                        // Atualiza o serviço
+                                error_log("✓ Histórico registrado para serviço $servicoNome");
+                            } catch (Exception $e) {
+                                error_log("⚠ Erro ao registrar histórico: " . $e->getMessage());
+                                // Continua mesmo se falhar o histórico
+                            }
+                        }
+
+                        // Atualiza o serviço existente
                         $stmt = $db->prepare("
                             UPDATE Servicos_Associado 
-                            SET tipo_associado = ?, valor_aplicado = ?, percentual_aplicado = ?, observacao = ?
+                            SET tipo_associado = ?, valor_aplicado = ?, percentual_aplicado = ?, 
+                                observacao = ?, ativo = 1, data_cancelamento = NULL
                             WHERE id = ?
                         ");
 
@@ -397,49 +431,105 @@ try {
                             $novoServico['valor_aplicado'],
                             $novoServico['percentual_aplicado'],
                             $novoServico['observacao'],
-                            $servicoAtivo['id']
+                            $servicoExistente['id']
                         ]);
 
                         $servicosAlterados = true;
-                        $detalhesServicos[] = "Atualizado {$servicoNome}: R$ " . number_format($novoServico['valor_aplicado'], 2, ',', '.');
+                        
+                        if ($precisaReativar) {
+                            $detalhesServicos[] = "Reativado {$servicoNome}: R$ " . number_format($novoServico['valor_aplicado'], 2, ',', '.');
+                            error_log("✓ Serviço $servicoNome reativado");
+                        } else {
+                            $detalhesServicos[] = "Atualizado {$servicoNome}: R$ " . number_format($novoServico['valor_aplicado'], 2, ',', '.');
+                            error_log("✓ Serviço $servicoNome atualizado");
+                        }
+                    } else {
+                        error_log("- Serviço $servicoNome já está correto, não precisa atualizar");
                     }
                 } else {
-                    // NÃO EXISTE - CRIAR NOVO
-                    $stmt = $db->prepare("
-                        INSERT INTO Servicos_Associado (
-                            associado_id, servico_id, tipo_associado, ativo, data_adesao, 
-                            valor_aplicado, percentual_aplicado, observacao
-                        ) VALUES (?, ?, ?, 1, NOW(), ?, ?, ?)
-                    ");
+                    // NÃO EXISTE NO BANCO - CRIAR NOVO COM INSERT ... ON DUPLICATE KEY UPDATE
+                    error_log("Criando novo serviço $servicoNome...");
+                    
+                    try {
+                        $stmt = $db->prepare("
+                            INSERT INTO Servicos_Associado (
+                                associado_id, servico_id, tipo_associado, ativo, data_adesao, 
+                                valor_aplicado, percentual_aplicado, observacao
+                            ) VALUES (?, ?, ?, 1, NOW(), ?, ?, ?)
+                            ON DUPLICATE KEY UPDATE
+                                tipo_associado = VALUES(tipo_associado),
+                                valor_aplicado = VALUES(valor_aplicado),
+                                percentual_aplicado = VALUES(percentual_aplicado),
+                                observacao = VALUES(observacao),
+                                ativo = 1,
+                                data_cancelamento = NULL
+                        ");
 
-                    $stmt->execute([
-                        $associadoId,
-                        $servicoId,
-                        $novoServico['tipo_associado'],
-                        $novoServico['valor_aplicado'],
-                        $novoServico['percentual_aplicado'],
-                        $novoServico['observacao']
-                    ]);
+                        $stmt->execute([
+                            $associadoId,
+                            $servicoId,
+                            $novoServico['tipo_associado'],
+                            $novoServico['valor_aplicado'],
+                            $novoServico['percentual_aplicado'],
+                            $novoServico['observacao']
+                        ]);
 
-                    $servicosAlterados = true;
-                    $detalhesServicos[] = "Adicionado {$servicoNome}: R$ " . number_format($novoServico['valor_aplicado'], 2, ',', '.');
+                        $servicosAlterados = true;
+                        $detalhesServicos[] = "Adicionado {$servicoNome}: R$ " . number_format($novoServico['valor_aplicado'], 2, ',', '.');
+                        error_log("✓ Serviço $servicoNome criado com sucesso");
+                        
+                    } catch (PDOException $e) {
+                        if ($e->getCode() == 23000) {
+                            // Erro de chave duplicada - tenta atualizar em vez de inserir
+                            error_log("⚠ Chave duplicada detectada, tentando atualizar...");
+                            
+                            $stmt = $db->prepare("
+                                UPDATE Servicos_Associado 
+                                SET tipo_associado = ?, valor_aplicado = ?, percentual_aplicado = ?, 
+                                    observacao = ?, ativo = 1, data_cancelamento = NULL
+                                WHERE associado_id = ? AND servico_id = ?
+                            ");
+
+                            $stmt->execute([
+                                $novoServico['tipo_associado'],
+                                $novoServico['valor_aplicado'],
+                                $novoServico['percentual_aplicado'],
+                                $novoServico['observacao'],
+                                $associadoId,
+                                $servicoId
+                            ]);
+
+                            $servicosAlterados = true;
+                            $detalhesServicos[] = "Atualizado {$servicoNome}: R$ " . number_format($novoServico['valor_aplicado'], 2, ',', '.');
+                            error_log("✓ Serviço $servicoNome atualizado via fallback");
+                        } else {
+                            throw $e; // Re-lança outros erros
+                        }
+                    }
                 }
             } else {
                 // NÃO QUER ESTE SERVIÇO - DESATIVAR SE ESTIVER ATIVO
-                if ($servicoAtivo) {
+                if ($servicoExistente && $servicoExistente['ativo'] == 1) {
                     $stmt = $db->prepare("
                         UPDATE Servicos_Associado 
                         SET ativo = 0, data_cancelamento = NOW()
                         WHERE id = ?
                     ");
 
-                    $stmt->execute([$servicoAtivo['id']]);
+                    $stmt->execute([$servicoExistente['id']]);
 
                     $servicosAlterados = true;
                     $detalhesServicos[] = "Removido {$servicoNome}";
+                    error_log("✓ Serviço $servicoNome desativado");
+                } else {
+                    error_log("- Serviço $servicoNome já estava inativo ou não existia");
                 }
             }
         }
+
+        error_log("=== FIM PROCESSAMENTO SERVIÇOS ===");
+        error_log("Serviços alterados: " . ($servicosAlterados ? 'sim' : 'não'));
+        error_log("Detalhes: " . implode(', ', $detalhesServicos));
 
         // Salva auditoria incluindo informações de indicação
         if (($mudouSituacao && $ficouDesfiliado) || $servicosAlterados || $indicacaoMudou) {
