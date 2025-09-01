@@ -93,194 +93,338 @@ $headerComponent = HeaderComponent::create([
                 <h1 class="page-title">Gestão de Associados</h1>
                 <p class="page-subtitle">Gerencie os associados da ASSEGO</p>
             </div>
-             <?php include 'components/simulation-banner.php'; ?>
+            <?php include 'components/simulation-banner.php'; ?>
 
             <?php
-// Apenas a parte que precisa ser modificada no dashboard.php
+            // Configuração de permissões para KPIs
+            $departamentoComercialId = 10;
+            $departamentoPresidenciaId = 1;
+            
+            $podeVerKPIs = $auth->isDiretor() || 
+                          (isset($usuarioLogado['departamento_id']) && 
+                           ($usuarioLogado['departamento_id'] == $departamentoComercialId || 
+                            $usuarioLogado['departamento_id'] == $departamentoPresidenciaId));
 
-// ANTES da seção Stats Grid, adicionar:
-$departamentoComercialId = 10; // AJUSTE CONFORME SEU BANCO
-$departamentoPresidenciaId = 1; // AJUSTE CONFORME SEU BANCO
-
-$podeVerKPIs = $auth->isDiretor() || 
-               (isset($usuarioLogado['departamento_id']) && 
-                $usuarioLogado['departamento_id'] == $departamentoComercialId || $usuarioLogado['departamento_id'] == $departamentoPresidenciaId);
-
-if ($podeVerKPIs): ?>
-    <!-- Stats Grid -->
-    <div class="stats-grid" data-aos="fade-up">
-        <!-- Card 1: Associados Ativos + Novos - LAYOUT VERTICAL -->
-        <div class="stat-card dual-stat-card">
-            <div class="dual-stat-header">
-                <div class="dual-stat-title">
-                    <i class="fas fa-users"></i>
-                    Associados
-                </div>
-                <div class="dual-stat-percentage" id="associadosPercent">
-                    <i class="fas fa-chart-line"></i>
-                    Crescimento
-                </div>
-            </div>
-            <div class="dual-stats-row vertical-layout">
-                <div class="dual-stat-item ativos-item">
-                    <div class="dual-stat-icon ativos-icon">
-                        <i class="fas fa-user-check"></i>
-                    </div>
-                    <div class="dual-stat-info">
-                        <div class="dual-stat-value" id="associadosAtivos">-</div>
-                        <div class="dual-stat-label">Ativos</div>
-                    </div>
-                </div>
-                <div class="dual-stats-separator"></div>
-                <div class="dual-stat-item novos-item">
-                    <div class="dual-stat-icon novos-icon">
-                        <i class="fas fa-user-plus"></i>
-                    </div>
-                    <div class="dual-stat-info">
-                        <div class="dual-stat-value" id="novosAssociados">-</div>
-                        <div class="dual-stat-label">Novos (30d)</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Card 2: PM + BM + Outros -->
-        <div class="stat-card dual-stat-card triple-stat-card">
-            <div class="dual-stat-header">
-                <div class="dual-stat-title">
-                    <i class="fas fa-shield-alt"></i>
-                    Corporações
-                </div>
-                <div class="dual-stat-percentage" id="corporacoesPercent">
-                    <i class="fas fa-chart-pie"></i>
-                    -% do total
-                </div>
-            </div>
-            <div class="dual-stats-row triple-stats-row">
-                <div class="dual-stat-item pm-item">
-                    <div class="dual-stat-icon pm-icon">
-                        <i class="fas fa-shield-alt"></i>
-                    </div>
-                    <div class="dual-stat-info">
-                        <div class="dual-stat-value" id="pmQuantidade">-</div>
-                        <div class="dual-stat-label">PM</div>
-                        <div class="dual-stat-extra">
-                            <div class="status-breakdown">
-                                <div class="status-item status-ativa">
-                                    <i class="fas fa-circle"></i>
-                                    <span id="pmAtiva">-</span> Ativa
+            if ($podeVerKPIs): ?>
+                <!-- Stats Grid com Gráficos de Pizza de 3 Fatias -->
+                <div class="stats-grid" data-aos="fade-up">
+                    <!-- Card 1: Associados Ativos + Novos - COM GRÁFICOS PIZZA 3 FATIAS -->
+                    <div class="stat-card dual-stat-card associados-pie">
+                        <div class="dual-stat-header">
+                            <div class="dual-stat-title">
+                                <i class="fas fa-users"></i>
+                                Associados
+                            </div>
+                            <div class="dual-stat-percentage" id="associadosPercent">
+                                <i class="fas fa-chart-line"></i>
+                                Crescimento
+                            </div>
+                        </div>
+                        <div class="dual-stats-row vertical-layout">
+                            <div class="dual-stat-item ativos-item">
+                                <div class="dual-stat-icon ativos-icon">
+                                    <i class="fas fa-user-check"></i>
                                 </div>
-                                <div class="status-item status-reserva">
-                                    <i class="fas fa-circle"></i>
-                                    <span id="pmReserva">-</span> Reserva
+                                <div class="dual-stat-info">
+                                    <div class="dual-stat-value" id="associadosAtivos">-</div>
+                                    <div class="dual-stat-label">Ativos</div>
+                                </div>
+                                <!-- Gráfico Pizza para Ativos com 3 categorias -->
+                                <div class="pie-chart-container">
+                                    <svg class="pie-chart" width="120" height="120" viewBox="0 0 42 42">
+                                        <circle class="pie-background" cx="21" cy="21" r="15.9155" fill="transparent" stroke="#e5e7eb" stroke-width="3"></circle>
+                                        <circle class="pie-ativa" id="ativosPieAtiva" cx="21" cy="21" r="15.9155" fill="transparent" stroke="#00c853" stroke-width="3" 
+                                            stroke-dasharray="0 100" stroke-dashoffset="25" transform="rotate(-90 21 21)"></circle>
+                                        <circle class="pie-reserva" id="ativosPieReserva" cx="21" cy="21" r="15.9155" fill="transparent" stroke="#ff9500" stroke-width="3" 
+                                            stroke-dasharray="0 100" stroke-dashoffset="25" transform="rotate(-90 21 21)"></circle>
+                                        <circle class="pie-pensionista" id="ativosPiePensionista" cx="21" cy="21" r="15.9155" fill="transparent" stroke="#8b5cf6" stroke-width="3" 
+                                            stroke-dasharray="0 100" stroke-dashoffset="25" transform="rotate(-90 21 21)"></circle>
+                                    </svg>
+                                    <div class="pie-legend">
+                                        <div class="legend-item">
+                                            <span class="color-dot ativa"></span>
+                                            <span id="associadosAtiva">-</span> Ativa
+                                        </div>
+                                        <div class="legend-item">
+                                            <span class="color-dot reserva"></span>
+                                            <span id="associadosReserva">-</span> Reserva
+                                        </div>
+                                        <div class="legend-item">
+                                            <span class="color-dot pensionista"></span>
+                                            <span id="associadosPensionista">-</span> Pensionista
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="dual-stats-separator"></div>
+                            <div class="dual-stat-item novos-item">
+                                <div class="dual-stat-icon novos-icon">
+                                    <i class="fas fa-user-plus"></i>
+                                </div>
+                                <div class="dual-stat-info">
+                                    <div class="dual-stat-value" id="novosAssociados">-</div>
+                                    <div class="dual-stat-label">Novos (30d)</div>
+                                </div>
+                                <!-- Gráfico Pizza para Novos com 3 categorias -->
+                                <div class="pie-chart-container">
+                                    <svg class="pie-chart" width="120" height="120" viewBox="0 0 42 42">
+                                        <circle class="pie-background" cx="21" cy="21" r="15.9155" fill="transparent" stroke="#e5e7eb" stroke-width="3"></circle>
+                                        <circle class="pie-ativa" id="novosPieAtiva" cx="21" cy="21" r="15.9155" fill="transparent" stroke="#00c853" stroke-width="3" 
+                                            stroke-dasharray="0 100" stroke-dashoffset="25" transform="rotate(-90 21 21)"></circle>
+                                        <circle class="pie-reserva" id="novosPieReserva" cx="21" cy="21" r="15.9155" fill="transparent" stroke="#ff9500" stroke-width="3" 
+                                            stroke-dasharray="0 100" stroke-dashoffset="25" transform="rotate(-90 21 21)"></circle>
+                                        <circle class="pie-pensionista" id="novosPiePensionista" cx="21" cy="21" r="15.9155" fill="transparent" stroke="#8b5cf6" stroke-width="3" 
+                                            stroke-dasharray="0 100" stroke-dashoffset="25" transform="rotate(-90 21 21)"></circle>
+                                    </svg>
+                                    <div class="pie-legend">
+                                        <div class="legend-item">
+                                            <span class="color-dot ativa"></span>
+                                            <span id="novosAtiva">-</span> Ativa
+                                        </div>
+                                        <div class="legend-item">
+                                            <span class="color-dot reserva"></span>
+                                            <span id="novosReserva">-</span> Reserva
+                                        </div>
+                                        <div class="legend-item">
+                                            <span class="color-dot pensionista"></span>
+                                            <span id="novosPensionista">-</span> Pensionista
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card 2: PM + BM + Outros - COM GRÁFICO PIZZA 3 FATIAS -->
+                    <div class="stat-card dual-stat-card triple-stat-card corporacoes-pie">
+                        <div class="dual-stat-header">
+                            <div class="dual-stat-title">
+                                <i class="fas fa-shield-alt"></i>
+                                Corporações
+                            </div>
+                            <div class="dual-stat-percentage" id="corporacoesPercent">
+                                <i class="fas fa-chart-pie"></i>
+                                -% do total
+                            </div>
+                        </div>
+                        <div class="dual-stats-row triple-stats-row">
+                            <div class="dual-stat-item pm-item">
+                                <div class="dual-stat-icon pm-icon">
+                                    <i class="fas fa-shield-alt"></i>
+                                </div>
+                                <div class="dual-stat-info">
+                                    <div class="dual-stat-value" id="pmQuantidade">-</div>
+                                    <div class="dual-stat-label">PM</div>
+                                </div>
+                                <!-- Gráfico Pizza PM -->
+                                <div class="pie-chart-container">
+                                    <svg class="pie-chart" width="120" height="120" viewBox="0 0 42 42">
+                                        <circle class="pie-background" cx="21" cy="21" r="15.9155" fill="transparent" stroke="#e5e7eb" stroke-width="3"></circle>
+                                        <circle class="pie-ativa" id="pmPieAtiva" cx="21" cy="21" r="15.9155" fill="transparent" stroke="#00c853" stroke-width="3" 
+                                            stroke-dasharray="0 100" stroke-dashoffset="25" transform="rotate(-90 21 21)"></circle>
+                                        <circle class="pie-reserva" id="pmPieReserva" cx="21" cy="21" r="15.9155" fill="transparent" stroke="#ff9500" stroke-width="3" 
+                                            stroke-dasharray="0 100" stroke-dashoffset="25" transform="rotate(-90 21 21)"></circle>
+                                        <circle class="pie-pensionista" id="pmPiePensionista" cx="21" cy="21" r="15.9155" fill="transparent" stroke="#8b5cf6" stroke-width="3" 
+                                            stroke-dasharray="0 100" stroke-dashoffset="25" transform="rotate(-90 21 21)"></circle>
+                                    </svg>
+                                    <div class="pie-legend">
+                                        <div class="legend-item">
+                                            <span class="color-dot ativa"></span>
+                                            <span id="pmAtiva">-</span> Ativa
+                                        </div>
+                                        <div class="legend-item">
+                                            <span class="color-dot reserva"></span>
+                                            <span id="pmReserva">-</span> Reserva
+                                        </div>
+                                        <div class="legend-item">
+                                            <span class="color-dot pensionista"></span>
+                                            <span id="pmPensionista">-</span> Pensionista
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="dual-stats-separator"></div>
+                            <div class="dual-stat-item bm-item">
+                                <div class="dual-stat-icon bm-icon">
+                                    <i class="fas fa-fire-extinguisher"></i>
+                                </div>
+                                <div class="dual-stat-info">
+                                    <div class="dual-stat-value" id="bmQuantidade">-</div>
+                                    <div class="dual-stat-label">BM</div>
+                                </div>
+                                <!-- Gráfico Pizza BM -->
+                                <div class="pie-chart-container">
+                                    <svg class="pie-chart" width="120" height="120" viewBox="0 0 42 42">
+                                        <circle class="pie-background" cx="21" cy="21" r="15.9155" fill="transparent" stroke="#e5e7eb" stroke-width="3"></circle>
+                                        <circle class="pie-ativa" id="bmPieAtiva" cx="21" cy="21" r="15.9155" fill="transparent" stroke="#00c853" stroke-width="3" 
+                                            stroke-dasharray="0 100" stroke-dashoffset="25" transform="rotate(-90 21 21)"></circle>
+                                        <circle class="pie-reserva" id="bmPieReserva" cx="21" cy="21" r="15.9155" fill="transparent" stroke="#ff9500" stroke-width="3" 
+                                            stroke-dasharray="0 100" stroke-dashoffset="25" transform="rotate(-90 21 21)"></circle>
+                                        <circle class="pie-pensionista" id="bmPiePensionista" cx="21" cy="21" r="15.9155" fill="transparent" stroke="#8b5cf6" stroke-width="3" 
+                                            stroke-dasharray="0 100" stroke-dashoffset="25" transform="rotate(-90 21 21)"></circle>
+                                    </svg>
+                                    <div class="pie-legend">
+                                        <div class="legend-item">
+                                            <span class="color-dot ativa"></span>
+                                            <span id="bmAtiva">-</span> Ativa
+                                        </div>
+                                        <div class="legend-item">
+                                            <span class="color-dot reserva"></span>
+                                            <span id="bmReserva">-</span> Reserva
+                                        </div>
+                                        <div class="legend-item">
+                                            <span class="color-dot pensionista"></span>
+                                            <span id="bmPensionista">-</span> Pensionista
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="dual-stats-separator"></div>
+                            <div class="dual-stat-item outros-item">
+                                <div class="dual-stat-icon outros-icon">
+                                    <i class="fas fa-users"></i>
+                                </div>
+                                <div class="dual-stat-info">
+                                    <div class="dual-stat-value" id="outrosQuantidade">-</div>
+                                    <div class="dual-stat-label">Outros</div>
+                                </div>
+                                <!-- Gráfico Pizza Outros -->
+                                <div class="pie-chart-container">
+                                    <svg class="pie-chart" width="120" height="120" viewBox="0 0 42 42">
+                                        <circle class="pie-background" cx="21" cy="21" r="15.9155" fill="transparent" stroke="#e5e7eb" stroke-width="3"></circle>
+                                        <circle class="pie-ativa" id="outrosPieAtiva" cx="21" cy="21" r="15.9155" fill="transparent" stroke="#00c853" stroke-width="3" 
+                                            stroke-dasharray="0 100" stroke-dashoffset="25" transform="rotate(-90 21 21)"></circle>
+                                        <circle class="pie-reserva" id="outrosPieReserva" cx="21" cy="21" r="15.9155" fill="transparent" stroke="#ff9500" stroke-width="3" 
+                                            stroke-dasharray="0 100" stroke-dashoffset="25" transform="rotate(-90 21 21)"></circle>
+                                        <circle class="pie-pensionista" id="outrosPiePensionista" cx="21" cy="21" r="15.9155" fill="transparent" stroke="#8b5cf6" stroke-width="3" 
+                                            stroke-dasharray="0 100" stroke-dashoffset="25" transform="rotate(-90 21 21)"></circle>
+                                    </svg>
+                                    <div class="pie-legend">
+                                        <div class="legend-item">
+                                            <span class="color-dot ativa"></span>
+                                            <span id="outrosAtiva">-</span> Ativa
+                                        </div>
+                                        <div class="legend-item">
+                                            <span class="color-dot reserva"></span>
+                                            <span id="outrosReserva">-</span> Reserva
+                                        </div>
+                                        <div class="legend-item">
+                                            <span class="color-dot pensionista"></span>
+                                            <span id="outrosPensionista">-</span> Pensionista
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card 3: Capital/Interior - COM GRÁFICOS PIZZA 3 FATIAS -->
+                    <div class="stat-card dual-stat-card distribuicao-pie">
+                        <div class="dual-stat-header">
+                            <div class="dual-stat-title">
+                                <i class="fas fa-map-marked-alt"></i>
+                                Distribuição
+                            </div>
+                            <div class="dual-stat-percentage" id="localizacaoPercent">
+                                <i class="fas fa-percentage"></i>
+                                <span id="totalLocalizacao">-</span> Mapeados
+                            </div>
+                        </div>
+                        <div class="dual-stats-row vertical-layout">
+                            <div class="dual-stat-item capital-item">
+                                <div class="dual-stat-icon capital-icon">
+                                    <i class="fas fa-city"></i>
+                                </div>
+                                <div class="dual-stat-info">
+                                    <div class="dual-stat-value" id="capitalQuantidade">-</div>
+                                    <div class="dual-stat-label">Capital (Goiânia)</div>
+                                    <div class="dual-stat-extra">
+                                        <div class="status-breakdown">
+                                            <div class="status-item status-capital">
+                                                <i class="fas fa-circle"></i>
+                                                <span id="capitalPercent">-%</span> do total
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- Gráfico Pizza Capital -->
+                                <div class="pie-chart-container">
+                                    <svg class="pie-chart" width="120" height="120" viewBox="0 0 42 42">
+                                        <circle class="pie-background" cx="21" cy="21" r="15.9155" fill="transparent" stroke="#e5e7eb" stroke-width="3"></circle>
+                                        <circle class="pie-ativa" id="capitalPieAtiva" cx="21" cy="21" r="15.9155" fill="transparent" stroke="#00c853" stroke-width="3" 
+                                            stroke-dasharray="0 100" stroke-dashoffset="25" transform="rotate(-90 21 21)"></circle>
+                                        <circle class="pie-reserva" id="capitalPieReserva" cx="21" cy="21" r="15.9155" fill="transparent" stroke="#ff9500" stroke-width="3" 
+                                            stroke-dasharray="0 100" stroke-dashoffset="25" transform="rotate(-90 21 21)"></circle>
+                                        <circle class="pie-pensionista" id="capitalPiePensionista" cx="21" cy="21" r="15.9155" fill="transparent" stroke="#8b5cf6" stroke-width="3" 
+                                            stroke-dasharray="0 100" stroke-dashoffset="25" transform="rotate(-90 21 21)"></circle>
+                                    </svg>
+                                    <div class="pie-legend">
+                                        <div class="legend-item">
+                                            <span class="color-dot ativa"></span>
+                                            <span id="capitalAtiva">-</span> Ativa
+                                        </div>
+                                        <div class="legend-item">
+                                            <span class="color-dot reserva"></span>
+                                            <span id="capitalReserva">-</span> Reserva
+                                        </div>
+                                        <div class="legend-item">
+                                            <span class="color-dot pensionista"></span>
+                                            <span id="capitalPensionista">-</span> Pensionista
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="dual-stats-separator"></div>
+                            <div class="dual-stat-item interior-item">
+                                <div class="dual-stat-icon interior-icon">
+                                    <i class="fas fa-tree"></i>
+                                </div>
+                                <div class="dual-stat-info">
+                                    <div class="dual-stat-value" id="interiorQuantidade">-</div>
+                                    <div class="dual-stat-label">Interior</div>
+                                    <div class="dual-stat-extra">
+                                        <div class="status-breakdown">
+                                            <div class="status-item status-interior">
+                                                <i class="fas fa-circle"></i>
+                                                <span id="interiorPercent">-%</span> do total
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- Gráfico Pizza Interior -->
+                                <div class="pie-chart-container">
+                                    <svg class="pie-chart" width="120" height="120" viewBox="0 0 42 42">
+                                        <circle class="pie-background" cx="21" cy="21" r="15.9155" fill="transparent" stroke="#e5e7eb" stroke-width="3"></circle>
+                                        <circle class="pie-ativa" id="interiorPieAtiva" cx="21" cy="21" r="15.9155" fill="transparent" stroke="#00c853" stroke-width="3" 
+                                            stroke-dasharray="0 100" stroke-dashoffset="25" transform="rotate(-90 21 21)"></circle>
+                                        <circle class="pie-reserva" id="interiorPieReserva" cx="21" cy="21" r="15.9155" fill="transparent" stroke="#ff9500" stroke-width="3" 
+                                            stroke-dasharray="0 100" stroke-dashoffset="25" transform="rotate(-90 21 21)"></circle>
+                                        <circle class="pie-pensionista" id="interiorPiePensionista" cx="21" cy="21" r="15.9155" fill="transparent" stroke="#8b5cf6" stroke-width="3" 
+                                            stroke-dasharray="0 100" stroke-dashoffset="25" transform="rotate(-90 21 21)"></circle>
+                                    </svg>
+                                    <div class="pie-legend">
+                                        <div class="legend-item">
+                                            <span class="color-dot ativa"></span>
+                                            <span id="interiorAtiva">-</span> Ativa
+                                        </div>
+                                        <div class="legend-item">
+                                            <span class="color-dot reserva"></span>
+                                            <span id="interiorReserva">-</span> Reserva
+                                        </div>
+                                        <div class="legend-item">
+                                            <span class="color-dot pensionista"></span>
+                                            <span id="interiorPensionista">-</span> Pensionista
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="dual-stats-separator"></div>
-                <div class="dual-stat-item bm-item">
-                    <div class="dual-stat-icon bm-icon">
-                        <i class="fas fa-fire-extinguisher"></i>
-                    </div>
-                    <div class="dual-stat-info">
-                        <div class="dual-stat-value" id="bmQuantidade">-</div>
-                        <div class="dual-stat-label">BM</div>
-                        <div class="dual-stat-extra">
-                            <div class="status-breakdown">
-                                <div class="status-item status-ativa">
-                                    <i class="fas fa-circle"></i>
-                                    <span id="bmAtiva">-</span> Ativa
-                                </div>
-                                <div class="status-item status-reserva">
-                                    <i class="fas fa-circle"></i>
-                                    <span id="bmReserva">-</span> Reserva
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="dual-stats-separator"></div>
-                <div class="dual-stat-item outros-item">
-                    <div class="dual-stat-icon outros-icon">
-                        <i class="fas fa-users"></i>
-                    </div>
-                    <div class="dual-stat-info">
-                        <div class="dual-stat-value" id="outrosQuantidade">-</div>
-                        <div class="dual-stat-label">Outros</div>
-                        <div class="dual-stat-extra">
-                            <div class="status-breakdown">
-                                <div class="status-item status-ativa">
-                                    <i class="fas fa-circle"></i>
-                                    <span id="outrosAtiva">-</span> Ativa
-                                </div>
-                                <div class="status-item status-reserva">
-                                    <i class="fas fa-circle"></i>
-                                    <span id="outrosReserva">-</span> Reserva
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Card 3: Capital/Interior - LAYOUT VERTICAL -->
-        <div class="stat-card dual-stat-card">
-            <div class="dual-stat-header">
-                <div class="dual-stat-title">
-                    <i class="fas fa-map-marked-alt"></i>
-                    Distribuição
-                </div>
-                <div class="dual-stat-percentage" id="localizacaoPercent">
-                    <i class="fas fa-percentage"></i>
-                    <span id="totalLocalizacao">-</span> Mapeados
-                </div>
-            </div>
-            <div class="dual-stats-row vertical-layout">
-                <div class="dual-stat-item capital-item">
-                    <div class="dual-stat-icon capital-icon">
-                        <i class="fas fa-city"></i>
-                    </div>
-                    <div class="dual-stat-info">
-                        <div class="dual-stat-value" id="capitalQuantidade">-</div>
-                        <div class="dual-stat-label">Capital (Goiânia)</div>
-                        <div class="dual-stat-extra">
-                            <div class="status-breakdown">
-                                <div class="status-item status-capital">
-                                    <i class="fas fa-circle"></i>
-                                    <span id="capitalPercent">-%</span> do total
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="dual-stats-separator"></div>
-                <div class="dual-stat-item interior-item">
-                    <div class="dual-stat-icon interior-icon">
-                        <i class="fas fa-tree"></i>
-                    </div>
-                    <div class="dual-stat-info">
-                        <div class="dual-stat-value" id="interiorQuantidade">-</div>
-                        <div class="dual-stat-label">Interior</div>
-                        <div class="dual-stat-extra">
-                            <div class="status-breakdown">
-                                <div class="status-item status-interior">
-                                    <i class="fas fa-circle"></i>
-                                    <span id="interiorPercent">-%</span> do total
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-<?php endif; ?>
+            <?php endif; ?>
 
             <!-- Actions Bar with Filters -->
             <div class="actions-bar" data-aos="fade-up" data-aos-delay="100">
-                
                 <div class="filters-row">
                     <div class="search-box">
                         <label class="filter-label">Buscar</label>
@@ -349,8 +493,7 @@ if ($podeVerKPIs): ?>
                                 <th>Corporação</th>
                                 <th>Patente</th>
                                 <th>Dt. Filiação</th>
-                                <th>Contato</th>
-                                <th style="width: 120px;">Ações</th>
+                                <th style="width: 150px;">Ações</th>
                             </tr>
                         </thead>
                         <tbody id="tableBody">
@@ -506,7 +649,7 @@ if ($podeVerKPIs): ?>
                     <!-- Conteúdo será inserido dinamicamente -->
                 </div>
 
-                <!-- NOVA ABA: Observações Tab -->
+                <!-- Observações Tab -->
                 <div id="observacoes-tab" class="tab-content">
                     <!-- Header da Aba de Observações -->
                     <div class="observacoes-header">
@@ -531,7 +674,8 @@ if ($podeVerKPIs): ?>
                     <div class="observacoes-filters">
                         <div class="observacoes-search">
                             <i class="fas fa-search"></i>
-                            <input type="text" id="searchObservacoes" placeholder="Buscar nas observações..." class="observacoes-search-input">
+                            <input type="text" id="searchObservacoes" placeholder="Buscar nas observações..."
+                                class="observacoes-search-input">
                         </div>
                         <div class="observacoes-filter-buttons">
                             <button class="filter-btn active" data-filter="all">
@@ -552,7 +696,7 @@ if ($podeVerKPIs): ?>
                     <!-- Container de Observações -->
                     <div class="observacoes-container" id="observacoesContainer">
                         <!-- As observações serão carregadas dinamicamente aqui -->
-                        
+
                         <!-- Estado vazio -->
                         <div class="empty-observacoes-state" style="display: none;">
                             <div class="empty-observacoes-icon">
@@ -570,7 +714,8 @@ if ($podeVerKPIs): ?>
                     <!-- Paginação das Observações -->
                     <div class="observacoes-pagination">
                         <div class="pagination-info">
-                            Mostrando <span id="observacoesShowing">1-5</span> de <span id="observacoesTotal">12</span> observações
+                            Mostrando <span id="observacoesShowing">1-5</span> de <span id="observacoesTotal">12</span>
+                            observações
                         </div>
                         <div class="pagination-controls">
                             <button class="pagination-btn" id="prevObservacoes">
@@ -605,7 +750,7 @@ if ($podeVerKPIs): ?>
                                 <i class="fas fa-pen me-1"></i>
                                 Observação
                             </label>
-                            <textarea class="form-control observacao-textarea" id="observacaoTexto" rows="6" 
+                            <textarea class="form-control observacao-textarea" id="observacaoTexto" rows="6"
                                 placeholder="Digite aqui a observação sobre o associado..." required></textarea>
                             <div class="form-text">Seja claro e objetivo em suas anotações.</div>
                         </div>
@@ -673,6 +818,125 @@ if ($podeVerKPIs): ?>
         </div>
     </div>
 
+    <!-- Modal de Edição de Contato -->
+    <div class="modal fade" id="modalEditarContato" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header" style="background: linear-gradient(135deg, #0056D2, #003d94); color: white;">
+                    <h5 class="modal-title">
+                        <i class="fas fa-edit me-2"></i>
+                        Editar Informações de Contato
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Você pode editar apenas as informações de contato deste associado.
+                    </div>
+
+                    <form id="formEditarContato">
+                        <input type="hidden" id="editContatoId" name="id">
+
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <h6 class="text-primary mb-3">
+                                    <i class="fas fa-user me-2"></i>
+                                    <span id="editContatoNome"></span>
+                                </h6>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">
+                                        <i class="fas fa-phone me-1"></i>
+                                        Telefone
+                                    </label>
+                                    <input type="text" class="form-control" id="editContatoTelefone" name="telefone"
+                                        placeholder="(00) 00000-0000">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">
+                                        <i class="fas fa-envelope me-1"></i>
+                                        E-mail
+                                    </label>
+                                    <input type="email" class="form-control" id="editContatoEmail" name="email"
+                                        placeholder="email@exemplo.com">
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr>
+
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label class="form-label">
+                                        <i class="fas fa-map-marker-alt me-1"></i>
+                                        CEP
+                                    </label>
+                                    <input type="text" class="form-control" id="editContatoCep" name="cep"
+                                        placeholder="00000-000">
+                                </div>
+                            </div>
+                            <div class="col-md-8">
+                                <div class="mb-3">
+                                    <label class="form-label">Endereço</label>
+                                    <input type="text" class="form-control" id="editContatoEndereco" name="endereco">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label class="form-label">Número</label>
+                                    <input type="text" class="form-control" id="editContatoNumero" name="numero">
+                                </div>
+                            </div>
+                            <div class="col-md-5">
+                                <div class="mb-3">
+                                    <label class="form-label">Complemento</label>
+                                    <input type="text" class="form-control" id="editContatoComplemento"
+                                        name="complemento">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label class="form-label">Bairro</label>
+                                    <input type="text" class="form-control" id="editContatoBairro" name="bairro">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="mb-3">
+                                    <label class="form-label">Cidade</label>
+                                    <input type="text" class="form-control" id="editContatoCidade" name="cidade">
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i>
+                        Cancelar
+                    </button>
+                    <button type="button" class="btn btn-primary" onclick="salvarContatoEditado()">
+                        <i class="fas fa-save me-1"></i>
+                        Salvar Alterações
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
@@ -682,48 +946,7 @@ if ($podeVerKPIs): ?>
 
     <!-- CSS e JavaScript inline -->
     <style>
-        /* Estilos melhorados para KPI */
-        .stat-icon.birthday {
-            background: linear-gradient(135deg, #e91e63 0%, #ad1457 100%);
-        }
-        
-        .stat-icon.geographic {
-            background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
-        }
-        
-        .stat-change.neutral {
-            background: rgba(156, 39, 176, 0.1);
-            color: #9c27b0;
-        }
-        
-        .stat-change.neutral i {
-            color: #e91e63;
-        }
-        
-        /* Ajusta grid para 3 cards */
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-            gap: 1.5rem;
-        }
-        
-        @media (min-width: 1200px) {
-            .stats-grid {
-                grid-template-columns: repeat(3, 1fr);
-            }
-        }
-
-        @media (max-width: 1199px) and (min-width: 768px) {
-            .stats-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
-
-        @media (max-width: 767px) {
-            .stats-grid {
-                grid-template-columns: 1fr;
-            }
-        }
+        /* === ESTILOS COMPLETOS DOS CARDS COM GRÁFICOS DE PIZZA === */
         
         /* Card Principal */
         .dual-stat-card {
@@ -891,7 +1114,106 @@ if ($podeVerKPIs): ?>
             width: 33.33%;
         }
 
-        /* Informações extras */
+        /* === GRÁFICOS DE PIZZA COM HOVER PARA TODOS OS KPIs - 3 FATIAS === */
+        
+        /* Card gráficos de pizza - todos os KPIs */
+        .corporacoes-pie .triple-stats-row,
+        .associados-pie .dual-stats-row,
+        .distribuicao-pie .dual-stats-row {
+            min-height: 140px;
+        }
+
+        /* Container do gráfico pizza - escondido por padrão */
+        .pie-chart-container {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 10;
+            background: white;
+            border-radius: 12px;
+            padding: 1rem;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+            border: 2px solid var(--gray-200);
+            pointer-events: none;
+            width: 200px;
+        }
+
+        /* Mostrar gráfico no hover */
+        .dual-stat-item:hover .pie-chart-container {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        /* Gráfico SVG */
+        .pie-chart {
+            width: 100%;
+            height: auto;
+            margin-bottom: 0.5rem;
+        }
+
+        /* Círculos do gráfico */
+        .pie-chart circle {
+            transition: stroke-dasharray 1s ease-in-out;
+        }
+
+        .pie-background {
+            stroke: #f3f4f6;
+        }
+
+        .pie-ativa {
+            stroke: #00c853;
+        }
+
+        .pie-reserva {
+            stroke: #ff9500;
+        }
+
+        .pie-pensionista {
+            stroke: #8b5cf6;
+        }
+
+        /* Legenda do gráfico de pizza */
+        .pie-legend {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            font-size: 0.75rem;
+        }
+
+        .pie-legend .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 600;
+            color: var(--gray-700);
+        }
+
+        .color-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .color-dot.ativa {
+            background: #00c853;
+        }
+
+        .color-dot.reserva {
+            background: #ff9500;
+        }
+
+        .color-dot.pensionista {
+            background: #8b5cf6;
+        }
+
+        /* Informações extras para outros cards (Capital/Interior) */
         .dual-stat-extra {
             font-size: 0.75rem;
             color: var(--gray-600);
@@ -919,16 +1241,6 @@ if ($podeVerKPIs): ?>
             padding: 0.25rem 0.5rem;
             border-radius: 12px;
             white-space: nowrap;
-        }
-
-        .status-ativa {
-            background: rgba(40, 167, 69, 0.15);
-            color: var(--success);
-        }
-
-        .status-reserva {
-            background: rgba(255, 149, 0, 0.15);
-            color: var(--warning);
         }
 
         .status-capital {
@@ -1013,8 +1325,31 @@ if ($podeVerKPIs): ?>
             box-shadow: 0 8px 25px rgba(25, 135, 84, 0.4);
         }
 
-        /* === RESPONSIVO - LAYOUT HORIZONTAL NO MOBILE === */
+        /* Mobile: sempre mostrar gráficos */
         @media (max-width: 768px) {
+            .pie-chart-container {
+                position: static;
+                transform: none;
+                opacity: 1;
+                visibility: visible;
+                pointer-events: auto;
+                margin-top: 0.75rem;
+                width: 100%;
+                background: var(--gray-50);
+                border: 1px solid var(--gray-300);
+                box-shadow: none;
+            }
+
+            .dual-stat-item {
+                padding-bottom: 1rem;
+            }
+            
+            .corporacoes-pie .triple-stats-row,
+            .associados-pie .dual-stats-row,
+            .distribuicao-pie .dual-stats-row {
+                min-height: auto;
+            }
+
             .dual-stats-row {
                 flex-direction: column;
                 min-height: auto;
@@ -1095,11 +1430,11 @@ if ($podeVerKPIs): ?>
                 max-width: 50%;
                 overflow: visible;
             }
-            
+
             .dual-stat-value {
                 font-size: 1.5rem;
             }
-            
+
             .dual-stat-icon {
                 width: 44px;
                 height: 44px;
@@ -1111,7 +1446,7 @@ if ($podeVerKPIs): ?>
             .dual-stat-value {
                 font-size: 1.75rem;
             }
-            
+
             .dual-stat-icon {
                 width: 48px;
                 height: 48px;
@@ -1121,7 +1456,7 @@ if ($podeVerKPIs): ?>
             .triple-stats-row .dual-stat-value {
                 font-size: 2rem;
             }
-            
+
             .triple-stats-row .dual-stat-icon {
                 width: 52px;
                 height: 52px;
@@ -1131,8 +1466,12 @@ if ($podeVerKPIs): ?>
 
         /* Animações */
         @keyframes float {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-3px); }
+            0%, 100% {
+                transform: translateY(0);
+            }
+            50% {
+                transform: translateY(-3px);
+            }
         }
 
         .dual-stat-icon {
@@ -1142,9 +1481,35 @@ if ($podeVerKPIs): ?>
         .dual-stat-item:hover .dual-stat-icon {
             animation: none;
         }
+
+        /* Grid de Estatísticas */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 1.5rem;
+        }
+
+        @media (min-width: 1200px) {
+            .stats-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        @media (max-width: 1199px) and (min-width: 768px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 767px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 
     <script>
+        // Funções auxiliares
         function toggleSearch() {
             console.log('Busca global ativada');
             const searchInput = document.getElementById('searchInput');
@@ -1182,7 +1547,7 @@ if ($podeVerKPIs): ?>
 
                 case 'AGUARDANDO_ASSINATURA':
                     <?php if ($auth->isDiretor() || $usuarioLogado['departamento_id'] == 2): ?>
-                    acoes = `
+                        acoes = `
                             <button class="btn-modern btn-success btn-sm" onclick="abrirModalAssinaturaModal(${doc.id})" title="Assinar">
                                 <i class="fas fa-signature"></i>
                                 Assinar
@@ -1204,7 +1569,44 @@ if ($podeVerKPIs): ?>
             return acoes;
         }
 
-        // Carrega estatísticas via API
+        // Função para animar gráfico de pizza UNIVERSAL - funciona para todos os cards com 3 FATIAS
+        function animarGraficoPizza(tipo, ativa, reserva, pensionista) {
+            const total = ativa + reserva + pensionista;
+            if (total === 0) {
+                // Se não há dados, esconder o gráfico ou mostrar vazio
+                return;
+            }
+            
+            const ativaPercent = (ativa / total) * 100;
+            const reservaPercent = (reserva / total) * 100;
+            const pensionistaPercent = (pensionista / total) * 100;
+            
+            // Elementos SVG
+            const pieAtiva = document.getElementById(`${tipo}PieAtiva`);
+            const pieReserva = document.getElementById(`${tipo}PieReserva`);
+            const piePensionista = document.getElementById(`${tipo}PiePensionista`);
+            
+            if (!pieAtiva || !pieReserva || !piePensionista) {
+                console.warn(`Elementos de gráfico não encontrados para: ${tipo}`);
+                return;
+            }
+            
+            // Animar fatia "Ativa" (começa do topo - 12h)
+            pieAtiva.style.strokeDasharray = `${ativaPercent} 100`;
+            pieAtiva.style.strokeDashoffset = '25';
+            
+            // Animar fatia "Reserva" (continua após a ativa)
+            const reservaOffset = 25 - ativaPercent;
+            pieReserva.style.strokeDasharray = `${reservaPercent} 100`;
+            pieReserva.style.strokeDashoffset = `${reservaOffset}`;
+            
+            // Animar fatia "Pensionista" (continua após reserva)
+            const pensionistaOffset = reservaOffset - reservaPercent;
+            piePensionista.style.strokeDasharray = `${pensionistaPercent} 100`;
+            piePensionista.style.strokeDashoffset = `${pensionistaOffset}`;
+        }
+
+        // Carrega estatísticas via API - TODOS OS KPIs COM GRÁFICOS DE PIZZA 3 FATIAS
         function carregarEstatisticas() {
             fetch('../api/dashboard_stats.php')
                 .then(response => response.json())
@@ -1212,16 +1614,32 @@ if ($podeVerKPIs): ?>
                     if (data.status === 'success') {
                         const stats = data.data;
                         
-                        // === CARD 1: ASSOCIADOS ATIVOS + NOVOS ===
+                        // === CARD 1: ASSOCIADOS ATIVOS + NOVOS COM GRÁFICOS DE PIZZA ===
                         document.getElementById('associadosAtivos').textContent = 
                             new Intl.NumberFormat('pt-BR').format(stats.associados_ativos);
-                        
                         document.getElementById('novosAssociados').textContent = 
                             new Intl.NumberFormat('pt-BR').format(stats.novos_associados);
                         
-                        // === CARD 2: CORPORAÇÕES (PM/BM/OUTROS) ===
+                        // Dados para Associados Ativos
+                        const associadosAtiva = stats.associados_ativa || 0;
+                        const associadosReserva = stats.associados_reserva || 0;
+                        const associadosPensionista = stats.associados_pensionista || 0;
+                        document.getElementById('associadosAtiva').textContent = associadosAtiva;
+                        document.getElementById('associadosReserva').textContent = associadosReserva;
+                        document.getElementById('associadosPensionista').textContent = associadosPensionista;
+                        
+                        // Dados para Novos Associados
+                        const novosAtiva = stats.novos_ativa || 0;
+                        const novosReserva = stats.novos_reserva || 0;
+                        const novosPensionista = stats.novos_pensionista || 0;
+                        document.getElementById('novosAtiva').textContent = novosAtiva;
+                        document.getElementById('novosReserva').textContent = novosReserva;
+                        document.getElementById('novosPensionista').textContent = novosPensionista;
+                        
+                        // === CARD 2: CORPORAÇÕES COM GRÁFICOS DE PIZZA ===
                         const corp = stats.corporacoes_principais;
                         
+                        // Atualizar valores principais
                         document.getElementById('pmQuantidade').textContent = 
                             new Intl.NumberFormat('pt-BR').format(corp.pm_quantidade);
                         document.getElementById('bmQuantidade').textContent = 
@@ -1229,31 +1647,73 @@ if ($podeVerKPIs): ?>
                         document.getElementById('outrosQuantidade').textContent = 
                             new Intl.NumberFormat('pt-BR').format(corp.outros_quantidade);
                         
-                        // Atualizar detalhes Ativa/Reserva
-                        document.getElementById('pmAtiva').textContent = corp.pm_ativa || 0;
-                        document.getElementById('pmReserva').textContent = corp.pm_reserva || 0;
-                        document.getElementById('bmAtiva').textContent = corp.bm_ativa || 0;
-                        document.getElementById('bmReserva').textContent = corp.bm_reserva || 0;
-                        document.getElementById('outrosAtiva').textContent = corp.outros_ativa || 0;
-                        document.getElementById('outrosReserva').textContent = corp.outros_reserva || 0;
+                        // Atualizar valores de ativa/reserva/pensionista
+                        const pmAtiva = corp.pm_ativa || 0;
+                        const pmReserva = corp.pm_reserva || 0;
+                        const pmPensionista = corp.pm_pensionista || 0;
+                        const bmAtiva = corp.bm_ativa || 0;
+                        const bmReserva = corp.bm_reserva || 0;
+                        const bmPensionista = corp.bm_pensionista || 0;
+                        const outrosAtiva = corp.outros_ativa || 0;
+                        const outrosReserva = corp.outros_reserva || 0;
+                        const outrosPensionista = corp.outros_pensionista || 0;
+                        
+                        document.getElementById('pmAtiva').textContent = pmAtiva;
+                        document.getElementById('pmReserva').textContent = pmReserva;
+                        document.getElementById('pmPensionista').textContent = pmPensionista;
+                        document.getElementById('bmAtiva').textContent = bmAtiva;
+                        document.getElementById('bmReserva').textContent = bmReserva;
+                        document.getElementById('bmPensionista').textContent = bmPensionista;
+                        document.getElementById('outrosAtiva').textContent = outrosAtiva;
+                        document.getElementById('outrosReserva').textContent = outrosReserva;
+                        document.getElementById('outrosPensionista').textContent = outrosPensionista;
                         
                         document.getElementById('corporacoesPercent').innerHTML = 
                             `<i class="fas fa-chart-pie"></i> ${corp.total_percentual}% do total`;
                         
-                        // === CARD 3: DISTRIBUIÇÃO (CAPITAL/INTERIOR) ===
-                        const totalMapeados = stats.capital + stats.interior;
-                        
+                        // === CARD 3: DISTRIBUIÇÃO COM GRÁFICOS DE PIZZA ===
                         document.getElementById('capitalQuantidade').textContent = 
                             new Intl.NumberFormat('pt-BR').format(stats.capital);
                         document.getElementById('interiorQuantidade').textContent = 
                             new Intl.NumberFormat('pt-BR').format(stats.interior);
                         document.getElementById('totalLocalizacao').textContent = 
-                            new Intl.NumberFormat('pt-BR').format(totalMapeados);
+                            new Intl.NumberFormat('pt-BR').format(stats.total_localizacao);
+                        
+                        // Dados para Capital e Interior
+                        const capitalAtiva = stats.capital_ativa || 0;
+                        const capitalReserva = stats.capital_reserva || 0;
+                        const capitalPensionista = stats.capital_pensionista || 0;
+                        const interiorAtiva = stats.interior_ativa || 0;
+                        const interiorReserva = stats.interior_reserva || 0;
+                        const interiorPensionista = stats.interior_pensionista || 0;
+                        
+                        document.getElementById('capitalAtiva').textContent = capitalAtiva;
+                        document.getElementById('capitalReserva').textContent = capitalReserva;
+                        document.getElementById('capitalPensionista').textContent = capitalPensionista;
+                        document.getElementById('interiorAtiva').textContent = interiorAtiva;
+                        document.getElementById('interiorReserva').textContent = interiorReserva;
+                        document.getElementById('interiorPensionista').textContent = interiorPensionista;
                         
                         document.getElementById('capitalPercent').textContent = `${stats.capital_percentual}%`;
                         document.getElementById('interiorPercent').textContent = `${stats.interior_percentual}%`;
                         
-                        console.log('Estatísticas carregadas:', stats);
+                        // ANIMAR TODOS OS GRÁFICOS DE PIZZA COM 3 FATIAS
+                        setTimeout(() => {
+                            // Card 1: Associados
+                            animarGraficoPizza('ativos', associadosAtiva, associadosReserva, associadosPensionista);
+                            animarGraficoPizza('novos', novosAtiva, novosReserva, novosPensionista);
+                            
+                            // Card 2: Corporações
+                            animarGraficoPizza('pm', pmAtiva, pmReserva, pmPensionista);
+                            animarGraficoPizza('bm', bmAtiva, bmReserva, bmPensionista);
+                            animarGraficoPizza('outros', outrosAtiva, outrosReserva, outrosPensionista);
+                            
+                            // Card 3: Distribuição
+                            animarGraficoPizza('capital', capitalAtiva, capitalReserva, capitalPensionista);
+                            animarGraficoPizza('interior', interiorAtiva, interiorReserva, interiorPensionista);
+                        }, 500);
+                        
+                        console.log('Estatísticas carregadas com gráficos de pizza 3 fatias:', stats);
                         
                     } else {
                         console.error('Erro ao carregar estatísticas:', data.message);
@@ -1262,7 +1722,7 @@ if ($podeVerKPIs): ?>
                 .catch(error => {
                     console.error('Erro de rede:', error);
                     // Fallback: calcular com dados locais se disponível
-                    if (todosAssociados && todosAssociados.length > 0) {
+                    if (typeof todosAssociados !== 'undefined' && todosAssociados && todosAssociados.length > 0) {
                         calcularEstatisticasLocal();
                     }
                 });
@@ -1270,7 +1730,7 @@ if ($podeVerKPIs): ?>
 
         // Função de fallback para cálculo local
         function calcularEstatisticasLocal() {
-            if (!todosAssociados || todosAssociados.length === 0) return;
+            if (typeof todosAssociados === 'undefined' || !todosAssociados || todosAssociados.length === 0) return;
 
             // Associados ativos
             const ativos = todosAssociados.filter(a => a.situacao === 'Filiado').length;
@@ -1291,10 +1751,16 @@ if ($podeVerKPIs): ?>
             console.log('Estatísticas calculadas localmente');
         }
 
+        // Verifica se deve carregar estatísticas
+        const podeVerKPIs = <?php echo $podeVerKPIs ? 'true' : 'false'; ?>;
+
         // Carrega quando a página está pronta
         document.addEventListener('DOMContentLoaded', function() {
-            carregarEstatisticas();
-            
+            // Só carrega estatísticas se o usuário tem permissão
+            if (podeVerKPIs) {
+                carregarEstatisticas();
+            }
+
             // Inicializa AOS
             AOS.init({
                 duration: 800,
@@ -1302,28 +1768,39 @@ if ($podeVerKPIs): ?>
                 once: true
             });
         });
-    </script>
 
-    <script>
-    // Verifica se deve carregar estatísticas
-    const podeVerKPIs = <?php echo $podeVerKPIs ? 'true' : 'false'; ?>;
-    
-    document.addEventListener('DOMContentLoaded', function() {
-        // Só carrega estatísticas se o usuário tem permissão
-        if (podeVerKPIs) {
-            carregarEstatisticas();
-        }
-        
-        AOS.init({
-            duration: 800,
-            easing: 'ease-out-cubic',
-            once: true
-        });
-    });
-</script>
+        // Passar permissões do PHP para o JavaScript
+        const permissoesUsuario = {
+            podeExcluir: <?php
+                $podeExcluir = false;
+                if (isset($usuarioLogado['departamento_id'])) {
+                    // Presidência pode excluir
+                    if ($usuarioLogado['departamento_id'] == 1) {
+                        $podeExcluir = true;
+                    }
+                    // Diretor do Comercial pode excluir
+                    if ($usuarioLogado['cargo'] == 'Diretor' && $usuarioLogado['departamento_id'] == 10) {
+                        $podeExcluir = true;
+                    }
+                }
+                echo $podeExcluir ? 'true' : 'false';
+            ?>,
+            podeEditarCompleto: <?php
+                $podeEditarCompleto = false;
+                if (isset($usuarioLogado['departamento_id'])) {
+                    // Presidência, Comercial e RH podem editar completo
+                    if (in_array($usuarioLogado['departamento_id'], [1, 9, 10])) {
+                        $podeEditarCompleto = true;
+                    }
+                }
+                echo $podeEditarCompleto ? 'true' : 'false';
+            ?>,
+            departamentoId: <?php echo $usuarioLogado['departamento_id'] ?? 'null'; ?>,
+            cargo: '<?php echo $usuarioLogado['cargo'] ?? ''; ?>'
+        };
+    </script>
 
     <script src="js/dashboard.js"></script>
 
 </body>
-
 </html>

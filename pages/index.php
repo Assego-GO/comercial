@@ -575,7 +575,7 @@ if (!empty($_POST['email'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    
+    <title>ASSEGO</title>
     
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -622,7 +622,7 @@ if (!empty($_POST['email'])) {
             overflow: hidden;
         }
 
-        /* Background com imagens sutis */
+        /* Background com imagens sutis - TRANSIÇÃO CORRIGIDA */
         .bg-image {
             position: fixed;
             inset: -10%;
@@ -649,6 +649,17 @@ if (!empty($_POST['email'])) {
 
         .bg-image.inactive {
             opacity: 0;
+        }
+
+        /* Canvas de partículas */
+        #particles-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -3;
+            pointer-events: none;
         }
 
         /* Overlay azul sobre as imagens */
@@ -684,17 +695,8 @@ if (!empty($_POST['email'])) {
             padding: 0 1.5rem;
         }
 
-        .loading-logo img {
-            width: 80px;
-            height: 80px;
-            object-fit: contain;
-            border-radius: 50%;
-            box-shadow: 0 0 30px rgba(255, 255, 255, 0.3);
-            margin-bottom: 1.5rem;
-        }
-
         .loading-title {
-            font-size: 2rem;
+            font-size: 2.5rem;
             font-weight: 800;
             color: white;
             letter-spacing: -0.02em;
@@ -762,43 +764,17 @@ if (!empty($_POST['email'])) {
         /* Header minimalista e limpo */
         .login-header {
             background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
-            padding: 1.5rem 2rem;
+            padding: 2rem 2rem;
             text-align: center;
             position: relative;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.875rem;
-        }
-
-        .header-logo {
-            width: 44px;
-            height: 44px;
-            border-radius: 8px;
-            object-fit: contain;
-            background: rgba(255, 255, 255, 0.1);
-            padding: 6px;
-            flex-shrink: 0;
-        }
-
-        .header-content {
-            text-align: left;
         }
 
         .system-title {
-            font-size: 1.375rem;
+            font-size: 2rem;
             font-weight: 700;
             color: white;
             margin: 0;
             letter-spacing: -0.025em;
-            line-height: 1.1;
-        }
-
-        .system-subtitle {
-            font-size: 0.8125rem;
-            color: rgba(255, 255, 255, 0.75);
-            font-weight: 400;
-            margin-top: 0.125rem;
         }
 
         /* Corpo do formulário */
@@ -1054,21 +1030,11 @@ if (!empty($_POST['email'])) {
             }
 
             .login-header {
-                padding: 1.25rem 1.5rem;
-                gap: 0.75rem;
-            }
-
-            .header-logo {
-                width: 40px;
-                height: 40px;
+                padding: 1.5rem;
             }
 
             .system-title {
-                font-size: 1.25rem;
-            }
-
-            .system-subtitle {
-                font-size: 0.75rem;
+                font-size: 1.75rem;
             }
 
             .login-body {
@@ -1100,9 +1066,6 @@ if (!empty($_POST['email'])) {
     <!-- Loading Inicial -->
     <div class="initial-loading" id="initialLoading">
         <div class="loading-content">
-            <div class="loading-logo">
-                <img src="./img/logo-assego.jpeg" alt="ASSEGO">
-            </div>
             <h1 class="loading-title">ASSEGO</h1>
             <div class="loading-spinner"></div>
             <p class="loading-text">Carregando sistema...</p>
@@ -1113,7 +1076,10 @@ if (!empty($_POST['email'])) {
         </div>
     </div>
 
-    <!-- Background sutil -->
+    <!-- Background com partículas interativas -->
+    <canvas id="particles-canvas"></canvas>
+    
+    <!-- Background sutil com transição corrigida -->
     <div class="bg-image active" id="bg1" style="background-image: url('./img/fundo-1.jpeg')"></div>
     <div class="bg-image inactive" id="bg2" style="background-image: url('./img/fundo-2.jpeg')"></div>
 
@@ -1121,11 +1087,7 @@ if (!empty($_POST['email'])) {
     <div class="login-container">
         <!-- Header minimalista e limpo -->
         <div class="login-header">
-            <img src="./img/logo-assego.jpeg" alt="ASSEGO" class="header-logo">
-            <div class="header-content">
-                <h1 class="system-title">ASSEGO</h1>
-                <p class="system-subtitle">Sistema de Gestão</p>
-            </div>
+            <h1 class="system-title">ASSEGO</h1>
         </div>
         
         <!-- Corpo do formulário -->
@@ -1270,8 +1232,9 @@ if (!empty($_POST['email'])) {
     
     <script>
         let turnstileVerified = false;
+        let backgroundTransitionInterval = null;
         
-        // Função para alternar as imagens de fundo
+        // Função para alternar as imagens de fundo - CORRIGIDA
         function alternateBackgrounds() {
             const bg1 = document.getElementById('bg1');
             const bg2 = document.getElementById('bg2');
@@ -1288,21 +1251,180 @@ if (!empty($_POST['email'])) {
                 bg1.classList.add('active');
             }
         }
+        
+        // Inicialização única após o loading - CORRIGIDA
+        function initializeSystem() {
+            // Inicializar sistema de partículas
+            const particleNetwork = new ParticleNetwork();
+            
+            // Iniciar transição de fundo após 1 segundo do sistema carregado
+            setTimeout(() => {
+                alternateBackgrounds();
+                // Alternar a cada 6 segundos
+                backgroundTransitionInterval = setInterval(alternateBackgrounds, 6000);
+            }, 1000);
+        }
+        
+        // Sistema de partículas interativas
+        class ParticleNetwork {
+            constructor() {
+                this.canvas = document.getElementById('particles-canvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.particles = [];
+                this.mouse = { x: null, y: null };
+                this.animationId = null;
+                
+                this.settings = {
+                    particleCount: 150,
+                    particleSize: 5,
+                    connectionDistance: 140,
+                    mouseDistance: 200,
+                    particleSpeed: 0.5,
+                    lineOpacity: 0.75,
+                    mouseLineOpacity: 1.0,
+                    particleOpacity: 1.0
+                };
+                
+                this.init();
+            }
+            
+            init() {
+                this.resizeCanvas();
+                this.createParticles();
+                this.addEventListeners();
+                this.animate();
+            }
+            
+            resizeCanvas() {
+                this.canvas.width = window.innerWidth;
+                this.canvas.height = window.innerHeight;
+            }
+            
+            createParticles() {
+                this.particles = [];
+                for (let i = 0; i < this.settings.particleCount; i++) {
+                    this.particles.push({
+                        x: Math.random() * this.canvas.width,
+                        y: Math.random() * this.canvas.height,
+                        vx: (Math.random() - 0.5) * this.settings.particleSpeed,
+                        vy: (Math.random() - 0.5) * this.settings.particleSpeed,
+                        size: Math.random() * this.settings.particleSize + 1
+                    });
+                }
+            }
+            
+            addEventListeners() {
+                window.addEventListener('resize', () => {
+                    this.resizeCanvas();
+                    this.createParticles();
+                });
+                
+                document.addEventListener('mousemove', (e) => {
+                    this.mouse.x = e.clientX;
+                    this.mouse.y = e.clientY;
+                });
+                
+                document.addEventListener('mouseleave', () => {
+                    this.mouse.x = null;
+                    this.mouse.y = null;
+                });
+            }
+            
+            updateParticles() {
+                this.particles.forEach(particle => {
+                    particle.x += particle.vx;
+                    particle.y += particle.vy;
+                    
+                    // Rebote nas bordas
+                    if (particle.x < 0 || particle.x > this.canvas.width) {
+                        particle.vx *= -1;
+                        particle.x = Math.max(0, Math.min(this.canvas.width, particle.x));
+                    }
+                    if (particle.y < 0 || particle.y > this.canvas.height) {
+                        particle.vy *= -1;
+                        particle.y = Math.max(0, Math.min(this.canvas.height, particle.y));
+                    }
+                });
+            }
+            
+            drawParticles() {
+                this.particles.forEach(particle => {
+                    this.ctx.globalAlpha = this.settings.particleOpacity;
+                    this.ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                    this.ctx.beginPath();
+                    this.ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+                    this.ctx.fill();
+                });
+            }
+            
+            drawConnections() {
+                for (let i = 0; i < this.particles.length; i++) {
+                    for (let j = i + 1; j < this.particles.length; j++) {
+                        const dx = this.particles[i].x - this.particles[j].x;
+                        const dy = this.particles[i].y - this.particles[j].y;
+                        const distance = Math.sqrt(dx * dx + dy * dy);
+                        
+                        if (distance < this.settings.connectionDistance) {
+                            const opacity = (1 - distance / this.settings.connectionDistance) * this.settings.lineOpacity;
+                            this.ctx.globalAlpha = opacity;
+                            this.ctx.strokeStyle = 'rgba(255, 255, 255, 1)';
+                            this.ctx.lineWidth = 0.8;
+                            this.ctx.beginPath();
+                            this.ctx.moveTo(this.particles[i].x, this.particles[i].y);
+                            this.ctx.lineTo(this.particles[j].x, this.particles[j].y);
+                            this.ctx.stroke();
+                        }
+                    }
+                }
+            }
+            
+            drawMouseConnections() {
+                if (this.mouse.x === null || this.mouse.y === null) return;
+                
+                this.particles.forEach(particle => {
+                    const dx = particle.x - this.mouse.x;
+                    const dy = particle.y - this.mouse.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (distance < this.settings.mouseDistance) {
+                        const opacity = (1 - distance / this.settings.mouseDistance) * this.settings.mouseLineOpacity;
+                        this.ctx.globalAlpha = opacity;
+                        this.ctx.strokeStyle = 'rgba(255, 255, 255, 1)';
+                        this.ctx.lineWidth = 1.2;
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(particle.x, particle.y);
+                        this.ctx.lineTo(this.mouse.x, this.mouse.y);
+                        this.ctx.stroke();
+                    }
+                });
+            }
+            
+            animate() {
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                this.updateParticles();
+                this.drawConnections();
+                this.drawMouseConnections();
+                this.drawParticles();
+                
+                this.animationId = requestAnimationFrame(() => this.animate());
+            }
+        }
 
-        // Loading e alternância de imagens
+        // JavaScript habilitado
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('js_enabled').value = '1';
+        });
+        
+        // Controle único de loading e inicialização - CORRIGIDO
         window.addEventListener('load', () => {
             setTimeout(() => {
                 document.getElementById('initialLoading').classList.add('fade-out');
                 setTimeout(() => {
-                    alternateBackgrounds();
-                    setInterval(alternateBackgrounds, 6000);
+                    // Inicializar todo o sistema apenas uma vez
+                    initializeSystem();
                 }, 1000);
             }, 3000);
-        });
-        
-        // JavaScript habilitado
-        document.addEventListener('DOMContentLoaded', function() {
-            document.getElementById('js_enabled').value = '1';
         });
         
         // Callbacks do Turnstile
@@ -1357,6 +1479,13 @@ if (!empty($_POST['email'])) {
                 }
             });
         }, 5000);
+        
+        // Cleanup ao sair da página
+        window.addEventListener('beforeunload', () => {
+            if (backgroundTransitionInterval) {
+                clearInterval(backgroundTransitionInterval);
+            }
+        });
     </script>
 </body>
 </html>

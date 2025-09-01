@@ -501,6 +501,7 @@ $headerComponent = HeaderComponent::create([
                         <p class="report-description">
                             Lista de associados aniversariantes por período para envio de felicitações.
                         </p>
+
                        <!-- <div class="quick-report-actions">
                             <a class="quick-report-action" onclick="executarRelatorioRapido('aniversariantes', 'hoje'); event.stopPropagation();">
                                 <i class="fas fa-calendar-day"></i>
@@ -519,6 +520,7 @@ $headerComponent = HeaderComponent::create([
                                 <span>Filtrar</span>
                             </a>
                         </div> -->
+
                     </div>
                     <?php endif; ?>
 
