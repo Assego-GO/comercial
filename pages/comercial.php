@@ -2198,6 +2198,7 @@ $headerComponent = HeaderComponent::create([
         console.log(`🏢 Departamento: ${isComercial ? 'Comercial (ID: 10)' : isPresidencia ? 'Presidência (ID: 1)' : 'Outro'}`);
         console.log(`🔐 Funcionalidades: ${temPermissao ? 'Liberadas' : 'Restritas'}`);
         console.log(`📊 Estatísticas: Sempre visíveis (independente de permissões)`);
+        
         console.log(`📋 Suporte a múltiplos RGs de diferentes corporações ativado`);
     </script>
 
