@@ -12,7 +12,7 @@
  * SEGURANÇA: Apenas associados com is_diretor = 1 podem fazer login
  */
 
-session_start();
+
 require_once 'Permissoes.php';
 
 class Auth
