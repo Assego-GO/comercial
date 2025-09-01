@@ -25,11 +25,26 @@ if (!$auth->isLoggedIn()) {
 }
 
 // Verifica se é diretor (apenas diretores podem excluir)
-if (!$auth->isDiretor()) {
+// Verifica permissões específicas para excluir
+$usuarioLogado = $auth->getUser();
+$podeExcluir = false;
+
+// Verificar se é do departamento Presidência (ID = 1)
+if ($usuarioLogado['departamento_id'] == 1) {
+    $podeExcluir = true;
+}
+
+// Verificar se é Diretor do departamento Comercial (ID = 10)
+if ($usuarioLogado['cargo'] == 'Diretor' && $usuarioLogado['departamento_id'] == 10) {
+    $podeExcluir = true;
+}
+
+// Se não tem permissão, bloqueia
+if (!$podeExcluir) {
     header('Content-Type: application/json');
     echo json_encode([
         'status' => 'error',
-        'message' => 'Acesso negado. Apenas diretores podem excluir associados.'
+        'message' => 'Acesso negado. Apenas Diretores do Comercial ou pessoal da Presidência podem excluir associados.'
     ]);
     exit;
 }
@@ -49,10 +64,10 @@ $associadoId = intval($_POST['id']);
 try {
     // Instancia a classe Associados
     $associados = new Associados();
-    
+
     // Executa a exclusão
     $resultado = $associados->excluir($associadoId);
-    
+
     if ($resultado) {
         // Resposta de sucesso
         header('Content-Type: application/json');
@@ -64,11 +79,11 @@ try {
     } else {
         throw new Exception('Não foi possível excluir o associado.');
     }
-    
+
 } catch (Exception $e) {
     // Log do erro
     error_log("Erro ao excluir associado: " . $e->getMessage());
-    
+
     // Resposta de erro
     header('Content-Type: application/json');
     http_response_code(500);
