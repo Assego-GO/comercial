@@ -1,10 +1,13 @@
 <?php
 /**
- * Página de Gerenciamento de Permissões
+ * Página de Gerenciamento de Permissões - Sistema ASSEGO
  * pages/permissoes.php
  */
 
-// Configuração e includes
+// Tratamento de erros para debug
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
 require_once '../config/config.php';
 require_once '../config/database.php';
 require_once '../classes/Database.php';
@@ -26,23 +29,24 @@ if (!$auth->isLoggedIn()) {
 // Pega dados do usuário logado
 $usuarioLogado = $auth->getUser();
 
-// Inicializa o gerenciador de permissões e funcionários
+// Define o título da página
+$page_title = 'Gerenciamento de Permissões - ASSEGO';
+
+// Inicializa classes
 $permissoesManager = PermissoesManager::getInstance();
 $funcionariosClass = new Funcionarios();
+$db = Database::getInstance(DB_NAME_CADASTRO)->getConnection();
 
-// Busca dados completos do usuário logado incluindo departamento
+// Busca dados completos do usuário
 $dadosUsuarioCompleto = $funcionariosClass->getById($usuarioLogado['id']);
 $usuarioLogado['departamento_id'] = $dadosUsuarioCompleto['departamento_id'] ?? null;
 $usuarioLogado['cargo'] = $dadosUsuarioCompleto['cargo'] ?? null;
 
-// Verifica se é da presidência (departamento 1 ou cargos específicos)
+// Verificação de permissões
 $ehPresidencia = ($usuarioLogado['departamento_id'] == 1) || 
                  in_array($usuarioLogado['cargo'], ['Presidente', 'Vice-Presidente']);
-
-// Verifica permissões de acesso
-$temAcessoTotal = $ehPresidencia; // Presidência tem acesso total
 $isDiretor = $permissoesManager->isDiretorDepartamento($usuarioLogado['id']);
-$podeGerenciarPermissoes = $temAcessoTotal || $isDiretor;
+$podeGerenciarPermissoes = $ehPresidencia || $isDiretor;
 
 if (!$podeGerenciarPermissoes) {
     $_SESSION['erro'] = 'Você não tem permissão para acessar esta página.';
@@ -50,130 +54,71 @@ if (!$podeGerenciarPermissoes) {
     exit;
 }
 
-// Define o título da página
-$page_title = 'Gerenciamento de Permissões - ASSEGO';
-
-// Busca estatísticas
-$db = Database::getInstance(DB_NAME_CADASTRO)->getConnection();
-
+// Busca dados do sistema
 try {
-    // Dashboard de permissões
-    $dashboard = $permissoesManager->getDashboardDiretor($usuarioLogado['id']);
-    
-    // Busca funcionários baseado no nível de acesso
-    $funcionariosDepartamento = [];
-    
+    // Estatísticas gerais
+    $stmt = $db->prepare("SELECT COUNT(*) as total FROM Funcionarios WHERE ativo = 1");
+    $stmt->execute();
+    $totalUsuarios = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
+
+    $stmt = $db->prepare("SELECT COUNT(*) as total FROM Departamentos WHERE ativo = 1");
+    $stmt->execute();
+    $totalDepartamentos = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
+
+    // Delegações ativas
+    $stmt = $db->prepare("
+        SELECT COUNT(*) as total 
+        FROM Permissoes_Delegadas 
+        WHERE ativa = 1 
+        AND (data_fim IS NULL OR data_fim > NOW())
+    ");
+    $stmt->execute();
+    $totalDelegacoes = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
+
+    // Grupos de permissões
+    $stmt = $db->prepare("SELECT COUNT(*) as total FROM Grupos_Permissoes WHERE ativo = 1");
+    $stmt->execute();
+    $totalGrupos = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
+
+    // Lista de departamentos
+    $stmt = $db->prepare("SELECT id, nome FROM Departamentos WHERE ativo = 1 ORDER BY nome");
+    $stmt->execute();
+    $departamentos = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Lista de funcionários (baseado no nível de acesso)
     if ($ehPresidencia) {
-        // Presidência vê TODOS os funcionários de TODOS os departamentos
-        $funcionariosDepartamento = $funcionariosClass->listar([
-            'ativo' => 1
-        ]);
-    } else if ($isDiretor) {
-        // Diretor vê apenas funcionários do SEU departamento
-        $funcionariosDepartamento = $funcionariosClass->listar([
-            'ativo' => 1,
-            'departamento_id' => $usuarioLogado['departamento_id']
-        ]);
-    }
-    
-    // Busca delegações ativas - filtradas por acesso
-    $todasDelegacoes = [];
-    if ($ehPresidencia) {
-        // Presidência vê todas as delegações do sistema
         $stmt = $db->prepare("
-            SELECT 
-                pd.*,
-                fo.nome as origem_nome,
-                fd.nome as destino_nome,
-                do.nome as dept_origem,
-                dd.nome as dept_destino
-            FROM Permissoes_Delegadas pd
-            JOIN Funcionarios fo ON pd.funcionario_origem = fo.id
-            JOIN Funcionarios fd ON pd.funcionario_destino = fd.id
-            LEFT JOIN Departamentos do ON fo.departamento_id = do.id
-            LEFT JOIN Departamentos dd ON fd.departamento_id = dd.id
-            WHERE pd.ativa = 1
-            AND (pd.data_fim IS NULL OR pd.data_fim > NOW())
-            ORDER BY pd.criado_em DESC
+            SELECT f.*, d.nome as departamento_nome 
+            FROM Funcionarios f
+            LEFT JOIN Departamentos d ON f.departamento_id = d.id
+            WHERE f.ativo = 1
+            ORDER BY f.nome
         ");
-        $stmt->execute();
-        $todasDelegacoes = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    } else if ($isDiretor) {
-        // Diretor vê apenas delegações do seu departamento
+    } else {
         $stmt = $db->prepare("
-            SELECT 
-                pd.*,
-                fo.nome as origem_nome,
-                fd.nome as destino_nome,
-                do.nome as dept_origem,
-                dd.nome as dept_destino
-            FROM Permissoes_Delegadas pd
-            JOIN Funcionarios fo ON pd.funcionario_origem = fo.id
-            JOIN Funcionarios fd ON pd.funcionario_destino = fd.id
-            LEFT JOIN Departamentos do ON fo.departamento_id = do.id
-            LEFT JOIN Departamentos dd ON fd.departamento_id = dd.id
-            WHERE pd.ativa = 1
-            AND (pd.data_fim IS NULL OR pd.data_fim > NOW())
-            AND (fo.departamento_id = ? OR fd.departamento_id = ?)
-            ORDER BY pd.criado_em DESC
+            SELECT f.*, d.nome as departamento_nome 
+            FROM Funcionarios f
+            LEFT JOIN Departamentos d ON f.departamento_id = d.id
+            WHERE f.ativo = 1 AND f.departamento_id = ?
+            ORDER BY f.nome
         ");
-        $stmt->execute([$usuarioLogado['departamento_id'], $usuarioLogado['departamento_id']]);
-        $todasDelegacoes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $stmt->execute([$usuarioLogado['departamento_id']]);
     }
-    
-    // Busca permissões expirando - filtradas por acesso
-    $permissoesExpirando = [];
-    if ($ehPresidencia) {
-        $permissoesExpirando = $permissoesManager->getPermissoesExpirando(7);
-    } else if ($isDiretor) {
-        // Filtrar apenas do departamento
-        $stmt = $db->prepare("
-            SELECT 
-                'delegacao' as tipo,
-                pd.id,
-                pd.permissao,
-                pd.data_fim,
-                fd.nome as funcionario_nome,
-                pd.funcionario_destino as funcionario_id
-            FROM Permissoes_Delegadas pd
-            JOIN Funcionarios fd ON pd.funcionario_destino = fd.id
-            WHERE pd.ativa = 1
-            AND pd.data_fim BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL 7 DAY)
-            AND fd.departamento_id = ?
-            
-            UNION ALL
-            
-            SELECT 
-                'temporaria' as tipo,
-                pt.id,
-                pt.permissao,
-                pt.data_fim,
-                f.nome as funcionario_nome,
-                pt.funcionario_id
-            FROM Permissoes_Temporarias pt
-            JOIN Funcionarios f ON pt.funcionario_id = f.id
-            WHERE pt.ativa = 1
-            AND pt.data_fim BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL 7 DAY)
-            AND f.departamento_id = ?
-            
-            ORDER BY data_fim ASC
-        ");
-        $stmt->execute([$usuarioLogado['departamento_id'], $usuarioLogado['departamento_id']]);
-        $permissoesExpirando = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
-    
-    // Estatísticas do departamento/sistema
-    $estatisticas = $funcionariosClass->getEstatisticasGerais(
-        $ehPresidencia ? [] : ['departamento_id' => $usuarioLogado['departamento_id']]
-    );
-    
+    $stmt->execute();
+    $funcionarios = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Permissões disponíveis
+    $permissoesDisponiveis = Permissoes::listarPorCategoria();
+
 } catch (Exception $e) {
     error_log("Erro ao buscar dados: " . $e->getMessage());
-    $dashboard = ['delegacoes_ativas' => 0, 'funcionarios_com_delegacao' => 0, 'permissoes_temporarias' => 0, 'grupos_departamento' => 0];
-    $funcionariosDepartamento = [];
-    $todasDelegacoes = [];
-    $permissoesExpirando = [];
-    $estatisticas = [];
+    $totalUsuarios = 0;
+    $totalDepartamentos = 0;
+    $totalDelegacoes = 0;
+    $totalGrupos = 0;
+    $departamentos = [];
+    $funcionarios = [];
+    $permissoesDisponiveis = [];
 }
 
 // Cria instância do Header Component
@@ -181,14 +126,12 @@ $headerComponent = HeaderComponent::create([
     'usuario' => $usuarioLogado,
     'isDiretor' => $auth->isDiretor(),
     'activeTab' => 'permissoes',
-    'notificationCount' => count($permissoesExpirando),
+    'notificationCount' => $totalDelegacoes,
     'showSearch' => false
 ]);
-
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -209,729 +152,312 @@ $headerComponent = HeaderComponent::create([
     <!-- AOS Animation -->
     <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
 
+    <!-- Select2 -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+
     <!-- jQuery -->
     <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
 
     <!-- CSS do Header Component -->
     <?php $headerComponent->renderCSS(); ?>
-    
-    <!-- CSS Personalizado -->
+
     <style>
+        /* Variáveis CSS - Seguindo padrão do sistema */
         :root {
-            --primary: #4f46e5;
-            --primary-dark: #4338ca;
-            --primary-light: #eef2ff;
-            --secondary: #10b981;
-            --danger: #ef4444;
-            --warning: #f59e0b;
-            --info: #3b82f6;
-            --dark: #1f2937;
-            --gray-600: #4b5563;
-            --gray-400: #9ca3af;
-            --white: #ffffff;
-            --border-light: #e5e7eb;
+            --primary: #0056d2;
+            --primary-light: #4A90E2;
+            --primary-dark: #1e3d6f;
+            --secondary: #6c757d;
+            --success: #28a745;
+            --danger: #dc3545;
+            --warning: #ffc107;
+            --info: #17a2b8;
+            --light: #f8f9fa;
+            --dark: #343a40;
         }
 
         body {
             font-family: 'Plus Jakarta Sans', sans-serif;
-            background: #f3f4f6;
-            margin: 0;
-            padding: 0;
+            background: var(--light);
+            color: var(--dark);
         }
 
         .main-wrapper {
-            display: flex;
             min-height: 100vh;
-            background: #f3f4f6;
+            display: flex;
+            flex-direction: column;
         }
 
         .content-area {
             flex: 1;
-            padding: 2rem;
-            margin-left: 250px;
+            padding: 1.5rem;
+            margin-left: 0;
             transition: margin-left 0.3s ease;
         }
 
-        /* Page Header */
+        /* Page Header - Padrão do sistema */
         .page-header {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-            color: white;
-            padding: 2rem;
-            border-radius: 16px;
-            margin-bottom: 2rem;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .page-header::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            right: -10%;
-            width: 500px;
-            height: 500px;
-            background: rgba(255,255,255,0.1);
-            border-radius: 50%;
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 10px rgba(44, 90, 160, 0.08);
+            border-left: 4px solid var(--primary);
         }
 
         .page-title {
-            font-size: 2rem;
+            font-size: 1.75rem;
             font-weight: 700;
-            margin-bottom: 0.5rem;
-            position: relative;
-            z-index: 1;
+            color: var(--primary);
+            margin: 0;
+            display: flex;
+            align-items: center;
+        }
+
+        .page-title-icon {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 1rem;
+        }
+
+        .page-title-icon i {
+            color: white;
+            font-size: 1.5rem;
         }
 
         .page-subtitle {
-            opacity: 0.9;
-            position: relative;
-            z-index: 1;
+            color: var(--secondary);
+            margin: 0.5rem 0 0;
+            font-size: 0.95rem;
         }
 
-        .access-level-badge {
-            display: inline-block;
-            padding: 0.5rem 1rem;
-            background: rgba(255,255,255,0.2);
-            border-radius: 20px;
-            margin-top: 1rem;
-            font-size: 0.875rem;
-            font-weight: 600;
-        }
-
-        /* Stats Grid */
+        /* Stats Grid - Padrão do sistema */
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 2rem;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
         }
 
         .stat-card {
             background: white;
-            padding: 1.5rem;
             border-radius: 12px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            transition: transform 0.3s, box-shadow 0.3s;
-            position: relative;
-            overflow: hidden;
+            padding: 1.25rem;
+            box-shadow: 0 2px 10px rgba(40, 167, 69, 0.08);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border-left: 4px solid transparent;
         }
 
         .stat-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(40, 167, 69, 0.12);
         }
+
+        .stat-card.primary { border-left-color: var(--primary); }
+        .stat-card.success { border-left-color: var(--success); }
+        .stat-card.warning { border-left-color: var(--warning); }
+        .stat-card.danger { border-left-color: var(--danger); }
 
         .stat-header {
             display: flex;
             justify-content: space-between;
-            align-items: flex-start;
+            align-items: center;
         }
 
         .stat-value {
             font-size: 2rem;
-            font-weight: 700;
+            font-weight: 800;
             color: var(--dark);
-            margin-bottom: 0.5rem;
+            line-height: 1;
+            margin-bottom: 0.25rem;
         }
 
         .stat-label {
-            color: var(--gray-600);
-            font-size: 0.875rem;
-            font-weight: 500;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         .stat-icon {
-            width: 50px;
-            height: 50px;
-            border-radius: 10px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 1.5rem;
+            opacity: 0.1;
         }
 
-        .stat-icon.primary { background: var(--primary-light); color: var(--primary); }
-        .stat-icon.success { background: rgba(16, 185, 129, 0.1); color: var(--secondary); }
-        .stat-icon.warning { background: rgba(245, 158, 11, 0.1); color: var(--warning); }
-        .stat-icon.info { background: rgba(59, 130, 246, 0.1); color: var(--info); }
+        .stat-icon.primary { background: var(--primary); color: var(--primary); }
+        .stat-icon.success { background: var(--success); color: var(--success); }
+        .stat-icon.warning { background: var(--warning); color: var(--warning); }
+        .stat-icon.info { background: var(--info); color: var(--info); }
 
-        /* Tabs */
-        .tabs-container {
+        /* Service Section - Padrão do sistema */
+        .service-section {
             background: white;
             border-radius: 12px;
-            margin-bottom: 2rem;
+            box-shadow: 0 2px 10px rgba(40, 167, 69, 0.08);
             overflow: hidden;
+            margin-bottom: 1.5rem;
         }
 
-        .tabs {
-            display: flex;
-            border-bottom: 1px solid var(--border-light);
-        }
-
-        .tab {
+        .service-header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
             padding: 1rem 1.5rem;
-            background: none;
-            border: none;
-            color: var(--gray-600);
-            cursor: pointer;
-            font-size: 0.95rem;
-            font-weight: 500;
-            transition: all 0.3s;
-            position: relative;
         }
 
-        .tab:hover {
-            color: var(--primary);
-            background: var(--primary-light);
-        }
-
-        .tab.active {
-            color: var(--primary);
-        }
-
-        .tab.active::after {
-            content: '';
-            position: absolute;
-            bottom: -1px;
-            left: 0;
-            right: 0;
-            height: 3px;
-            background: var(--primary);
-        }
-
-        .tab-content {
-            padding: 2rem;
-            display: none;
-        }
-
-        .tab-content.active {
-            display: block;
-            animation: fadeIn 0.3s;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        /* Action Bar */
-        .action-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1.5rem;
-            flex-wrap: wrap;
-            gap: 1rem;
-        }
-
-        .search-box {
-            position: relative;
-            flex: 1;
-            max-width: 400px;
-        }
-
-        .search-box input {
-            width: 100%;
-            padding: 0.75rem 1rem 0.75rem 3rem;
-            border: 1px solid var(--border-light);
-            border-radius: 10px;
-            font-size: 0.95rem;
-            transition: all 0.3s;
-        }
-
-        .search-box input:focus {
-            outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
-        }
-
-        .search-box i {
-            position: absolute;
-            left: 1rem;
-            top: 50%;
-            transform: translateY(-50%);
-            color: var(--gray-400);
-        }
-
-        /* Buttons */
-        .btn-modern {
-            padding: 0.75rem 1.5rem;
-            border: none;
-            border-radius: 10px;
-            font-size: 0.95rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.3s;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .btn-primary {
-            background: var(--primary);
-            color: white;
-        }
-
-        .btn-primary:hover {
-            background: var(--primary-dark);
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(79, 70, 229, 0.3);
-        }
-
-        .btn-secondary {
-            background: white;
-            color: var(--gray-600);
-            border: 1px solid var(--border-light);
-        }
-
-        .btn-secondary:hover {
-            background: var(--primary-light);
-            color: var(--primary);
-            border-color: var(--primary);
-        }
-
-        .btn-danger {
-            background: var(--danger);
-            color: white;
-        }
-
-        .btn-danger:hover {
-            background: #dc2626;
-        }
-
-        /* Table */
-        .table-container {
-            background: white;
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        }
-
-        .table-header {
-            padding: 1.5rem;
-            border-bottom: 1px solid var(--border-light);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .table-title {
-            font-size: 1.125rem;
-            font-weight: 600;
-            color: var(--dark);
+        .service-header h3 {
             margin: 0;
-        }
-
-        .modern-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        .modern-table th {
-            background: #f9fafb;
-            padding: 1rem;
-            text-align: left;
             font-weight: 600;
-            color: var(--gray-600);
-            font-size: 0.875rem;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            border-bottom: 1px solid var(--border-light);
-        }
-
-        .modern-table td {
-            padding: 1rem;
-            border-bottom: 1px solid var(--border-light);
-            color: var(--gray-600);
-        }
-
-        .modern-table tr:hover {
-            background: #fafafa;
-        }
-
-        .dept-tag {
-            display: inline-block;
-            padding: 0.25rem 0.5rem;
-            background: var(--primary-light);
-            color: var(--primary);
-            border-radius: 4px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            margin-left: 0.5rem;
-        }
-
-        /* Badge */
-        .badge {
-            padding: 0.375rem 0.75rem;
-            border-radius: 20px;
-            font-size: 0.875rem;
-            font-weight: 500;
-            display: inline-block;
-        }
-
-        .badge-success {
-            background: rgba(16, 185, 129, 0.1);
-            color: var(--secondary);
-        }
-
-        .badge-warning {
-            background: rgba(245, 158, 11, 0.1);
-            color: var(--warning);
-        }
-
-        .badge-danger {
-            background: rgba(239, 68, 68, 0.1);
-            color: var(--danger);
-        }
-
-        .badge-info {
-            background: rgba(79, 70, 229, 0.1);
-            color: var(--primary);
-        }
-
-        /* Modal */
-        .modal-custom {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0,0,0,0.5);
-            z-index: 10000;
-            align-items: center;
-            justify-content: center;
-            animation: fadeIn 0.3s;
-        }
-
-        .modal-custom.show {
+            font-size: 1.1rem;
             display: flex;
-        }
-
-        .modal-content-custom {
-            background: white;
-            border-radius: 16px;
-            max-width: 600px;
-            width: 90%;
-            max-height: 90vh;
-            overflow: hidden;
-            animation: slideUp 0.3s;
-        }
-
-        @keyframes slideUp {
-            from { transform: translateY(20px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
-        }
-
-        .modal-header-custom {
-            padding: 1.5rem;
-            border-bottom: 1px solid var(--border-light);
-            display: flex;
-            justify-content: space-between;
             align-items: center;
         }
 
-        .modal-title-custom {
+        .service-header i {
+            margin-right: 0.5rem;
             font-size: 1.25rem;
-            font-weight: 600;
-            color: var(--dark);
-            margin: 0;
         }
 
-        .modal-close-custom {
-            background: none;
-            border: none;
-            font-size: 1.5rem;
-            color: var(--gray-400);
-            cursor: pointer;
-            padding: 0;
-            width: 30px;
-            height: 30px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 6px;
-            transition: all 0.3s;
-        }
-
-        .modal-close-custom:hover {
-            background: var(--primary-light);
-            color: var(--primary);
-        }
-
-        .modal-body-custom {
+        .service-content {
             padding: 1.5rem;
-            overflow-y: auto;
-            max-height: calc(90vh - 140px);
         }
 
-        .modal-footer-custom {
-            padding: 1.5rem;
-            border-top: 1px solid var(--border-light);
-            display: flex;
-            justify-content: flex-end;
-            gap: 0.75rem;
-        }
-
-        /* Form */
-        .form-group {
+        /* Tabs customizadas */
+        .nav-tabs-custom {
+            border-bottom: 2px solid #e9ecef;
             margin-bottom: 1.5rem;
         }
 
-        .form-label {
-            display: block;
-            margin-bottom: 0.5rem;
-            color: var(--dark);
+        .nav-tabs-custom .nav-link {
+            color: var(--secondary);
+            border: none;
+            padding: 1rem 1.5rem;
             font-weight: 500;
-            font-size: 0.95rem;
+            transition: all 0.3s ease;
+            border-bottom: 3px solid transparent;
         }
 
-        .form-label span {
-            color: var(--danger);
+        .nav-tabs-custom .nav-link:hover {
+            color: var(--primary);
+            background: rgba(0, 86, 210, 0.05);
         }
 
-        .form-control-custom {
-            width: 100%;
-            padding: 0.75rem;
-            border: 1px solid var(--border-light);
-            border-radius: 8px;
-            font-size: 0.95rem;
-            transition: all 0.3s;
+        .nav-tabs-custom .nav-link.active {
+            color: var(--primary);
+            background: transparent;
+            border-bottom-color: var(--primary);
         }
 
-        .form-control-custom:focus {
-            outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
-        }
-
-        .form-text {
-            margin-top: 0.5rem;
-            font-size: 0.875rem;
-            color: var(--gray-600);
-        }
-
-        /* Permission Grid */
-        .permission-grid {
+        /* Permissões Grid */
+        .permissoes-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
             gap: 1rem;
             margin-top: 1rem;
         }
 
-        .permission-item {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            padding: 1rem;
-            border: 1px solid var(--border-light);
+        .permissao-item {
+            background: #f8f9fa;
             border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-
-        .permission-item:hover {
-            border-color: var(--primary);
-            background: var(--primary-light);
-        }
-
-        .permission-item.selected {
-            border-color: var(--primary);
-            background: var(--primary-light);
-        }
-
-        .permission-item input[type="checkbox"] {
-            width: 18px;
-            height: 18px;
-            cursor: pointer;
-        }
-
-        .permission-item label {
-            cursor: pointer;
-            flex: 1;
-            margin: 0;
-            font-size: 0.95rem;
-        }
-
-        /* Alert */
-        .alert-custom {
-            padding: 1rem 1.5rem;
-            border-radius: 10px;
-            margin-bottom: 1.5rem;
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        .alert-warning {
-            background: rgba(245, 158, 11, 0.1);
-            color: var(--warning);
-            border: 1px solid rgba(245, 158, 11, 0.2);
-        }
-
-        .alert-info {
-            background: rgba(79, 70, 229, 0.1);
-            color: var(--primary);
-            border: 1px solid rgba(79, 70, 229, 0.2);
-        }
-
-        /* Empty State */
-        .empty-state {
-            text-align: center;
-            padding: 3rem;
-            color: var(--gray-400);
-        }
-
-        .empty-state i {
-            font-size: 3rem;
-            margin-bottom: 1rem;
-            opacity: 0.5;
-        }
-
-        /* Timeline */
-        .timeline {
-            position: relative;
-            padding-left: 2.5rem;
-        }
-
-        .timeline::before {
-            content: '';
-            position: absolute;
-            left: 1rem;
-            top: 0;
-            bottom: 0;
-            width: 2px;
-            background: var(--border-light);
-        }
-
-        .timeline-item {
-            position: relative;
-            margin-bottom: 1.5rem;
             padding: 1rem;
-            background: #f9fafb;
-            border-radius: 8px;
+            border: 2px solid #e9ecef;
+            transition: all 0.3s ease;
         }
 
-        .timeline-item::before {
-            content: '';
-            position: absolute;
-            left: -1.75rem;
-            top: 1.5rem;
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
+        .permissao-item:hover {
+            border-color: var(--primary);
             background: white;
-            border: 3px solid var(--primary);
         }
 
-        .timeline-date {
-            color: var(--gray-400);
-            font-size: 0.875rem;
-            margin-bottom: 0.5rem;
+        .permissao-categoria {
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 0.75rem;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            letter-spacing: 0.5px;
         }
 
-        .timeline-content {
-            color: var(--gray-600);
+        /* Tabela customizada */
+        .table-custom {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
         }
 
-        /* Action buttons in table */
-        .action-buttons-table {
+        .table-custom thead {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+        }
+
+        .table-custom th {
+            border: none;
+            padding: 1rem;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        /* Badges customizados */
+        .badge-custom {
+            padding: 0.35rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        /* Botões de ação */
+        .action-buttons {
             display: flex;
             gap: 0.5rem;
         }
 
-        .btn-icon {
-            width: 32px;
-            height: 32px;
-            border: none;
+        .btn-action {
+            padding: 0.25rem 0.5rem;
             border-radius: 6px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.3s;
-            font-size: 0.875rem;
+            font-size: 0.85rem;
+            border: none;
+            transition: all 0.3s ease;
         }
 
-        .btn-icon.view {
-            background: var(--primary-light);
-            color: var(--primary);
+        /* Modal */
+        .modal-header-custom {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
         }
 
-        .btn-icon.edit {
-            background: rgba(16, 185, 129, 0.1);
-            color: var(--secondary);
+        /* Filtros */
+        .filter-section {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 1rem;
+            margin-bottom: 1rem;
         }
 
-        .btn-icon.delete {
-            background: rgba(239, 68, 68, 0.1);
-            color: var(--danger);
-        }
-
-        .btn-icon:hover {
-            transform: scale(1.1);
-        }
-
-        /* Loading */
-        .loading-overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(255, 255, 255, 0.9);
-            z-index: 9999;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .loading-overlay.active {
-            display: flex;
-        }
-
-        .loading-spinner {
-            width: 50px;
-            height: 50px;
-            border: 4px solid var(--border-light);
-            border-top-color: var(--primary);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        /* Responsive */
+        /* Responsivo */
         @media (max-width: 768px) {
-            .content-area {
-                margin-left: 0;
-                padding: 1rem;
-            }
-
             .stats-grid {
                 grid-template-columns: 1fr;
             }
-
-            .tabs {
-                overflow-x: auto;
-            }
-
-            .modal-content-custom {
-                width: 95%;
+            
+            .permissoes-grid {
+                grid-template-columns: 1fr;
             }
         }
     </style>
 </head>
 
 <body>
-    <!-- Loading Overlay -->
-    <div class="loading-overlay" id="loadingOverlay">
-        <div class="loading-spinner"></div>
-    </div>
-
     <!-- Main Content -->
     <div class="main-wrapper">
         <!-- Header Component -->
@@ -941,36 +467,29 @@ $headerComponent = HeaderComponent::create([
         <div class="content-area">
             <!-- Page Header -->
             <div class="page-header" data-aos="fade-right">
-                <h1 class="page-title">🛡️ Gerenciamento de Permissões</h1>
+                <h1 class="page-title">
+                    <div class="page-title-icon">
+                        <i class="fas fa-shield-alt"></i>
+                    </div>
+                    Gerenciamento de Permissões
+                    <?php if ($ehPresidencia): ?>
+                        <small class="text-muted ms-2">- Presidência</small>
+                    <?php elseif ($isDiretor): ?>
+                        <small class="text-muted ms-2">- Diretor</small>
+                    <?php endif; ?>
+                </h1>
                 <p class="page-subtitle">
-                    <?php if ($ehPresidencia): ?>
-                        Controle total de permissões do sistema
-                    <?php else: ?>
-                        Gerencie e delegue permissões para sua equipe do <?php echo htmlspecialchars($dadosUsuarioCompleto['departamento_nome'] ?? 'departamento'); ?>
-                    <?php endif; ?>
+                    Configure permissões por departamento, cargo e usuário
                 </p>
-                <div class="access-level-badge">
-                    <?php if ($ehPresidencia): ?>
-                        <i class="fas fa-crown"></i> Acesso: Presidência - Sistema Completo
-                    <?php else: ?>
-                        <i class="fas fa-shield-alt"></i> Acesso: Diretor - <?php echo htmlspecialchars($dadosUsuarioCompleto['departamento_nome'] ?? ''); ?>
-                    <?php endif; ?>
-                </div>
             </div>
 
-            <!-- Stats Grid -->
+            <!-- Estatísticas -->
             <div class="stats-grid" data-aos="fade-up">
-                <div class="stat-card">
+                <div class="stat-card primary">
                     <div class="stat-header">
                         <div>
-                            <div class="stat-value"><?php echo count($funcionariosDepartamento); ?></div>
-                            <div class="stat-label">
-                                <?php if ($ehPresidencia): ?>
-                                    Funcionários no Sistema
-                                <?php else: ?>
-                                    Funcionários no Departamento
-                                <?php endif; ?>
-                            </div>
+                            <div class="stat-value"><?php echo $totalUsuarios; ?></div>
+                            <div class="stat-label">Usuários Ativos</div>
                         </div>
                         <div class="stat-icon primary">
                             <i class="fas fa-users"></i>
@@ -978,328 +497,226 @@ $headerComponent = HeaderComponent::create([
                     </div>
                 </div>
 
-                <div class="stat-card">
+                <div class="stat-card success">
                     <div class="stat-header">
                         <div>
-                            <div class="stat-value"><?php echo count($todasDelegacoes); ?></div>
-                            <div class="stat-label">Delegações Ativas</div>
+                            <div class="stat-value"><?php echo $totalDepartamentos; ?></div>
+                            <div class="stat-label">Departamentos</div>
                         </div>
                         <div class="stat-icon success">
-                            <i class="fas fa-check-circle"></i>
+                            <i class="fas fa-building"></i>
                         </div>
                     </div>
                 </div>
 
-                <div class="stat-card">
+                <div class="stat-card warning">
                     <div class="stat-header">
                         <div>
-                            <div class="stat-value"><?php echo count($permissoesExpirando); ?></div>
-                            <div class="stat-label">Expirando em 7 dias</div>
+                            <div class="stat-value"><?php echo $totalDelegacoes; ?></div>
+                            <div class="stat-label">Delegações Ativas</div>
                         </div>
                         <div class="stat-icon warning">
-                            <i class="fas fa-clock"></i>
+                            <i class="fas fa-exchange-alt"></i>
                         </div>
                     </div>
                 </div>
 
-                <div class="stat-card">
+                <div class="stat-card info">
                     <div class="stat-header">
                         <div>
-                            <div class="stat-value">
-                                <?php 
-                                    if ($ehPresidencia) {
-                                        echo count($estatisticas['por_departamento'] ?? []);
-                                    } else {
-                                        echo $estatisticas['ativos'] ?? 0;
-                                    }
-                                ?>
-                            </div>
-                            <div class="stat-label">
-                                <?php if ($ehPresidencia): ?>
-                                    Departamentos Ativos
-                                <?php else: ?>
-                                    Funcionários Ativos
-                                <?php endif; ?>
-                            </div>
+                            <div class="stat-value"><?php echo $totalGrupos; ?></div>
+                            <div class="stat-label">Grupos</div>
                         </div>
                         <div class="stat-icon info">
-                            <i class="fas fa-key"></i>
+                            <i class="fas fa-layer-group"></i>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Alert for expiring permissions -->
-            <?php if (count($permissoesExpirando) > 0): ?>
-            <div class="alert-custom alert-warning" data-aos="fade-up">
-                <i class="fas fa-exclamation-triangle"></i>
-                <div>
-                    <strong><?php echo count($permissoesExpirando); ?> permissões</strong> expiram nos próximos 7 dias. 
-                    <a href="#" onclick="switchTab('expirando'); return false;">Ver detalhes</a>
-                </div>
-            </div>
-            <?php endif; ?>
+            <!-- Tabs -->
+            <ul class="nav nav-tabs nav-tabs-custom" role="tablist">
+                <li class="nav-item">
+                    <a class="nav-link active" data-bs-toggle="tab" href="#departamentos">
+                        <i class="fas fa-building me-2"></i>Por Departamento
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-bs-toggle="tab" href="#usuarios">
+                        <i class="fas fa-user me-2"></i>Por Usuário
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-bs-toggle="tab" href="#delegacoes">
+                        <i class="fas fa-exchange-alt me-2"></i>Delegações
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-bs-toggle="tab" href="#grupos">
+                        <i class="fas fa-layer-group me-2"></i>Grupos
+                    </a>
+                </li>
+            </ul>
 
-            <!-- Tabs Container -->
-            <div class="tabs-container" data-aos="fade-up" data-aos-delay="100">
-                <div class="tabs">
-                    <button class="tab active" onclick="switchTab('delegacoes')">
-                        <i class="fas fa-hand-holding-usd"></i> Delegações
-                    </button>
-                    <button class="tab" onclick="switchTab('funcionarios')">
-                        <i class="fas fa-users"></i> Funcionários
-                    </button>
-                    <button class="tab" onclick="switchTab('grupos')">
-                        <i class="fas fa-layer-group"></i> Grupos
-                    </button>
-                    <button class="tab" onclick="switchTab('temporarias')">
-                        <i class="fas fa-hourglass-half"></i> Temporárias
-                    </button>
-                    <?php if (count($permissoesExpirando) > 0): ?>
-                    <button class="tab" onclick="switchTab('expirando')">
-                        <i class="fas fa-exclamation-circle"></i> Expirando (<?php echo count($permissoesExpirando); ?>)
-                    </button>
-                    <?php endif; ?>
-                    <button class="tab" onclick="switchTab('historico')">
-                        <i class="fas fa-history"></i> Histórico
-                    </button>
+            <!-- Tab Content -->
+            <div class="tab-content">
+                <!-- Tab: Departamentos -->
+                <div class="tab-pane fade show active" id="departamentos">
+                    <div class="service-section">
+                        <div class="service-header">
+                            <h3><i class="fas fa-building"></i> Permissões por Departamento</h3>
+                        </div>
+                        <div class="service-content">
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold">Selecione o Departamento</label>
+                                    <select class="form-select" id="selectDepartamento">
+                                        <option value="">Escolha um departamento...</option>
+                                        <?php foreach ($departamentos as $dept): ?>
+                                            <option value="<?php echo $dept['id']; ?>">
+                                                <?php echo htmlspecialchars($dept['nome']); ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                                <div class="col-md-6 d-flex align-items-end">
+                                    <button class="btn btn-primary" onclick="salvarPermissoesDepartamento()">
+                                        <i class="fas fa-save me-2"></i>Salvar Alterações
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div id="permissoesDepartamento">
+                                <div class="text-center text-muted py-5">
+                                    <i class="fas fa-arrow-up fa-3x mb-3 opacity-50"></i>
+                                    <p>Selecione um departamento para configurar suas permissões</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab: Usuários -->
+                <div class="tab-pane fade" id="usuarios">
+                    <div class="service-section">
+                        <div class="service-header">
+                            <h3><i class="fas fa-users"></i> Permissões por Usuário</h3>
+                        </div>
+                        <div class="service-content">
+                            <div class="filter-section mb-3">
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <input type="text" class="form-control" placeholder="Buscar usuário..." id="searchUsuario">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <select class="form-select" id="filterDepartamento">
+                                            <option value="">Todos os departamentos</option>
+                                            <?php foreach ($departamentos as $dept): ?>
+                                                <option value="<?php echo $dept['id']; ?>">
+                                                    <?php echo htmlspecialchars($dept['nome']); ?>
+                                                </option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <button class="btn btn-primary" onclick="abrirModalPermissaoUsuario()">
+                                            <i class="fas fa-plus me-2"></i>Adicionar Permissão
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Usuário</th>
+                                            <th>Cargo</th>
+                                            <th>Departamento</th>
+                                            <th>Permissões</th>
+                                            <th width="150">Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach ($funcionarios as $func): ?>
+                                        <tr>
+                                            <td>
+                                                <strong><?php echo htmlspecialchars($func['nome']); ?></strong><br>
+                                                <small class="text-muted"><?php echo htmlspecialchars($func['email']); ?></small>
+                                            </td>
+                                            <td><?php echo htmlspecialchars($func['cargo'] ?: 'N/A'); ?></td>
+                                            <td>
+                                                <?php echo htmlspecialchars($func['departamento_nome'] ?: 'N/A'); ?>
+                                            </td>
+                                            <td>
+                                                <?php 
+                                                $permissoes = $permissoesManager->getPermissoesEfetivas($func['id']);
+                                                $count = count($permissoes);
+                                                ?>
+                                                <span class="badge bg-info"><?php echo $count; ?> permissões</span>
+                                            </td>
+                                            <td>
+                                                <div class="action-buttons">
+                                                    <button class="btn btn-sm btn-outline-primary" 
+                                                            onclick="verPermissoes(<?php echo $func['id']; ?>)">
+                                                        <i class="fas fa-eye"></i>
+                                                    </button>
+                                                    <button class="btn btn-sm btn-outline-secondary" 
+                                                            onclick="editarPermissoes(<?php echo $func['id']; ?>)">
+                                                        <i class="fas fa-edit"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Tab: Delegações -->
-                <div id="delegacoes-tab" class="tab-content active">
-                    <div class="action-bar">
-                        <div class="search-box">
-                            <i class="fas fa-search"></i>
-                            <input type="text" placeholder="Buscar delegações..." id="searchDelegacoes">
+                <div class="tab-pane fade" id="delegacoes">
+                    <div class="service-section">
+                        <div class="service-header">
+                            <h3><i class="fas fa-exchange-alt"></i> Delegações de Permissões</h3>
                         </div>
-                        <button class="btn-modern btn-primary" onclick="abrirModalDelegar()">
-                            <i class="fas fa-plus"></i> Nova Delegação
-                        </button>
-                    </div>
+                        <div class="service-content">
+                            <div class="mb-3">
+                                <button class="btn btn-primary" onclick="abrirModalDelegacao()">
+                                    <i class="fas fa-plus me-2"></i>Nova Delegação
+                                </button>
+                            </div>
 
-                    <div class="table-container">
-                        <table class="modern-table">
-                            <thead>
-                                <tr>
-                                    <th>Funcionário</th>
-                                    <?php if ($ehPresidencia): ?>
-                                    <th>Departamento</th>
-                                    <?php endif; ?>
-                                    <th>Permissão</th>
-                                    <th>Delegada em</th>
-                                    <th>Expira em</th>
-                                    <th>Status</th>
-                                    <th width="120">Ações</th>
-                                </tr>
-                            </thead>
-                            <tbody id="delegacoesTableBody">
-                                <?php if (empty($todasDelegacoes)): ?>
-                                <tr>
-                                    <td colspan="<?php echo $ehPresidencia ? '7' : '6'; ?>">
-                                        <div class="empty-state">
-                                            <i class="fas fa-inbox"></i>
-                                            <p>Nenhuma delegação ativa</p>
-                                        </div>
-                                    </td>
-                                </tr>
-                                <?php else: ?>
-                                    <?php foreach ($todasDelegacoes as $delegacao): ?>
-                                    <tr>
-                                        <td>
-                                            <strong><?php echo htmlspecialchars($delegacao['destino_nome']); ?></strong>
-                                        </td>
-                                        <?php if ($ehPresidencia): ?>
-                                        <td>
-                                            <span class="dept-tag"><?php echo htmlspecialchars($delegacao['dept_destino'] ?? 'N/A'); ?></span>
-                                        </td>
-                                        <?php endif; ?>
-                                        <td><?php echo htmlspecialchars($delegacao['permissao']); ?></td>
-                                        <td><?php echo date('d/m/Y', strtotime($delegacao['criado_em'])); ?></td>
-                                        <td>
-                                            <?php if ($delegacao['data_fim']): ?>
-                                                <?php echo date('d/m/Y', strtotime($delegacao['data_fim'])); ?>
-                                            <?php else: ?>
-                                                <span class="badge badge-info">Sem prazo</span>
-                                            <?php endif; ?>
-                                        </td>
-                                        <td><span class="badge badge-success">Ativa</span></td>
-                                        <td>
-                                            <div class="action-buttons-table">
-                                                <button class="btn-icon delete" onclick="revogarDelegacao(<?php echo $delegacao['id']; ?>)" title="Revogar">
-                                                    <i class="fas fa-times"></i>
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    <?php endforeach; ?>
-                                <?php endif; ?>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>
+                                Delegações permitem que diretores concedam temporariamente suas permissões a outros funcionários.
+                            </div>
 
-                <!-- Tab: Funcionários -->
-                <div id="funcionarios-tab" class="tab-content">
-                    <div class="action-bar">
-                        <div class="search-box">
-                            <i class="fas fa-search"></i>
-                            <input type="text" placeholder="Buscar funcionário..." id="searchFuncionarios">
+                            <div id="listaDelegacoes">
+                                <!-- Carregado via AJAX -->
+                            </div>
                         </div>
-                    </div>
-
-                    <div class="table-container">
-                        <table class="modern-table">
-                            <thead>
-                                <tr>
-                                    <th>Nome</th>
-                                    <th>Cargo</th>
-                                    <th>Departamento</th>
-                                    <th>Permissões Ativas</th>
-                                    <th width="150">Ações</th>
-                                </tr>
-                            </thead>
-                            <tbody id="funcionariosTableBody">
-                                <?php foreach ($funcionariosDepartamento as $func): ?>
-                                <tr>
-                                    <td>
-                                        <strong><?php echo htmlspecialchars($func['nome']); ?></strong>
-                                        <br>
-                                        <small class="text-muted"><?php echo htmlspecialchars($func['email']); ?></small>
-                                    </td>
-                                    <td><?php echo htmlspecialchars($func['cargo'] ?: 'Sem cargo'); ?></td>
-                                    <td>
-                                        <?php echo htmlspecialchars($func['departamento_nome'] ?: 'Sem departamento'); ?>
-                                        <?php if ($ehPresidencia && $func['departamento_id'] == 1): ?>
-                                            <span class="badge badge-warning">Presidência</span>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td>
-                                        <button class="btn-modern btn-secondary btn-sm" onclick="verPermissoesFuncionario(<?php echo $func['id']; ?>)">
-                                            Ver permissões
-                                        </button>
-                                    </td>
-                                    <td>
-                                        <div class="action-buttons-table">
-                                            <button class="btn-icon view" onclick="verPermissoesFuncionario(<?php echo $func['id']; ?>)" title="Ver Permissões">
-                                                <i class="fas fa-eye"></i>
-                                            </button>
-                                            <?php 
-                                            // Só pode gerenciar se for presidência ou se for diretor do mesmo departamento
-                                            $podeGerenciar = $ehPresidencia || 
-                                                           ($isDiretor && $func['departamento_id'] == $usuarioLogado['departamento_id'] && $func['id'] != $usuarioLogado['id']);
-                                            if ($podeGerenciar): 
-                                            ?>
-                                            <button class="btn-icon edit" onclick="gerenciarPermissoes(<?php echo $func['id']; ?>)" title="Gerenciar">
-                                                <i class="fas fa-cog"></i>
-                                            </button>
-                                            <?php endif; ?>
-                                        </div>
-                                    </td>
-                                </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
                     </div>
                 </div>
 
                 <!-- Tab: Grupos -->
-                <div id="grupos-tab" class="tab-content">
-                    <div class="action-bar">
-                        <div class="search-box">
-                            <i class="fas fa-search"></i>
-                            <input type="text" placeholder="Buscar grupos..." id="searchGrupos">
+                <div class="tab-pane fade" id="grupos">
+                    <div class="service-section">
+                        <div class="service-header">
+                            <h3><i class="fas fa-layer-group"></i> Grupos de Permissões</h3>
                         </div>
-                        <?php if ($ehPresidencia): ?>
-                        <button class="btn-modern btn-primary" onclick="abrirModalNovoGrupo()">
-                            <i class="fas fa-plus"></i> Novo Grupo
-                        </button>
-                        <?php endif; ?>
-                    </div>
+                        <div class="service-content">
+                            <div class="mb-3">
+                                <button class="btn btn-primary" onclick="abrirModalGrupo()">
+                                    <i class="fas fa-plus me-2"></i>Novo Grupo
+                                </button>
+                            </div>
 
-                    <div class="empty-state">
-                        <i class="fas fa-layer-group"></i>
-                        <p>Nenhum grupo de permissões cadastrado</p>
-                        <?php if ($ehPresidencia): ?>
-                        <button class="btn-modern btn-primary mt-3" onclick="abrirModalNovoGrupo()">
-                            Criar primeiro grupo
-                        </button>
-                        <?php endif; ?>
-                    </div>
-                </div>
-
-                <!-- Tab: Temporárias -->
-                <div id="temporarias-tab" class="tab-content">
-                    <div class="action-bar">
-                        <div class="search-box">
-                            <i class="fas fa-search"></i>
-                            <input type="text" placeholder="Buscar permissões temporárias..." id="searchTemporarias">
-                        </div>
-                        <button class="btn-modern btn-primary" onclick="abrirModalPermissaoTemporaria()">
-                            <i class="fas fa-plus"></i> Nova Permissão Temporária
-                        </button>
-                    </div>
-
-                    <div class="empty-state">
-                        <i class="fas fa-hourglass-half"></i>
-                        <p>Nenhuma permissão temporária ativa</p>
-                    </div>
-                </div>
-
-                <!-- Tab: Expirando -->
-                <?php if (count($permissoesExpirando) > 0): ?>
-                <div id="expirando-tab" class="tab-content">
-                    <div class="table-container">
-                        <table class="modern-table">
-                            <thead>
-                                <tr>
-                                    <th>Tipo</th>
-                                    <th>Funcionário</th>
-                                    <th>Permissão</th>
-                                    <th>Expira em</th>
-                                    <th>Ações</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($permissoesExpirando as $perm): ?>
-                                <tr>
-                                    <td>
-                                        <?php if ($perm['tipo'] == 'delegacao'): ?>
-                                            <span class="badge badge-info">Delegação</span>
-                                        <?php else: ?>
-                                            <span class="badge badge-warning">Temporária</span>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td><?php echo htmlspecialchars($perm['funcionario_nome']); ?></td>
-                                    <td><?php echo htmlspecialchars($perm['permissao']); ?></td>
-                                    <td>
-                                        <?php 
-                                        $diasRestantes = floor((strtotime($perm['data_fim']) - time()) / (60 * 60 * 24));
-                                        if ($diasRestantes <= 3) {
-                                            echo '<span class="badge badge-danger">' . $diasRestantes . ' dias</span>';
-                                        } else {
-                                            echo '<span class="badge badge-warning">' . $diasRestantes . ' dias</span>';
-                                        }
-                                        ?>
-                                    </td>
-                                    <td>
-                                        <button class="btn-modern btn-secondary btn-sm" onclick="renovarPermissao(<?php echo $perm['id']; ?>, '<?php echo $perm['tipo']; ?>')">
-                                            <i class="fas fa-sync-alt"></i> Renovar
-                                        </button>
-                                    </td>
-                                </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-                <?php endif; ?>
-
-                <!-- Tab: Histórico -->
-                <div id="historico-tab" class="tab-content">
-                    <div class="timeline" id="timelineHistorico">
-                        <div class="empty-state">
-                            <i class="fas fa-history"></i>
-                            <p>Carregando histórico...</p>
+                            <div id="listaGrupos">
+                                <!-- Carregado via AJAX -->
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1307,110 +724,59 @@ $headerComponent = HeaderComponent::create([
         </div>
     </div>
 
-    <!-- Modal Delegar Permissão -->
-    <div class="modal-custom" id="modalDelegar">
-        <div class="modal-content-custom">
-            <div class="modal-header-custom">
-                <h2 class="modal-title-custom">Nova Delegação de Permissão</h2>
-                <button class="modal-close-custom" onclick="fecharModal('modalDelegar')">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <div class="modal-body-custom">
-                <form id="formDelegar">
-                    <div class="form-group">
-                        <label class="form-label">Funcionário <span>*</span></label>
-                        <select class="form-control-custom" id="funcionario_destino" required>
-                            <option value="">Selecione um funcionário</option>
-                            <?php 
-                            // Filtrar funcionários disponíveis para delegação
-                            foreach ($funcionariosDepartamento as $func): 
-                                // Não pode delegar para si mesmo
-                                if ($func['id'] == $usuarioLogado['id']) continue;
-                                
-                                // Se não for presidência, só pode delegar para o mesmo departamento
-                                if (!$ehPresidencia && $func['departamento_id'] != $usuarioLogado['departamento_id']) continue;
-                            ?>
-                                <option value="<?php echo $func['id']; ?>">
-                                    <?php echo htmlspecialchars($func['nome'] . ' - ' . ($func['cargo'] ?: 'Sem cargo')); ?>
-                                    <?php if ($ehPresidencia): ?>
-                                        (<?php echo htmlspecialchars($func['departamento_nome'] ?: 'Sem depto'); ?>)
+    <!-- Modal Delegação -->
+    <div class="modal fade" id="modalDelegacao" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header modal-header-custom">
+                    <h5 class="modal-title">Nova Delegação</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="formDelegacao">
+                        <div class="mb-3">
+                            <label class="form-label">Funcionário</label>
+                            <select class="form-select" id="funcionarioDelegacao" required>
+                                <option value="">Selecione...</option>
+                                <?php foreach ($funcionarios as $func): ?>
+                                    <?php if ($func['id'] != $usuarioLogado['id']): ?>
+                                    <option value="<?php echo $func['id']; ?>">
+                                        <?php echo htmlspecialchars($func['nome']); ?>
+                                    </option>
                                     <?php endif; ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Permissão <span>*</span></label>
-                        <select class="form-control-custom" id="permissao_delegar" required>
-                            <option value="">Selecione uma permissão</option>
-                            <?php 
-                            // Listar permissões disponíveis baseado no nível de acesso
-                            $permissoesDisponiveis = Permissoes::listarTodasPermissoes();
-                            
-                            foreach ($permissoesDisponiveis as $key => $desc): 
-                                // Se não for presidência, verificar se tem a permissão
-                                if (!$ehPresidencia && !$permissoesManager->temPermissao($usuarioLogado['id'], $key)) {
-                                    continue;
-                                }
-                            ?>
-                                <option value="<?php echo $key; ?>"><?php echo htmlspecialchars($desc); ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Data de Expiração</label>
-                        <input type="date" class="form-control-custom" id="data_fim_delegar" 
-                               min="<?php echo date('Y-m-d'); ?>">
-                        <div class="form-text">Deixe em branco para delegação sem prazo</div>
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Motivo</label>
-                        <textarea class="form-control-custom" id="motivo_delegar" rows="3" 
-                                  placeholder="Descreva o motivo da delegação..."></textarea>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer-custom">
-                <button type="button" class="btn-modern btn-secondary" onclick="fecharModal('modalDelegar')">
-                    Cancelar
-                </button>
-                <button type="button" class="btn-modern btn-primary" onclick="salvarDelegacao()">
-                    <i class="fas fa-save"></i> Salvar Delegação
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal Permissões do Funcionário -->
-    <div class="modal-custom" id="modalPermissoesFuncionario">
-        <div class="modal-content-custom" style="max-width: 700px;">
-            <div class="modal-header-custom">
-                <h2 class="modal-title-custom" id="modalTitlePermissoes">Permissões do Funcionário</h2>
-                <button class="modal-close-custom" onclick="fecharModal('modalPermissoesFuncionario')">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <div class="modal-body-custom">
-                <div class="alert-custom alert-info">
-                    <i class="fas fa-info-circle"></i>
-                    <div>Visualizando todas as permissões efetivas do funcionário</div>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Permissão</label>
+                            <select class="form-select" id="permissaoDelegacao" required>
+                                <option value="">Selecione...</option>
+                                <?php foreach ($permissoesDisponiveis as $categoria => $perms): ?>
+                                    <optgroup label="<?php echo htmlspecialchars($categoria); ?>">
+                                        <?php foreach ($perms as $key => $desc): ?>
+                                            <option value="<?php echo $key; ?>">
+                                                <?php echo htmlspecialchars($desc); ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </optgroup>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Data de Expiração</label>
+                            <input type="date" class="form-control" id="dataFimDelegacao" 
+                                   min="<?php echo date('Y-m-d'); ?>">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Motivo</label>
+                            <textarea class="form-control" id="motivoDelegacao" rows="3"></textarea>
+                        </div>
+                    </form>
                 </div>
-                
-                <div id="permissoesFuncionarioContent">
-                    <div class="text-center">
-                        <div class="loading-spinner"></div>
-                        <p class="text-muted mt-3">Carregando permissões...</p>
-                    </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" onclick="salvarDelegacao()">Salvar</button>
                 </div>
-            </div>
-            <div class="modal-footer-custom">
-                <button type="button" class="btn-modern btn-secondary" onclick="fecharModal('modalPermissoesFuncionario')">
-                    Fechar
-                </button>
             </div>
         </div>
     </div>
@@ -1418,324 +784,188 @@ $headerComponent = HeaderComponent::create([
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
     <!-- JavaScript do Header Component -->
     <?php $headerComponent->renderJS(); ?>
 
     <script>
-        // Inicializa AOS
+        // Inicialização
         AOS.init({
             duration: 800,
             once: true
         });
 
-        // Variáveis globais
-        const usuarioLogadoId = <?php echo json_encode($usuarioLogado['id']); ?>;
-        const ehPresidencia = <?php echo json_encode($ehPresidencia); ?>;
-        const isDiretor = <?php echo json_encode($isDiretor); ?>;
-        const departamentoUsuario = <?php echo json_encode($usuarioLogado['departamento_id']); ?>;
+        $(document).ready(function() {
+            // Inicializa Select2
+            $('.form-select').select2({
+                theme: 'bootstrap-5',
+                width: '100%'
+            });
 
-        // Funções de loading
-        function showLoading() {
-            document.getElementById('loadingOverlay').classList.add('active');
+            // Carrega dados iniciais
+            carregarDelegacoes();
+            carregarGrupos();
+
+            // Event listeners
+            $('#selectDepartamento').on('change', carregarPermissoesDepartamento);
+            $('#searchUsuario').on('keyup', filtrarUsuarios);
+            $('#filterDepartamento').on('change', filtrarUsuarios);
+        });
+
+        // Carregar permissões do departamento
+        function carregarPermissoesDepartamento() {
+            const deptId = $('#selectDepartamento').val();
+            if (!deptId) return;
+
+            $.get(`../api/permissoes/departamento.php?id=${deptId}`, function(data) {
+                exibirPermissoesDepartamento(data);
+            });
         }
 
-        function hideLoading() {
-            document.getElementById('loadingOverlay').classList.remove('active');
+        // Exibir permissões do departamento
+        function exibirPermissoesDepartamento(permissoes) {
+            let html = '<div class="permissoes-grid">';
+            
+            <?php foreach ($permissoesDisponiveis as $categoria => $perms): ?>
+            html += `
+                <div class="permissao-item">
+                    <div class="permissao-categoria">
+                        <i class="fas fa-folder me-2"></i><?php echo $categoria; ?>
+                    </div>
+                    <?php foreach ($perms as $key => $desc): ?>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" 
+                               value="<?php echo $key; ?>" 
+                               id="perm_<?php echo $key; ?>"
+                               ${permissoes.includes('<?php echo $key; ?>') ? 'checked' : ''}>
+                        <label class="form-check-label" for="perm_<?php echo $key; ?>">
+                            <?php echo htmlspecialchars($desc); ?>
+                        </label>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+            `;
+            <?php endforeach; ?>
+            
+            html += '</div>';
+            $('#permissoesDepartamento').html(html);
         }
 
-        // Switch tabs
-        function switchTab(tabName) {
-            // Remove active de todas as tabs e conteúdos
-            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-            
-            // Ativa a tab clicada
-            event.target.classList.add('active');
-            document.getElementById(tabName + '-tab').classList.add('active');
-            
-            // Carrega dados específicos da tab se necessário
-            if (tabName === 'historico') {
-                carregarHistorico();
+        // Salvar permissões do departamento
+        function salvarPermissoesDepartamento() {
+            const deptId = $('#selectDepartamento').val();
+            if (!deptId) {
+                alert('Selecione um departamento');
+                return;
             }
+
+            const permissoes = [];
+            $('#permissoesDepartamento input:checked').each(function() {
+                permissoes.push($(this).val());
+            });
+
+            $.post('../api/permissoes/departamento_salvar.php', {
+                departamento_id: deptId,
+                permissoes: permissoes
+            }, function(response) {
+                if (response.success) {
+                    alert('Permissões salvas com sucesso!');
+                }
+            });
         }
 
-        // Abre modal de delegação
-        function abrirModalDelegar() {
-            document.getElementById('modalDelegar').classList.add('show');
+        // Carregar delegações
+        function carregarDelegacoes() {
+            $.get('../api/permissoes/delegacoes_listar.php', function(data) {
+                let html = '<div class="table-responsive"><table class="table">';
+                html += '<thead><tr><th>De</th><th>Para</th><th>Permissão</th><th>Expira</th><th>Ações</th></tr></thead><tbody>';
+                
+                data.forEach(del => {
+                    html += `
+                        <tr>
+                            <td>${del.origem_nome}</td>
+                            <td>${del.destino_nome}</td>
+                            <td>${del.permissao}</td>
+                            <td>${del.data_fim || 'Sem prazo'}</td>
+                            <td>
+                                <button class="btn btn-sm btn-danger" onclick="revogarDelegacao(${del.id})">
+                                    Revogar
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                });
+                
+                html += '</tbody></table></div>';
+                $('#listaDelegacoes').html(html);
+            });
         }
 
-        // Fechar modal
-        function fecharModal(modalId) {
-            document.getElementById(modalId).classList.remove('show');
+        // Carregar grupos
+        function carregarGrupos() {
+            $.get('../api/permissoes/grupos_listar.php', function(data) {
+                let html = '<div class="row">';
+                
+                data.forEach(grupo => {
+                    html += `
+                        <div class="col-md-4 mb-3">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h6>${grupo.nome}</h6>
+                                    <p class="text-muted small">${grupo.descricao}</p>
+                                    <button class="btn btn-sm btn-outline-primary" onclick="editarGrupo(${grupo.id})">
+                                        Editar
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                html += '</div>';
+                $('#listaGrupos').html(html);
+            });
+        }
+
+        // Abrir modais
+        function abrirModalDelegacao() {
+            $('#modalDelegacao').modal('show');
         }
 
         // Salvar delegação
         function salvarDelegacao() {
-            const funcionario_destino = document.getElementById('funcionario_destino').value;
-            const permissao = document.getElementById('permissao_delegar').value;
-            const data_fim = document.getElementById('data_fim_delegar').value;
-            const motivo = document.getElementById('motivo_delegar').value;
+            const dados = {
+                funcionario_destino: $('#funcionarioDelegacao').val(),
+                permissao: $('#permissaoDelegacao').val(),
+                data_fim: $('#dataFimDelegacao').val(),
+                motivo: $('#motivoDelegacao').val()
+            };
 
-            if (!funcionario_destino || !permissao) {
-                alert('Por favor, selecione um funcionário e uma permissão.');
-                return;
-            }
-
-            showLoading();
-
-            $.ajax({
-                url: '../api/permissoes_delegar.php',
-                method: 'POST',
-                data: JSON.stringify({
-                    funcionario_destino: funcionario_destino,
-                    permissao: permissao,
-                    data_fim: data_fim,
-                    motivo: motivo
-                }),
-                contentType: 'application/json',
-                dataType: 'json',
-                success: function(response) {
-                    hideLoading();
-                    
-                    if (response.status === 'success') {
-                        alert('Permissão delegada com sucesso!');
-                        fecharModal('modalDelegar');
-                        location.reload(); // Recarrega para atualizar lista
-                    } else {
-                        alert('Erro: ' + response.message);
-                    }
-                },
-                error: function(xhr, status, error) {
-                    hideLoading();
-                    console.error('Erro:', error);
-                    alert('Erro ao delegar permissão');
+            $.post('../api/permissoes/delegar.php', dados, function(response) {
+                if (response.success) {
+                    $('#modalDelegacao').modal('hide');
+                    carregarDelegacoes();
+                    alert('Delegação criada com sucesso!');
                 }
             });
         }
 
-        // Revogar delegação
-        function revogarDelegacao(id) {
-            if (!confirm('Tem certeza que deseja revogar esta delegação?')) {
-                return;
-            }
-
-            showLoading();
-
-            $.ajax({
-                url: '../api/permissoes_revogar.php',
-                method: 'POST',
-                data: JSON.stringify({ delegacao_id: id }),
-                contentType: 'application/json',
-                dataType: 'json',
-                success: function(response) {
-                    hideLoading();
-                    
-                    if (response.status === 'success') {
-                        alert('Delegação revogada com sucesso!');
-                        location.reload();
-                    } else {
-                        alert('Erro: ' + response.message);
-                    }
-                },
-                error: function(xhr, status, error) {
-                    hideLoading();
-                    console.error('Erro:', error);
-                    alert('Erro ao revogar delegação');
-                }
-            });
-        }
-
-        // Ver permissões do funcionário
-        function verPermissoesFuncionario(funcionarioId) {
-            showLoading();
-            document.getElementById('modalPermissoesFuncionario').classList.add('show');
-
-            $.ajax({
-                url: '../api/permissoes_funcionario.php',
-                method: 'GET',
-                data: { funcionario_id: funcionarioId },
-                dataType: 'json',
-                success: function(response) {
-                    hideLoading();
-                    
-                    if (response.status === 'success') {
-                        const permissoes = response.permissoes;
-                        const funcionario = response.funcionario;
-                        
-                        document.getElementById('modalTitlePermissoes').textContent = 
-                            `Permissões de ${funcionario.nome}`;
-                        
-                        let html = '<div class="permission-grid">';
-                        
-                        if (permissoes.length === 0) {
-                            html = '<div class="empty-state"><i class="fas fa-lock"></i><p>Nenhuma permissão específica</p></div>';
-                        } else if (permissoes.includes('*')) {
-                            html = '<div class="alert-custom alert-warning"><i class="fas fa-crown"></i> <strong>Acesso Total ao Sistema</strong></div>';
-                        } else {
-                            permissoes.forEach(perm => {
-                                html += `
-                                    <div class="permission-item">
-                                        <i class="fas fa-check-circle text-success"></i>
-                                        <label>${perm}</label>
-                                    </div>
-                                `;
-                            });
-                            html += '</div>';
-                        }
-                        
-                        document.getElementById('permissoesFuncionarioContent').innerHTML = html;
-                    } else {
-                        alert('Erro ao carregar permissões');
-                    }
-                },
-                error: function(xhr, status, error) {
-                    hideLoading();
-                    console.error('Erro:', error);
-                    alert('Erro ao buscar permissões');
-                }
-            });
-        }
-
-        // Gerenciar permissões
-        function gerenciarPermissoes(funcionarioId) {
-            // Implementar modal de gerenciamento
-            alert('Funcionalidade em desenvolvimento');
-        }
-
-        // Carregar histórico
-        function carregarHistorico() {
-            showLoading();
+        // Filtrar usuários
+        function filtrarUsuarios() {
+            const search = $('#searchUsuario').val().toLowerCase();
+            const dept = $('#filterDepartamento').val();
             
-            $.ajax({
-                url: '../api/permissoes_historico.php',
-                method: 'GET',
-                data: {
-                    departamento_id: ehPresidencia ? null : departamentoUsuario
-                },
-                dataType: 'json',
-                success: function(response) {
-                    hideLoading();
-                    
-                    if (response.status === 'success' && response.historico.length > 0) {
-                        let html = '<div class="timeline">';
-                        
-                        response.historico.forEach(item => {
-                            html += `
-                                <div class="timeline-item">
-                                    <div class="timeline-date">${item.data_formatada}</div>
-                                    <div class="timeline-content">
-                                        <strong>${item.acao}</strong><br>
-                                        ${item.descricao}
-                                    </div>
-                                </div>
-                            `;
-                        });
-                        
-                        html += '</div>';
-                        document.getElementById('timelineHistorico').innerHTML = html;
-                    } else {
-                        document.getElementById('timelineHistorico').innerHTML = 
-                            '<div class="empty-state"><i class="fas fa-history"></i><p>Nenhum histórico disponível</p></div>';
-                    }
-                },
-                error: function(xhr, status, error) {
-                    hideLoading();
-                    console.error('Erro:', error);
-                }
+            $('#usuarios tbody tr').each(function() {
+                const nome = $(this).find('td:first').text().toLowerCase();
+                const deptId = $(this).data('dept');
+                
+                const matchSearch = nome.includes(search);
+                const matchDept = !dept || deptId == dept;
+                
+                $(this).toggle(matchSearch && matchDept);
             });
         }
-
-        // Renovar permissão
-        function renovarPermissao(id, tipo) {
-            // Implementar renovação
-            alert('Funcionalidade em desenvolvimento');
-        }
-
-        // Abrir modal novo grupo
-        function abrirModalNovoGrupo() {
-            alert('Funcionalidade em desenvolvimento');
-        }
-
-        // Abrir modal permissão temporária
-        function abrirModalPermissaoTemporaria() {
-            alert('Funcionalidade em desenvolvimento');
-        }
-
-        // Event listeners
-        document.addEventListener('DOMContentLoaded', function() {
-            // Busca em tempo real nas tabelas
-            ['searchDelegacoes', 'searchFuncionarios', 'searchGrupos', 'searchTemporarias'].forEach(id => {
-                const input = document.getElementById(id);
-                if (input) {
-                    input.addEventListener('input', function() {
-                        const searchValue = this.value.toLowerCase();
-                        let tableId = '';
-                        
-                        switch(id) {
-                            case 'searchDelegacoes':
-                                tableId = 'delegacoesTableBody';
-                                break;
-                            case 'searchFuncionarios':
-                                tableId = 'funcionariosTableBody';
-                                break;
-                            case 'searchGrupos':
-                                // Implementar busca em grupos quando houver
-                                return;
-                            case 'searchTemporarias':
-                                // Implementar busca em temporárias quando houver
-                                return;
-                        }
-                        
-                        if (tableId) {
-                            const tbody = document.getElementById(tableId);
-                            const rows = tbody.getElementsByTagName('tr');
-                            
-                            for (let row of rows) {
-                                const text = row.textContent.toLowerCase();
-                                if (text.includes(searchValue)) {
-                                    row.style.display = '';
-                                } else {
-                                    row.style.display = 'none';
-                                }
-                            }
-                        }
-                    });
-                }
-            });
-
-            // Fechar modal ao clicar fora
-            document.querySelectorAll('.modal-custom').forEach(modal => {
-                modal.addEventListener('click', function(e) {
-                    if (e.target === this) {
-                        this.classList.remove('show');
-                    }
-                });
-            });
-
-            // ESC fecha modais
-            document.addEventListener('keydown', function(e) {
-                if (e.key === 'Escape') {
-                    document.querySelectorAll('.modal-custom.show').forEach(modal => {
-                        modal.classList.remove('show');
-                    });
-                }
-            });
-            
-            // Limpar formulários ao fechar modais
-            document.querySelectorAll('.modal-close-custom').forEach(closeBtn => {
-                closeBtn.addEventListener('click', function() {
-                    const modal = this.closest('.modal-custom');
-                    const forms = modal.querySelectorAll('form');
-                    forms.forEach(form => form.reset());
-                });
-            });
-            
-            // Adicionar informação de nível de acesso no console
-            console.log('Sistema de Permissões carregado');
-            console.log('Nível de acesso:', ehPresidencia ? 'Presidência (Total)' : 'Diretor (Departamental)');
-            console.log('Departamento:', departamentoUsuario);
-        });
     </script>
 </body>
 </html>

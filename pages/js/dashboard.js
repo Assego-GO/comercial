@@ -386,18 +386,27 @@ function renderizarTabela(dados) {
             <td>${associado.corporacao || '-'}</td>
             <td>${associado.patente || '-'}</td>
             <td>${formatarData(associado.data_filiacao)}</td>
-            <td>${formatarTelefone(associado.telefone)}</td>
+
             <td>
-                <div class="action-buttons-table">
-                    <button class="btn-icon view" onclick="visualizarAssociado(${associado.id})" title="Visualizar">
-                        <i class="fas fa-eye"></i>
-                    </button>
-                    <button class="btn-icon edit" onclick="editarAssociado(${associado.id})" title="Editar">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                   
-                </div>
-            </td>
+    <div class="action-buttons-table">
+        <button class="btn-icon view" onclick="visualizarAssociado(${associado.id})" title="Visualizar">
+            <i class="fas fa-eye"></i>
+        </button>
+        ${associado.telefone ? `
+            <button class="btn-icon whatsapp" onclick="abrirWhatsApp('${associado.telefone}')" title="WhatsApp" style="background: #25D366;">
+                <i class="fab fa-whatsapp" style="color: white;"></i>
+            </button>
+        ` : ''}
+        <button class="btn-icon edit" onclick="editarAssociadoNovo(${associado.id})" title="Editar">
+            <i class="fas fa-edit"></i>
+        </button>
+        ${permissoesUsuario.podeExcluir ? `
+            <button class="btn-icon delete" onclick="excluirAssociado(${associado.id})" title="Excluir">
+                <i class="fas fa-trash"></i>
+            </button>
+        ` : ''}
+    </div>
+</td>
         `;
         tbody.appendChild(row);
     });
@@ -2428,7 +2437,7 @@ function fecharModal() {
 
     // NOVA LINHA: Resetar observações ao fechar
     resetarObservacoes();
-    
+
     // Volta para a primeira tab
     abrirTab('overview');
 }
@@ -2457,9 +2466,17 @@ function abrirTab(tabName) {
 }
 
 // Função para editar associado
+// Função para editar associado
 function editarAssociado(id) {
     console.log('Editando associado ID:', id);
     event.stopPropagation();
+
+    // ADICIONE ESTA VERIFICAÇÃO NO INÍCIO:
+    if (!permissoesUsuario.podeEditar) {
+        alert('Você não tem permissão para editar associados.');
+        return;
+    }
+
     window.location.href = `cadastroForm.php?id=${id}`;
 }
 
@@ -2467,6 +2484,12 @@ function editarAssociado(id) {
 function excluirAssociado(id) {
     console.log('Excluindo associado ID:', id);
     event.stopPropagation();
+
+    // ADICIONE ESTA VERIFICAÇÃO NO INÍCIO:
+    if (!permissoesUsuario.podeExcluir) {
+        alert('Você não tem permissão para excluir associados.');
+        return;
+    }
 
     const associado = todosAssociados.find(a => a.id == id);
 
@@ -2589,14 +2612,14 @@ function carregarObservacoes(associadoId, forceReload = false) {
         console.log('Já está carregando observações, ignorando...');
         return;
     }
-    
+
     // Evitar recarregar se já carregou para este associado E não for reload forçado
     if (!forceReload && currentAssociadoIdObs === associadoId && observacoesData.length > 0) {
         console.log('Observações já carregadas para este associado');
         renderizarObservacoes();
         return;
     }
-    
+
     window.carregandoObservacoes = true;
     currentAssociadoIdObs = associadoId;
 
@@ -2656,7 +2679,7 @@ function carregarObservacoes(associadoId, forceReload = false) {
 
             mostrarErroObservacoes(mensagemErro);
         },
-        complete: function() {
+        complete: function () {
             window.carregandoObservacoes = false;
         }
     });
@@ -3161,20 +3184,20 @@ function resetarObservacoesCache() {
     currentFilterObs = 'all';
     currentAssociadoIdObs = null;
     window.carregandoObservacoes = false;
-    
+
     // Esconder badge
     const badge = document.getElementById('observacoesCountBadge');
     if (badge) {
         badge.style.display = 'none';
         badge.textContent = '0';
     }
-    
+
     // Limpar container
     const container = document.getElementById('observacoesContainer');
     if (container) {
         container.innerHTML = '';
     }
-    
+
     console.log('Cache de observações resetado completamente');
 }
 
@@ -3210,6 +3233,38 @@ function mostrarNotificacaoObs(mensagem, tipo = 'info') {
     setTimeout(() => {
         notificacao.remove();
     }, 3000);
+}
+
+function abrirWhatsApp(telefone) {
+    event.stopPropagation();
+
+    // Remove caracteres não numéricos
+    const numero = telefone.replace(/\D/g, '');
+
+    // Adiciona código do país se não tiver
+    const numeroFormatado = numero.startsWith('55') ? numero : '55' + numero;
+
+    // Abre WhatsApp Web
+    window.open(`https://wa.me/${numeroFormatado}`, '_blank');
+}
+
+// Nova função de edição com lógica de permissão
+function editarAssociadoNovo(id) {
+    event.stopPropagation();
+
+    const associado = todosAssociados.find(a => a.id == id);
+    if (!associado) {
+        alert('Associado não encontrado!');
+        return;
+    }
+
+    // Se pode editar completo, vai para o formulário
+    if (permissoesUsuario.podeEditarCompleto) {
+        window.location.href = `cadastroForm.php?id=${id}`;
+    } else {
+        // Senão, abre modal de edição de contato
+        abrirModalEditarContato(associado);
+    }
 }
 
 
@@ -3303,6 +3358,81 @@ function mostrarErroObservacoes(mensagem) {
             ${mensagem}
         </div>
     `;
+}
+
+// Função para abrir modal de edição de contato
+function abrirModalEditarContato(associado) {
+    // Preenche os campos
+    document.getElementById('editContatoId').value = associado.id;
+    document.getElementById('editContatoNome').textContent = associado.nome;
+    document.getElementById('editContatoTelefone').value = associado.telefone || '';
+    document.getElementById('editContatoEmail').value = associado.email || '';
+    document.getElementById('editContatoCep').value = associado.cep || '';
+    document.getElementById('editContatoEndereco').value = associado.endereco || '';
+    document.getElementById('editContatoNumero').value = associado.numero || '';
+    document.getElementById('editContatoComplemento').value = associado.complemento || '';
+    document.getElementById('editContatoBairro').value = associado.bairro || '';
+    document.getElementById('editContatoCidade').value = associado.cidade || '';
+
+    // Abre o modal
+    const modal = new bootstrap.Modal(document.getElementById('modalEditarContato'));
+    modal.show();
+}
+
+// Função para salvar contato editado
+function salvarContatoEditado() {
+    const form = document.getElementById('formEditarContato');
+    const formData = new FormData(form);
+
+    // Mostrar loading no botão
+    const btnSalvar = document.querySelector('#modalEditarContato button[onclick="salvarContatoEditado()"]');
+    const textoOriginal = btnSalvar.innerHTML;
+    btnSalvar.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Salvando...';
+    btnSalvar.disabled = true;
+
+    // Fazer requisição
+    $.ajax({
+        url: '../api/editar_contato_associado.php',
+        method: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function (response) {
+            if (response.status === 'success') {
+                // Fechar modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('modalEditarContato'));
+                modal.hide();
+
+                // Atualizar dados locais
+                const associadoId = document.getElementById('editContatoId').value;
+                const associado = todosAssociados.find(a => a.id == associadoId);
+                if (associado) {
+                    associado.telefone = document.getElementById('editContatoTelefone').value;
+                    associado.email = document.getElementById('editContatoEmail').value;
+                    associado.cep = document.getElementById('editContatoCep').value;
+                    associado.endereco = document.getElementById('editContatoEndereco').value;
+                    associado.numero = document.getElementById('editContatoNumero').value;
+                    associado.complemento = document.getElementById('editContatoComplemento').value;
+                    associado.bairro = document.getElementById('editContatoBairro').value;
+                    associado.cidade = document.getElementById('editContatoCidade').value;
+                }
+
+                // Recarregar tabela
+                aplicarFiltros();
+
+                alert('Informações de contato atualizadas com sucesso!');
+            } else {
+                alert('Erro: ' + (response.message || 'Erro desconhecido'));
+            }
+        },
+        error: function () {
+            alert('Erro ao salvar alterações. Tente novamente.');
+        },
+        complete: function () {
+            btnSalvar.innerHTML = textoOriginal;
+            btnSalvar.disabled = false;
+        }
+    });
 }
 
 // Atualizar a função abrirTab existente para carregar observações
