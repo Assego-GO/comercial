@@ -938,97 +938,9 @@ $headerComponent = HeaderComponent::create([
         </div>
     <?php else: ?>
         <!-- Card 1: Total + Ativos -->
-        <div class="stat-card dual-stat-card funcionarios-base-pie">
-            <div class="dual-stat-header">
-                <div class="dual-stat-title">
-                    <i class="fas fa-users"></i>
-                    Base de Funcionários
-                </div>
-                <div class="dual-stat-percentage" id="funcionariosPercent">
-                    <i class="fas fa-chart-pie"></i>
-                    Status Geral
-                </div>
-            </div>
-            <div class="dual-stats-row vertical-layout">
-                <div class="dual-stat-item total-item">
-                    <div class="dual-stat-icon total-icon">
-                        <i class="fas fa-user-tie"></i>
-                    </div>
-                    <div class="dual-stat-info">
-                        <div class="dual-stat-value"><?php echo number_format($totalFuncionarios, 0, ',', '.'); ?></div>
-                        <div class="dual-stat-label">
-                            <?php 
-                            echo $escopoVisualizacao === 'DEPARTAMENTO' ? 'Do Departamento' : 'Total';
-                            ?>
-                        </div>
-                    </div>
-                </div>
-                <div class="dual-stats-separator"></div>
-                <div class="dual-stat-item ativos-item">
-                    <div class="dual-stat-icon ativos-icon">
-                        <i class="fas fa-user-check"></i>
-                    </div>
-                    <div class="dual-stat-info">
-                        <div class="dual-stat-value"><?php echo number_format($funcionariosAtivos, 0, ',', '.'); ?></div>
-                        <div class="dual-stat-label">Ativos</div>
-                    </div>
-                </div>
-            </div>
-        </div>
 
-        <!-- Card 2: Novos + Departamentos -->
-        <div class="stat-card dual-stat-card funcionarios-crescimento-pie">
-            <div class="dual-stat-header">
-                <div class="dual-stat-title">
-                    <i class="fas fa-chart-line"></i>
-                    Crescimento & Estrutura
-                </div>
-                <div class="dual-stat-percentage" id="crescimentoPercent">
-                    <i class="fas fa-trending-up"></i>
-                    Expansão
-                </div>
-            </div>
-            <div class="dual-stats-row vertical-layout">
-                <div class="dual-stat-item novos-item">
-                    <div class="dual-stat-icon novos-icon">
-                        <i class="fas fa-user-plus"></i>
-                    </div>
-                    <div class="dual-stat-info">
-                        <div class="dual-stat-value"><?php echo number_format($novosFuncionarios, 0, ',', '.'); ?></div>
-                        <div class="dual-stat-label">Novos (30d)</div>
-                    </div>
-                </div>
-                <div class="dual-stats-separator"></div>
-                <div class="dual-stat-item departamentos-item">
-                    <div class="dual-stat-icon departamentos-icon">
-                        <i class="fas fa-building"></i>
-                    </div>
-                    <div class="dual-stat-info">
-                        <div class="dual-stat-value"><?php echo number_format($totalDepartamentos, 0, ',', '.'); ?></div>
-                        <div class="dual-stat-label">Departamentos</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Card 3: Inativos (card simples para destacar) -->
-        <?php if ($funcionariosInativos > 0): ?>
-        <div class="stat-card simple-stat-card inativos-card">
-            <div class="simple-stat-header">
-                <div class="simple-stat-icon inativos-simple-icon">
-                    <i class="fas fa-user-times"></i>
-                </div>
-                <div class="simple-stat-info">
-                    <div class="simple-stat-value"><?php echo number_format($funcionariosInativos, 0, ',', '.'); ?></div>
-                    <div class="simple-stat-label">Funcionários Inativos</div>
-                    <div class="simple-stat-change negative">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        Requer atenção
-                    </div>
-                </div>
-            </div>
-        </div>
-        <?php endif; ?>
+      
+        
     <?php endif; ?>
 </div>
 

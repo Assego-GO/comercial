@@ -1117,39 +1117,7 @@ $headerComponent = HeaderComponent::create([
                 <!-- Estatísticas Financeiras - KPIs Modernos -->
                 <div class="stats-grid" data-aos="fade-up">
                     <!-- Card 1: Associados + Inadimplentes -->
-                    <div class="stat-card dual-stat-card associados-financeiro-pie">
-                        <div class="dual-stat-header">
-                            <div class="dual-stat-title">
-                                <i class="fas fa-users"></i>
-                                Base de Associados
-                            </div>
-                            <div class="dual-stat-percentage" id="associadosFinanceiroPercent">
-                                <i class="fas fa-chart-pie"></i>
-                                Status
-                            </div>
-                        </div>
-                        <div class="dual-stats-row vertical-layout">
-                            <div class="dual-stat-item ativos-item">
-                                <div class="dual-stat-icon ativos-icon">
-                                    <i class="fas fa-user-check"></i>
-                                </div>
-                                <div class="dual-stat-info">
-                                    <div class="dual-stat-value"><?php echo number_format($totalAssociadosAtivos, 0, ',', '.'); ?></div>
-                                    <div class="dual-stat-label">Ativos</div>
-                                </div>
-                            </div>
-                            <div class="dual-stats-separator"></div>
-                            <div class="dual-stat-item inadimplentes-item">
-                                <div class="dual-stat-icon inadimplentes-icon">
-                                    <i class="fas fa-exclamation-triangle"></i>
-                                </div>
-                                <div class="dual-stat-info">
-                                    <div class="dual-stat-value"><?php echo number_format($associadosInadimplentes, 0, ',', '.'); ?></div>
-                                    <div class="dual-stat-label">Em Débito</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    
 
                     <!-- Card 2: Arrecadação + Pagamentos -->
                     <div class="stat-card dual-stat-card financeiro-receita-pie">
