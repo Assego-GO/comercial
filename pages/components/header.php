@@ -100,12 +100,13 @@ class HeaderComponent {
             'associados.php' => 'associados',
             'funcionarios.php' => 'funcionarios',
             'comercial.php' => 'comercial',
+            'estatisticas_pre.php' => 'estatisticas',
             'financeiro.php' => 'financeiro',
             'auditoria.php' => 'auditoria',
             'presidencia.php' => 'presidencia',
             'relatorios.php' => 'relatorios',
             'relatorio_financeiro.php' => 'relatorios',
-            'estatisticas.php' => 'relatorios',
+            'estatisticas.php' => 'rel  atorios',
             'documentos.php' => 'documentos',
             'notificacoes.php' => 'notificacoes'
         ];
@@ -1814,6 +1815,16 @@ class HeaderComponent {
                 'badge' => null
             ];
         }
+
+        if (Permissoes::tem('estatisticas.visualizar') || $this->isDiretor) {
+    $items[] = [
+        'id' => 'estatisticas',
+        'label' => 'Estatísticas', 
+        'icon' => 'fas fa-chart-pie',
+        'href' => 'estatisticas_pre.php',
+        'badge' => null
+    ];
+}
 
         // ========================================
         // AUDITORIA - Verifica permissão
