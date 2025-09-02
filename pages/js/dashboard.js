@@ -107,7 +107,6 @@ function formatarDoador(doador) {
     return isDoador ? 'Sim' : 'Não';
 }
 
-// Função principal - Carrega dados da tabela
 function carregarAssociados() {
     if (carregamentoIniciado || carregamentoCompleto) {
         console.log('Carregamento já realizado ou em andamento, ignorando nova chamada');
@@ -115,7 +114,7 @@ function carregarAssociados() {
     }
 
     carregamentoIniciado = true;
-    console.log('Iniciando carregamento de associados...');
+    console.log('🚀 Iniciando carregamento OTIMIZADO...');
     showLoading();
 
     const startTime = Date.now();
@@ -123,26 +122,31 @@ function carregarAssociados() {
     const timeoutId = setTimeout(() => {
         hideLoading();
         carregamentoIniciado = false;
-        console.error('TIMEOUT: Requisição demorou mais de 30 segundos');
-        alert('Tempo esgotado ao carregar dados. Por favor, recarregue a página.');
-        renderizarTabela([]);
-    }, 30000);
+        console.error('TIMEOUT: Requisição demorou mais de 15 segundos');
+        alert('Tempo esgotado ao carregar dados. Tentando carregamento alternativo...');
+        carregarTodosAssociadosFallback();
+    }, 15000); // Reduzido para 15s
 
-    // Requisição AJAX
+    // 🚀 Requisição otimizada - apenas 100 registros iniciais
     $.ajax({
         url: '../api/carregar_associados.php',
         method: 'GET',
+        data: {
+            page: 1,
+            limit: 100,
+            load_type: 'initial'
+        },
         dataType: 'json',
         cache: false,
-        timeout: 25000,
+        timeout: 12000,
         beforeSend: function () {
-            console.log('Enviando requisição para:', this.url);
+            console.log('Enviando requisição OTIMIZADA para:', this.url);
         },
         success: function (response) {
             clearTimeout(timeoutId);
             const elapsed = Date.now() - startTime;
-            console.log(`Resposta recebida em ${elapsed}ms`);
-            console.log('Total de registros:', response.total);
+            console.log(`✅ Carregamento otimizado: ${elapsed}ms`);
+            console.log(`📊 ${response.total} registros de ${response.total_banco} total`);
 
             if (response && response.status === 'success') {
                 todosAssociados = Array.isArray(response.dados) ? response.dados : [];
@@ -157,25 +161,28 @@ function carregarAssociados() {
                     return true;
                 });
 
-                // Ordena por ID decrescente (mais recentes primeiro)
+                // Ordena por ID decrescente
                 todosAssociados.sort((a, b) => b.id - a.id);
-
                 associadosFiltrados = [...todosAssociados];
 
-                // Preenche os filtros
-                preencherFiltros();
+                // 🚀 Preenche filtros usando dados do servidor (mais rápido)
+                preencherFiltrosOtimizado(response);
 
-                // Calcula total de páginas
+                // Calcula paginação
                 calcularPaginacao();
-
-                // Renderiza a primeira página
                 renderizarPagina();
 
                 // Marca como carregamento completo
                 carregamentoCompleto = true;
 
-                console.log('✓ Dados carregados com sucesso!');
-                console.log(`Total de associados únicos: ${todosAssociados.length}`);
+                console.log('✅ Sistema pronto!', todosAssociados.length, 'registros em cache');
+
+                // 🚀 Carrega mais dados em background se houver
+                if (response.has_next && todosAssociados.length < 500) {
+                    setTimeout(() => {
+                        carregarProximoLoteBackground(response);
+                    }, 1000);
+                }
 
                 if (response.aviso) {
                     console.warn(response.aviso);
@@ -195,28 +202,167 @@ function carregarAssociados() {
                 error: error
             });
 
-            let mensagemErro = 'Erro ao carregar dados';
-
-            if (xhr.status === 0) {
-                mensagemErro = 'Sem conexão com o servidor';
-            } else if (xhr.status === 404) {
-                mensagemErro = 'Arquivo não encontrado';
-            } else if (xhr.status === 500) {
-                mensagemErro = 'Erro no servidor';
-            } else if (status === 'timeout') {
-                mensagemErro = 'Tempo esgotado';
-            } else if (status === 'parsererror') {
-                mensagemErro = 'Resposta inválida do servidor';
-            }
-
-            alert(mensagemErro + '\n\nPor favor, recarregue a página.');
-            renderizarTabela([]);
+            // Fallback: tenta carregar da forma antiga
+            console.log('🔄 Tentando carregamento fallback...');
+            carregarTodosAssociadosFallback();
         },
         complete: function () {
             clearTimeout(timeoutId);
             hideLoading();
             carregamentoIniciado = false;
             console.log('Carregamento finalizado');
+        }
+    });
+}
+
+
+
+function preencherFiltrosOtimizado(response) {
+    console.log('🔧 Preenchendo filtros otimizados...');
+
+    const selectCorporacao = document.getElementById('filterCorporacao');
+    const selectPatente = document.getElementById('filterPatente');
+
+    if (!selectCorporacao || !selectPatente) return;
+
+    selectCorporacao.innerHTML = '<option value="">Todos</option>';
+    selectPatente.innerHTML = '<option value="">Todos</option>';
+
+    // 🚀 Usa dados do servidor se disponíveis
+    let corporacoes = response.corporacoes_unicas || [];
+    let patentes = response.patentes_unicas || [];
+
+    // Fallback: extrai dos dados carregados se servidor não enviou
+    if (corporacoes.length === 0) {
+        corporacoes = [...new Set(todosAssociados
+            .map(a => a.corporacao)
+            .filter(c => c && c.trim() !== '')
+        )].sort();
+    }
+
+    if (patentes.length === 0) {
+        patentes = [...new Set(todosAssociados
+            .map(a => a.patente)
+            .filter(p => p && p.trim() !== '')
+        )].sort();
+    }
+
+    // Preenche selects
+    corporacoes.forEach(corp => {
+        const option = document.createElement('option');
+        option.value = corp;
+        option.textContent = corp;
+        selectCorporacao.appendChild(option);
+    });
+
+    patentes.forEach(pat => {
+        const option = document.createElement('option');
+        option.value = pat;
+        option.textContent = pat;
+        selectPatente.appendChild(option);
+    });
+
+    console.log(`✅ Filtros otimizados: ${corporacoes.length} corporações, ${patentes.length} patentes`);
+}
+
+// Carrega próximo lote em background
+function carregarProximoLoteBackground(responseAnterior) {
+    if (!responseAnterior.has_next || window.isLoadingMore) {
+        return;
+    }
+
+    window.isLoadingMore = true;
+    console.log('🔄 Carregando mais dados em background...');
+
+    const nextPage = responseAnterior.page + 1;
+
+    $.ajax({
+        url: '../api/carregar_associados.php',
+        method: 'GET',
+        data: {
+            page: nextPage,
+            limit: 100,
+            load_type: 'page'
+        },
+        dataType: 'json',
+        cache: false,
+        timeout: 10000,
+        success: function (response) {
+            if (response && response.status === 'success' && response.dados) {
+                console.log(`📦 +${response.dados.length} registros carregados em background`);
+                
+                // Adiciona novos dados
+                const novosRegistros = response.dados.filter(novo => 
+                    !todosAssociados.some(existente => existente.id === novo.id)
+                );
+                
+                todosAssociados = [...todosAssociados, ...novosRegistros];
+                
+                // Reaplica filtros se necessário
+                if (temFiltrosAtivos()) {
+                    aplicarFiltros();
+                } else {
+                    associadosFiltrados = [...todosAssociados];
+                    calcularPaginacao();
+                }
+                
+                console.log(`✅ Total em cache: ${todosAssociados.length} registros`);
+                
+                // Continua carregando se ainda houver dados
+                if (response.has_next && todosAssociados.length < 1000) {
+                    setTimeout(() => {
+                        carregarProximoLoteBackground(response);
+                    }, 2000);
+                }
+            }
+        },
+        error: function (xhr, status, error) {
+            console.warn('⚠️ Erro ao carregar lote adicional:', error);
+        },
+        complete: function () {
+            window.isLoadingMore = false;
+        }
+    });
+}
+
+// Verifica se há filtros ativos
+function temFiltrosAtivos() {
+    const search = document.getElementById('searchInput')?.value || '';
+    const situacao = document.getElementById('filterSituacao')?.value || '';
+    const corporacao = document.getElementById('filterCorporacao')?.value || '';
+    const patente = document.getElementById('filterPatente')?.value || '';
+    
+    return search || situacao || corporacao || patente;
+}
+
+// Fallback para carregamento completo (compatibilidade)
+function carregarTodosAssociadosFallback() {
+    console.log('🔄 Fallback: carregando da forma tradicional...');
+    
+    $.ajax({
+        url: '../api/carregar_associados.php',
+        method: 'GET',
+        data: { load_type: 'all' },
+        dataType: 'json',
+        cache: false,
+        timeout: 30000,
+        success: function (response) {
+            if (response && response.status === 'success') {
+                todosAssociados = response.dados || [];
+                associadosFiltrados = [...todosAssociados];
+                
+                preencherFiltros(); // Usa a função original
+                calcularPaginacao();
+                renderizarPagina();
+                
+                console.log(`✅ Fallback completo: ${todosAssociados.length} registros`);
+                carregamentoCompleto = true;
+            }
+        },
+        error: function () {
+            console.error('❌ Fallback também falhou');
+            renderizarTabela([]);
+            alert('Erro crítico ao carregar dados. Recarregue a página.');
         }
     });
 }
@@ -455,10 +601,10 @@ function limparFiltros() {
     renderizarPagina();
 }
 
-// Função para visualizar detalhes do associado
+// 🚀 3. SUBSTITUA a função visualizarAssociado() existente por esta:
 function visualizarAssociado(id) {
-    console.log('Visualizando associado ID:', id);
-    const associado = todosAssociados.find(a => a.id == id);
+    console.log('👁️ Visualizando associado:', id);
+    let associado = todosAssociados.find(a => a.id == id);
 
     if (!associado) {
         console.error('Associado não encontrado:', id);
@@ -466,6 +612,77 @@ function visualizarAssociado(id) {
         return;
     }
 
+    // 🚀 Se não tem detalhes carregados, carrega via API
+    if (!associado.detalhes_carregados) {
+        console.log('📋 Carregando detalhes completos...');
+        
+        // Mostra loading no modal
+        const modal = document.getElementById('modalAssociado');
+        modal.classList.add('show');
+        document.body.style.overflow = 'hidden';
+        
+        // Mostra loading
+        document.getElementById('overview-tab').innerHTML = `
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 3rem;">
+                <div class="loading-spinner" style="margin-bottom: 1rem;"></div>
+                <p style="color: var(--gray-500);">Carregando detalhes completos...</p>
+            </div>
+        `;
+        
+        carregarDetalhesAssociado(id).then(detalhes => {
+            if (detalhes) {
+                // Merge dos detalhes no associado
+                associado = { ...associado, ...detalhes, detalhes_carregados: true };
+                
+                // Atualiza no array principal
+                const index = todosAssociados.findIndex(a => a.id == id);
+                if (index !== -1) {
+                    todosAssociados[index] = associado;
+                }
+                
+                console.log('✅ Detalhes carregados e merged');
+            }
+            
+            abrirModalAssociadoCompleto(associado);
+        }).catch(error => {
+            console.error('❌ Erro ao carregar detalhes:', error);
+            // Mesmo com erro, tenta abrir com os dados básicos
+            abrirModalAssociadoCompleto(associado);
+        });
+    } else {
+        abrirModalAssociadoCompleto(associado);
+    }
+}
+
+
+// 🚀 4. ADICIONE esta nova função:
+function carregarDetalhesAssociado(id) {
+    return new Promise((resolve, reject) => {
+        $.ajax({
+            url: '../api/carregar_detalhes_associado.php',
+            method: 'GET',
+            data: { id: id },
+            dataType: 'json',
+            timeout: 10000,
+            success: function(response) {
+                if (response && response.status === 'success') {
+                    console.log('✅ Detalhes carregados para associado', id);
+                    resolve(response.dados);
+                } else {
+                    console.warn('⚠️ Resposta inválida ao carregar detalhes');
+                    resolve(null);
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('❌ Erro ao carregar detalhes:', error);
+                reject(error);
+            }
+        });
+    });
+}
+
+// 🚀 5. ADICIONE esta nova função (renomeada da original):
+function abrirModalAssociadoCompleto(associado) {
     // NOVA LINHA: Resetar dados de observações ao abrir novo modal
     resetarObservacoes();
 
@@ -480,12 +697,11 @@ function visualizarAssociado(id) {
     preencherTabDependentes(associado);
     preencherTabDocumentos(associado);
 
-    // NOVA LINHA: Carregar apenas o contador de observações (não os dados completos)
+    // NOVA LINHA: Carregar apenas o contador de observações
     carregarContadorObservacoes(associado.id);
 
-    // Abre o modal
-    document.getElementById('modalAssociado').classList.add('show');
-    document.body.style.overflow = 'hidden';
+    // Modal já está aberto, apenas força active na tab overview
+    abrirTab('overview');
 }
 // 2. NOVA FUNÇÃO: Resetar observações ao trocar de associado
 function resetarObservacoes() {
