@@ -1118,41 +1118,8 @@ $headerComponent = HeaderComponent::create([
                 <div class="stats-grid" data-aos="fade-up">
                     <!-- Card 1: Associados + Inadimplentes -->
                     
-
-                    <!-- Card 2: Arrecadação + Pagamentos -->
-                    <div class="stat-card dual-stat-card financeiro-receita-pie">
-                        <div class="dual-stat-header">
-                            <div class="dual-stat-title">
-                                <i class="fas fa-dollar-sign"></i>
-                                Movimentação Financeira
-                            </div>
-                            <div class="dual-stat-percentage" id="receitaPercent">
-                                <i class="fas fa-trending-up"></i>
-                                Receita
-                            </div>
-                        </div>
-                        <div class="dual-stats-row vertical-layout">
-                            <div class="dual-stat-item arrecadacao-item">
-                                <div class="dual-stat-icon arrecadacao-icon">
-                                    <i class="fas fa-coins"></i>
-                                </div>
-                                <div class="dual-stat-info">
-                                    <div class="dual-stat-value">R$ <?php echo number_format($arrecadacaoMes, 0, ',', '.'); ?></div>
-                                    <div class="dual-stat-label">Arrecadação Mês</div>
-                                </div>
-                            </div>
-                            <div class="dual-stats-separator"></div>
-                            <div class="dual-stat-item pagamentos-item">
-                                <div class="dual-stat-icon pagamentos-icon">
-                                    <i class="fas fa-credit-card"></i>
-                                </div>
-                                <div class="dual-stat-info">
-                                    <div class="dual-stat-value"><?php echo number_format($pagamentosHoje, 0, ',', '.'); ?></div>
-                                    <div class="dual-stat-label">Pagamentos Hoje</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+ 
+                    
                 </div>
 
                 <!-- Alert informativo -->
