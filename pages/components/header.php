@@ -1892,14 +1892,6 @@ class HeaderComponent
             ];
         }
 
-        // AUDITORIA - Liberado para todos
-        $items[] = [
-            'id' => 'auditoria',
-            'label' => 'Auditoria',
-            'icon' => 'fas fa-user-shield',
-            'href' => 'auditoria.php',
-            'badge' => null
-        ];
 
         // PRESIDÊNCIA - Liberado para todos
         $items[] = [
