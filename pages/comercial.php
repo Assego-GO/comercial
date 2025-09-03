@@ -1,10 +1,8 @@
 <?php
-
 /**
  * Página de Serviços Comerciais - Sistema ASSEGO
- * pages/servicos_comercial.php
- * VERSÃO ATUALIZADA - Suporte a múltiplos RGs de diferentes corporações
- * LÓGICA DE PERMISSÕES: Estatísticas sempre visíveis, funcionalidades dependem de permissão
+ * pages/comercial.php
+ * VERSÃO COMPLETA COM SISTEMA DE PERMISSÕES INTEGRADO
  */
 
 // Tratamento de erros para debug
@@ -16,6 +14,7 @@ require_once '../config/database.php';
 require_once '../classes/Database.php';
 require_once '../classes/Auth.php';
 require_once '../classes/Funcionarios.php';
+require_once '../classes/Permissoes.php';
 require_once './components/header.php';
 
 // Inicia autenticação
@@ -33,99 +32,71 @@ $usuarioLogado = $auth->getUser();
 // Define o título da página
 $page_title = 'Serviços Comerciais - ASSEGO';
 
-// Verificar permissões para setor comercial - APENAS COMERCIAL E PRESIDÊNCIA
-$temPermissaoComercial = false;
-$motivoNegacao = '';
-$isComercial = false;
-$isPresidencia = false;
-$departamentoUsuario = null;
+// ====================================
+// VERIFICAÇÃO DE PERMISSÕES
+// ====================================
 
-error_log("=== DEBUG PERMISSÕES SERVIÇOS COMERCIAIS - RESTRITO ===");
-error_log("Usuário: " . $usuarioLogado['nome']);
-error_log("Departamento ID: " . ($usuarioLogado['departamento_id'] ?? 'NULL'));
-error_log("É Diretor: " . ($auth->isDiretor() ? 'SIM' : 'NÃO'));
+// Permissão básica - todos do comercial têm
+$temPermissaoVisualizar = Permissoes::tem('COMERCIAL_DASHBOARD') || Permissoes::tem('COMERCIAL_VISUALIZAR');
 
-// Verificação de permissões: APENAS comercial (ID: 10) OU presidência (ID: 1)
-if (isset($usuarioLogado['departamento_id'])) {
-    $deptId = $usuarioLogado['departamento_id'];
-    $departamentoUsuario = $deptId;
+// Permissões específicas
+$temPermissaoCriarAssociado = Permissoes::tem('COMERCIAL_CRIAR_ASSOCIADO');
+$temPermissaoDesfiliacao = Permissoes::tem('COMERCIAL_DESFILIACAO');
+$temPermissaoDependentes = Permissoes::tem('COMERCIAL_DEPENDENTES');
 
-    if ($deptId == 10) { // Comercial
-        $temPermissaoComercial = true;
-        $isComercial = true;
-        error_log("✅ Permissão concedida: Usuário pertence ao Setor Comercial (ID: 10)");
-    } elseif ($deptId == 1) { // Presidência
-        $temPermissaoComercial = true;
-        $isPresidencia = true;
-        error_log("✅ Permissão concedida: Usuário pertence à Presidência (ID: 1)");
-    } else {
-        $motivoNegacao = 'Acesso restrito EXCLUSIVAMENTE ao Setor Comercial e Presidência.';
-        error_log("❌ Acesso negado. Departamento: '$deptId'. Permitido apenas: Comercial (ID: 10) ou Presidência (ID: 1)");
-    }
-} else {
-    $motivoNegacao = 'Departamento não identificado no perfil do usuário.';
-    error_log("❌ departamento_id não existe no array do usuário");
+// Permissão especial de relatórios - apenas diretor e ID 71
+$temPermissaoRelatorios = Permissoes::tem('COMERCIAL_RELATORIOS');
+// DEBUG TEMPORÁRIO - REMOVER DEPOIS
+echo "<!-- DEBUG PERMISSÕES\n";
+echo "Usuario ID: " . $usuarioLogado['id'] . "\n";
+echo "Usuario Nome: " . $usuarioLogado['nome'] . "\n";
+echo "Usuario Cargo: " . $usuarioLogado['cargo'] . "\n";
+echo "Usuario Depto: " . $usuarioLogado['departamento_id'] . "\n";
+echo "Tem Permissão Relatórios: " . ($temPermissaoRelatorios ? 'SIM' : 'NÃO') . "\n";
+
+// Verificar diretamente no banco
+// FIM DO DEBUG
+
+// Se não tem nem permissão básica de visualizar, bloqueia acesso total
+if (!$temPermissaoVisualizar) {
+    Permissoes::registrarAcessoNegado('COMERCIAL_DASHBOARD', 'comercial.php');
+    $_SESSION['erro'] = 'Você não tem permissão para acessar o setor comercial.';
+    header('Location: ../pages/dashboard.php');
+    exit;
 }
 
-// Log final do resultado
-if (!$temPermissaoComercial) {
-    error_log("❌ ACESSO NEGADO AOS SERVIÇOS COMERCIAIS: " . $motivoNegacao);
-} else {
-    error_log("✅ ACESSO PERMITIDO - Usuário " . ($isComercial ? 'do Comercial' : 'da Presidência'));
+// Verificar se é diretor do comercial ou a funcionária especial para gerenciar permissões
+$podeGerenciarPermissoes = false;
+if (
+    $usuarioLogado['id'] == 71 ||
+    ($usuarioLogado['cargo'] == 'Diretor' && $usuarioLogado['departamento_id'] == 10)
+) {
+    $podeGerenciarPermissoes = true;
 }
 
-// Busca estatísticas do setor comercial (SEMPRE VISÍVEIS - são apenas números gerais)
+// Busca estatísticas do setor comercial
 try {
     $db = Database::getInstance(DB_NAME_CADASTRO)->getConnection();
 
-    // Total de associados ativos (SEMPRE VISÍVEL)
+    // Total de associados ativos
     $sql = "SELECT COUNT(*) as total FROM Associados WHERE situacao = 'Filiado'";
     $stmt = $db->prepare($sql);
     $stmt->execute();
     $totalAssociadosAtivos = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
 
-    // Novos cadastros hoje (SEMPRE VISÍVEL) 
-    // Baseado na estrutura real da tabela: usa data_aprovacao ou data_pre_cadastro
-    try {
-        // Primeiro tenta data_aprovacao (quando foi aprovado o cadastro)
-        $sql = "SELECT COUNT(*) as hoje FROM Associados WHERE DATE(data_aprovacao) = CURDATE()";
-        $stmt = $db->prepare($sql);
-        $stmt->execute();
-        $cadastrosHoje = $stmt->fetch(PDO::FETCH_ASSOC)['hoje'];
+    // Novos cadastros hoje
+    $sql = "SELECT COUNT(*) as hoje FROM Associados WHERE DATE(data_aprovacao) = CURDATE()";
+    $stmt = $db->prepare($sql);
+    $stmt->execute();
+    $cadastrosHoje = $stmt->fetch(PDO::FETCH_ASSOC)['hoje'];
 
-        // Se não houver aprovações hoje, conta os pré-cadastros de hoje
-        if ($cadastrosHoje == 0) {
-            $sql = "SELECT COUNT(*) as hoje FROM Associados WHERE DATE(data_pre_cadastro) = CURDATE()";
-            $stmt = $db->prepare($sql);
-            $stmt->execute();
-            $cadastrosHoje = $stmt->fetch(PDO::FETCH_ASSOC)['hoje'];
-        }
+    // Pré-cadastros pendentes
+    $sql = "SELECT COUNT(*) as pendentes FROM Associados WHERE pre_cadastro = 1";
+    $stmt = $db->prepare($sql);
+    $stmt->execute();
+    $preCadastrosPendentes = $stmt->fetch(PDO::FETCH_ASSOC)['pendentes'];
 
-        error_log("Cadastros hoje encontrados: " . $cadastrosHoje);
-    } catch (Exception $e) {
-        error_log("Erro ao buscar cadastros hoje: " . $e->getMessage());
-        $cadastrosHoje = 0;
-    }
-
-    // Pré-cadastros pendentes (SEMPRE VISÍVEL)
-    // Baseado na estrutura real: pre_cadastro = 1 são pré-cadastros
-    try {
-        // Conta todos os pré-cadastros ainda não aprovados
-        $sql = "SELECT COUNT(*) as pendentes FROM Associados WHERE pre_cadastro = 1";
-        $stmt = $db->prepare($sql);
-        $stmt->execute();
-        $preCadastrosPendentes = $stmt->fetch(PDO::FETCH_ASSOC)['pendentes'];
-
-        error_log("Pré-cadastros pendentes encontrados: " . $preCadastrosPendentes);
-    } catch (Exception $e) {
-        error_log("Erro ao buscar pré-cadastros pendentes: " . $e->getMessage());
-        $preCadastrosPendentes = 0;
-    }
-
-    // Solicitações de desfiliação (último mês) - APENAS NOVAS DESFILIAÇÕES
-try {
-    // Busca APENAS desfiliações que aconteceram nos últimos 30 dias
-    // (associados antigos com data_desfiliacao = NULL não contam)
+    // Desfiliações recentes (30 dias)
     $sql = "SELECT COUNT(*) as desfiliacao FROM Associados 
             WHERE situacao IN ('DESFILIADO', 'Desfiliado', 'desfiliado')
             AND data_desfiliacao IS NOT NULL
@@ -133,58 +104,35 @@ try {
     $stmt = $db->prepare($sql);
     $stmt->execute();
     $desfiliacoesRecentes = $stmt->fetch(PDO::FETCH_ASSOC)['desfiliacao'] ?? 0;
-    
-    error_log("✅ Desfiliações NOVAS (últimos 30 dias): " . $desfiliacoesRecentes);
-    
-    // Debug - mostra total de desfiliados vs. desfiliações recentes
-    $sql = "SELECT 
-                COUNT(*) as total_desfiliados,
-                SUM(CASE WHEN data_desfiliacao IS NOT NULL THEN 1 ELSE 0 END) as com_data,
-                SUM(CASE WHEN data_desfiliacao IS NULL THEN 1 ELSE 0 END) as sem_data
-            FROM Associados 
-            WHERE situacao IN ('DESFILIADO', 'Desfiliado', 'desfiliado')";
-    $stmt = $db->prepare($sql);
-    $stmt->execute();
-    $debug = $stmt->fetch(PDO::FETCH_ASSOC);
-    
-    error_log("📊 Debug desfiliações:");
-    error_log("   Total desfiliados: " . ($debug['total_desfiliados'] ?? 0));
-    error_log("   Com data (novos): " . ($debug['com_data'] ?? 0));
-    error_log("   Sem data (antigos): " . ($debug['sem_data'] ?? 0));
-    
-    // Mostra detalhes das desfiliações recentes (se houver)
-    if ($desfiliacoesRecentes > 0) {
-        $sql = "SELECT nome, data_desfiliacao FROM Associados 
-                WHERE situacao IN ('DESFILIADO', 'Desfiliado', 'desfiliado')
-                AND data_desfiliacao IS NOT NULL
-                AND data_desfiliacao >= DATE_SUB(NOW(), INTERVAL 30 DAY)
-                ORDER BY data_desfiliacao DESC
-                LIMIT 5";
-        $stmt = $db->prepare($sql);
-        $stmt->execute();
-        $detalhes = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        
-        error_log("📋 Desfiliações recentes:");
-        foreach ($detalhes as $i => $detalhe) {
-            error_log("   " . ($i+1) . ". " . $detalhe['nome'] . " - " . $detalhe['data_desfiliacao']);
-        }
-    }
 
 } catch (Exception $e) {
-    error_log("❌ Erro ao buscar desfiliações: " . $e->getMessage());
-    $desfiliacoesRecentes = 0;
-}
-} catch (Exception $e) {
-    error_log("Erro ao buscar estatísticas comerciais: " . $e->getMessage());
+    error_log("Erro ao buscar estatísticas: " . $e->getMessage());
     $totalAssociadosAtivos = $cadastrosHoje = $preCadastrosPendentes = $desfiliacoesRecentes = 0;
 }
 
-// Debug final das estatísticas
-error_log("=== ESTATÍSTICAS COMERCIAIS FINAIS ===");
-error_log("Associados Ativos: " . $totalAssociadosAtivos);
-error_log("Cadastros Hoje: " . $cadastrosHoje);
-error_log("Pré-cadastros Pendentes: " . $preCadastrosPendentes);
-error_log("Desfiliações (30 dias): " . $desfiliacoesRecentes);
+// Se pode gerenciar permissões, busca funcionários do departamento
+$funcionariosComercial = [];
+if ($podeGerenciarPermissoes) {
+    try {
+        $sql = "SELECT f.id, f.nome, f.cargo, f.email,
+                (SELECT COUNT(*) FROM funcionario_permissoes fp 
+                 JOIN recursos r ON fp.recurso_id = r.id 
+                 WHERE fp.funcionario_id = f.id 
+                 AND r.codigo = 'COMERCIAL_RELATORIOS' 
+                 AND fp.tipo = 'GRANT') as tem_relatorios
+                FROM Funcionarios f
+                WHERE f.departamento_id = 10 
+                AND f.ativo = 1
+                AND f.id != 71  -- Não mostrar a própria funcionária especial
+                AND f.cargo != 'Diretor'  -- Diretor já tem acesso
+                ORDER BY f.nome";
+        $stmt = $db->prepare($sql);
+        $stmt->execute();
+        $funcionariosComercial = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Exception $e) {
+        error_log("Erro ao buscar funcionários: " . $e->getMessage());
+    }
+}
 
 // Cria instância do Header Component
 $headerComponent = HeaderComponent::create([
@@ -213,37 +161,61 @@ $headerComponent = HeaderComponent::create([
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
 
     <!-- AOS Animation -->
     <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
 
-    <!-- jQuery PRIMEIRO -->
+    <!-- Animate.css -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+
+    <!-- jQuery -->
     <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
 
     <!-- CSS do Header Component -->
     <?php $headerComponent->renderCSS(); ?>
 
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="./estilizacao/style.css">
+
+    <!-- Estilos Personalizados Premium -->
     <style>
-        /* Variáveis CSS */
         :root {
             --primary: #0056d2;
             --primary-light: #4A90E2;
-            --primary-dark: #1e3d6f;
+            --primary-dark: #003d94;
             --secondary: #6c757d;
-            --success: #28a745;
-            --danger: #dc3545;
-            --warning: #ffc107;
-            --info: #17a2b8;
-            --light: #f8f9fa;
-            --dark: #343a40;
-            --bg-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --info: #3b82f6;
+            --dark: #1e293b;
+            --light: #f8fafc;
+            --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --gradient-success: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%);
+            --gradient-danger: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            --gradient-warning: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+            --gradient-info: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+            --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1);
+            --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+            --shadow-premium: 0 10px 40px rgba(0, 86, 210, 0.15);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
 
         body {
             font-family: 'Plus Jakarta Sans', sans-serif;
-            background: var(--light);
-            color: var(--dark);
+            background: #f5f7fa;
+            min-height: 100vh;
+            position: relative;
         }
 
         .main-wrapper {
@@ -254,749 +226,649 @@ $headerComponent = HeaderComponent::create([
 
         .content-area {
             flex: 1;
-            padding: 1.5rem;
+            padding: 2rem;
             margin-left: 0;
-            transition: margin-left 0.3s ease;
+            animation: fadeIn 0.5s ease-in-out;
         }
 
-        /* Page Header - Mais compacto */
+        /* Page Header */
         .page-header {
-            background: white;
-            border-radius: 12px;
-            padding: 1.5rem;
-            margin-bottom: 1.5rem;
-            box-shadow: 0 2px 10px rgba(44, 90, 160, 0.08);
-            border-left: 4px solid var(--primary);
+            margin-bottom: 2rem;
+            padding: 0 0 1rem 0;
+            position: relative;
         }
 
         .page-title {
-            font-size: 1.75rem;
-            font-weight: 700;
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--dark);
+            margin-bottom: 0.5rem;
+            letter-spacing: -0.5px;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .page-title i {
             color: var(--primary);
-            margin: 0;
-            display: flex;
-            align-items: center;
-        }
-
-        .page-title-icon {
-            width: 50px;
-            height: 50px;
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-right: 1rem;
-        }
-
-        .page-title-icon i {
-            color: white;
-            font-size: 1.5rem;
         }
 
         .page-subtitle {
-            color: var(--secondary);
-            margin: 0.5rem 0 0;
-            font-size: 0.95rem;
+            color: #64748b;
+            font-size: 1rem;
+            font-weight: 500;
         }
 
-        /* Stats Grid - Mais compacto */
+        /* Stats Grid Premium */
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 1rem;
-            margin-bottom: 1.5rem;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2.5rem;
         }
 
         .stat-card {
             background: white;
-            border-radius: 12px;
-            padding: 1.25rem;
-            box-shadow: 0 2px 10px rgba(44, 90, 160, 0.08);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-            border-left: 4px solid transparent;
-        }
-
-        .stat-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 15px rgba(44, 90, 160, 0.12);
-        }
-
-        .stat-card.primary {
-            border-left-color: var(--primary);
-        }
-
-        .stat-card.success {
-            border-left-color: var(--success);
-        }
-
-        .stat-card.warning {
-            border-left-color: var(--warning);
-        }
-
-        .stat-card.info {
-            border-left-color: var(--info);
-        }
-
-        .stat-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .stat-value {
-            font-size: 2rem;
-            font-weight: 800;
-            color: var(--dark);
-            line-height: 1;
-            margin-bottom: 0.25rem;
-        }
-
-        .stat-label {
-            font-size: 0.85rem;
-            font-weight: 600;
-            color: var(--secondary);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .stat-change {
-            font-size: 0.75rem;
-            margin-top: 0.25rem;
-            display: flex;
-            align-items: center;
-            gap: 0.25rem;
-        }
-
-        .stat-change.positive {
-            color: var(--success);
-        }
-
-        .stat-change.negative {
-            color: var(--danger);
-        }
-
-        .stat-change.neutral {
-            color: var(--info);
-        }
-
-        .stat-icon {
-            width: 80px;
-            height: 80px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 2rem;
-            opacity: 0.1;
-        }
-
-        .stat-icon.primary {
-            background: var(--primary);
-            color: var(--primary);
-        }
-
-        .stat-icon.success {
-            background: var(--success);
-            color: var(--success);
-        }
-
-        .stat-icon.warning {
-            background: var(--warning);
-            color: var(--warning);
-        }
-
-        .stat-icon.info {
-            background: var(--info);
-            color: var(--info);
-        }
-
-        /* Seções de Serviços */
-        .services-container {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1.5rem;
-            margin-bottom: 1.5rem;
-        }
-
-        .service-section {
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 2px 10px rgba(44, 90, 160, 0.08);
+            border-radius: 20px;
+            padding: 1.75rem;
+            position: relative;
             overflow: hidden;
-            height: fit-content;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: var(--shadow-md);
+            border: 1px solid rgba(0, 86, 210, 0.1);
         }
 
-        .service-header {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-            color: white;
-            padding: 1rem 1.5rem;
-        }
-
-        .service-header h3 {
-            margin: 0;
-            font-weight: 600;
-            font-size: 1.1rem;
-            display: flex;
-            align-items: center;
-        }
-
-        .service-header i {
-            margin-right: 0.5rem;
-            font-size: 1.25rem;
-        }
-
-        .service-content {
-            padding: 1.5rem;
-        }
-
-        /* Seção de Desfiliação */
-        .busca-form {
-            display: flex;
-            gap: 0.75rem;
-            align-items: end;
-            flex-wrap: wrap;
-            margin-bottom: 1rem;
-        }
-
-        .busca-input-group {
-            flex: 1;
-            min-width: 200px;
-        }
-
-        .form-label {
-            font-weight: 600;
-            color: var(--dark);
-            margin-bottom: 0.375rem;
-            font-size: 0.9rem;
-        }
-
-        .form-control {
-            border-radius: 6px;
-            border: 2px solid #e9ecef;
-            padding: 0.5rem 0.75rem;
-            font-size: 0.9rem;
-            transition: all 0.3s ease;
-        }
-
-        .form-control:focus {
-            border-color: var(--primary);
-            box-shadow: 0 0 0 0.2rem rgba(44, 90, 160, 0.25);
-        }
-
-        .btn-primary {
-            background: var(--primary);
-            border-color: var(--primary);
-            border-radius: 6px;
-            padding: 0.5rem 1rem;
-            font-weight: 600;
-            font-size: 0.9rem;
-            transition: all 0.3s ease;
-        }
-
-        .btn-primary:hover {
-            background: var(--primary-dark);
-            transform: translateY(-2px);
-        }
-
-        .btn-secondary {
-            background: var(--secondary);
-            border-color: var(--secondary);
-            border-radius: 6px;
-            padding: 0.5rem 1rem;
-            font-weight: 600;
-            font-size: 0.9rem;
-            transition: all 0.3s ease;
-        }
-
-        .btn-secondary:hover {
-            background: #5a6268;
-            transform: translateY(-2px);
-        }
-
-        /* Modal de Seleção de Associados */
-        .modal-selecao-associado {
-            z-index: 9999;
-        }
-
-        .associado-card {
-            border: 2px solid #e9ecef;
-            border-radius: 10px;
-            padding: 1rem;
-            margin-bottom: 0.75rem;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            background: white;
-        }
-
-        .associado-card:hover {
-            border-color: var(--primary);
-            transform: translateY(-1px);
-            box-shadow: 0 2px 10px rgba(0, 86, 210, 0.12);
-        }
-
-        .associado-card.selecionado {
-            border-color: var(--success);
-            background: linear-gradient(135deg, #ffffff 0%, #f0fff4 100%);
-        }
-
-        .associado-foto {
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 3px solid #e9ecef;
-        }
-
-        .associado-info {
-            flex: 1;
-            margin-left: 1.5rem;
-        }
-
-        .associado-nome {
-            font-size: 1.1rem;
-            font-weight: 600;
-            color: var(--dark);
-            margin-bottom: 0.25rem;
-        }
-
-        .associado-rg {
-            color: var(--secondary);
-            font-size: 0.9rem;
-            margin-bottom: 0.5rem;
-        }
-
-        .associado-militar {
-            display: flex;
-            gap: 1rem;
-            flex-wrap: wrap;
-        }
-
-        .badge-corporacao {
-            padding: 0.35rem 0.75rem;
-            border-radius: 6px;
-            font-size: 0.85rem;
-            font-weight: 600;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.25rem;
-        }
-
-        .badge-pm {
-            background: #e3f2fd;
-            color: #1565c0;
-        }
-
-        .badge-bm {
-            background: #ffebee;
-            color: #c62828;
-        }
-
-        .badge-pc {
-            background: #f3e5f5;
-            color: #6a1b9a;
-        }
-
-        .badge-default {
-            background: #f5f5f5;
-            color: #616161;
-        }
-
-        /* Seção de Cadastro - Nova estrutura compacta */
-        .cadastro-options {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 1rem;
-        }
-
-        .cadastro-option {
-            background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
-            border-radius: 10px;
-            padding: 1.25rem;
-            border: 2px solid #e9ecef;
-            transition: all 0.3s ease;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            min-height: 80px;
-        }
-
-        .cadastro-option:hover {
-            border-color: var(--primary);
-            transform: translateY(-2px);
-            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-            box-shadow: 0 4px 15px rgba(0, 86, 210, 0.15);
-        }
-
-        .cadastro-option-icon {
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            background: var(--primary);
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.25rem;
-            flex-shrink: 0;
-        }
-
-        .cadastro-option-content h5 {
-            margin: 0 0 0.25rem 0;
-            font-size: 1rem;
-            font-weight: 600;
-            color: var(--dark);
-        }
-
-        .cadastro-option-content p {
-            margin: 0;
-            font-size: 0.85rem;
-            color: var(--secondary);
-            line-height: 1.3;
-        }
-
-        /* Alert personalizado */
-        .alert-custom {
-            border-radius: 10px;
-            border: none;
-            padding: 1rem;
-            margin-bottom: 1.5rem;
-            display: flex;
-            align-items: center;
-        }
-
-        .alert-custom i {
-            font-size: 1.25rem;
-            margin-right: 0.75rem;
-        }
-
-        .alert-info-custom {
-            background: linear-gradient(135deg, var(--primary-light) 0%, #e3f2fd 100%);
-            color: var(--primary-dark);
-            border-left: 4px solid var(--primary);
-        }
-
-        .alert-success-custom {
-            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
-            color: #155724;
-            border-left: 4px solid var(--success);
-        }
-
-        .alert-warning-custom {
-            background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
-            color: #856404;
-            border-left: 4px solid var(--warning);
-        }
-
-        /* Dados do associado */
-        .dados-associado-container {
-            background: #f8f9fa;
-            border-radius: 10px;
-            padding: 1.25rem;
-            margin-top: 1rem;
-            border: 2px solid #e9ecef;
-        }
-
-        .dados-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 0.75rem;
-            margin-bottom: 1rem;
-        }
-
-        .dados-item {
-            background: white;
-            border-radius: 6px;
-            padding: 0.75rem;
-            border-left: 3px solid var(--primary);
-            transition: all 0.3s ease;
-        }
-
-        .dados-item:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 2px 8px rgba(44, 90, 160, 0.08);
-        }
-
-        .dados-label {
-            font-weight: 600;
-            color: var(--secondary);
-            font-size: 0.8rem;
-            margin-bottom: 0.25rem;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .dados-value {
-            color: var(--dark);
-            font-size: 0.9rem;
-            font-weight: 500;
-            word-break: break-word;
-        }
-
-        /* Identificação Militar */
-        .identificacao-militar {
-            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-            border-radius: 8px;
-            padding: 1rem;
-            margin-bottom: 1.5rem;
-        }
-
-        .identificacao-militar h6 {
-            color: var(--primary);
-            font-weight: 600;
-            margin-bottom: 1rem;
-        }
-
-        .militar-info-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1rem;
-        }
-
-        .militar-info-item {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .militar-info-label {
-            font-size: 0.8rem;
-            color: var(--secondary);
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .militar-info-value {
-            font-size: 1rem;
-            color: var(--dark);
-            font-weight: 500;
-        }
-
-        /* Loading spinner */
-        .loading-spinner {
-            width: 40px;
-            height: 40px;
-            border: 4px solid var(--light);
-            border-top: 4px solid var(--primary);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            0% {
-                transform: rotate(0deg);
-            }
-
-            100% {
-                transform: rotate(360deg);
-            }
-        }
-
-        .loading-overlay {
+        .stat-card::before {
+            content: '';
             position: absolute;
             top: 0;
             left: 0;
             right: 0;
-            bottom: 0;
-            background: rgba(255, 255, 255, 0.95);
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--primary-light));
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform 0.4s ease;
+        }
+
+        .stat-card:hover::before {
+            transform: scaleX(1);
+        }
+
+        .stat-card:hover {
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: var(--shadow-2xl);
+        }
+
+        .stat-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 16px;
             display: flex;
             align-items: center;
             justify-content: center;
-            flex-direction: column;
-            border-radius: 15px;
-            z-index: 1000;
+            font-size: 1.5rem;
+            margin-bottom: 1.25rem;
+            position: relative;
+            z-index: 1;
+            box-shadow: var(--shadow-lg);
         }
 
-        /* Ficha de Desfiliação */
-        .ficha-desfiliacao-container {
+        .stat-icon::after {
+            content: '';
+            position: absolute;
+            inset: -2px;
+            border-radius: 18px;
+            background: inherit;
+            filter: blur(10px);
+            opacity: 0.4;
+            z-index: -1;
+        }
+
+        .stat-icon.primary {
+            background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+            color: white;
+        }
+
+        .stat-icon.success {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white;
+        }
+
+        .stat-icon.warning {
+            background: linear-gradient(135deg, #eab308 0%, #ca8a04 100%);
+            color: white;
+        }
+
+        .stat-icon.danger {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+        }
+
+        .stat-value {
+            font-size: 2.25rem;
+            font-weight: 800;
+            color: var(--dark);
+            margin-bottom: 0.5rem;
+            line-height: 1;
+            letter-spacing: -1px;
+        }
+
+        .stat-label {
+            font-size: 0.875rem;
+            color: #64748b;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-trend {
+            position: absolute;
+            top: 1.5rem;
+            right: 1.5rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success);
+        }
+
+        /* Actions Container Premium */
+        .actions-container {
             background: white;
-            border-radius: 12px;
-            margin-top: 1.5rem;
-            box-shadow: 0 2px 10px rgba(44, 90, 160, 0.08);
+            border-radius: 24px;
+            padding: 2.5rem;
+            box-shadow: var(--shadow-xl);
+            position: relative;
             overflow: hidden;
         }
 
-        .ficha-header-container {
-            background: linear-gradient(135deg, var(--success) 0%, #20c997 100%);
-            color: white;
-            padding: 1rem 1.5rem;
+        .actions-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 200px;
+            background: linear-gradient(180deg, rgba(0, 86, 210, 0.03) 0%, transparent 100%);
+            pointer-events: none;
         }
 
-        .ficha-content {
-            padding: 2rem;
-        }
-
-        .ficha-desfiliacao {
-            font-family: 'Times New Roman', serif;
-            line-height: 1.8;
-            color: #333;
-            font-size: 14px;
-        }
-
-        .ficha-title {
-            text-align: center;
-            font-size: 1.6rem;
-            font-weight: bold;
-            color: var(--primary);
+        .actions-header {
             margin-bottom: 2rem;
-            padding-bottom: 1rem;
-            border-bottom: 2px solid var(--primary);
+            padding-bottom: 1.5rem;
+            border-bottom: 2px solid transparent;
+            background: linear-gradient(90deg, var(--light) 0%, var(--light) 50%, transparent 50%);
+            background-size: 20px 2px;
+            background-repeat: repeat-x;
+            background-position: bottom;
         }
 
-        .campo-preenchimento {
-            border-bottom: 1px solid #333;
-            min-width: 150px;
+        .actions-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--dark);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .actions-title i {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            color: white;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.125rem;
+        }
+
+        .actions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 1.25rem;
+        }
+
+        .action-card {
+            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+            border: 2px solid transparent;
+            border-radius: 16px;
+            padding: 1.75rem;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 1.25rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .action-card::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(0, 86, 210, 0.1);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        .action-card:hover::before {
+            width: 400px;
+            height: 400px;
+        }
+
+        .action-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--primary);
+            box-shadow: 0 12px 24px rgba(0, 86, 210, 0.15);
+            background: white;
+        }
+
+        .action-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.375rem;
+            flex-shrink: 0;
+            transition: all 0.3s ease;
+            position: relative;
+            z-index: 1;
+        }
+
+        .action-card:hover .action-icon {
+            transform: rotate(5deg) scale(1.1);
+        }
+
+        .action-icon.primary {
+            background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+            color: white;
+            box-shadow: 0 4px 14px rgba(34, 197, 94, 0.4);
+        }
+
+        .action-icon.success {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white;
+            box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4);
+        }
+
+        .action-icon.warning {
+            background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+            color: white;
+            box-shadow: 0 4px 14px rgba(249, 115, 22, 0.4);
+        }
+
+        .action-icon.info {
+            background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+            color: white;
+            box-shadow: 0 4px 14px rgba(139, 92, 246, 0.4);
+        }
+
+        .action-content {
+            position: relative;
+            z-index: 1;
+        }
+
+        .action-content h5 {
+            margin: 0 0 0.375rem 0;
+            font-size: 1.125rem;
+            font-weight: 700;
+            color: var(--dark);
+        }
+
+        .action-content p {
+            margin: 0;
+            font-size: 0.9rem;
+            color: #64748b;
+            line-height: 1.5;
+        }
+
+        /* Permissões */
+        .permission-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
             display: inline-block;
-            padding: 2px 8px;
-            margin: 0 3px;
-            font-weight: bold;
-            background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
-            border-radius: 3px;
+            margin-left: 0.5rem;
         }
 
-        .campo-preenchimento.largo {
-            min-width: 400px;
+        .action-card.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            pointer-events: none;
         }
 
-        .campo-preenchimento.medio {
-            min-width: 250px;
+        .action-card.disabled::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 16px;
         }
 
-        .motivo-area {
-            border: 2px solid var(--primary);
-            min-height: 100px;
-            padding: 15px;
-            margin: 15px 0;
+        .no-permission-overlay {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            background: rgba(239, 68, 68, 0.9);
+            color: white;
+            padding: 0.25rem 0.5rem;
             border-radius: 8px;
-            background: #f8f9fa;
-            font-style: italic;
+            font-size: 0.7rem;
+            font-weight: 600;
+            z-index: 10;
         }
 
-        .assinatura-area {
-            text-align: center;
-            margin-top: 3rem;
-            padding-top: 2rem;
-            border-top: 2px solid #333;
+        /* Gerenciamento de Permissões */
+        .permissions-management {
+            background: white;
+            border-radius: 20px;
+            padding: 2rem;
+            margin-top: 2rem;
+            box-shadow: var(--shadow-lg);
         }
 
-        .linha-assinatura {
-            border-top: 2px solid #333;
+        .permission-user-card {
+            background: #f8fafc;
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+
+        .permission-user-card:hover {
+            background: #f1f5f9;
+            transform: translateX(4px);
+        }
+
+        .switch-permission {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 28px;
+        }
+
+        .switch-permission input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider-permission {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #cbd5e1;
+            transition: .4s;
+            border-radius: 28px;
+        }
+
+        .slider-permission:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked+.slider-permission {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        }
+
+        input:checked+.slider-permission:before {
+            transform: translateX(32px);
+        }
+
+        /* Modals */
+        .modal-content {
+            border: none;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: var(--shadow-2xl);
+        }
+
+        .modal-header-custom {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            padding: 1.75rem;
+            border: none;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .modal-header-custom::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -25%;
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+        }
+
+        .modal-title-custom {
+            font-size: 1.375rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .modal-body {
+            padding: 2rem;
+            background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+        }
+
+        .modal-footer {
+            padding: 1.5rem 2rem;
+            background: #f8fafc;
+            border-top: 1px solid rgba(0, 86, 210, 0.1);
+        }
+
+        /* Buttons */
+        .btn-premium {
+            padding: 0.75rem 1.5rem;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            border: none;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            box-shadow: var(--shadow-md);
+        }
+
+        .btn-premium::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        .btn-premium:hover::before {
             width: 300px;
-            margin: 2rem auto 1rem;
-            padding-top: 0.5rem;
-            font-weight: bold;
+            height: 300px;
         }
 
-        .ficha-actions {
+        .btn-primary-premium {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            color: white;
+        }
+
+        .btn-primary-premium:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0, 86, 210, 0.3);
+            color: white;
+        }
+
+        .btn-success-premium {
+            background: linear-gradient(135deg, var(--success) 0%, #059669 100%);
+            color: white;
+        }
+
+        .btn-success-premium:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(16, 185, 129, 0.3);
+            color: white;
+        }
+
+        .btn-secondary-premium {
+            background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+            color: white;
+        }
+
+        .btn-secondary-premium:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(100, 116, 139, 0.3);
+            color: white;
+        }
+
+        /* Forms */
+        .form-control-premium {
+            padding: 0.875rem 1.25rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        .form-control-premium:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(0, 86, 210, 0.1);
+            outline: none;
+        }
+
+        .form-label-premium {
+            font-weight: 600;
+            color: var(--dark);
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* Alerts */
+        .alert-premium {
+            padding: 1.25rem;
+            border-radius: 12px;
+            border: none;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .alert-info-premium {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(29, 78, 216, 0.1) 100%);
+            color: #1e40af;
+            border-left: 4px solid var(--primary);
+        }
+
+        .alert-warning-premium {
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(217, 119, 6, 0.1) 100%);
+            color: #92400e;
+            border-left: 4px solid var(--warning);
+        }
+
+        /* Cards */
+        .result-card {
+            background: white;
+            border-radius: 12px;
             padding: 1.5rem;
-            background: #f8f9fa;
-            border-top: 1px solid #dee2e6;
-            text-align: center;
+            box-shadow: var(--shadow-md);
+            border: 1px solid rgba(0, 86, 210, 0.1);
+            margin-top: 1rem;
         }
 
-        .btn-imprimir {
-            background: var(--success);
-            color: white;
-            border: none;
-            border-radius: 6px;
-            padding: 0.75rem 2rem;
-            font-weight: 600;
-            font-size: 1rem;
+        .selection-card {
+            background: white;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 1.25rem;
+            margin-bottom: 1rem;
             transition: all 0.3s ease;
-            margin-right: 1rem;
+            cursor: pointer;
         }
 
-        .btn-imprimir:hover {
-            background: #146c43;
-            transform: translateY(-2px);
+        .selection-card:hover {
+            border-color: var(--primary);
+            transform: translateX(4px);
+            box-shadow: var(--shadow-lg);
         }
 
-        .btn-gerar-pdf {
-            background: var(--danger);
-            color: white;
-            border: none;
-            border-radius: 6px;
-            padding: 0.75rem 2rem;
+        .selection-card.selected {
+            background: linear-gradient(135deg, rgba(0, 86, 210, 0.05) 0%, rgba(74, 144, 226, 0.05) 100%);
+            border-color: var(--primary);
+        }
+
+        /* Loading */
+        .loading-premium {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 3rem;
+        }
+
+        .spinner-premium {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(0, 86, 210, 0.1);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        /* Badge */
+        .badge-premium {
+            padding: 0.375rem 0.875rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
             font-weight: 600;
-            font-size: 1rem;
-            transition: all 0.3s ease;
+            letter-spacing: 0.5px;
         }
 
-        .btn-gerar-pdf:hover {
-            background: #b02a37;
-            transform: translateY(-2px);
+        .badge-primary-premium {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            color: white;
         }
-
-        /* Toast personalizado */
-        .toast-container {
-            z-index: 9999;
-        }
-
-        .toast {
-            min-width: 300px;
-        }
-
-        /* Responsivo */
-        @media (max-width: 1200px) {
-            .cadastro-options {
-                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            }
-        }
-
-        @media (max-width: 768px) {
-            .services-container {
-                grid-template-columns: 1fr;
-            }
-
-            .cadastro-options {
-                grid-template-columns: 1fr;
-            }
-
-            .cadastro-option {
-                flex-direction: column;
-                text-align: center;
-                min-height: auto;
-                padding: 1rem;
-            }
-
-            .cadastro-option-icon {
-                margin-bottom: 0.5rem;
-            }
-
-            .stats-grid {
-                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            }
-
-            .content-area {
-                padding: 1rem;
-            }
-
-            .busca-form {
-                flex-direction: column;
-                align-items: stretch;
-            }
-
-            .dados-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .ficha-content {
-                padding: 1.5rem;
-            }
-        }
-
-
-        /* Modo impressão - VERSÃO OTIMIZADA PARA 1 PÁGINA */
-@media print {
-    
-}
 
         /* Animações */
-        .fade-in {
-            animation: fadeIn 0.5s ease-in;
-        }
-
         @keyframes fadeIn {
             from {
                 opacity: 0;
@@ -1008,12 +880,37 @@ $headerComponent = HeaderComponent::create([
                 transform: translateY(0);
             }
         }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Responsivo */
+        @media (max-width: 768px) {
+            .content-area {
+                padding: 1.5rem;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .actions-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .page-title {
+                font-size: 1.75rem;
+            }
+        }
     </style>
 </head>
 
 <body>
-    <!-- Toast Container para Notificações -->
-    <div class="toast-container position-fixed top-0 end-0 p-3" id="toastContainer"></div>
+    <!-- Toast Container -->
+    <div class="toast-container position-fixed top-0 end-0 p-3"></div>
 
     <!-- Main Content -->
     <div class="main-wrapper">
@@ -1022,1186 +919,1016 @@ $headerComponent = HeaderComponent::create([
 
         <!-- Content Area -->
         <div class="content-area">
-            <?php if (!$temPermissaoComercial): ?>
-                <!-- Sem Permissão -->
-                <div class="alert alert-danger" data-aos="fade-up">
-                    <h4><i class="fas fa-ban me-2"></i>Acesso Negado aos Serviços Comerciais</h4>
-                    <p class="mb-3"><?php echo htmlspecialchars($motivoNegacao); ?></p>
+            <!-- Page Header -->
+            <div class="page-header animate__animated animate__fadeInDown">
+                <h1 class="page-title">
+                    <i class="fas fa-handshake me-2"></i>
+                    Serviços Comerciais
+                </h1>
+                <p class="page-subtitle">
+                    Gerencie cadastros, desfiliações e serviços do setor comercial com eficiência
+                </p>
+            </div>
 
-                    <a href="../pages/dashboard.php" class="btn btn-secondary">
-                        <i class="fas fa-arrow-left me-1"></i>
-                        Voltar ao Dashboard
-                    </a>
+            <!-- Stats Grid -->
+            <div class="stats-grid">
+                <div class="stat-card animate__animated animate__fadeInUp" data-aos="fade-up" data-aos-delay="100">
+                    <span class="stat-trend">+12%</span>
+                    <div class="stat-icon primary">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div class="stat-value"><?php echo number_format($totalAssociadosAtivos, 0, ',', '.'); ?></div>
+                    <div class="stat-label">Associados Ativos</div>
                 </div>
 
-            <?php else: ?>
-                <!-- Com Permissão - Conteúdo Normal -->
+                <div class="stat-card animate__animated animate__fadeInUp" data-aos="fade-up" data-aos-delay="200">
+                    <div class="stat-icon success">
+                        <i class="fas fa-user-plus"></i>
+                    </div>
+                    <div class="stat-value"><?php echo $cadastrosHoje; ?></div>
+                    <div class="stat-label">Cadastros Hoje</div>
+                </div>
 
-                <!-- Page Header -->
-                <div class="page-header" data-aos="fade-right">
-                    <h1 class="page-title">
-                        <div class="page-title-icon">
-                            <i class="fas fa-handshake"></i>
-                        </div>
-                        Serviços Comerciais
-                        <?php if ($isComercial): ?>
-                            <small class="text-muted">- Setor Comercial</small>
-                        <?php elseif ($isPresidencia): ?>
-                            <small class="text-muted">- Presidência</small>
+                <div class="stat-card animate__animated animate__fadeInUp" data-aos="fade-up" data-aos-delay="300">
+                    <div class="stat-icon warning">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <div class="stat-value"><?php echo $preCadastrosPendentes; ?></div>
+                    <div class="stat-label">Pré-Filiados Pendentes</div>
+                </div>
+
+                <div class="stat-card animate__animated animate__fadeInUp" data-aos="fade-up" data-aos-delay="400">
+                    <div class="stat-icon danger">
+                        <i class="fas fa-user-times"></i>
+                    </div>
+                    <div class="stat-value"><?php echo $desfiliacoesRecentes; ?></div>
+                    <div class="stat-label">Desfiliações (30 dias)</div>
+                </div>
+            </div>
+
+            <!-- Actions Container -->
+            <div class="actions-container animate__animated animate__fadeIn" data-aos="fade-up" data-aos-delay="500">
+                <div class="actions-header">
+                    <h3 class="actions-title">
+                        <i class="fas fa-tools"></i>
+                        Ações Rápidas
+                    </h3>
+                </div>
+
+                <div class="actions-grid">
+                    <!-- Nova Filiação -->
+                    <div class="action-card <?php echo !$temPermissaoCriarAssociado ? 'disabled' : ''; ?>"
+                        onclick="<?php echo $temPermissaoCriarAssociado ? 'novoPreCadastro()' : 'semPermissao()'; ?>">
+                        <?php if (!$temPermissaoCriarAssociado): ?>
+                            <div class="no-permission-overlay">Sem permissão</div>
                         <?php endif; ?>
-                    </h1>
-                    <p class="page-subtitle">
-                        Gerencie desfiliações, cadastros de novos associados e demais serviços comerciais. Sistema preparado para múltiplos RGs de diferentes corporações.
-                    </p>
-                </div>
-
-               
-
-                <!-- Alert informativo sobre o nível de acesso -->
-                <div class="alert-custom alert-info-custom" data-aos="fade-up">
-                    <div>
-                        <i class="fas fa-<?php echo $isComercial ? 'handshake' : 'crown'; ?>"></i>
+                        <div class="action-icon primary">
+                            <i class="fas fa-user-plus"></i>
+                        </div>
+                        <div class="action-content">
+                            <h5>Nova Filiação</h5>
+                            <p>Cadastrar novo associado no sistema</p>
+                        </div>
                     </div>
-                    <div>
-                        <h6 class="mb-1">
-                            <?php if ($isComercial): ?>
-                                <i class="fas fa-handshake text-primary"></i> Setor Comercial
-                            <?php elseif ($isPresidencia): ?>
-                                <i class="fas fa-crown text-warning"></i> Presidência
-                            <?php endif; ?>
-                        </h6>
-                        <small>
-                            <?php if ($isComercial): ?>
-                                Você tem acesso completo aos serviços comerciais: estatísticas, desfiliações, cadastros e atendimento.
-                            <?php elseif ($isPresidencia): ?>
-                                Você tem acesso administrativo aos serviços comerciais como membro da presidência.
-                            <?php else: ?>
-                                Você pode visualizar as estatísticas, mas funcionalidades avançadas requerem permissão específica.
-                            <?php endif; ?>
-                            Sistema preparado para múltiplos RGs de diferentes corporações.
-                        </small>
+
+                    <!-- Consultar Associado -->
+                    <div class="action-card" onclick="consultarAssociado()">
+                        <div class="action-icon success">
+                            <i class="fas fa-search"></i>
+                        </div>
+                        <div class="action-content">
+                            <h5>Consultar Associado</h5>
+                            <p>Buscar e visualizar dados completos</p>
+                        </div>
                     </div>
+
+                    <!-- Solicitação de Desfiliação -->
+                    <div class="action-card <?php echo !$temPermissaoDesfiliacao ? 'disabled' : ''; ?>"
+                        onclick="<?php echo $temPermissaoDesfiliacao ? 'abrirModalDesfiliacao()' : 'semPermissao()'; ?>">
+                        <?php if (!$temPermissaoDesfiliacao): ?>
+                            <div class="no-permission-overlay">Sem permissão</div>
+                        <?php endif; ?>
+                        <div class="action-icon warning">
+                            <i class="fas fa-user-times"></i>
+                        </div>
+                        <div class="action-content">
+                            <h5>Solicitação de Desfiliação</h5>
+                            <p>Gerar ficha oficial de desfiliação</p>
+                        </div>
+                    </div>
+
+                    <!-- Dependentes 18+ -->
+                    <div class="action-card <?php echo !$temPermissaoDependentes ? 'disabled' : ''; ?>"
+                        onclick="<?php echo $temPermissaoDependentes ? 'consultarDependentes18()' : 'semPermissao()'; ?>">
+                        <?php if (!$temPermissaoDependentes): ?>
+                            <div class="no-permission-overlay">Sem permissão</div>
+                        <?php endif; ?>
+                        <div class="action-icon info">
+                            <i class="fas fa-birthday-cake"></i>
+                        </div>
+                        <div class="action-content">
+                            <h5>Dependentes 18+</h5>
+                            <p>Listar dependentes maiores de idade</p>
+                        </div>
+                    </div>
+
+                    <!-- Relatórios -->
+                    <div class="action-card <?php echo !$temPermissaoRelatorios ? 'disabled' : ''; ?>"
+                        onclick="<?php echo $temPermissaoRelatorios ? 'relatoriosComerciais()' : 'semPermissao()'; ?>">
+                        <?php if (!$temPermissaoRelatorios): ?>
+                            <div class="no-permission-overlay">Sem permissão</div>
+                        <?php endif; ?>
+                        <div class="action-icon primary">
+                            <i class="fas fa-chart-bar"></i>
+                        </div>
+                        <div class="action-content">
+                            <h5>Relatórios Gerenciais</h5>
+                            <p>Estatísticas e análises detalhadas</p>
+                        </div>
+                    </div>
+
+
                 </div>
+            </div>
 
-                <!-- Seções de Serviços -->
-                <div class="services-container" data-aos="fade-up" data-aos-delay="200">
+            ''
 
-                    <!-- Seção de Desfiliação -->
-                    <div class="service-section">
-                        <div class="service-header">
-                            <h3>
+            <!-- ADICIONE ESTE CSS ADICIONAL NO HEAD -->
+            <style>
+                .permission-user-card {
+                    background: #f8fafc;
+                    border-radius: 12px;
+                    padding: 1rem;
+                    margin-bottom: 0.75rem;
+                    transition: all 0.3s ease;
+                    border: 2px solid transparent;
+                }
+
+                .permission-user-card:hover {
+                    background: #f1f5f9;
+                    border-color: var(--primary-light);
+                    transform: translateX(4px);
+                }
+
+                .badge-status .badge {
+                    min-width: 110px;
+                }
+
+                #listaFuncionariosPermissoes::-webkit-scrollbar {
+                    width: 8px;
+                }
+
+                #listaFuncionariosPermissoes::-webkit-scrollbar-track {
+                    background: #f1f1f1;
+                    border-radius: 10px;
+                }
+
+                #listaFuncionariosPermissoes::-webkit-scrollbar-thumb {
+                    background: var(--primary-light);
+                    border-radius: 10px;
+                }
+
+                #listaFuncionariosPermissoes::-webkit-scrollbar-thumb:hover {
+                    background: var(--primary);
+                }
+
+                .funcionario-item {
+                    animation: fadeIn 0.3s ease;
+                }
+
+                .funcionario-item.hidden {
+                    display: none;
+                }
+
+                /* Loading overlay para botões */
+                .btn-loading {
+                    position: relative;
+                    pointer-events: none;
+                    opacity: 0.7;
+                }
+
+                .btn-loading::after {
+                    content: '';
+                    position: absolute;
+                    width: 16px;
+                    height: 16px;
+                    margin: auto;
+                    border: 2px solid transparent;
+                    border-top-color: #ffffff;
+                    border-radius: 50%;
+                    animation: button-loading-spinner 1s ease infinite;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                }
+
+                @keyframes button-loading-spinner {
+                    from {
+                        transform: translate(-50%, -50%) rotate(0turn);
+                    }
+
+                    to {
+                        transform: translate(-50%, -50%) rotate(1turn);
+                    }
+                }
+            </style>
+
+            <!-- Modal de Desfiliação -->
+            <div class="modal fade" id="modalDesfiliacao" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-lg modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header modal-header-custom">
+                            <h5 class="modal-title modal-title-custom">
                                 <i class="fas fa-user-times"></i>
                                 Solicitação de Desfiliação
-                            </h3>
+                            </h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                         </div>
-                        <div class="service-content" style="position: relative;">
-                            <p class="text-muted mb-3" style="font-size: 0.9rem;">
-                                Busque um associado pelo RG militar ou nome e gere automaticamente a ficha de desfiliação. Sistema preparado para múltiplos RGs de diferentes corporações.
-                            </p>
+                        <div class="modal-body">
+                            <div class="alert-premium alert-info-premium">
+                                <i class="fas fa-info-circle fa-lg"></i>
+                                <div>
+                                    <strong>Instruções:</strong><br>
+                                    Digite o RG militar ou nome do associado para gerar a ficha de desfiliação oficial.
+                                </div>
+                            </div>
 
-                            <form class="busca-form" onsubmit="buscarAssociadoPorRG(event)">
-                                <div class="busca-input-group">
-                                    <label class="form-label" for="rgBuscaComercial">
-                                        <i class="fas fa-id-card me-1"></i>
-                                        RG Militar ou Nome
+                            <form id="formBuscaDesfiliacao" onsubmit="buscarAssociadoDesfiliacao(event)">
+                                <div class="mb-4">
+                                    <label class="form-label-premium">
+                                        <i class="fas fa-id-card"></i>
+                                        RG Militar ou Nome do Associado
                                     </label>
-                                    <input type="text" class="form-control" id="rgBuscaComercial"
-                                        placeholder="Digite o RG militar ou nome..." required>
-                                    <small class="text-muted">
-                                        Se houver múltiplos registros com o mesmo RG, você poderá escolher a corporação correta
-                                    </small>
+                                    <input type="text" class="form-control form-control-premium" id="buscaDesfiliacao"
+                                        placeholder="Ex: 123456 ou João da Silva" required>
                                 </div>
-                                <div>
-                                    <button type="submit" class="btn btn-primary" id="btnBuscarComercial">
-                                        <i class="fas fa-search me-1"></i>
-                                        Buscar
+
+                                <div class="d-flex gap-2">
+                                    <button type="submit" class="btn btn-premium btn-primary-premium">
+                                        <i class="fas fa-search me-2"></i>
+                                        Buscar Associado
                                     </button>
-                                </div>
-                                <div>
-                                    <button type="button" class="btn btn-secondary" onclick="limparBuscaComercial()">
-                                        <i class="fas fa-eraser me-1"></i>
+                                    <button type="button" class="btn btn-premium btn-secondary-premium"
+                                        onclick="limparBuscaDesfiliacao()">
+                                        <i class="fas fa-eraser me-2"></i>
                                         Limpar
                                     </button>
                                 </div>
                             </form>
 
-                            <!-- Alert para mensagens de busca -->
-                            <div id="alertBuscaComercial" class="alert" style="display: none;">
-                                <i class="fas fa-info-circle me-2"></i>
-                                <span id="alertBuscaComercialText"></span>
+                            <!-- Container para resultados -->
+                            <div id="resultadoDesfiliacao" class="mt-4" style="display: none;">
+                                <!-- Dados do associado serão exibidos aqui -->
                             </div>
 
-                            <!-- Container para dados do associado -->
-                            <div id="dadosAssociadoContainer" class="dados-associado-container fade-in" style="display: none;">
-                                <h6 class="mb-3">
-                                    <i class="fas fa-user me-2" style="color: var(--primary);"></i>
-                                    Dados do Associado Encontrado
-                                </h6>
-
-                                <!-- Identificação Militar -->
-                                <div id="identificacaoMilitarComercial" class="identificacao-militar" style="display: none;">
-                                    <h6>
-                                        <i class="fas fa-shield-alt me-2"></i>
-                                        Identificação Militar
-                                    </h6>
-                                    <div class="militar-info-grid" id="militarInfoGridComercial">
-                                        <!-- Dados militares serão inseridos aqui -->
-                                    </div>
-                                </div>
-
-                                <div class="dados-grid" id="dadosAssociadoGrid">
-                                    <!-- Dados serão inseridos aqui dinamicamente -->
-                                </div>
-                            </div>
-
-                            <!-- Loading overlay -->
-                            <div id="loadingBuscaComercial" class="loading-overlay" style="display: none;">
-                                <div class="loading-spinner mb-3"></div>
-                                <p class="text-muted">Buscando dados do associado...</p>
+                            <!-- Loading -->
+                            <div id="loadingDesfiliacao" class="loading-premium" style="display: none;">
+                                <div class="spinner-premium"></div>
+                                <p class="mt-3 text-muted">Buscando dados do associado...</p>
                             </div>
                         </div>
-                    </div>
-
-                    <!-- Seção de Cadastro de Associados -->
-                    <div class="service-section">
-                        <div class="service-header">
-                            <h3>
-                                <i class="fas fa-user-plus"></i>
-                                Cadastro de Associados
-                            </h3>
-                        </div>
-                        <div class="service-content">
-                            <p class="text-muted mb-4" style="font-size: 0.9rem;">
-                                Inicie novos cadastros de associados ou gerencie pré-cadastros existentes.
-                            </p>
-
-                            <div class="cadastro-options">
-                                <div class="cadastro-option" onclick="novoPreCadastro()">
-                                    <div class="cadastro-option-icon">
-                                        <i class="fas fa-user-plus"></i>
-                                    </div>
-                                    <div class="cadastro-option-content">
-                                        <h5>Nova Filiação</h5>
-                                        <p>Inicie um nova filiação de associado com formulário completo</p>
-                                    </div>
-                                </div>
-
-                                <div class="cadastro-option" onclick="consultarAssociado()">
-                                    <div class="cadastro-option-icon">
-                                        <i class="fas fa-search"></i>
-                                    </div>
-                                    <div class="cadastro-option-content">
-                                        <h5>Consultar Associado</h5>
-                                        <p>Busque e consulte dados de associados existentes</p>
-                                    </div>
-                                </div>
-
-                                <div class="cadastro-option" onclick="consultarDependentes18()">
-                                    <div class="cadastro-option-icon">
-                                        <i class="fas fa-birthday-cake"></i>
-                                    </div>
-                                    <div class="cadastro-option-content">
-                                        <h5>Dependentes 18+</h5>
-                                        <p>Veja os dependentes que já completaram ou estão prestes a completar 18 anos</p>
-                                    </div>
-                                </div>
-
-                                <div class="cadastro-option" onclick="relatoriosComerciais()">
-                                    <div class="cadastro-option-icon">
-                                        <i class="fas fa-chart-bar"></i>
-                                    </div>
-                                    <div class="cadastro-option-content">
-                                        <h5>Relatórios Comerciais</h5>
-                                        <p>Visualize estatísticas e relatórios do setor comercial</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Container para ficha de desfiliação (apenas com permissão) -->
-                <?php if ($temPermissaoComercial): ?>
-                    <div id="fichaDesfiliacao" class="ficha-desfiliacao-container fade-in" style="display: none;" data-aos="fade-up">
-                        <div class="ficha-header-container no-print">
-                            <h4>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-premium btn-secondary-premium" data-bs-dismiss="modal">
+                                <i class="fas fa-times me-2"></i>
+                                Cancelar
+                            </button>
+                            <button type="button" class="btn btn-premium btn-success-premium" id="btnGerarFicha"
+                                style="display: none;" onclick="gerarFichaDesfiliacao()">
                                 <i class="fas fa-file-alt me-2"></i>
-                                Ficha de Desfiliação - ASSEGO
-                            </h4>
-                            <p class="mb-0">Documento oficial preenchido automaticamente</p>
-                        </div>
-
-                        <div class="ficha-content">
-                            <div class="ficha-desfiliacao">
-                                <div class="ficha-title">
-                                    SOLICITAÇÃO DE DESFILIAÇÃO<br>
-                                    ASSEGO
-                                </div>
-
-                                <p>
-                                    Goiânia, <span class="campo-preenchimento" id="diaAtual"></span> de
-                                    <span class="campo-preenchimento" id="mesAtual"></span> de
-                                    <span class="campo-preenchimento" id="anoAtual"></span>
-                                </p>
-
-                                <br>
-
-                                <p><strong>Prezado Sr. Presidente,</strong></p>
-
-                                <br>
-
-                                <p>
-                                    Eu, <span class="campo-preenchimento largo" id="nomeCompleto" contenteditable="true"></span>,
-                                    portador do RG militar: <span class="campo-preenchimento" id="rgMilitar" contenteditable="true"></span>,
-                                    Instituição: <span class="campo-preenchimento medio" id="corporacao" contenteditable="true"></span>,
-                                    residente e domiciliado:
-                                    <span class="campo-preenchimento largo" id="endereco1" contenteditable="true"></span>
-                                </p>
-
-                                <p>
-                                    <span class="campo-preenchimento largo" id="endereco2" contenteditable="true"></span>
-                                </p>
-
-                                <p>
-                                    <span class="campo-preenchimento largo" id="endereco3" contenteditable="true"></span>,
-                                    telefone <span class="campo-preenchimento" id="telefoneFormatado" contenteditable="true"></span>,
-                                    Lotação: <span class="campo-preenchimento medio" id="lotacao" contenteditable="true"></span>,
-                                    solicito minha desfiliação total da Associação dos Subtenentes e Sargentos do Estado
-                                    de Goiás – ASSEGO, pelo motivo:
-                                </p>
-
-                                <div class="motivo-area" contenteditable="true" id="motivoDesfiliacao">
-                                    Clique aqui para digitar o motivo da desfiliação...
-                                </div>
-
-                                <br>
-
-                                <p>
-                                    Me coloco à disposição, através do telefone informado acima para informações
-                                    adicionais necessárias à conclusão deste processo e, desde já, <strong>DECLARO ESTAR
-                                        CIENTE QUE O PROCESSO INTERNO TEM UM PRAZO DE ATÉ 30 DIAS, A CONTAR DA
-                                        DATA DE SOLICITAÇÃO, PARA SER CONCLUÍDO.</strong>
-                                </p>
-
-                                <br>
-
-                                <p><strong>Respeitosamente,</strong></p>
-
-                                <div class="assinatura-area">
-                                    <div class="linha-assinatura">
-                                        Assinatura do requerente
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Botões de ação -->
-                        <div class="ficha-actions no-print">
-                            <button class="btn-imprimir" onclick="imprimirFicha()">
-                                <i class="fas fa-print me-2"></i>
-                                Imprimir Ficha
-                            </button>
-                            <button class="btn-gerar-pdf" onclick="gerarPDFFicha()">
-                                <i class="fas fa-file-pdf me-2"></i>
-                                Gerar PDF
+                                Gerar Ficha
                             </button>
                         </div>
-                    </div>
-
-                <?php else: ?>
-                    <!-- Sem permissão - Apenas estatísticas visíveis -->
-                    <div class="alert alert-warning" data-aos="fade-up">
-                        <h5><i class="fas fa-lock me-2"></i>Funcionalidades Restritas</h5>
-                        <p class="mb-2">
-                            Você pode visualizar as estatísticas comerciais, mas não tem permissão para acessar as funcionalidades avançadas.
-                        </p>
-                        <small class="text-muted">
-                            <strong>Para acesso completo:</strong> Entre em contato com o administrador para obter permissões do setor comercial ou presidência.
-                        </small>
-                    </div>
-                <?php endif; ?>
-
-            <?php endif; ?>
-        </div>
-    </div>
-
-    <!-- Modal de Seleção de Associado (apenas com permissão) -->
-    <?php if ($temPermissaoComercial): ?>
-        <div class="modal fade modal-selecao-associado" id="modalSelecaoAssociadoComercial" tabindex="-1">
-            <div class="modal-dialog modal-lg">
-                <div class="modal-content">
-                    <div class="modal-header bg-primary text-white">
-                        <h5 class="modal-title">
-                            <i class="fas fa-users me-2"></i>
-                            Múltiplos Associados Encontrados
-                        </h5>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="alert alert-info">
-                            <i class="fas fa-info-circle me-2"></i>
-                            <strong>Atenção:</strong> Foram encontrados múltiplos associados com o mesmo RG em diferentes corporações.
-                            Selecione o associado correto para visualizar os dados e gerar a ficha de desfiliação.
-                        </div>
-                        <div id="listaAssociadosSelecaoComercial">
-                            <!-- Lista de associados será inserida aqui -->
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                            <i class="fas fa-times me-2"></i>
-                            Cancelar
-                        </button>
-                        <button type="button" class="btn btn-primary" id="btnConfirmarSelecaoComercial" disabled>
-                            <i class="fas fa-check me-2"></i>
-                            Confirmar Seleção
-                        </button>
                     </div>
                 </div>
             </div>
-        </div>
-    <?php endif; ?>
 
-    <!-- Scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+            <!-- Modal de Seleção (múltiplos associados) -->
+            <div class="modal fade" id="modalSelecaoAssociado" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-lg modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header modal-header-custom">
+                            <h5 class="modal-title modal-title-custom">
+                                <i class="fas fa-users"></i>
+                                Seleção de Associado
+                            </h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="alert-premium alert-warning-premium">
+                                <i class="fas fa-exclamation-triangle fa-lg"></i>
+                                <div>
+                                    <strong>Múltiplos registros encontrados!</strong><br>
+                                    Selecione o associado correto para continuar.
+                                </div>
+                            </div>
+                            <div id="listaAssociadosSelecao">
+                                <!-- Lista será inserida aqui -->
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-premium btn-secondary-premium" data-bs-dismiss="modal">
+                                <i class="fas fa-times me-2"></i>
+                                Cancelar
+                            </button>
+                            <button type="button" class="btn btn-premium btn-primary-premium" id="btnConfirmarSelecao"
+                                disabled onclick="confirmarSelecaoAssociado()">
+                                <i class="fas fa-check me-2"></i>
+                                Confirmar Seleção
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-    <!-- JavaScript do Header Component -->
-    <?php $headerComponent->renderJS(); ?>
+            <!-- Modal de Ficha de Desfiliação -->
+            <div class="modal fade" id="modalFichaDesfiliacao" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-xl modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header modal-header-custom">
+                            <h5 class="modal-title modal-title-custom">
+                                <i class="fas fa-file-alt"></i>
+                                Ficha de Desfiliação - ASSEGO
+                            </h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div id="fichaDesfiliacao" style="padding: 2.5rem; background: white; border-radius: 12px;">
+                                <!-- Conteúdo da ficha será gerado aqui -->
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-premium btn-secondary-premium" data-bs-dismiss="modal">
+                                <i class="fas fa-times me-2"></i>
+                                Fechar
+                            </button>
+                            <button type="button" class="btn btn-premium btn-primary-premium" onclick="imprimirFicha()">
+                                <i class="fas fa-print me-2"></i>
+                                Imprimir Ficha
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-    <script>
-        // ===== SISTEMA DE NOTIFICAÇÕES =====
-        class NotificationSystem {
-            constructor() {
-                this.container = document.getElementById('toastContainer');
-            }
+            <!-- Scripts -->
+            <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+            <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
 
-            show(message, type = 'success', duration = 5000) {
-                const toast = document.createElement('div');
-                toast.className = `toast align-items-center text-white bg-${type} border-0`;
-                toast.setAttribute('role', 'alert');
+            <!-- JavaScript do Header Component -->
+            <?php $headerComponent->renderJS(); ?>
 
-                toast.innerHTML = `
+            <script>
+                // Variáveis globais
+                let dadosAssociadoAtual = null;
+                let associadoSelecionadoId = null;
+
+                // Inicialização
+                document.addEventListener('DOMContentLoaded', function () {
+                    AOS.init({
+                        duration: 800,
+                        once: true,
+                        offset: 50
+                    });
+
+                    // Adiciona efeito de ondulação nos cards
+                    document.querySelectorAll('.action-card').forEach(card => {
+                        card.addEventListener('click', function (e) {
+                            const ripple = document.createElement('span');
+                            ripple.classList.add('ripple');
+                            this.appendChild(ripple);
+
+                            setTimeout(() => {
+                                ripple.remove();
+                            }, 600);
+                        });
+                    });
+                });
+
+                // Função para mostrar aviso de sem permissão
+                function semPermissao() {
+                    showToast('Você não tem permissão para acessar esta funcionalidade', 'danger');
+                }
+
+                // Funções de navegação
+                function novoPreCadastro() {
+                    showToast('Redirecionando para novo cadastro...', 'info');
+                    setTimeout(() => {
+                        window.location.href = '../pages/cadastroForm.php';
+                    }, 500);
+                }
+
+                function consultarAssociado() {
+                    showToast('Abrindo consulta de associados...', 'info');
+                    setTimeout(() => {
+                        window.location.href = '../pages/dashboard.php';
+                    }, 500);
+                }
+
+                function consultarDependentes18() {
+                    showToast('Carregando dependentes...', 'info');
+                    setTimeout(() => {
+                        window.location.href = '../pages/dependentes_18anos.php';
+                    }, 500);
+                }
+
+                function relatoriosComerciais() {
+                    showToast('Abrindo relatórios comerciais...', 'info');
+                    setTimeout(() => {
+                        window.location.href = '../pages/comercial_relatorios.php';
+                    }, 500);
+                }
+
+                function gerenciarPreCadastros() {
+                    showToast('Carregando pré-cadastros...', 'info');
+                    setTimeout(() => {
+                        window.location.href = '../pages/pre_cadastros.php';
+                    }, 500);
+                }
+
+                // Função para abrir modal de desfiliação
+                function abrirModalDesfiliacao() {
+                    const modal = new bootstrap.Modal(document.getElementById('modalDesfiliacao'));
+                    modal.show();
+                }
+
+                // Buscar associado para desfiliação
+                async function buscarAssociadoDesfiliacao(event) {
+                    event.preventDefault();
+
+                    const busca = document.getElementById('buscaDesfiliacao').value.trim();
+                    const loading = document.getElementById('loadingDesfiliacao');
+                    const resultado = document.getElementById('resultadoDesfiliacao');
+                    const btnGerar = document.getElementById('btnGerarFicha');
+
+                    if (!busca) {
+                        showToast('Por favor, digite um RG ou nome', 'warning');
+                        return;
+                    }
+
+                    loading.style.display = 'flex';
+                    resultado.style.display = 'none';
+                    btnGerar.style.display = 'none';
+
+                    try {
+                        const parametro = isNaN(busca) ? 'nome' : 'rg';
+                        const response = await fetch(`../api/associados/buscar_por_rg.php?${parametro}=${encodeURIComponent(busca)}`);
+                        const result = await response.json();
+
+                        if (result.status === 'multiple_results') {
+                            mostrarModalSelecao(result.data);
+                        } else if (result.status === 'success') {
+                            dadosAssociadoAtual = result.data;
+                            exibirDadosAssociado(result.data);
+                        } else {
+                            showToast(result.message || 'Associado não encontrado', 'danger');
+                        }
+                    } catch (error) {
+                        console.error('Erro:', error);
+                        showToast('Erro ao buscar associado', 'danger');
+                    } finally {
+                        loading.style.display = 'none';
+                    }
+                }
+
+                // Exibir dados do associado encontrado
+                function exibirDadosAssociado(dados) {
+                    const resultado = document.getElementById('resultadoDesfiliacao');
+                    const btnGerar = document.getElementById('btnGerarFicha');
+
+                    const pessoais = dados.dados_pessoais || {};
+                    const militares = dados.dados_militares || {};
+
+                    resultado.innerHTML = `
+                <div class="result-card animate__animated animate__fadeIn">
+                    <h6 class="mb-3" style="color: var(--primary); font-weight: 700;">
+                        <i class="fas fa-user me-2"></i>
+                        Dados do Associado Encontrado
+                    </h6>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <div class="d-flex flex-column gap-2">
+                                <div>
+                                    <small class="text-muted">Nome Completo</small>
+                                    <p class="mb-0 fw-semibold">${pessoais.nome || '-'}</p>
+                                </div>
+                                <div>
+                                    <small class="text-muted">RG Militar</small>
+                                    <p class="mb-0 fw-semibold">${pessoais.rg || '-'}</p>
+                                </div>
+                                <div>
+                                    <small class="text-muted">CPF</small>
+                                    <p class="mb-0 fw-semibold">${formatarCPF(pessoais.cpf) || '-'}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="d-flex flex-column gap-2">
+                                <div>
+                                    <small class="text-muted">Corporação</small>
+                                    <p class="mb-0 fw-semibold">${militares.corporacao || '-'}</p>
+                                </div>
+                                <div>
+                                    <small class="text-muted">Patente</small>
+                                    <p class="mb-0 fw-semibold">${militares.patente || '-'}</p>
+                                </div>
+                                <div>
+                                    <small class="text-muted">Lotação</small>
+                                    <p class="mb-0 fw-semibold">${militares.lotacao || '-'}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+                    resultado.style.display = 'block';
+                    btnGerar.style.display = 'inline-block';
+                }
+
+                // Mostrar modal de seleção para múltiplos resultados
+                function mostrarModalSelecao(associados) {
+                    const lista = document.getElementById('listaAssociadosSelecao');
+                    lista.innerHTML = '';
+
+                    associados.forEach(assoc => {
+                        const card = document.createElement('div');
+                        card.className = 'selection-card';
+                        card.innerHTML = `
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="associadoSelecao" 
+                               value="${assoc.id}" id="assoc_${assoc.id}"
+                               onchange="habilitarConfirmacao()">
+                        <label class="form-check-label" for="assoc_${assoc.id}" style="cursor: pointer; width: 100%;">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-1">${assoc.nome}</h6>
+                                    <small class="text-muted">RG: ${assoc.rg} | CPF: ${assoc.cpf || '-'}</small><br>
+                                    <span class="badge badge-premium badge-primary-premium mt-1">
+                                        ${assoc.corporacao || 'Sem corporação'} - ${assoc.patente || '-'}
+                                    </span>
+                                </div>
+                                <i class="fas fa-chevron-right text-muted"></i>
+                            </div>
+                        </label>
+                    </div>
+                `;
+
+                        card.addEventListener('click', function () {
+                            document.querySelector(`#assoc_${assoc.id}`).checked = true;
+                            document.querySelectorAll('.selection-card').forEach(c => c.classList.remove('selected'));
+                            this.classList.add('selected');
+                            habilitarConfirmacao();
+                        });
+
+                        lista.appendChild(card);
+                    });
+
+                    // Fechar modal de busca
+                    bootstrap.Modal.getInstance(document.getElementById('modalDesfiliacao')).hide();
+
+                    // Abrir modal de seleção
+                    const modalSelecao = new bootstrap.Modal(document.getElementById('modalSelecaoAssociado'));
+                    modalSelecao.show();
+                }
+
+                // Habilitar botão de confirmação
+                function habilitarConfirmacao() {
+                    document.getElementById('btnConfirmarSelecao').disabled = false;
+                }
+
+                // Confirmar seleção de associado
+                async function confirmarSelecaoAssociado() {
+                    const selected = document.querySelector('input[name="associadoSelecao"]:checked');
+                    if (!selected) return;
+
+                    associadoSelecionadoId = selected.value;
+
+                    // Fechar modal de seleção
+                    bootstrap.Modal.getInstance(document.getElementById('modalSelecaoAssociado')).hide();
+
+                    // Reabrir modal de desfiliação
+                    const modalDesfiliacao = new bootstrap.Modal(document.getElementById('modalDesfiliacao'));
+                    modalDesfiliacao.show();
+
+                    // Buscar dados completos
+                    const loading = document.getElementById('loadingDesfiliacao');
+                    loading.style.display = 'flex';
+
+                    try {
+                        const response = await fetch(`../api/associados/buscar_por_rg.php?id=${associadoSelecionadoId}`);
+                        const result = await response.json();
+
+                        if (result.status === 'success') {
+                            dadosAssociadoAtual = result.data;
+                            exibirDadosAssociado(result.data);
+                        }
+                    } catch (error) {
+                        console.error('Erro:', error);
+                        showToast('Erro ao buscar dados', 'danger');
+                    } finally {
+                        loading.style.display = 'none';
+                    }
+                }
+
+                // Gerar ficha de desfiliação
+                function gerarFichaDesfiliacao() {
+                    if (!dadosAssociadoAtual) {
+                        showToast('Nenhum associado selecionado', 'warning');
+                        return;
+                    }
+
+                    const pessoais = dadosAssociadoAtual.dados_pessoais || {};
+                    const militares = dadosAssociadoAtual.dados_militares || {};
+                    const endereco = dadosAssociadoAtual.endereco || {};
+
+                    const hoje = new Date();
+                    const meses = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
+                        'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+
+                    const fichaHTML = `
+                <div style="font-family: Arial, Helvetica, sans-serif; line-height: 1.6; color: #000;">
+                    <div style="text-align: center; margin-bottom: 40px;">
+                        <h2 style="color: #000; font-size: 18px; margin-bottom: 5px; font-weight: bold; letter-spacing: 1px;">
+                            SOLICITAÇÃO DE DESFILIAÇÃO
+                        </h2>
+                        <h3 style="color: #000; font-size: 16px; font-weight: bold; letter-spacing: 1px;">ASSEGO</h3>
+                    </div>
+                    
+                    <p style="text-align: right; margin-bottom: 30px; font-size: 14px;">
+                        Goiânia, ${hoje.getDate()} de ${meses[hoje.getMonth()]} de ${hoje.getFullYear()}
+                    </p>
+                    
+                    <p style="margin-bottom: 20px; font-size: 14px;"><strong>Prezado Sr. Presidente,</strong></p>
+                    
+                    <div style="text-align: justify; line-height: 1.8; margin-bottom: 20px; font-size: 14px;">
+                        <p style="text-indent: 40px;">
+                            Eu, <strong>${pessoais.nome || '_______________'}</strong>,
+                            portador do RG militar: <strong>${pessoais.rg || '_______________'}</strong>,
+                            Instituição: <strong>${militares.corporacao || '_______________'}</strong>,
+                            residente e domiciliado: <strong>${formatarEndereco(endereco)}</strong>,
+                            telefone <strong>${formatarTelefone(pessoais.telefone) || '_______________'}</strong>,
+                            Lotação: <strong>${militares.lotacao || '_______________'}</strong>,
+                            solicito minha desfiliação total da Associação dos Subtenentes e Sargentos do Estado
+                            de Goiás – ASSEGO, pelo motivo:
+                        </p>
+                    </div>
+                    
+                    <div style="margin: 25px 0;">
+                        <textarea id="motivoDesfiliacao" 
+                                  style="width: 100%; 
+                                         min-height: 100px; 
+                                         padding: 10px; 
+                                         border: 1px solid #000; 
+                                         border-radius: 0; 
+                                         font-family: Arial, Helvetica, sans-serif;
+                                         font-size: 14px;
+                                         line-height: 1.6;
+                                         background: #fff;
+                                         resize: vertical;"
+                                  placeholder="Digite o motivo da desfiliação"
+                                  onInput="this.style.height = 'auto'; this.style.height = this.scrollHeight + 'px'">
+                        </textarea>
+                    </div>
+                    
+                    <div style="text-align: justify; margin-bottom: 30px; font-size: 14px;">
+                        <p style="text-indent: 40px;">
+                            Me coloco à disposição, através do telefone informado acima para informações
+                            adicionais necessárias à conclusão deste processo e, desde já, 
+                            <strong>DECLARO ESTAR CIENTE QUE O PROCESSO INTERNO TEM UM PRAZO DE ATÉ 30 DIAS, 
+                            A CONTAR DA DATA DE SOLICITAÇÃO, PARA SER CONCLUÍDO.</strong>
+                        </p>
+                    </div>
+                    
+                    <p style="margin-bottom: 60px; font-size: 14px;"><strong>Respeitosamente,</strong></p>
+                    
+                    <div style="text-align: center; margin-top: 80px;">
+                        <div style="display: inline-block; border-top: 1px solid #000; 
+                                    padding-top: 5px; min-width: 300px; font-size: 14px;">
+                            <strong>Assinatura do requerente</strong>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+                    document.getElementById('fichaDesfiliacao').innerHTML = fichaHTML;
+
+                    // Fechar modal de busca
+                    bootstrap.Modal.getInstance(document.getElementById('modalDesfiliacao')).hide();
+
+                    // Abrir modal da ficha
+                    setTimeout(() => {
+                        const modalFicha = new bootstrap.Modal(document.getElementById('modalFichaDesfiliacao'));
+                        modalFicha.show();
+
+                        // Focar no campo de texto após abrir o modal
+                        setTimeout(() => {
+                            const textarea = document.getElementById('motivoDesfiliacao');
+                            if (textarea) {
+                                textarea.focus();
+                            }
+                        }, 500);
+                    }, 300);
+                }
+
+                // Função para imprimir ficha
+                function imprimirFicha() {
+                    // Capturar o valor do motivo antes de imprimir
+                    const motivoTextarea = document.getElementById('motivoDesfiliacao');
+                    const motivoTexto = motivoTextarea ? motivoTextarea.value : '';
+
+                    // Criar uma cópia do conteúdo substituindo o textarea pelo texto
+                    const conteudoOriginal = document.getElementById('fichaDesfiliacao').innerHTML;
+                    const conteudoParaImprimir = conteudoOriginal.replace(
+                        /<textarea[^>]*id="motivoDesfiliacao"[^>]*>.*?<\/textarea>/gi,
+                        `<div style="border: 1px solid #000; 
+                     min-height: 100px; 
+                     padding: 10px; 
+                     background: #fff;
+                     white-space: pre-wrap;
+                     word-wrap: break-word;
+                     font-size: 14px;">${motivoTexto || '[Motivo não preenchido]'}</div>`
+                    );
+
+                    const janela = window.open('', '_blank', 'width=800,height=600');
+
+                    janela.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Ficha de Desfiliação - ASSEGO</title>
+                    <style>
+                        body { 
+                            font-family: Arial, Helvetica, sans-serif; 
+                            padding: 20mm; 
+                            line-height: 1.6;
+                            color: #000;
+                        }
+                        @media print { 
+                            body { 
+                                margin: 0;
+                                padding: 15mm;
+                            } 
+                        }
+                        @page {
+                            size: A4;
+                            margin: 15mm;
+                        }
+                    </style>
+                </head>
+                <body>${conteudoParaImprimir}</body>
+                </html>
+            `);
+
+                    janela.document.close();
+                    janela.onload = function () {
+                        janela.print();
+                        janela.close();
+                    };
+                }
+
+                // Limpar busca
+                function limparBuscaDesfiliacao() {
+                    document.getElementById('buscaDesfiliacao').value = '';
+                    document.getElementById('resultadoDesfiliacao').style.display = 'none';
+                    document.getElementById('btnGerarFicha').style.display = 'none';
+                    dadosAssociadoAtual = null;
+                }
+
+                // Função para alterar permissão de relatórios (apenas para diretor)
+                async function alterarPermissaoRelatorios(funcionarioId, conceder) {
+                    try {
+                        const response = await fetch('../api/permissoes/alterar_permissao_relatorios.php', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                funcionario_id: funcionarioId,
+                                conceder: conceder
+                            })
+                        });
+
+                        const result = await response.json();
+
+                        if (result.success) {
+                            showToast(conceder ?
+                                'Permissão de relatórios concedida com sucesso!' :
+                                'Permissão de relatórios removida com sucesso!',
+                                'success'
+                            );
+                        } else {
+                            showToast(result.message || 'Erro ao alterar permissão', 'danger');
+                            // Reverter o switch em caso de erro
+                            const checkbox = document.querySelector(`input[onchange*="${funcionarioId}"]`);
+                            if (checkbox) {
+                                checkbox.checked = !conceder;
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Erro:', error);
+                        showToast('Erro ao alterar permissão', 'danger');
+                        // Reverter o switch em caso de erro
+                        const checkbox = document.querySelector(`input[onchange*="${funcionarioId}"]`);
+                        if (checkbox) {
+                            checkbox.checked = !conceder;
+                        }
+                    }
+                }
+
+                // Funções auxiliares
+                function formatarCPF(cpf) {
+                    if (!cpf) return '';
+                    cpf = cpf.toString().replace(/\D/g, '');
+                    if (cpf.length === 11) {
+                        return cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+                    }
+                    return cpf;
+                }
+
+                function formatarTelefone(telefone) {
+                    if (!telefone) return '';
+                    telefone = telefone.toString().replace(/\D/g, '');
+                    if (telefone.length === 11) {
+                        return telefone.replace(/(\d{2})(\d{5})(\d{4})/, "($1) $2-$3");
+                    } else if (telefone.length === 10) {
+                        return telefone.replace(/(\d{2})(\d{4})(\d{4})/, "($1) $2-$3");
+                    }
+                    return telefone;
+                }
+
+                function formatarEndereco(endereco) {
+                    const partes = [];
+                    if (endereco.endereco) {
+                        let linha = endereco.endereco;
+                        if (endereco.numero) linha += `, nº ${endereco.numero}`;
+                        if (endereco.complemento) linha += `, ${endereco.complemento}`;
+                        partes.push(linha);
+                    }
+                    if (endereco.bairro) partes.push(`Bairro: ${endereco.bairro}`);
+                    if (endereco.cidade) partes.push(endereco.cidade);
+                    if (endereco.cep) partes.push(`CEP: ${endereco.cep}`);
+
+                    return partes.join(', ') || '_______________';
+                }
+
+                // Sistema de Toast
+                function showToast(message, type = 'success') {
+                    const toastHTML = `
+                <div class="toast align-items-center text-white bg-${type} border-0" role="alert">
                     <div class="d-flex">
                         <div class="toast-body">
-                            <i class="fas fa-${this.getIcon(type)} me-2"></i>
                             ${message}
                         </div>
                         <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
                     </div>
-                `;
-
-                this.container.appendChild(toast);
-                const bsToast = new bootstrap.Toast(toast, {
-                    delay: duration
-                });
-                bsToast.show();
-
-                toast.addEventListener('hidden.bs.toast', () => {
-                    toast.remove();
-                });
-            }
-
-            getIcon(type) {
-                const icons = {
-                    success: 'check-circle',
-                    error: 'exclamation-triangle',
-                    warning: 'exclamation-circle',
-                    info: 'info-circle'
-                };
-                return icons[type] || 'info-circle';
-            }
-        }
-
-        // ===== VARIÁVEIS GLOBAIS =====
-        const notifications = new NotificationSystem();
-        let dadosAssociadoAtual = null;
-        let associadoSelecionadoId = null;
-        let listaAssociadosMultiplos = [];
-        const temPermissao = <?php echo json_encode($temPermissaoComercial); ?>;
-        const isComercial = <?php echo json_encode($isComercial); ?>;
-        const isPresidencia = <?php echo json_encode($isPresidencia); ?>;
-        const departamentoUsuario = <?php echo json_encode($departamentoUsuario); ?>;
-
-        // ===== INICIALIZAÇÃO =====
-        document.addEventListener('DOMContentLoaded', function() {
-            AOS.init({
-                duration: 800,
-                once: true
-            });
-
-            if (!temPermissao) {
-                console.log('❌ Usuário sem permissão - funcionalidades restritas, mas estatísticas visíveis');
-                configurarEventos();
-                preencherDataAtual();
-                notifications.show('Acesso limitado - apenas visualização de estatísticas!', 'warning', 4000);
-                return;
-            }
-
-            preencherDataAtual();
-            configurarEventos();
-            <?php if ($temPermissaoComercial): ?>
-                configurarFichaDesfiliacao();
-            <?php endif; ?>
-
-            <?php if ($temPermissaoComercial): ?>
-                $('#rgBuscaComercial').on('keypress', function(e) {
-                    if (e.key === 'Enter') {
-                        e.preventDefault();
-                        buscarAssociadoPorRG(e);
-                    }
-                });
-
-                document.getElementById('btnConfirmarSelecaoComercial').addEventListener('click', buscarAssociadoSelecionado);
-            <?php endif; ?>
-
-            const departamentoNome = isComercial ? 'Comercial' : isPresidencia ? 'Presidência' : 'Outro';
-            const nivelAcesso = temPermissao ? 'completo' : 'visualização apenas';
-            notifications.show(`Serviços comerciais - ${departamentoNome} (${nivelAcesso})!`, temPermissao ? 'success' : 'info', 3000);
-        });
-
-        // ===== FUNÇÕES DE BUSCA (ATUALIZADAS PARA MÚLTIPLOS ASSOCIADOS) =====
-
-        async function buscarAssociadoPorRG(event) {
-            event.preventDefault();
-
-            if (!temPermissao) {
-                notifications.show('Você não tem permissão para buscar associados', 'error');
-                return;
-            }
-
-            const rgInput = document.getElementById('rgBuscaComercial');
-            const busca = rgInput.value.trim();
-            const btnBuscar = document.getElementById('btnBuscarComercial');
-            const loadingOverlay = document.getElementById('loadingBuscaComercial');
-            const dadosContainer = document.getElementById('dadosAssociadoContainer');
-            const fichaContainer = document.getElementById('fichaDesfiliacao');
-
-            if (!busca) {
-                mostrarAlertaBuscaComercial('Por favor, digite um RG ou nome para buscar.', 'danger');
-                return;
-            }
-
-            // Mostra loading
-            loadingOverlay.style.display = 'flex';
-            btnBuscar.disabled = true;
-            dadosContainer.style.display = 'none';
-            fichaContainer.style.display = 'none';
-            esconderAlertaBuscaComercial();
-
-            try {
-                const parametro = isNaN(busca) ? 'nome' : 'rg';
-                const response = await fetch(`../api/associados/buscar_por_rg.php?${parametro}=${encodeURIComponent(busca)}`);
-                const result = await response.json();
-
-                if (result.status === 'multiple_results') {
-                    listaAssociadosMultiplos = result.data;
-                    mostrarModalSelecaoComercial(result.data);
-                    mostrarAlertaBuscaComercial('Múltiplos associados encontrados. Por favor, selecione o correto.', 'warning');
-                } else if (result.status === 'success') {
-                    dadosAssociadoAtual = result.data;
-                    exibirDadosAssociado(dadosAssociadoAtual);
-                    preencherFichaDesfiliacao(dadosAssociadoAtual);
-
-                    dadosContainer.style.display = 'block';
-                    fichaContainer.style.display = 'block';
-
-                    mostrarAlertaBuscaComercial('Associado encontrado! Dados carregados e ficha preenchida automaticamente.', 'success');
-
-                    setTimeout(() => {
-                        dadosContainer.scrollIntoView({
-                            behavior: 'smooth',
-                            block: 'start'
-                        });
-                    }, 300);
-                } else {
-                    mostrarAlertaBuscaComercial(result.message || 'Erro ao buscar dados', 'danger');
-                }
-
-            } catch (error) {
-                console.error('Erro na busca comercial:', error);
-                mostrarAlertaBuscaComercial('Erro ao buscar associado. Verifique sua conexão.', 'danger');
-            } finally {
-                loadingOverlay.style.display = 'none';
-                btnBuscar.disabled = false;
-            }
-        }
-
-        function mostrarModalSelecaoComercial(associados) {
-            const listaContainer = document.getElementById('listaAssociadosSelecaoComercial');
-            listaContainer.innerHTML = '';
-
-            associados.forEach(assoc => {
-                const card = document.createElement('div');
-                card.className = 'associado-card d-flex align-items-center';
-                card.dataset.id = assoc.id;
-
-                let badgeClass = 'badge-default';
-                let corporacaoIcon = 'fa-shield-alt';
-
-                if (assoc.corporacao) {
-                    const corp = assoc.corporacao.toUpperCase();
-                    if (corp.includes('PM') || corp.includes('POLÍCIA MILITAR')) {
-                        badgeClass = 'badge-pm';
-                        corporacaoIcon = 'fa-shield';
-                    } else if (corp.includes('BM') || corp.includes('BOMBEIRO')) {
-                        badgeClass = 'badge-bm';
-                        corporacaoIcon = 'fa-fire';
-                    } else if (corp.includes('PC') || corp.includes('POLÍCIA CIVIL')) {
-                        badgeClass = 'badge-pc';
-                        corporacaoIcon = 'fa-user-shield';
-                    }
-                }
-
-                card.innerHTML = `
-                    <div class="form-check me-3">
-                        <input class="form-check-input" type="radio" name="associadoSelecionadoComercial" 
-                               value="${assoc.id}" id="assoc_comercial_${assoc.id}">
-                    </div>
-                    ${assoc.foto ? 
-                        `<img src="${assoc.foto}" class="associado-foto" alt="${assoc.nome}">` : 
-                        `<div class="associado-foto d-flex align-items-center justify-content-center bg-light">
-                            <i class="fas fa-user fa-2x text-muted"></i>
-                        </div>`
-                    }
-                    <div class="associado-info">
-                        <div class="associado-nome">${assoc.nome}</div>
-                        <div class="associado-rg">
-                            <i class="fas fa-id-card me-1"></i>
-                            RG: ${assoc.rg} | CPF: ${assoc.cpf || 'Não informado'}
-                        </div>
-                        <div class="associado-militar">
-                            <span class="badge-corporacao ${badgeClass}">
-                                <i class="fas ${corporacaoIcon}"></i>
-                                ${assoc.corporacao || 'Corporação não informada'}
-                            </span>
-                            ${assoc.patente ? 
-                                `<span class="badge bg-secondary">
-                                    <i class="fas fa-star me-1"></i>
-                                    ${assoc.patente}
-                                </span>` : ''
-                            }
-                            ${assoc.unidade ? 
-                                `<span class="badge bg-info text-dark">
-                                    <i class="fas fa-building me-1"></i>
-                                    ${assoc.unidade}
-                                </span>` : ''
-                            }
-                        </div>
-                        ${assoc.situacao ? 
-                            `<div class="mt-2">
-                                <small class="text-muted">Situação: </small>
-                                <span class="badge ${assoc.situacao === 'DESFILIADO' ? 'bg-danger' : 'bg-success'}">
-                                    ${assoc.situacao}
-                                </span>
-                            </div>` : ''
-                        }
-                    </div>
-                `;
-
-                card.addEventListener('click', function() {
-                    const radio = this.querySelector('input[type="radio"]');
-                    radio.checked = true;
-
-                    document.querySelectorAll('.associado-card').forEach(c => c.classList.remove('selecionado'));
-                    this.classList.add('selecionado');
-
-                    document.getElementById('btnConfirmarSelecaoComercial').disabled = false;
-                    associadoSelecionadoId = assoc.id;
-                });
-
-                listaContainer.appendChild(card);
-            });
-
-            const modal = new bootstrap.Modal(document.getElementById('modalSelecaoAssociadoComercial'));
-            modal.show();
-        }
-
-        async function buscarAssociadoSelecionado() {
-            if (!associadoSelecionadoId || !temPermissao) return;
-
-            const modal = bootstrap.Modal.getInstance(document.getElementById('modalSelecaoAssociadoComercial'));
-            modal.hide();
-
-            const loadingOverlay = document.getElementById('loadingBuscaComercial');
-            const dadosContainer = document.getElementById('dadosAssociadoContainer');
-            const fichaContainer = document.getElementById('fichaDesfiliacao');
-
-            loadingOverlay.style.display = 'flex';
-
-            try {
-                const response = await fetch(`../api/associados/buscar_por_rg.php?id=${associadoSelecionadoId}`);
-                const result = await response.json();
-
-                if (result.status === 'success') {
-                    dadosAssociadoAtual = result.data;
-                    exibirDadosAssociado(result.data);
-                    preencherFichaDesfiliacao(result.data);
-
-                    dadosContainer.style.display = 'block';
-                    fichaContainer.style.display = 'block';
-
-                    mostrarAlertaBuscaComercial('Dados carregados e ficha preenchida automaticamente!', 'success');
-
-                    setTimeout(() => {
-                        dadosContainer.scrollIntoView({
-                            behavior: 'smooth',
-                            block: 'start'
-                        });
-                    }, 300);
-                } else {
-                    mostrarAlertaBuscaComercial(result.message || 'Erro ao buscar dados', 'danger');
-                }
-            } catch (error) {
-                console.error('Erro:', error);
-                mostrarAlertaBuscaComercial('Erro ao consultar dados do associado.', 'danger');
-            } finally {
-                loadingOverlay.style.display = 'none';
-                associadoSelecionadoId = null;
-                document.getElementById('btnConfirmarSelecaoComercial').disabled = true;
-            }
-        }
-
-        function exibirDadosAssociado(dados) {
-            const grid = document.getElementById('dadosAssociadoGrid');
-            const militarContainer = document.getElementById('identificacaoMilitarComercial');
-            const militarGrid = document.getElementById('militarInfoGridComercial');
-
-            grid.innerHTML = '';
-            militarGrid.innerHTML = '';
-
-            if (dados.dados_militares && dados.dados_militares.corporacao !== 'Não informada') {
-                militarContainer.style.display = 'block';
-
-                militarGrid.innerHTML = `
-                    <div class="militar-info-item">
-                        <span class="militar-info-label">Corporação</span>
-                        <span class="militar-info-value">${dados.dados_militares.corporacao}</span>
-                    </div>
-                    <div class="militar-info-item">
-                        <span class="militar-info-label">Patente</span>
-                        <span class="militar-info-value">${dados.dados_militares.patente}</span>
-                    </div>
-                    <div class="militar-info-item">
-                        <span class="militar-info-label">Unidade</span>
-                        <span class="militar-info-value">${dados.dados_militares.unidade || 'Não informada'}</span>
-                    </div>
-                    <div class="militar-info-item">
-                        <span class="militar-info-label">Lotação</span>
-                        <span class="militar-info-value">${dados.dados_militares.lotacao || 'Não informada'}</span>
-                    </div>
-                `;
-            } else {
-                militarContainer.style.display = 'none';
-            }
-
-            function criarDadosItem(label, value, icone = 'fa-info') {
-                if (!value || value === 'null' || value === '') return '';
-
-                return `
-                    <div class="dados-item">
-                        <div class="dados-label">
-                            <i class="fas ${icone} me-1"></i>
-                            ${label}
-                        </div>
-                        <div class="dados-value">${value}</div>
-                    </div>
-                `;
-            }
-
-            const pessoais = dados.dados_pessoais || {};
-            grid.innerHTML += criarDadosItem('Nome Completo', pessoais.nome, 'fa-user');
-            grid.innerHTML += criarDadosItem('RG Militar', pessoais.rg, 'fa-id-card');
-            grid.innerHTML += criarDadosItem('CPF', formatarCPF(pessoais.cpf), 'fa-id-badge');
-            grid.innerHTML += criarDadosItem('Data Nascimento', formatarData(pessoais.data_nascimento), 'fa-calendar');
-            grid.innerHTML += criarDadosItem('Email', pessoais.email, 'fa-envelope');
-            grid.innerHTML += criarDadosItem('Telefone', formatarTelefone(pessoais.telefone), 'fa-phone');
-
-            const militares = dados.dados_militares || {};
-            grid.innerHTML += criarDadosItem('Corporação', militares.corporacao, 'fa-shield-alt');
-            grid.innerHTML += criarDadosItem('Patente', militares.patente, 'fa-medal');
-            grid.innerHTML += criarDadosItem('Lotação', militares.lotacao, 'fa-building');
-            grid.innerHTML += criarDadosItem('Unidade', militares.unidade, 'fa-map-marker-alt');
-
-            const endereco = dados.endereco || {};
-            if (endereco.endereco) {
-                const enderecoCompleto = [
-                    endereco.endereco,
-                    endereco.numero ? `nº ${endereco.numero}` : '',
-                    endereco.bairro,
-                    endereco.cidade
-                ].filter(Boolean).join(', ');
-
-                grid.innerHTML += criarDadosItem('Endereço', enderecoCompleto, 'fa-home');
-            }
-            grid.innerHTML += criarDadosItem('CEP', formatarCEP(endereco.cep), 'fa-map-pin');
-
-            const financeiros = dados.dados_financeiros || {};
-            grid.innerHTML += criarDadosItem('Tipo Associado', financeiros.tipo_associado, 'fa-user-tag');
-            grid.innerHTML += criarDadosItem('Situação Financeira', financeiros.situacao_financeira, 'fa-dollar-sign');
-
-            const contrato = dados.contrato || {};
-            grid.innerHTML += criarDadosItem('Data Filiação', formatarData(contrato.data_filiacao), 'fa-handshake');
-
-            const statusBadge = dados.status_cadastro === 'PRE_CADASTRO' ?
-                '<span class="badge bg-warning">Pré-cadastro</span>' :
-                '<span class="badge bg-success">Cadastro Definitivo</span>';
-            grid.innerHTML += `
-                <div class="dados-item">
-                    <div class="dados-label">
-                        <i class="fas fa-info-circle me-1"></i>
-                        Status do Cadastro
-                    </div>
-                    <div class="dados-value">${statusBadge}</div>
                 </div>
             `;
-        }
 
-        // ===== FUNÇÕES DE DESFILIAÇÃO =====
+                    const container = document.querySelector('.toast-container');
+                    const toastElement = document.createElement('div');
+                    toastElement.innerHTML = toastHTML;
+                    container.appendChild(toastElement.firstElementChild);
 
-        function preencherDataAtual() {
-            const hoje = new Date();
-            const dia = hoje.getDate();
-            const meses = [
-                'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
-                'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'
-            ];
-            const mes = meses[hoje.getMonth()];
-            const ano = hoje.getFullYear();
+                    const toast = new bootstrap.Toast(container.lastElementChild);
+                    toast.show();
+                }
+            </script>
 
-            const diaEl = document.getElementById('diaAtual');
-            const mesEl = document.getElementById('mesAtual');
-            const anoEl = document.getElementById('anoAtual');
+            <script>
+                // Função para abrir modal de permissões
+                function abrirModalPermissoes() {
+                    const modal = new bootstrap.Modal(document.getElementById('modalGerenciarPermissoes'));
+                    modal.show();
+                }
 
-            if (diaEl) diaEl.textContent = dia.toString().padStart(2, '0');
-            if (mesEl) mesEl.textContent = mes;
-            if (anoEl) anoEl.textContent = ano.toString();
-        }
+                // Função para filtrar funcionários na busca
+                function filtrarFuncionarios() {
+                    const busca = document.getElementById('buscaFuncionario').value.toLowerCase();
+                    const funcionarios = document.querySelectorAll('.funcionario-item');
 
-        function preencherFichaDesfiliacao(dados) {
-            const pessoais = dados.dados_pessoais || {};
-            const nomeEl = document.getElementById('nomeCompleto');
-            const rgEl = document.getElementById('rgMilitar');
-            const telefoneEl = document.getElementById('telefoneFormatado');
+                    funcionarios.forEach(item => {
+                        const nome = item.getAttribute('data-nome');
+                        if (nome.includes(busca)) {
+                            item.classList.remove('hidden');
+                        } else {
+                            item.classList.add('hidden');
+                        }
+                    });
+                }
 
-            if (nomeEl) nomeEl.textContent = pessoais.nome || '';
-            if (rgEl) rgEl.textContent = pessoais.rg || '';
-            if (telefoneEl) telefoneEl.textContent = formatarTelefone(pessoais.telefone) || '';
+                // Função melhorada para alterar permissão
+                async function alterarPermissaoModal(funcionarioId, conceder) {
+                    const btn = document.getElementById(`btn_permissao_${funcionarioId}`);
+                    const statusBadge = document.getElementById(`status_${funcionarioId}`);
+                    const currentState = btn.getAttribute('data-current-state');
 
-            const militares = dados.dados_militares || {};
-            const corpEl = document.getElementById('corporacao');
-            const lotacaoEl = document.getElementById('lotacao');
+                    // Adicionar estado de loading
+                    btn.classList.add('btn-loading');
+                    btn.disabled = true;
 
-            if (corpEl) corpEl.textContent = militares.corporacao || '';
-            if (lotacaoEl) lotacaoEl.textContent = militares.lotacao || '';
+                    try {
+                        const response = await fetch('../api/permissoes/alterar_permissao_relatorios.php', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest'
+                            },
+                            body: JSON.stringify({
+                                funcionario_id: funcionarioId,
+                                conceder: conceder
+                            })
+                        });
 
-            const endereco = dados.endereco || {};
-            const enderecoCompleto = montarEnderecoCompleto(endereco);
+                        // Verificar se a resposta é válida
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
 
-            const linhas = quebrarEnderecoEmLinhas(enderecoCompleto);
-            const end1El = document.getElementById('endereco1');
-            const end2El = document.getElementById('endereco2');
-            const end3El = document.getElementById('endereco3');
+                        const text = await response.text();
 
-            if (end1El) end1El.textContent = linhas[0] || '';
-            if (end2El) end2El.textContent = linhas[1] || '';
-            if (end3El) end3El.textContent = linhas[2] || '';
+                        // Tentar fazer parse do JSON
+                        let result;
+                        try {
+                            result = JSON.parse(text);
+                        } catch (e) {
+                            console.error('Resposta não é JSON válido:', text);
+                            throw new Error('Resposta inválida do servidor');
+                        }
 
-            const motivoEl = document.getElementById('motivoDesfiliacao');
-            if (motivoEl) motivoEl.textContent = '';
-        }
+                        if (result.success) {
+                            // Atualizar UI
+                            if (conceder) {
+                                btn.className = 'btn btn-sm btn-danger';
+                                btn.innerHTML = '<i class="fas fa-times me-1"></i>Remover';
+                                btn.setAttribute('onclick', `alterarPermissaoModal(${funcionarioId}, false)`);
+                                btn.setAttribute('data-current-state', '1');
+                                statusBadge.innerHTML = '<span class="badge bg-success"><i class="fas fa-check-circle me-1"></i>Com acesso</span>';
+                            } else {
+                                btn.className = 'btn btn-sm btn-success';
+                                btn.innerHTML = '<i class="fas fa-check me-1"></i>Conceder';
+                                btn.setAttribute('onclick', `alterarPermissaoModal(${funcionarioId}, true)`);
+                                btn.setAttribute('data-current-state', '0');
+                                statusBadge.innerHTML = '<span class="badge bg-secondary"><i class="fas fa-times-circle me-1"></i>Sem acesso</span>';
+                            }
 
-        function montarEnderecoCompleto(endereco) {
-            const partes = [];
+                            // Atualizar contadores
+                            atualizarContadores();
 
-            if (endereco.endereco) {
-                let linha = endereco.endereco;
-                if (endereco.numero) linha += `, nº ${endereco.numero}`;
-                if (endereco.complemento) linha += `, ${endereco.complemento}`;
-                partes.push(linha);
-            }
-
-            if (endereco.bairro) {
-                partes.push(`Bairro: ${endereco.bairro}`);
-            }
-
-            if (endereco.cidade) {
-                let cidade = endereco.cidade;
-                if (endereco.cep) cidade += ` - CEP: ${formatarCEP(endereco.cep)}`;
-                partes.push(cidade);
-            }
-
-            return partes.join(', ');
-        }
-
-        function quebrarEnderecoEmLinhas(enderecoCompleto, maxPorLinha = 60) {
-            if (!enderecoCompleto) return ['', '', ''];
-
-            const palavras = enderecoCompleto.split(' ');
-            const linhas = [];
-            let linhaAtual = '';
-
-            for (const palavra of palavras) {
-                if ((linhaAtual + ' ' + palavra).length <= maxPorLinha) {
-                    linhaAtual += (linhaAtual ? ' ' : '') + palavra;
-                } else {
-                    if (linhaAtual) {
-                        linhas.push(linhaAtual);
-                        linhaAtual = palavra;
-                    } else {
-                        linhas.push(palavra);
+                            // Mostrar toast de sucesso
+                            showToast(conceder ?
+                                'Permissão de relatórios concedida com sucesso!' :
+                                'Permissão de relatórios removida com sucesso!',
+                                'success'
+                            );
+                        } else {
+                            throw new Error(result.message || 'Erro ao alterar permissão');
+                        }
+                    } catch (error) {
+                        console.error('Erro detalhado:', error);
+                        showToast('Erro ao alterar permissão: ' + error.message, 'danger');
+                    } finally {
+                        // Remover estado de loading
+                        btn.classList.remove('btn-loading');
+                        btn.disabled = false;
                     }
                 }
-            }
 
-            if (linhaAtual) linhas.push(linhaAtual);
+                // Função para atualizar contadores
+                function atualizarContadores() {
+                    const badges = document.querySelectorAll('.badge-status .badge');
+                    let comAcesso = 0;
+                    let semAcesso = 0;
 
-            while (linhas.length < 3) {
-                linhas.push('');
-            }
+                    badges.forEach(badge => {
+                        if (badge.textContent.includes('Com acesso')) {
+                            comAcesso++;
+                        } else {
+                            semAcesso++;
+                        }
+                    });
 
-            return linhas.slice(0, 3);
-        }
+                    // Atualizar os cards de estatística se existirem
+                    const totalComAcessoEl = document.getElementById('totalComAcesso');
+                    const totalSemAcessoEl = document.getElementById('totalSemAcesso');
 
-        function configurarFichaDesfiliacao() {
-            if (!temPermissao) return;
+                    if (totalComAcessoEl) {
+                        totalComAcessoEl.textContent = comAcesso;
+                    }
+                    if (totalSemAcessoEl) {
+                        totalSemAcessoEl.textContent = semAcesso;
+                    }
+                }
 
-            const motivoArea = document.getElementById('motivoDesfiliacao');
-
-            if (motivoArea) {
-                motivoArea.addEventListener('focus', function() {
-                    if (this.textContent === 'Clique aqui para digitar o motivo da desfiliação...') {
-                        this.textContent = '';
+                // Adicionar listener para tecla ESC fechar o modal
+                document.addEventListener('keydown', function (e) {
+                    if (e.key === 'Escape') {
+                        const modal = bootstrap.Modal.getInstance(document.getElementById('modalGerenciarPermissoes'));
+                        if (modal) {
+                            modal.hide();
+                        }
                     }
                 });
-
-                motivoArea.addEventListener('blur', function() {
-                    if (this.textContent.trim() === '') {
-                        this.textContent = 'Clique aqui para digitar o motivo da desfiliação...';
-                    }
-                });
-            }
-        }
-
-        function limparBuscaComercial() {
-            if (!temPermissao) {
-                notifications.show('Você não tem permissão para esta funcionalidade', 'error');
-                return;
-            }
-
-            const rgInput = document.getElementById('rgBuscaComercial');
-            const dadosContainer = document.getElementById('dadosAssociadoContainer');
-            const fichaContainer = document.getElementById('fichaDesfiliacao');
-            const dadosGrid = document.getElementById('dadosAssociadoGrid');
-            const militarContainer = document.getElementById('identificacaoMilitarComercial');
-
-            if (rgInput) rgInput.value = '';
-            if (dadosContainer) dadosContainer.style.display = 'none';
-            if (fichaContainer) fichaContainer.style.display = 'none';
-            if (dadosGrid) dadosGrid.innerHTML = '';
-            if (militarContainer) militarContainer.style.display = 'none';
-
-            dadosAssociadoAtual = null;
-            associadoSelecionadoId = null;
-            esconderAlertaBuscaComercial();
-
-            const campos = [
-                'nomeCompleto', 'rgMilitar', 'corporacao', 'endereco1',
-                'endereco2', 'endereco3', 'telefoneFormatado', 'lotacao'
-            ];
-
-            campos.forEach(campo => {
-                const elemento = document.getElementById(campo);
-                if (elemento) elemento.textContent = '';
-            });
-
-            const motivoArea = document.getElementById('motivoDesfiliacao');
-            if (motivoArea) {
-                motivoArea.textContent = 'Clique aqui para digitar o motivo da desfiliação...';
-            }
-        }
-
-        function mostrarAlertaBuscaComercial(mensagem, tipo) {
-            const alertDiv = document.getElementById('alertBuscaComercial');
-            const alertText = document.getElementById('alertBuscaComercialText');
-
-            if (!alertDiv || !alertText) return;
-
-            alertText.textContent = mensagem;
-
-            alertDiv.className = 'alert';
-
-            switch (tipo) {
-                case 'success':
-                    alertDiv.classList.add('alert-success');
-                    break;
-                case 'danger':
-                    alertDiv.classList.add('alert-danger');
-                    break;
-                case 'info':
-                    alertDiv.classList.add('alert-info');
-                    break;
-                case 'warning':
-                    alertDiv.classList.add('alert-warning');
-                    break;
-            }
-
-            alertDiv.style.display = 'flex';
-
-            if (tipo === 'success') {
-                setTimeout(esconderAlertaBuscaComercial, 5000);
-            }
-        }
-
-        function esconderAlertaBuscaComercial() {
-            const alertDiv = document.getElementById('alertBuscaComercial');
-            if (alertDiv) {
-                alertDiv.style.display = 'none';
-            }
-        }
-
-        function imprimirFicha() {
-    if (!temPermissao) {
-        notifications.show('Você não tem permissão para esta funcionalidade', 'error');
-        return;
-    }
-    
-    const nomeEl = document.getElementById('nomeCompleto');
-    const rgEl = document.getElementById('rgMilitar');
-    const motivoEl = document.getElementById('motivoDesfiliacao');
-    
-    const nome = nomeEl?.textContent?.trim();
-    const rg = rgEl?.textContent?.trim();
-    const motivo = motivoEl?.textContent?.trim();
-    
-    if (!nome || !rg) {
-        mostrarAlertaBuscaComercial('Por favor, busque um associado antes de imprimir.', 'danger');
-        return;
-    }
-    
-    if (!motivo || motivo === 'Clique aqui para digitar o motivo da desfiliação...') {
-        mostrarAlertaBuscaComercial('Por favor, informe o motivo da desfiliação antes de imprimir.', 'danger');
-        return;
-    }
-    
-    // Pega APENAS o conteúdo da ficha
-    const fichaContent = document.querySelector('#fichaDesfiliacao .ficha-desfiliacao');
-    if (!fichaContent) {
-        mostrarAlertaBuscaComercial('Conteúdo da ficha não encontrado.', 'danger');
-        return;
-    }
-    
-    // Cria uma nova janela com APENAS a ficha
-    const janelaImpressao = window.open('', '_blank', 'width=800,height=600');
-    
-    janelaImpressao.document.write(`
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="UTF-8">
-            <title>Solicitação de Desfiliação - ${nome}</title>
-            <style>
-                @page {
-                    size: A4;
-                    margin: 1.5cm;
-                }
-                
-                body {
-                    font-family: 'Times New Roman', serif;
-                    font-size: 12pt;
-                    line-height: 1.4;
-                    color: #000;
-                    margin: 0;
-                    padding: 0;
-                    background: white;
-                }
-                
-                .ficha-title {
-                    text-align: center;
-                    font-size: 16pt;
-                    font-weight: bold;
-                    margin-bottom: 1.5rem;
-                    padding-bottom: 0.5rem;
-                    border-bottom: 2pt solid #000;
-                }
-                
-                p {
-                    margin: 0.4rem 0;
-                    text-align: justify;
-                }
-                
-                .campo-preenchimento {
-                    border-bottom: 1pt solid #000;
-                    padding: 0 3pt;
-                    font-weight: bold;
-                    display: inline-block;
-                    min-width: 100px;
-                    background: transparent;
-                }
-                
-                .campo-preenchimento.largo {
-                    min-width: 300px;
-                }
-                
-                .campo-preenchimento.medio {
-                    min-width: 200px;
-                }
-                
-                .motivo-area {
-                    border: 1pt solid #000;
-                    min-height: 80pt;
-                    padding: 10pt;
-                    margin: 1rem 0;
-                    background: transparent;
-                }
-                
-                .assinatura-area {
-                    text-align: center;
-                    margin-top: 2rem;
-                }
-                
-                .linha-assinatura {
-                    border-top: 1pt solid #000;
-                    width: 300pt;
-                    margin: 2rem auto 0.5rem;
-                    padding-top: 0.5rem;
-                    font-weight: bold;
-                }
-                
-                @media print {
-                    body { 
-                        margin: 0; 
-                        padding: 0; 
-                    }
-                }
-            </style>
-        </head>
-        <body>
-            ${fichaContent.outerHTML}
-        </body>
-        </html>
-    `);
-    
-    janelaImpressao.document.close();
-    
-    // Aguarda carregar e imprime
-    janelaImpressao.onload = function() {
-        setTimeout(() => {
-            janelaImpressao.print();
-            janelaImpressao.close();
-        }, 500);
-    };
-    
-    notifications.show('Abrindo ficha para impressão...', 'success', 2000);
-}
-
-        function gerarPDFFicha() {
-            if (!temPermissao) {
-                notifications.show('Você não tem permissão para esta funcionalidade', 'error');
-                return;
-            }
-            notifications.show('Funcionalidade de geração de PDF será implementada em breve.', 'info');
-        }
-
-        // ===== FUNÇÕES DE CADASTRO =====
-
-        function novoPreCadastro() {
-            if (!temPermissao) {
-                notifications.show('Você não tem permissão para esta funcionalidade', 'error');
-                return;
-            }
-            notifications.show('Redirecionando para novo pré-cadastro...', 'info');
-            setTimeout(() => {
-                window.location.href = '../pages/cadastroForm.php';
-            }, 1000);
-        }
-
-        function consultarAssociado() {
-            if (!temPermissao) {
-                notifications.show('Você não tem permissão para esta funcionalidade', 'error');
-                return;
-            }
-            notifications.show('Abrindo consulta de associados...', 'info');
-            setTimeout(() => {
-                window.location.href = '../pages/dashboard.php';
-            }, 1000);
-        }
-
-        function consultarDependentes18() {
-            if (!temPermissao) {
-                notifications.show('Você não tem permissão para esta funcionalidade', 'error');
-                return;
-            }
-            notifications.show('Carregando dependentes 18+...', 'info');
-            setTimeout(() => {
-                window.location.href = '../pages/dependentes_18anos.php';
-            }, 1000);
-        }
-
-        function relatoriosComerciais() {
-            if (!temPermissao) {
-                notifications.show('Você não tem permissão para esta funcionalidade', 'error');
-                return;
-            }
-            notifications.show('Carregando relatórios comerciais...', 'info');
-            setTimeout(() => {
-                window.location.href = '../pages/relatorios.php';
-            }, 1000);
-        }
-
-        // ===== FUNÇÕES AUXILIARES =====
-
-        function configurarEventos() {
-            // Outros event listeners se necessário
-        }
-
-        function formatarCPF(cpf) {
-            if (!cpf) return '';
-            cpf = cpf.toString().replace(/\D/g, '');
-            if (cpf.length === 11) {
-                return cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
-            }
-            return cpf;
-        }
-
-        function formatarTelefone(telefone) {
-            if (!telefone) return '';
-            telefone = telefone.toString().replace(/\D/g, '');
-            if (telefone.length === 11) {
-                return telefone.replace(/(\d{2})(\d{5})(\d{4})/, "($1) $2-$3");
-            } else if (telefone.length === 10) {
-                return telefone.replace(/(\d{2})(\d{4})(\d{4})/, "($1) $2-$3");
-            }
-            return telefone;
-        }
-
-        function formatarCEP(cep) {
-            if (!cep) return '';
-            cep = cep.toString().replace(/\D/g, '');
-            if (cep.length === 8) {
-                return cep.replace(/(\d{5})(\d{3})/, "$1-$2");
-            }
-            return cep;
-        }
-
-        function formatarData(data) {
-            if (!data) return '';
-            try {
-                const dataObj = new Date(data + 'T00:00:00');
-                return dataObj.toLocaleDateString('pt-BR');
-            } catch (e) {
-                return data;
-            }
-        }
-
-        console.log('✓ Sistema de Serviços Comerciais carregado com sucesso!');
-        console.log(`🏢 Departamento: ${isComercial ? 'Comercial (ID: 10)' : isPresidencia ? 'Presidência (ID: 1)' : 'Outro'}`);
-        console.log(`🔐 Funcionalidades: ${temPermissao ? 'Liberadas' : 'Restritas'}`);
-        console.log(`📊 Estatísticas: Sempre visíveis (independente de permissões)`);
-        
-        console.log(`📋 Suporte a múltiplos RGs de diferentes corporações ativado`);
-    </script>
-
+            </script>
 </body>
 
 </html>
