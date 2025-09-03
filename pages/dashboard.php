@@ -10,6 +10,7 @@ require_once '../config/database.php';
 require_once '../classes/Database.php';
 require_once '../classes/Auth.php';
 require_once '../classes/Funcionarios.php';
+require_once '../classes/Permissoes.php';
 
 // NOVO: Include do componente Header
 require_once './components/header.php';
@@ -25,6 +26,11 @@ if (!$auth->isLoggedIn()) {
 
 // Pega dados do usuário logado
 $usuarioLogado = $auth->getUser();
+
+if (!Permissoes::tem('ASSOCIADOS_DASHBOARD', 'VIEW')) {
+    header('Location: ../pages/sem_permissao.php');
+    exit;
+}
 
 // Define o título da página
 $page_title = 'Associados - ASSEGO';
@@ -99,11 +105,14 @@ $headerComponent = HeaderComponent::create([
             // Configuração de permissões para KPIs
             $departamentoComercialId = 10;
             $departamentoPresidenciaId = 1;
-            
-            $podeVerKPIs = $auth->isDiretor() || 
-                          (isset($usuarioLogado['departamento_id']) && 
-                           ($usuarioLogado['departamento_id'] == $departamentoComercialId || 
-                            $usuarioLogado['departamento_id'] == $departamentoPresidenciaId));
+
+            // Verificar se pode ver KPIs baseado em permissões ou departamento
+            $podeVerKPIs = Permissoes::getInstance()->isDiretor() ||
+                Permissoes::getInstance()->isPresidente() ||
+                Permissoes::getInstance()->isSuperAdmin() ||
+                (isset($usuarioLogado['departamento_id']) &&
+                    ($usuarioLogado['departamento_id'] == $departamentoComercialId ||
+                        $usuarioLogado['departamento_id'] == $departamentoPresidenciaId));
 
             if ($podeVerKPIs): ?>
                 <!-- Stats Grid com Gráficos de Pizza de 3 Fatias -->
@@ -137,13 +146,18 @@ $headerComponent = HeaderComponent::create([
                                 <!-- Gráfico Pizza para Ativos com 3 categorias -->
                                 <div class="pie-chart-container">
                                     <svg class="pie-chart" width="120" height="120" viewBox="0 0 42 42">
-                                        <circle class="pie-background" cx="21" cy="21" r="15.9155" fill="transparent" stroke="#e5e7eb" stroke-width="3"></circle>
-                                        <circle class="pie-ativa" id="ativosPieAtiva" cx="21" cy="21" r="15.9155" fill="transparent" stroke="#00c853" stroke-width="3" 
-                                            stroke-dasharray="0 100" stroke-dashoffset="25" transform="rotate(-90 21 21)"></circle>
-                                        <circle class="pie-reserva" id="ativosPieReserva" cx="21" cy="21" r="15.9155" fill="transparent" stroke="#ff9500" stroke-width="3" 
-                                            stroke-dasharray="0 100" stroke-dashoffset="25" transform="rotate(-90 21 21)"></circle>
-                                        <circle class="pie-pensionista" id="ativosPiePensionista" cx="21" cy="21" r="15.9155" fill="transparent" stroke="#8b5cf6" stroke-width="3" 
-                                            stroke-dasharray="0 100" stroke-dashoffset="25" transform="rotate(-90 21 21)"></circle>
+                                        <circle class="pie-background" cx="21" cy="21" r="15.9155" fill="transparent"
+                                            stroke="#e5e7eb" stroke-width="3"></circle>
+                                        <circle class="pie-ativa" id="ativosPieAtiva" cx="21" cy="21" r="15.9155"
+                                            fill="transparent" stroke="#00c853" stroke-width="3" stroke-dasharray="0 100"
+                                            stroke-dashoffset="25" transform="rotate(-90 21 21)"></circle>
+                                        <circle class="pie-reserva" id="ativosPieReserva" cx="21" cy="21" r="15.9155"
+                                            fill="transparent" stroke="#ff9500" stroke-width="3" stroke-dasharray="0 100"
+                                            stroke-dashoffset="25" transform="rotate(-90 21 21)"></circle>
+                                        <circle class="pie-pensionista" id="ativosPiePensionista" cx="21" cy="21"
+                                            r="15.9155" fill="transparent" stroke="#8b5cf6" stroke-width="3"
+                                            stroke-dasharray="0 100" stroke-dashoffset="25" transform="rotate(-90 21 21)">
+                                        </circle>
                                     </svg>
                                     <div class="pie-legend">
                                         <div class="legend-item">
@@ -178,13 +192,17 @@ $headerComponent = HeaderComponent::create([
                                 <!-- Gráfico Pizza para Novos com 3 categorias -->
                                 <div class="pie-chart-container">
                                     <svg class="pie-chart" width="120" height="120" viewBox="0 0 42 42">
-                                        <circle class="pie-background" cx="21" cy="21" r="15.9155" fill="transparent" stroke="#e5e7eb" stroke-width="3"></circle>
-                                        <circle class="pie-ativa" id="novosPieAtiva" cx="21" cy="21" r="15.9155" fill="transparent" stroke="#00c853" stroke-width="3" 
-                                            stroke-dasharray="0 100" stroke-dashoffset="25" transform="rotate(-90 21 21)"></circle>
-                                        <circle class="pie-reserva" id="novosPieReserva" cx="21" cy="21" r="15.9155" fill="transparent" stroke="#ff9500" stroke-width="3" 
-                                            stroke-dasharray="0 100" stroke-dashoffset="25" transform="rotate(-90 21 21)"></circle>
-                                        <circle class="pie-pensionista" id="novosPiePensionista" cx="21" cy="21" r="15.9155" fill="transparent" stroke="#8b5cf6" stroke-width="3" 
-                                            stroke-dasharray="0 100" stroke-dashoffset="25" transform="rotate(-90 21 21)"></circle>
+                                        <circle class="pie-background" cx="21" cy="21" r="15.9155" fill="transparent"
+                                            stroke="#e5e7eb" stroke-width="3"></circle>
+                                        <circle class="pie-ativa" id="novosPieAtiva" cx="21" cy="21" r="15.9155"
+                                            fill="transparent" stroke="#00c853" stroke-width="3" stroke-dasharray="0 100"
+                                            stroke-dashoffset="25" transform="rotate(-90 21 21)"></circle>
+                                        <circle class="pie-reserva" id="novosPieReserva" cx="21" cy="21" r="15.9155"
+                                            fill="transparent" stroke="#ff9500" stroke-width="3" stroke-dasharray="0 100"
+                                            stroke-dashoffset="25" transform="rotate(-90 21 21)"></circle>
+                                        <circle class="pie-pensionista" id="novosPiePensionista" cx="21" cy="21" r="15.9155"
+                                            fill="transparent" stroke="#8b5cf6" stroke-width="3" stroke-dasharray="0 100"
+                                            stroke-dashoffset="25" transform="rotate(-90 21 21)"></circle>
                                     </svg>
                                     <div class="pie-legend">
                                         <div class="legend-item">
@@ -234,13 +252,17 @@ $headerComponent = HeaderComponent::create([
                                 <!-- Gráfico Pizza PM -->
                                 <div class="pie-chart-container">
                                     <svg class="pie-chart" width="120" height="120" viewBox="0 0 42 42">
-                                        <circle class="pie-background" cx="21" cy="21" r="15.9155" fill="transparent" stroke="#e5e7eb" stroke-width="3"></circle>
-                                        <circle class="pie-ativa" id="pmPieAtiva" cx="21" cy="21" r="15.9155" fill="transparent" stroke="#00c853" stroke-width="3" 
-                                            stroke-dasharray="0 100" stroke-dashoffset="25" transform="rotate(-90 21 21)"></circle>
-                                        <circle class="pie-reserva" id="pmPieReserva" cx="21" cy="21" r="15.9155" fill="transparent" stroke="#ff9500" stroke-width="3" 
-                                            stroke-dasharray="0 100" stroke-dashoffset="25" transform="rotate(-90 21 21)"></circle>
-                                        <circle class="pie-pensionista" id="pmPiePensionista" cx="21" cy="21" r="15.9155" fill="transparent" stroke="#8b5cf6" stroke-width="3" 
-                                            stroke-dasharray="0 100" stroke-dashoffset="25" transform="rotate(-90 21 21)"></circle>
+                                        <circle class="pie-background" cx="21" cy="21" r="15.9155" fill="transparent"
+                                            stroke="#e5e7eb" stroke-width="3"></circle>
+                                        <circle class="pie-ativa" id="pmPieAtiva" cx="21" cy="21" r="15.9155"
+                                            fill="transparent" stroke="#00c853" stroke-width="3" stroke-dasharray="0 100"
+                                            stroke-dashoffset="25" transform="rotate(-90 21 21)"></circle>
+                                        <circle class="pie-reserva" id="pmPieReserva" cx="21" cy="21" r="15.9155"
+                                            fill="transparent" stroke="#ff9500" stroke-width="3" stroke-dasharray="0 100"
+                                            stroke-dashoffset="25" transform="rotate(-90 21 21)"></circle>
+                                        <circle class="pie-pensionista" id="pmPiePensionista" cx="21" cy="21" r="15.9155"
+                                            fill="transparent" stroke="#8b5cf6" stroke-width="3" stroke-dasharray="0 100"
+                                            stroke-dashoffset="25" transform="rotate(-90 21 21)"></circle>
                                     </svg>
                                     <div class="pie-legend">
                                         <div class="legend-item">
@@ -275,13 +297,17 @@ $headerComponent = HeaderComponent::create([
                                 <!-- Gráfico Pizza BM -->
                                 <div class="pie-chart-container">
                                     <svg class="pie-chart" width="120" height="120" viewBox="0 0 42 42">
-                                        <circle class="pie-background" cx="21" cy="21" r="15.9155" fill="transparent" stroke="#e5e7eb" stroke-width="3"></circle>
-                                        <circle class="pie-ativa" id="bmPieAtiva" cx="21" cy="21" r="15.9155" fill="transparent" stroke="#00c853" stroke-width="3" 
-                                            stroke-dasharray="0 100" stroke-dashoffset="25" transform="rotate(-90 21 21)"></circle>
-                                        <circle class="pie-reserva" id="bmPieReserva" cx="21" cy="21" r="15.9155" fill="transparent" stroke="#ff9500" stroke-width="3" 
-                                            stroke-dasharray="0 100" stroke-dashoffset="25" transform="rotate(-90 21 21)"></circle>
-                                        <circle class="pie-pensionista" id="bmPiePensionista" cx="21" cy="21" r="15.9155" fill="transparent" stroke="#8b5cf6" stroke-width="3" 
-                                            stroke-dasharray="0 100" stroke-dashoffset="25" transform="rotate(-90 21 21)"></circle>
+                                        <circle class="pie-background" cx="21" cy="21" r="15.9155" fill="transparent"
+                                            stroke="#e5e7eb" stroke-width="3"></circle>
+                                        <circle class="pie-ativa" id="bmPieAtiva" cx="21" cy="21" r="15.9155"
+                                            fill="transparent" stroke="#00c853" stroke-width="3" stroke-dasharray="0 100"
+                                            stroke-dashoffset="25" transform="rotate(-90 21 21)"></circle>
+                                        <circle class="pie-reserva" id="bmPieReserva" cx="21" cy="21" r="15.9155"
+                                            fill="transparent" stroke="#ff9500" stroke-width="3" stroke-dasharray="0 100"
+                                            stroke-dashoffset="25" transform="rotate(-90 21 21)"></circle>
+                                        <circle class="pie-pensionista" id="bmPiePensionista" cx="21" cy="21" r="15.9155"
+                                            fill="transparent" stroke="#8b5cf6" stroke-width="3" stroke-dasharray="0 100"
+                                            stroke-dashoffset="25" transform="rotate(-90 21 21)"></circle>
                                     </svg>
                                     <div class="pie-legend">
                                         <div class="legend-item">
@@ -316,13 +342,18 @@ $headerComponent = HeaderComponent::create([
                                 <!-- Gráfico Pizza Outros -->
                                 <div class="pie-chart-container">
                                     <svg class="pie-chart" width="120" height="120" viewBox="0 0 42 42">
-                                        <circle class="pie-background" cx="21" cy="21" r="15.9155" fill="transparent" stroke="#e5e7eb" stroke-width="3"></circle>
-                                        <circle class="pie-ativa" id="outrosPieAtiva" cx="21" cy="21" r="15.9155" fill="transparent" stroke="#00c853" stroke-width="3" 
-                                            stroke-dasharray="0 100" stroke-dashoffset="25" transform="rotate(-90 21 21)"></circle>
-                                        <circle class="pie-reserva" id="outrosPieReserva" cx="21" cy="21" r="15.9155" fill="transparent" stroke="#ff9500" stroke-width="3" 
-                                            stroke-dasharray="0 100" stroke-dashoffset="25" transform="rotate(-90 21 21)"></circle>
-                                        <circle class="pie-pensionista" id="outrosPiePensionista" cx="21" cy="21" r="15.9155" fill="transparent" stroke="#8b5cf6" stroke-width="3" 
-                                            stroke-dasharray="0 100" stroke-dashoffset="25" transform="rotate(-90 21 21)"></circle>
+                                        <circle class="pie-background" cx="21" cy="21" r="15.9155" fill="transparent"
+                                            stroke="#e5e7eb" stroke-width="3"></circle>
+                                        <circle class="pie-ativa" id="outrosPieAtiva" cx="21" cy="21" r="15.9155"
+                                            fill="transparent" stroke="#00c853" stroke-width="3" stroke-dasharray="0 100"
+                                            stroke-dashoffset="25" transform="rotate(-90 21 21)"></circle>
+                                        <circle class="pie-reserva" id="outrosPieReserva" cx="21" cy="21" r="15.9155"
+                                            fill="transparent" stroke="#ff9500" stroke-width="3" stroke-dasharray="0 100"
+                                            stroke-dashoffset="25" transform="rotate(-90 21 21)"></circle>
+                                        <circle class="pie-pensionista" id="outrosPiePensionista" cx="21" cy="21"
+                                            r="15.9155" fill="transparent" stroke="#8b5cf6" stroke-width="3"
+                                            stroke-dasharray="0 100" stroke-dashoffset="25" transform="rotate(-90 21 21)">
+                                        </circle>
                                     </svg>
                                     <div class="pie-legend">
                                         <div class="legend-item">
@@ -380,13 +411,18 @@ $headerComponent = HeaderComponent::create([
                                 <!-- Gráfico Pizza Capital -->
                                 <div class="pie-chart-container">
                                     <svg class="pie-chart" width="120" height="120" viewBox="0 0 42 42">
-                                        <circle class="pie-background" cx="21" cy="21" r="15.9155" fill="transparent" stroke="#e5e7eb" stroke-width="3"></circle>
-                                        <circle class="pie-ativa" id="capitalPieAtiva" cx="21" cy="21" r="15.9155" fill="transparent" stroke="#00c853" stroke-width="3" 
-                                            stroke-dasharray="0 100" stroke-dashoffset="25" transform="rotate(-90 21 21)"></circle>
-                                        <circle class="pie-reserva" id="capitalPieReserva" cx="21" cy="21" r="15.9155" fill="transparent" stroke="#ff9500" stroke-width="3" 
-                                            stroke-dasharray="0 100" stroke-dashoffset="25" transform="rotate(-90 21 21)"></circle>
-                                        <circle class="pie-pensionista" id="capitalPiePensionista" cx="21" cy="21" r="15.9155" fill="transparent" stroke="#8b5cf6" stroke-width="3" 
-                                            stroke-dasharray="0 100" stroke-dashoffset="25" transform="rotate(-90 21 21)"></circle>
+                                        <circle class="pie-background" cx="21" cy="21" r="15.9155" fill="transparent"
+                                            stroke="#e5e7eb" stroke-width="3"></circle>
+                                        <circle class="pie-ativa" id="capitalPieAtiva" cx="21" cy="21" r="15.9155"
+                                            fill="transparent" stroke="#00c853" stroke-width="3" stroke-dasharray="0 100"
+                                            stroke-dashoffset="25" transform="rotate(-90 21 21)"></circle>
+                                        <circle class="pie-reserva" id="capitalPieReserva" cx="21" cy="21" r="15.9155"
+                                            fill="transparent" stroke="#ff9500" stroke-width="3" stroke-dasharray="0 100"
+                                            stroke-dashoffset="25" transform="rotate(-90 21 21)"></circle>
+                                        <circle class="pie-pensionista" id="capitalPiePensionista" cx="21" cy="21"
+                                            r="15.9155" fill="transparent" stroke="#8b5cf6" stroke-width="3"
+                                            stroke-dasharray="0 100" stroke-dashoffset="25" transform="rotate(-90 21 21)">
+                                        </circle>
                                     </svg>
                                     <div class="pie-legend">
                                         <div class="legend-item">
@@ -429,13 +465,18 @@ $headerComponent = HeaderComponent::create([
                                 <!-- Gráfico Pizza Interior -->
                                 <div class="pie-chart-container">
                                     <svg class="pie-chart" width="120" height="120" viewBox="0 0 42 42">
-                                        <circle class="pie-background" cx="21" cy="21" r="15.9155" fill="transparent" stroke="#e5e7eb" stroke-width="3"></circle>
-                                        <circle class="pie-ativa" id="interiorPieAtiva" cx="21" cy="21" r="15.9155" fill="transparent" stroke="#00c853" stroke-width="3" 
-                                            stroke-dasharray="0 100" stroke-dashoffset="25" transform="rotate(-90 21 21)"></circle>
-                                        <circle class="pie-reserva" id="interiorPieReserva" cx="21" cy="21" r="15.9155" fill="transparent" stroke="#ff9500" stroke-width="3" 
-                                            stroke-dasharray="0 100" stroke-dashoffset="25" transform="rotate(-90 21 21)"></circle>
-                                        <circle class="pie-pensionista" id="interiorPiePensionista" cx="21" cy="21" r="15.9155" fill="transparent" stroke="#8b5cf6" stroke-width="3" 
-                                            stroke-dasharray="0 100" stroke-dashoffset="25" transform="rotate(-90 21 21)"></circle>
+                                        <circle class="pie-background" cx="21" cy="21" r="15.9155" fill="transparent"
+                                            stroke="#e5e7eb" stroke-width="3"></circle>
+                                        <circle class="pie-ativa" id="interiorPieAtiva" cx="21" cy="21" r="15.9155"
+                                            fill="transparent" stroke="#00c853" stroke-width="3" stroke-dasharray="0 100"
+                                            stroke-dashoffset="25" transform="rotate(-90 21 21)"></circle>
+                                        <circle class="pie-reserva" id="interiorPieReserva" cx="21" cy="21" r="15.9155"
+                                            fill="transparent" stroke="#ff9500" stroke-width="3" stroke-dasharray="0 100"
+                                            stroke-dashoffset="25" transform="rotate(-90 21 21)"></circle>
+                                        <circle class="pie-pensionista" id="interiorPiePensionista" cx="21" cy="21"
+                                            r="15.9155" fill="transparent" stroke="#8b5cf6" stroke-width="3"
+                                            stroke-dasharray="0 100" stroke-dashoffset="25" transform="rotate(-90 21 21)">
+                                        </circle>
                                     </svg>
                                     <div class="pie-legend">
                                         <div class="legend-item">
@@ -1149,7 +1190,14 @@ $headerComponent = HeaderComponent::create([
             width: 33.33%;
         }
 
-        /* === GRÁFICOS DE PIZZA RESPONSIVOS === */
+        /* === GRÁFICOS DE PIZZA RESPONSIVOS COM 3 FATIAS === */
+        
+        /* Configuração específica para cards com gráficos */
+        .corporacoes-pie .triple-stats-row,
+        .associados-pie .dual-stats-row,
+        .distribuicao-pie .dual-stats-row {
+            min-height: 140px;
+        }
         
         /* Container do gráfico pizza - escondido por padrão */
         .pie-chart-container {
@@ -1767,50 +1815,50 @@ $headerComponent = HeaderComponent::create([
                 // Se não há dados, esconder o gráfico ou mostrar vazio
                 return;
             }
-            
+
             const ativaPercent = (ativa / total) * 100;
             const reservaPercent = (reserva / total) * 100;
             const pensionistaPercent = (pensionista / total) * 100;
-            
+
             // Elementos SVG
             const pieAtiva = document.getElementById(`${tipo}PieAtiva`);
             const pieReserva = document.getElementById(`${tipo}PieReserva`);
             const piePensionista = document.getElementById(`${tipo}PiePensionista`);
-            
+
             if (!pieAtiva || !pieReserva || !piePensionista) {
                 console.warn(`Elementos de gráfico não encontrados para: ${tipo}`);
                 return;
             }
-            
+
             // Animar fatia "Ativa" (começa do topo - 12h)
             pieAtiva.style.strokeDasharray = `${ativaPercent} 100`;
             pieAtiva.style.strokeDashoffset = '25';
-            
+
             // Animar fatia "Reserva" (continua após a ativa)
             const reservaOffset = 25 - ativaPercent;
             pieReserva.style.strokeDasharray = `${reservaPercent} 100`;
             pieReserva.style.strokeDashoffset = `${reservaOffset}`;
-            
+
             // Animar fatia "Pensionista" (continua após reserva)
             const pensionistaOffset = reservaOffset - reservaPercent;
             piePensionista.style.strokeDasharray = `${pensionistaPercent} 100`;
             piePensionista.style.strokeDashoffset = `${pensionistaOffset}`;
         }
 
-        // Carrega estatísticas via API - TODOS OS KPIs COM GRÁFICOS DE PIZZA 3 FATIAS
+        // Carrega estatísticas via API - VERSÃO COMBINADA
         function carregarEstatisticas() {
             fetch('../api/dashboard_stats.php')
                 .then(response => response.json())
                 .then(data => {
                     if (data.status === 'success') {
                         const stats = data.data;
-                        
+
                         // === CARD 1: ASSOCIADOS ATIVOS + NOVOS COM GRÁFICOS DE PIZZA ===
-                        document.getElementById('associadosAtivos').textContent = 
+                        document.getElementById('associadosAtivos').textContent =
                             new Intl.NumberFormat('pt-BR').format(stats.associados_ativos);
-                        document.getElementById('novosAssociados').textContent = 
+                        document.getElementById('novosAssociados').textContent =
                             new Intl.NumberFormat('pt-BR').format(stats.novos_associados);
-                        
+
                         // Dados para Associados Ativos
                         const associadosAtiva = stats.associados_ativa || 0;
                         const associadosReserva = stats.associados_reserva || 0;
@@ -1818,7 +1866,7 @@ $headerComponent = HeaderComponent::create([
                         document.getElementById('associadosAtiva').textContent = associadosAtiva;
                         document.getElementById('associadosReserva').textContent = associadosReserva;
                         document.getElementById('associadosPensionista').textContent = associadosPensionista;
-                        
+
                         // Dados para Novos Associados
                         const novosAtiva = stats.novos_ativa || 0;
                         const novosReserva = stats.novos_reserva || 0;
@@ -1826,18 +1874,18 @@ $headerComponent = HeaderComponent::create([
                         document.getElementById('novosAtiva').textContent = novosAtiva;
                         document.getElementById('novosReserva').textContent = novosReserva;
                         document.getElementById('novosPensionista').textContent = novosPensionista;
-                        
+
                         // === CARD 2: CORPORAÇÕES COM GRÁFICOS DE PIZZA ===
                         const corp = stats.corporacoes_principais;
-                        
+
                         // Atualizar valores principais
-                        document.getElementById('pmQuantidade').textContent = 
+                        document.getElementById('pmQuantidade').textContent =
                             new Intl.NumberFormat('pt-BR').format(corp.pm_quantidade);
-                        document.getElementById('bmQuantidade').textContent = 
+                        document.getElementById('bmQuantidade').textContent =
                             new Intl.NumberFormat('pt-BR').format(corp.bm_quantidade);
-                        document.getElementById('outrosQuantidade').textContent = 
+                        document.getElementById('outrosQuantidade').textContent =
                             new Intl.NumberFormat('pt-BR').format(corp.outros_quantidade);
-                        
+
                         // Atualizar valores de ativa/reserva/pensionista
                         const pmAtiva = corp.pm_ativa || 0;
                         const pmReserva = corp.pm_reserva || 0;
@@ -1848,7 +1896,7 @@ $headerComponent = HeaderComponent::create([
                         const outrosAtiva = corp.outros_ativa || 0;
                         const outrosReserva = corp.outros_reserva || 0;
                         const outrosPensionista = corp.outros_pensionista || 0;
-                        
+
                         document.getElementById('pmAtiva').textContent = pmAtiva;
                         document.getElementById('pmReserva').textContent = pmReserva;
                         document.getElementById('pmPensionista').textContent = pmPensionista;
@@ -1858,18 +1906,18 @@ $headerComponent = HeaderComponent::create([
                         document.getElementById('outrosAtiva').textContent = outrosAtiva;
                         document.getElementById('outrosReserva').textContent = outrosReserva;
                         document.getElementById('outrosPensionista').textContent = outrosPensionista;
-                        
-                        document.getElementById('corporacoesPercent').innerHTML = 
+
+                        document.getElementById('corporacoesPercent').innerHTML =
                             `<i class="fas fa-chart-pie"></i> ${corp.total_percentual}% do total`;
-                        
+
                         // === CARD 3: DISTRIBUIÇÃO COM GRÁFICOS DE PIZZA ===
-                        document.getElementById('capitalQuantidade').textContent = 
+                        document.getElementById('capitalQuantidade').textContent =
                             new Intl.NumberFormat('pt-BR').format(stats.capital);
-                        document.getElementById('interiorQuantidade').textContent = 
+                        document.getElementById('interiorQuantidade').textContent =
                             new Intl.NumberFormat('pt-BR').format(stats.interior);
-                        document.getElementById('totalLocalizacao').textContent = 
+                        document.getElementById('totalLocalizacao').textContent =
                             new Intl.NumberFormat('pt-BR').format(stats.total_localizacao);
-                        
+
                         // Dados para Capital e Interior
                         const capitalAtiva = stats.capital_ativa || 0;
                         const capitalReserva = stats.capital_reserva || 0;
@@ -1877,19 +1925,22 @@ $headerComponent = HeaderComponent::create([
                         const interiorAtiva = stats.interior_ativa || 0;
                         const interiorReserva = stats.interior_reserva || 0;
                         const interiorPensionista = stats.interior_pensionista || 0;
-                        
+
                         document.getElementById('capitalAtiva').textContent = capitalAtiva;
                         document.getElementById('capitalReserva').textContent = capitalReserva;
                         document.getElementById('capitalPensionista').textContent = capitalPensionista;
                         document.getElementById('interiorAtiva').textContent = interiorAtiva;
                         document.getElementById('interiorReserva').textContent = interiorReserva;
                         document.getElementById('interiorPensionista').textContent = interiorPensionista;
-                        
+
                         document.getElementById('capitalPercent').textContent = `${stats.capital_percentual}%`;
                         document.getElementById('interiorPercent').textContent = `${stats.interior_percentual}%`;
                         
-                        // ANIMAR TODOS OS GRÁFICOS DE PIZZA COM 3 FATIAS (APENAS NO DESKTOP)
+                        // ANIMAR GRÁFICOS - VERSÃO COMBINADA
+                        // Desktop: anima automaticamente
+                        // Mobile: só anima quando o usuário clicar no botão toggle
                         if (window.innerWidth > 768) {
+                            // DESKTOP: Animar todos os gráficos automaticamente
                             setTimeout(() => {
                                 // Card 1: Associados
                                 animarGraficoPizza('ativos', associadosAtiva, associadosReserva, associadosPensionista);
@@ -1905,6 +1956,7 @@ $headerComponent = HeaderComponent::create([
                                 animarGraficoPizza('interior', interiorAtiva, interiorReserva, interiorPensionista);
                             }, 500);
                         }
+                        // No mobile, os gráficos só serão animados quando o usuário clicar no botão toggle
                         
                         console.log('Estatísticas carregadas com gráficos de pizza 3 fatias responsivos:', stats);
                         
@@ -1927,7 +1979,7 @@ $headerComponent = HeaderComponent::create([
 
             // Associados ativos
             const ativos = todosAssociados.filter(a => a.situacao === 'Filiado').length;
-            document.getElementById('associadosAtivos').textContent = 
+            document.getElementById('associadosAtivos').textContent =
                 new Intl.NumberFormat('pt-BR').format(ativos);
 
             // Novos (30 dias) - aproximação
@@ -1938,7 +1990,7 @@ $headerComponent = HeaderComponent::create([
                 const dataFiliacao = new Date(a.data_filiacao);
                 return dataFiliacao >= trintaDiasAtras;
             }).length;
-            document.getElementById('novosAssociados').textContent = 
+            document.getElementById('novosAssociados').textContent =
                 new Intl.NumberFormat('pt-BR').format(novos);
 
             console.log('Estatísticas calculadas localmente');
@@ -1948,7 +2000,7 @@ $headerComponent = HeaderComponent::create([
         const podeVerKPIs = <?php echo $podeVerKPIs ? 'true' : 'false'; ?>;
 
         // Carrega quando a página está pronta
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             // Só carrega estatísticas se o usuário tem permissão
             if (podeVerKPIs) {
                 carregarEstatisticas();
@@ -1964,36 +2016,42 @@ $headerComponent = HeaderComponent::create([
 
         // Passar permissões do PHP para o JavaScript
         const permissoesUsuario = {
-            podeExcluir: <?php
-                $podeExcluir = false;
-                if (isset($usuarioLogado['departamento_id'])) {
-                    // Presidência pode excluir
-                    if ($usuarioLogado['departamento_id'] == 1) {
-                        $podeExcluir = true;
-                    }
-                    // Diretor do Comercial pode excluir
-                    if ($usuarioLogado['cargo'] == 'Diretor' && $usuarioLogado['departamento_id'] == 10) {
-                        $podeExcluir = true;
-                    }
-                }
-                echo $podeExcluir ? 'true' : 'false';
-            ?>,
+            // Permissão de visualizar detalhes (todos têm)
+            podeVisualizar: <?php echo Permissoes::tem('ASSOCIADOS_VISUALIZAR', 'VIEW') ? 'true' : 'false'; ?>,
+
+            // Permissão de editar contato (todos têm, exceto visualizadores)
+            podeEditarContato: <?php echo Permissoes::tem('ASSOCIADOS_ATUALIZAR_CONTATO', 'EDIT') ? 'true' : 'false'; ?>,
+
+            // Permissão de editar completo (Comercial, Diretores, etc)
             podeEditarCompleto: <?php
-                $podeEditarCompleto = false;
-                if (isset($usuarioLogado['departamento_id'])) {
-                    // Presidência, Comercial e RH podem editar completo
-                    if (in_array($usuarioLogado['departamento_id'], [1, 9, 10])) {
-                        $podeEditarCompleto = true;
-                    }
-                }
-                echo $podeEditarCompleto ? 'true' : 'false';
+            $podeEditarCompleto = Permissoes::tem('ASSOCIADOS_EDITAR_COMPLETO', 'EDIT') ||
+                Permissoes::tem('ASSOCIADOS_EDITAR_COMPLETO', 'FULL') ||
+                (isset($usuarioLogado['departamento_id']) && $usuarioLogado['departamento_id'] == 10);
+            echo $podeEditarCompleto ? 'true' : 'false';
             ?>,
+
+            // Permissão de excluir (restrita)
+            podeExcluir: <?php echo Permissoes::tem('ASSOCIADOS_EXCLUIR', 'DELETE') ? 'true' : 'false'; ?>,
+
+            // Informações do usuário
             departamentoId: <?php echo $usuarioLogado['departamento_id'] ?? 'null'; ?>,
-            cargo: '<?php echo $usuarioLogado['cargo'] ?? ''; ?>'
+            departamentoNome: '<?php echo $usuarioLogado['departamento_nome'] ?? ''; ?>',
+            cargo: '<?php echo $usuarioLogado['cargo'] ?? ''; ?>',
+
+            // Flags especiais
+            isDiretor: <?php echo Permissoes::getInstance()->isDiretor() ? 'true' : 'false'; ?>,
+            isComercial: <?php echo (isset($usuarioLogado['departamento_id']) && $usuarioLogado['departamento_id'] == 10) ? 'true' : 'false'; ?>,
+            isSuperAdmin: <?php echo Permissoes::getInstance()->isSuperAdmin() ? 'true' : 'false'; ?>,
+            isPresidente: <?php echo Permissoes::getInstance()->isPresidente() ? 'true' : 'false'; ?>
         };
+
+        // Log de permissões para debug (remover em produção)
+        console.log('Permissões do usuário:', permissoesUsuario);
+
     </script>
 
     <script src="js/dashboard.js"></script>
 
 </body>
+
 </html>

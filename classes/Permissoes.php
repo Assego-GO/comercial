@@ -1,367 +1,966 @@
 <?php
 /**
- * Sistema de Permissões - Versão Refatorada com Banco de Dados
+ * Sistema de Gerenciamento de Permissões RBAC + ACL
  * classes/Permissoes.php
  * 
- * Versão simplificada que consulta as permissões diretamente do banco
+ * Sistema híbrido com:
+ * - RBAC (Role-Based Access Control)
+ * - ACL (Access Control List)
+ * - Delegações temporárias
+ * - Cache de permissões
+ * - Políticas condicionais
  */
 
 require_once 'Database.php';
 
 class Permissoes {
     
-    private static $db = null;
-    private static $cache = [];
+    private static $instance = null;
+    private $db;
+    private $funcionarioId;
+    private $tipoUsuario;
+    private $cache = [];
+    private $roles = null;
+    private $permissions = null;
+    private $useCache = true;
+    private $cacheLifetime = 3600; // 1 hora
     
     /**
-     * Inicializa conexão com banco
+     * Constructor privado para Singleton
      */
-    private static function getDb() {
-        if (self::$db === null) {
-            self::$db = Database::getInstance(DB_NAME_CADASTRO)->getConnection();
+    private function __construct() {
+        $this->db = Database::getInstance(DB_NAME_CADASTRO)->getConnection();
+        
+        // Pegar dados da sessão considerando impersonation
+        if (isset($_SESSION['impersonate_id'])) {
+            $this->funcionarioId = $_SESSION['impersonate_id'];
+            $this->tipoUsuario = $_SESSION['impersonate_tipo_usuario'] ?? 'funcionario';
+        } else {
+            $this->funcionarioId = $_SESSION['funcionario_id'] ?? null;
+            $this->tipoUsuario = $_SESSION['tipo_usuario'] ?? 'funcionario';
         }
-        return self::$db;
+        
+        if ($this->funcionarioId && $this->useCache) {
+            $this->loadFromCache();
+        }
+    }
+    
+    /**
+     * Obter instância única (Singleton)
+     */
+    public static function getInstance() {
+        if (self::$instance === null) {
+            self::$instance = new self();
+        }
+        return self::$instance;
+    }
+    
+    /**
+     * Método estático para verificar permissão
+     */
+    public static function tem($recurso, $permissao = 'VIEW') {
+        return self::getInstance()->hasPermission($recurso, $permissao);
+    }
+    
+    /**
+     * Verificar múltiplas permissões (precisa ter todas)
+     */
+    public static function temTodas(array $permissoes) {
+        $instance = self::getInstance();
+        foreach ($permissoes as $recurso => $permissao) {
+            if (is_numeric($recurso)) {
+                // Se for array simples, assume VIEW
+                if (!$instance->hasPermission($permissao, 'VIEW')) {
+                    return false;
+                }
+            } else {
+                if (!$instance->hasPermission($recurso, $permissao)) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+    
+    /**
+     * Verificar se tem alguma das permissões
+     */
+    public static function temAlguma(array $permissoes) {
+        $instance = self::getInstance();
+        foreach ($permissoes as $recurso => $permissao) {
+            if (is_numeric($recurso)) {
+                if ($instance->hasPermission($permissao, 'VIEW')) {
+                    return true;
+                }
+            } else {
+                if ($instance->hasPermission($recurso, $permissao)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+    
+    /**
+     * Verifica se pode impersonar
+     */
+    public static function podeImpersonar() {
+        $instance = self::getInstance();
+        return $instance->hasRole('SUPER_ADMIN') || 
+               $instance->hasRole('PRESIDENTE') ||
+               $instance->hasPermission('SISTEMA_IMPERSONAR', 'FULL');
     }
     
     /**
      * Verifica se o usuário tem uma permissão específica
      */
-    public static function tem($permissao, $usuario_id = null) {
-        // Pega da sessão se não foi informado
-        if ($usuario_id === null) {
-            $usuario_id = $_SESSION['funcionario_id'] ?? null;
+    public function hasPermission($recurso, $permissao = 'VIEW') {
+        // Super Admin tem acesso total
+        if ($this->isSuperAdmin()) {
+            $this->logAccess($recurso, $permissao, 'PERMITIDO', 'Super Admin');
+            return true;
         }
         
-        if (!$usuario_id) return false;
-        
-        // Verificar cache
-        $cacheKey = $usuario_id . '_' . $permissao;
-        if (isset(self::$cache[$cacheKey])) {
-            return self::$cache[$cacheKey];
-        }
-        
-        try {
-            $db = self::getDb();
-            
-            // Buscar informações do funcionário
-            $stmt = $db->prepare("
-                SELECT f.cargo, f.departamento_id 
-                FROM Funcionarios f 
-                WHERE f.id = ? AND f.ativo = 1
-            ");
-            $stmt->execute([$usuario_id]);
-            $funcionario = $stmt->fetch();
-            
-            if (!$funcionario) {
-                self::$cache[$cacheKey] = false;
-                return false;
-            }
-            
-            // 1. Verificar se é Presidente ou Vice (acesso total)
-            if (in_array($funcionario['cargo'], ['Presidente', 'Vice-Presidente'])) {
-                self::$cache[$cacheKey] = true;
-                return true;
-            }
-            
-            // 2. Verificar se é da Presidência (departamento_id = 1)
-            if ($funcionario['departamento_id'] == 1) {
-                self::$cache[$cacheKey] = true;
-                return true;
-            }
-            
-            // 3. Buscar recurso e permissão
-            $partes = explode('.', $permissao);
-            if (count($partes) != 2) {
-                self::$cache[$cacheKey] = false;
-                return false;
-            }
-            
-            $recurso_chave = $permissao;
-            $acao = $partes[1];
-            
-            // Mapear ação para ID da permissão
-            $permissao_id = self::getPermissaoId($acao);
-            
-            // 4. Verificar permissões específicas do funcionário
-            $stmt = $db->prepare("
-                SELECT pf.concedido
-                FROM Permissoes_Funcionario pf
-                JOIN Recursos r ON pf.recurso_id = r.id
-                WHERE pf.funcionario_id = ? 
-                AND r.chave = ?
-                AND pf.permissao_id = ?
-            ");
-            $stmt->execute([$usuario_id, $recurso_chave, $permissao_id]);
-            
-            if ($row = $stmt->fetch()) {
-                self::$cache[$cacheKey] = (bool)$row['concedido'];
-                return (bool)$row['concedido'];
-            }
-            
-            // 5. Verificar permissões do departamento
-            $stmt = $db->prepare("
-                SELECT 1
-                FROM Permissoes_Departamento pd
-                JOIN Recursos r ON pd.recurso_id = r.id
-                WHERE pd.departamento_id = ?
-                AND r.chave = ?
-                AND pd.permissao_id = ?
-            ");
-            $stmt->execute([$funcionario['departamento_id'], $recurso_chave, $permissao_id]);
-            
-            $resultado = $stmt->fetchColumn() !== false;
-            self::$cache[$cacheKey] = $resultado;
-            return $resultado;
-            
-        } catch (PDOException $e) {
-            error_log("Erro ao verificar permissão: " . $e->getMessage());
+        // Converter código do recurso para ID se necessário
+        $recursoId = $this->getRecursoId($recurso);
+        if (!$recursoId) {
+            $this->logAccess($recurso, $permissao, 'NEGADO', 'Recurso não encontrado');
             return false;
         }
-    }
-    
-    /**
-     * Mapeia nome da ação para ID da permissão
-     */
-    private static function getPermissaoId($acao) {
-        $mapa = [
-            'visualizar' => 1,
-            'criar' => 2,
-            'editar' => 3,
-            'excluir' => 4,
-            'exportar' => 5,
-            'aprovar' => 6,
-            'rejeitar' => 7,
-            'assinar' => 8,
-            'gerenciar' => 9,
-            'delegar' => 10,
-            'impersonar' => 11,
-            // Adicione outros conforme necessário
-            'upload' => 2,  // Upload é como criar
-            'relatorios' => 1, // Relatórios é visualizar
-            'importar_asaas' => 3, // Importar é como editar
-            'desativar' => 4, // Desativar é similar a excluir
-            'badges' => 9, // Badges é gerenciar
-            'backup' => 9, // Backup é gerenciar
-            'configuracoes' => 9, // Configurações é gerenciar
-            'completos' => 5, // Relatórios completos é exportar
-            'aprovar_documentos' => 6, // Aprovar documentos
-            'gestao_completa' => 9, // Gestão completa é gerenciar
-        ];
         
-        return $mapa[$acao] ?? 1; // Default para visualizar
-    }
-    
-    /**
-     * Obtém todas as permissões de um usuário
-     */
-    public static function getPermissoesUsuario($usuario_id = null) {
-        if ($usuario_id === null) {
-            $usuario_id = $_SESSION['funcionario_id'] ?? null;
+        $permissaoId = $this->getPermissaoId($permissao);
+        if (!$permissaoId) {
+            $this->logAccess($recurso, $permissao, 'NEGADO', 'Permissão inválida');
+            return false;
         }
         
-        if (!$usuario_id) return [];
+        // Verificar DENY específicos primeiro
+        if ($this->hasDenyPermission($recursoId, $permissaoId)) {
+            $this->logAccess($recurso, $permissao, 'NEGADO', 'Permissão negada explicitamente');
+            return false;
+        }
+        
+        // Verificar delegações ativas
+        if ($this->hasDelegatedPermission($recursoId, $permissaoId)) {
+            $this->logAccess($recurso, $permissao, 'PERMITIDO', 'Delegação ativa');
+            return true;
+        }
+        
+        // Verificar permissões por role
+        if ($this->hasRolePermission($recursoId, $permissaoId)) {
+            $this->logAccess($recurso, $permissao, 'PERMITIDO', 'Permissão via role');
+            return true;
+        }
+        
+        // Verificar permissões específicas GRANT
+        if ($this->hasGrantPermission($recursoId, $permissaoId)) {
+            $this->logAccess($recurso, $permissao, 'PERMITIDO', 'Permissão específica');
+            return true;
+        }
+        
+        // Verificar políticas de acesso
+        if (!$this->checkPolicies($recursoId)) {
+            $this->logAccess($recurso, $permissao, 'NEGADO', 'Política de acesso');
+            return false;
+        }
+        
+        $this->logAccess($recurso, $permissao, 'NEGADO', 'Sem permissão');
+        return false;
+    }
+    
+    /**
+     * Verifica se tem role específica
+     */
+    public function hasRole($roleCode) {
+        $roles = $this->getUserRoles();
+        foreach ($roles as $role) {
+            if ($role['codigo'] === $roleCode) {
+                return true;
+            }
+        }
+        return false;
+    }
+    
+    /**
+     * Verifica se é Super Admin
+     */
+    public function isSuperAdmin() {
+        // Verificar cache primeiro
+        if (isset($this->cache['is_super_admin'])) {
+            return $this->cache['is_super_admin'];
+        }
+        
+        $result = $this->hasRole('SUPER_ADMIN');
+        $this->cache['is_super_admin'] = $result;
+        return $result;
+    }
+    
+    /**
+     * Verifica se é Presidente
+     */
+    public function isPresidente() {
+        return $this->hasRole('PRESIDENTE');
+    }
+    
+    /**
+     * Verifica se é Diretor
+     */
+    public function isDiretor($departamentoId = null) {
+        $roles = $this->getUserRoles();
+        
+        foreach ($roles as $role) {
+            if ($role['codigo'] === 'DIRETOR') {
+                if ($departamentoId === null || $role['departamento_id'] == $departamentoId) {
+                    return true;
+                }
+            }
+        }
+        
+        // Verificar também associados-diretores
+        if ($this->tipoUsuario === 'associado') {
+            return true; // Associados só logam se is_diretor = 1
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Verifica se é Subdiretor
+     */
+    public function isSubdiretor($departamentoId = null) {
+        $roles = $this->getUserRoles();
+        
+        foreach ($roles as $role) {
+            if ($role['codigo'] === 'SUBDIRETOR') {
+                if ($departamentoId === null || $role['departamento_id'] == $departamentoId) {
+                    return true;
+                }
+            }
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Obter todas as roles do usuário
+     */
+    private function getUserRoles() {
+        if ($this->roles !== null && $this->useCache) {
+            return $this->roles;
+        }
         
         try {
-            $db = self::getDb();
+            $sql = "
+                SELECT 
+                    r.id,
+                    r.codigo,
+                    r.nome,
+                    r.nivel_hierarquia,
+                    r.tipo,
+                    fr.departamento_id,
+                    fr.principal,
+                    d.nome as departamento_nome
+                FROM funcionario_roles fr
+                INNER JOIN roles r ON fr.role_id = r.id
+                LEFT JOIN Departamentos d ON fr.departamento_id = d.id
+                WHERE fr.funcionario_id = ?
+                AND (fr.data_fim IS NULL OR fr.data_fim >= CURDATE())
+                ORDER BY r.nivel_hierarquia DESC, fr.principal DESC
+            ";
             
-            // Buscar informações do funcionário
-            $stmt = $db->prepare("
-                SELECT cargo, departamento_id 
-                FROM Funcionarios 
-                WHERE id = ? AND ativo = 1
-            ");
-            $stmt->execute([$usuario_id]);
-            $funcionario = $stmt->fetch();
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([$this->funcionarioId]);
+            $this->roles = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
-            if (!$funcionario) return [];
-            
-            // Se for Presidente/Vice ou da Presidência, tem tudo
-            if (in_array($funcionario['cargo'], ['Presidente', 'Vice-Presidente']) || 
-                $funcionario['departamento_id'] == 1) {
-                return ['*']; // Acesso total
-            }
-            
-            $permissoes = [];
-            
-            // Buscar permissões específicas do funcionário
-            $stmt = $db->prepare("
-                SELECT DISTINCT r.chave
-                FROM Permissoes_Funcionario pf
-                JOIN Recursos r ON pf.recurso_id = r.id
-                WHERE pf.funcionario_id = ? AND pf.concedido = 1
-            ");
-            $stmt->execute([$usuario_id]);
-            while ($row = $stmt->fetch()) {
-                $permissoes[] = $row['chave'];
-            }
-            
-            // Buscar permissões do departamento
-            $stmt = $db->prepare("
-                SELECT DISTINCT r.chave
-                FROM Permissoes_Departamento pd
-                JOIN Recursos r ON pd.recurso_id = r.id
-                WHERE pd.departamento_id = ?
-            ");
-            $stmt->execute([$funcionario['departamento_id']]);
-            while ($row = $stmt->fetch()) {
-                $permissoes[] = $row['chave'];
-            }
-            
-            return array_unique($permissoes);
+            return $this->roles;
             
         } catch (PDOException $e) {
-            error_log("Erro ao buscar permissões: " . $e->getMessage());
+            error_log("Erro ao buscar roles: " . $e->getMessage());
             return [];
         }
     }
     
     /**
-     * Verifica se é da presidência (mantido para compatibilidade)
+     * Verificar permissão negada específica
      */
-    public static function ehPresidencia($usuario_id = null) {
-        if ($usuario_id === null) {
-            $cargo = $_SESSION['funcionario_cargo'] ?? null;
-            $departamento_id = $_SESSION['departamento_id'] ?? null;
-        } else {
-            $db = self::getDb();
-            $stmt = $db->prepare("SELECT cargo, departamento_id FROM Funcionarios WHERE id = ?");
-            $stmt->execute([$usuario_id]);
-            $func = $stmt->fetch();
-            $cargo = $func['cargo'] ?? null;
-            $departamento_id = $func['departamento_id'] ?? null;
-        }
-        
-        return $departamento_id == 1 || in_array($cargo, ['Presidente', 'Vice-Presidente']);
-    }
-    
-    /**
-     * Verifica se é diretor (mantido para compatibilidade)
-     */
-    public static function ehDiretor($usuario_id = null) {
-        if ($usuario_id === null) {
-            $cargo = $_SESSION['funcionario_cargo'] ?? null;
-        } else {
-            $db = self::getDb();
-            $stmt = $db->prepare("SELECT cargo FROM Funcionarios WHERE id = ?");
-            $stmt->execute([$usuario_id]);
-            $func = $stmt->fetch();
-            $cargo = $func['cargo'] ?? null;
-        }
-        
-        return $cargo === 'Diretor';
-    }
-    
-    /**
-     * Verifica se é diretor de departamento específico
-     */
-    public static function ehDiretorDepartamento($departamento_check, $usuario_id = null) {
-        if ($usuario_id === null) {
-            $cargo = $_SESSION['funcionario_cargo'] ?? null;
-            $departamento_id = $_SESSION['departamento_id'] ?? null;
-        } else {
-            $db = self::getDb();
-            $stmt = $db->prepare("SELECT cargo, departamento_id FROM Funcionarios WHERE id = ?");
-            $stmt->execute([$usuario_id]);
-            $func = $stmt->fetch();
-            $cargo = $func['cargo'] ?? null;
-            $departamento_id = $func['departamento_id'] ?? null;
-        }
-        
-        return $cargo === 'Diretor' && $departamento_id == $departamento_check;
-    }
-    
-    /**
-     * Métodos helper para compatibilidade (mantidos para não quebrar código existente)
-     */
-    public static function podeVerComercial() {
-        return self::tem('comercial.visualizar');
-    }
-    
-    public static function podeVerFinanceiro() {
-        return self::tem('financeiro.visualizar');
-    }
-    
-    public static function podeVerRH() {
-        return self::tem('funcionarios.visualizar');
-    }
-    
-    public static function podeImpersonar($usuario_id = null) {
-        return self::tem('sistema.impersonar', $usuario_id);
-    }
-    
-    public static function isAdmin($usuario_id = null) {
-        if ($usuario_id === null) {
-            $usuario_id = $_SESSION['funcionario_id'] ?? null;
-        }
-        return self::ehPresidencia($usuario_id) || self::tem('sistema.configuracoes', $usuario_id);
-    }
-    
-    /**
-     * Exigir permissão ou redirecionar
-     */
-    public static function exigir($permissao, $redirect = '/pages/dashboard.php') {
-        if (!self::tem($permissao)) {
-            $_SESSION['erro'] = 'Você não tem permissão para acessar esta página.';
-            header('Location: ' . BASE_URL . $redirect);
-            exit;
-        }
-    }
-    
-    /**
-     * Registrar tentativa de acesso negado
-     */
-    public static function registrarAcessoNegado($permissao, $pagina) {
+    private function hasDenyPermission($recursoId, $permissaoId) {
         try {
-            $db = self::getDb();
-            $stmt = $db->prepare("
-                INSERT INTO Auditoria 
-                (tabela, acao, funcionario_id, alteracoes, ip_origem, browser_info)
-                VALUES ('Permissoes', 'ACESSO_NEGADO', ?, ?, ?, ?)
+            $sql = "
+                SELECT COUNT(*) 
+                FROM funcionario_permissoes
+                WHERE funcionario_id = ?
+                AND recurso_id = ?
+                AND permissao_id = ?
+                AND tipo = 'DENY'
+                AND (data_fim IS NULL OR data_fim >= CURDATE())
+            ";
+            
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([$this->funcionarioId, $recursoId, $permissaoId]);
+            
+            return $stmt->fetchColumn() > 0;
+            
+        } catch (PDOException $e) {
+            error_log("Erro ao verificar DENY: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Verificar permissão concedida específica
+     */
+    private function hasGrantPermission($recursoId, $permissaoId) {
+        try {
+            $sql = "
+                SELECT COUNT(*) 
+                FROM funcionario_permissoes
+                WHERE funcionario_id = ?
+                AND recurso_id = ?
+                AND permissao_id = ?
+                AND tipo = 'GRANT'
+                AND (data_fim IS NULL OR data_fim >= CURDATE())
+            ";
+            
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([$this->funcionarioId, $recursoId, $permissaoId]);
+            
+            return $stmt->fetchColumn() > 0;
+            
+        } catch (PDOException $e) {
+            error_log("Erro ao verificar GRANT: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Verificar permissão via roles
+     */
+    private function hasRolePermission($recursoId, $permissaoId) {
+        try {
+            $roles = $this->getUserRoles();
+            if (empty($roles)) {
+                return false;
+            }
+            
+            $roleIds = array_column($roles, 'id');
+            $placeholders = str_repeat('?,', count($roleIds) - 1) . '?';
+            
+            $sql = "
+                SELECT COUNT(*)
+                FROM role_permissoes
+                WHERE role_id IN ($placeholders)
+                AND recurso_id = ?
+                AND permissao_id = ?
+            ";
+            
+            $params = array_merge($roleIds, [$recursoId, $permissaoId]);
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute($params);
+            
+            return $stmt->fetchColumn() > 0;
+            
+        } catch (PDOException $e) {
+            error_log("Erro ao verificar permissão via role: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Verificar delegações ativas
+     */
+    private function hasDelegatedPermission($recursoId, $permissaoId) {
+        try {
+            $sql = "
+                SELECT COUNT(*)
+                FROM delegacoes d
+                LEFT JOIN role_permissoes rp ON d.role_id = rp.role_id
+                WHERE d.delegado_id = ?
+                AND d.ativo = 1
+                AND NOW() BETWEEN d.data_inicio AND d.data_fim
+                AND (
+                    (d.recurso_id IS NULL OR d.recurso_id = ?)
+                    AND (d.role_id IS NULL OR (rp.recurso_id = ? AND rp.permissao_id = ?))
+                )
+            ";
+            
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([
+                $this->funcionarioId,
+                $recursoId,
+                $recursoId,
+                $permissaoId
+            ]);
+            
+            return $stmt->fetchColumn() > 0;
+            
+        } catch (PDOException $e) {
+            error_log("Erro ao verificar delegação: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Verificar políticas de acesso
+     */
+    private function checkPolicies($recursoId) {
+        try {
+            // Buscar políticas aplicáveis
+            $sql = "
+                SELECT p.tipo, p.regras
+                FROM politicas_acesso p
+                INNER JOIN politica_aplicacoes pa ON p.id = pa.politica_id
+                WHERE p.ativo = 1 AND pa.ativo = 1
+                AND (
+                    (pa.tipo_alvo = 'FUNCIONARIO' AND pa.alvo_id = ?)
+                    OR (pa.tipo_alvo = 'ROLE' AND pa.alvo_id IN (
+                        SELECT role_id FROM funcionario_roles 
+                        WHERE funcionario_id = ? 
+                        AND (data_fim IS NULL OR data_fim >= CURDATE())
+                    ))
+                    OR (pa.tipo_alvo = 'DEPARTAMENTO' AND pa.alvo_id = ?)
+                )
+                ORDER BY p.prioridade DESC
+            ";
+            
+            $departamentoId = $_SESSION['departamento_id'] ?? null;
+            
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([
+                $this->funcionarioId,
+                $this->funcionarioId,
+                $departamentoId
+            ]);
+            
+            $politicas = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            foreach ($politicas as $politica) {
+                $regras = json_decode($politica['regras'], true);
+                
+                switch ($politica['tipo']) {
+                    case 'HORARIO':
+                        if (!$this->checkHorarioPolicy($regras)) {
+                            return false;
+                        }
+                        break;
+                        
+                    case 'IP':
+                        if (!$this->checkIPPolicy($regras)) {
+                            return false;
+                        }
+                        break;
+                        
+                    case 'DEPARTAMENTO':
+                        if (!$this->checkDepartamentoPolicy($regras)) {
+                            return false;
+                        }
+                        break;
+                }
+            }
+            
+            return true;
+            
+        } catch (PDOException $e) {
+            error_log("Erro ao verificar políticas: " . $e->getMessage());
+            return true; // Em caso de erro, permitir acesso
+        }
+    }
+    
+    /**
+     * Verificar política de horário
+     */
+    private function checkHorarioPolicy($regras) {
+        $horaAtual = date('H:i');
+        $diaAtual = date('N'); // 1 = Segunda, 7 = Domingo
+        
+        if (isset($regras['dias_permitidos'])) {
+            if (!in_array($diaAtual, $regras['dias_permitidos'])) {
+                return false;
+            }
+        }
+        
+        if (isset($regras['hora_inicio']) && isset($regras['hora_fim'])) {
+            if ($horaAtual < $regras['hora_inicio'] || $horaAtual > $regras['hora_fim']) {
+                return false;
+            }
+        }
+        
+        return true;
+    }
+    
+    /**
+     * Verificar política de IP
+     */
+    private function checkIPPolicy($regras) {
+        $clientIP = $_SERVER['REMOTE_ADDR'] ?? '';
+        
+        if (isset($regras['ips_permitidos'])) {
+            return in_array($clientIP, $regras['ips_permitidos']);
+        }
+        
+        if (isset($regras['ranges_permitidos'])) {
+            foreach ($regras['ranges_permitidos'] as $range) {
+                if ($this->ipInRange($clientIP, $range)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        
+        return true;
+    }
+    
+    /**
+     * Verificar política de departamento
+     */
+    private function checkDepartamentoPolicy($regras) {
+        $departamentoId = $_SESSION['departamento_id'] ?? null;
+        
+        if (isset($regras['departamentos_permitidos'])) {
+            return in_array($departamentoId, $regras['departamentos_permitidos']);
+        }
+        
+        return true;
+    }
+    
+    /**
+     * Obter ID do recurso pelo código
+     */
+    private function getRecursoId($codigo) {
+        // Cache de recursos
+        if (isset($this->cache['recursos'][$codigo])) {
+            return $this->cache['recursos'][$codigo];
+        }
+        
+        try {
+            $stmt = $this->db->prepare("SELECT id FROM recursos WHERE codigo = ? AND ativo = 1");
+            $stmt->execute([$codigo]);
+            $id = $stmt->fetchColumn();
+            
+            if ($id) {
+                $this->cache['recursos'][$codigo] = $id;
+            }
+            
+            return $id;
+            
+        } catch (PDOException $e) {
+            error_log("Erro ao buscar recurso: " . $e->getMessage());
+            return null;
+        }
+    }
+    
+    /**
+     * Obter ID da permissão pelo código
+     */
+    private function getPermissaoId($codigo) {
+        // Cache de permissões
+        if (isset($this->cache['permissoes'][$codigo])) {
+            return $this->cache['permissoes'][$codigo];
+        }
+        
+        try {
+            $stmt = $this->db->prepare("SELECT id FROM permissoes WHERE codigo = ?");
+            $stmt->execute([$codigo]);
+            $id = $stmt->fetchColumn();
+            
+            if ($id) {
+                $this->cache['permissoes'][$codigo] = $id;
+            }
+            
+            return $id;
+            
+        } catch (PDOException $e) {
+            error_log("Erro ao buscar permissão: " . $e->getMessage());
+            return null;
+        }
+    }
+    
+    /**
+     * Carregar cache de permissões
+     */
+    private function loadFromCache() {
+        try {
+            $stmt = $this->db->prepare("
+                SELECT permissoes_json, hash_permissoes, expira_em
+                FROM cache_permissoes
+                WHERE funcionario_id = ?
+                AND (expira_em IS NULL OR expira_em > NOW())
+            ");
+            $stmt->execute([$this->funcionarioId]);
+            $cache = $stmt->fetch();
+            
+            if ($cache) {
+                $this->permissions = json_decode($cache['permissoes_json'], true);
+                return true;
+            }
+            
+            return false;
+            
+        } catch (PDOException $e) {
+            error_log("Erro ao carregar cache: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Salvar cache de permissões
+     */
+    public function saveToCache() {
+        try {
+            $permissoes = $this->getAllPermissions();
+            $json = json_encode($permissoes);
+            $hash = md5($json);
+            $expira = date('Y-m-d H:i:s', time() + $this->cacheLifetime);
+            
+            $stmt = $this->db->prepare("
+                INSERT INTO cache_permissoes (funcionario_id, permissoes_json, hash_permissoes, expira_em)
+                VALUES (?, ?, ?, ?)
+                ON DUPLICATE KEY UPDATE
+                permissoes_json = VALUES(permissoes_json),
+                hash_permissoes = VALUES(hash_permissoes),
+                expira_em = VALUES(expira_em),
+                criado_em = NOW()
             ");
             
-            $detalhes = json_encode([
-                'permissao' => $permissao,
-                'pagina' => $pagina
-            ]);
+            $stmt->execute([$this->funcionarioId, $json, $hash, $expira]);
+            
+        } catch (PDOException $e) {
+            error_log("Erro ao salvar cache: " . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Invalidar cache de permissões
+     */
+    public static function invalidateCache($funcionarioId = null) {
+        try {
+            $db = Database::getInstance(DB_NAME_CADASTRO)->getConnection();
+            
+            if ($funcionarioId) {
+                $stmt = $db->prepare("DELETE FROM cache_permissoes WHERE funcionario_id = ?");
+                $stmt->execute([$funcionarioId]);
+            } else {
+                $db->exec("DELETE FROM cache_permissoes WHERE 1=1");
+            }
+            
+        } catch (PDOException $e) {
+            error_log("Erro ao invalidar cache: " . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Registrar acesso (log)
+     */
+    private function logAccess($recurso, $permissao, $resultado, $motivo = null) {
+        try {
+            // Limitar logs para evitar sobrecarga
+            if (rand(1, 100) > 10) { // Log apenas 10% dos acessos bem-sucedidos
+                if ($resultado === 'PERMITIDO') {
+                    return;
+                }
+            }
+            
+            $recursoId = is_numeric($recurso) ? $recurso : $this->getRecursoId($recurso);
+            $permissaoId = is_numeric($permissao) ? $permissao : $this->getPermissaoId($permissao);
+            
+            $stmt = $this->db->prepare("
+                INSERT INTO log_acessos (
+                    funcionario_id, recurso_id, permissao_id, 
+                    acao, resultado, motivo_negacao, 
+                    ip, user_agent
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ");
             
             $stmt->execute([
-                $_SESSION['funcionario_id'] ?? 0,
-                $detalhes,
-                $_SERVER['REMOTE_ADDR'] ?? '',
-                $_SERVER['HTTP_USER_AGENT'] ?? ''
+                $this->funcionarioId,
+                $recursoId,
+                $permissaoId,
+                $recurso . '::' . $permissao,
+                $resultado,
+                $motivo,
+                $_SERVER['REMOTE_ADDR'] ?? null,
+                $_SERVER['HTTP_USER_AGENT'] ?? null
             ]);
+            
         } catch (PDOException $e) {
+            error_log("Erro ao registrar log de acesso: " . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Registrar acesso negado (para análise)
+     */
+    public static function registrarAcessoNegado($permissao, $url) {
+        try {
+            $instance = self::getInstance();
+            $instance->logAccess($url, $permissao, 'NEGADO', 'Acesso negado via checkPermissao');
+        } catch (Exception $e) {
             error_log("Erro ao registrar acesso negado: " . $e->getMessage());
         }
     }
     
     /**
-     * Limpar cache (usar quando atualizar permissões)
+     * Obter todas as permissões do usuário (para cache)
      */
-    public static function limparCache($usuario_id = null) {
-        if ($usuario_id === null) {
-            self::$cache = [];
-        } else {
-            foreach (self::$cache as $key => $value) {
-                if (strpos($key, $usuario_id . '_') === 0) {
-                    unset(self::$cache[$key]);
+    private function getAllPermissions() {
+        $permissoes = [];
+        
+        try {
+            // Buscar todas as permissões via roles
+            $sql = "
+                SELECT DISTINCT
+                    rec.codigo as recurso,
+                    p.codigo as permissao,
+                    'ROLE' as origem
+                FROM funcionario_roles fr
+                INNER JOIN role_permissoes rp ON fr.role_id = rp.role_id
+                INNER JOIN recursos rec ON rp.recurso_id = rec.id
+                INNER JOIN permissoes p ON rp.permissao_id = p.id
+                WHERE fr.funcionario_id = ?
+                AND (fr.data_fim IS NULL OR fr.data_fim >= CURDATE())
+                AND rec.ativo = 1
+            ";
+            
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([$this->funcionarioId]);
+            $rolePerms = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            foreach ($rolePerms as $perm) {
+                $permissoes[$perm['recurso']][$perm['permissao']] = true;
+            }
+            
+            // Buscar permissões específicas GRANT
+            $sql = "
+                SELECT 
+                    rec.codigo as recurso,
+                    p.codigo as permissao
+                FROM funcionario_permissoes fp
+                INNER JOIN recursos rec ON fp.recurso_id = rec.id
+                INNER JOIN permissoes p ON fp.permissao_id = p.id
+                WHERE fp.funcionario_id = ?
+                AND fp.tipo = 'GRANT'
+                AND (fp.data_fim IS NULL OR fp.data_fim >= CURDATE())
+            ";
+            
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([$this->funcionarioId]);
+            $grants = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            foreach ($grants as $grant) {
+                $permissoes[$grant['recurso']][$grant['permissao']] = true;
+            }
+            
+            // Remover permissões DENY
+            $sql = "
+                SELECT 
+                    rec.codigo as recurso,
+                    p.codigo as permissao
+                FROM funcionario_permissoes fp
+                INNER JOIN recursos rec ON fp.recurso_id = rec.id
+                INNER JOIN permissoes p ON fp.permissao_id = p.id
+                WHERE fp.funcionario_id = ?
+                AND fp.tipo = 'DENY'
+                AND (fp.data_fim IS NULL OR fp.data_fim >= CURDATE())
+            ";
+            
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([$this->funcionarioId]);
+            $denies = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            foreach ($denies as $deny) {
+                unset($permissoes[$deny['recurso']][$deny['permissao']]);
+            }
+            
+        } catch (PDOException $e) {
+            error_log("Erro ao buscar todas as permissões: " . $e->getMessage());
+        }
+        
+        return $permissoes;
+    }
+    
+    /**
+     * Verificar se IP está em um range
+     */
+    private function ipInRange($ip, $range) {
+        if (strpos($range, '/') === false) {
+            return $ip === $range;
+        }
+        
+        list($subnet, $bits) = explode('/', $range);
+        $ip = ip2long($ip);
+        $subnet = ip2long($subnet);
+        $mask = -1 << (32 - $bits);
+        $subnet &= $mask;
+        
+        return ($ip & $mask) == $subnet;
+    }
+    
+    /**
+     * Obter menu baseado em permissões
+     */
+    public static function getMenu() {
+        $instance = self::getInstance();
+        $menu = [];
+        
+        try {
+            $sql = "
+                SELECT DISTINCT
+                    r.id,
+                    r.codigo,
+                    r.nome,
+                    r.categoria,
+                    r.modulo,
+                    r.tipo,
+                    r.rota,
+                    r.icone,
+                    r.ordem
+                FROM recursos r
+                WHERE r.tipo IN ('MENU', 'PAGINA')
+                AND r.ativo = 1
+                ORDER BY r.categoria, r.ordem, r.nome
+            ";
+            
+            $stmt = $instance->db->prepare($sql);
+            $stmt->execute();
+            $recursos = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            foreach ($recursos as $recurso) {
+                if ($instance->hasPermission($recurso['codigo'], 'VIEW')) {
+                    if (!isset($menu[$recurso['categoria']])) {
+                        $menu[$recurso['categoria']] = [];
+                    }
+                    $menu[$recurso['categoria']][] = $recurso;
                 }
             }
+            
+        } catch (PDOException $e) {
+            error_log("Erro ao gerar menu: " . $e->getMessage());
+        }
+        
+        return $menu;
+    }
+    
+    /**
+     * Atribuir role a um funcionário
+     */
+    public static function atribuirRole($funcionarioId, $roleCode, $departamentoId = null, $atribuidoPor = null) {
+        try {
+            $db = Database::getInstance(DB_NAME_CADASTRO)->getConnection();
+            
+            // Buscar ID da role
+            $stmt = $db->prepare("SELECT id FROM roles WHERE codigo = ?");
+            $stmt->execute([$roleCode]);
+            $roleId = $stmt->fetchColumn();
+            
+            if (!$roleId) {
+                throw new Exception("Role não encontrada: $roleCode");
+            }
+            
+            // Inserir atribuição
+            $stmt = $db->prepare("
+                INSERT INTO funcionario_roles (
+                    funcionario_id, role_id, departamento_id, 
+                    atribuido_por, data_inicio
+                ) VALUES (?, ?, ?, ?, CURDATE())
+                ON DUPLICATE KEY UPDATE
+                data_fim = NULL,
+                atribuido_por = VALUES(atribuido_por)
+            ");
+            
+            $stmt->execute([
+                $funcionarioId,
+                $roleId,
+                $departamentoId,
+                $atribuidoPor ?? $_SESSION['funcionario_id'] ?? null
+            ]);
+            
+            // Invalidar cache
+            self::invalidateCache($funcionarioId);
+            
+            return true;
+            
+        } catch (Exception $e) {
+            error_log("Erro ao atribuir role: " . $e->getMessage());
+            return false;
         }
     }
-}
-
-/**
- * Funções helper globais para facilitar o uso
- */
-function temPermissao($permissao) {
-    return Permissoes::tem($permissao);
-}
-
-function ehPresidencia() {
-    return Permissoes::ehPresidencia();
-}
-
-function ehDiretor() {
-    return Permissoes::ehDiretor();
+    
+    /**
+     * Remover role de um funcionário
+     */
+    public static function removerRole($funcionarioId, $roleCode, $departamentoId = null) {
+        try {
+            $db = Database::getInstance(DB_NAME_CADASTRO)->getConnection();
+            
+            // Buscar ID da role
+            $stmt = $db->prepare("SELECT id FROM roles WHERE codigo = ?");
+            $stmt->execute([$roleCode]);
+            $roleId = $stmt->fetchColumn();
+            
+            if (!$roleId) {
+                return false;
+            }
+            
+            // Atualizar data_fim
+            $sql = "
+                UPDATE funcionario_roles 
+                SET data_fim = CURDATE()
+                WHERE funcionario_id = ?
+                AND role_id = ?
+            ";
+            
+            $params = [$funcionarioId, $roleId];
+            
+            if ($departamentoId !== null) {
+                $sql .= " AND departamento_id = ?";
+                $params[] = $departamentoId;
+            }
+            
+            $stmt = $db->prepare($sql);
+            $stmt->execute($params);
+            
+            // Invalidar cache
+            self::invalidateCache($funcionarioId);
+            
+            return true;
+            
+        } catch (Exception $e) {
+            error_log("Erro ao remover role: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Criar delegação temporária
+     */
+    public static function criarDelegacao($deleganteId, $delegadoId, $dataInicio, $dataFim, $motivo, $roleId = null, $recursoId = null) {
+        try {
+            $db = Database::getInstance(DB_NAME_CADASTRO)->getConnection();
+            
+            $stmt = $db->prepare("
+                INSERT INTO delegacoes (
+                    delegante_id, delegado_id, role_id, recurso_id,
+                    data_inicio, data_fim, motivo, ativo
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, 1)
+            ");
+            
+            $stmt->execute([
+                $deleganteId,
+                $delegadoId,
+                $roleId,
+                $recursoId,
+                $dataInicio,
+                $dataFim,
+                $motivo
+            ]);
+            
+            // Invalidar cache do delegado
+            self::invalidateCache($delegadoId);
+            
+            return $db->lastInsertId();
+            
+        } catch (Exception $e) {
+            error_log("Erro ao criar delegação: " . $e->getMessage());
+            return false;
+        }
+    }
 }

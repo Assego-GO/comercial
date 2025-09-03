@@ -11,10 +11,6 @@ require_once '../classes/Database.php';
 require_once '../classes/Auth.php';
 require_once '../classes/Associados.php';
 
-
-
-
-
 // Define o título da página
 $page_title = 'Cadastrar Novo Associado - ASSEGO';
 
