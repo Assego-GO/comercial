@@ -1,17 +1,16 @@
 <?php
 /**
- * API para Estatísticas Avançadas - VERSÃO CORRIGIDA GROUP BY
+ * API de Estatísticas Avançadas Melhorada - Sistema ASSEGO
  * api/estatisticas_avancadas.php
+ * Baseada na API original mas otimizada para nova interface
  */
 
 header('Content-Type: application/json');
 header('Cache-Control: no-cache, must-revalidate');
 
-// Log de debug
-error_log("=== ESTATÍSTICAS API GROUP BY CORRIGIDA ===");
+error_log("=== ESTATÍSTICAS API MELHORADA ===");
 
 try {
-    // Configuração e includes
     require_once '../config/config.php';
     require_once '../config/database.php';
     require_once '../classes/Database.php';
@@ -42,9 +41,145 @@ try {
         'pensionista' => $geral['ativos_pensionista'] ?? 0
     ];
 
-    error_log("Resumo geral: " . json_encode($stats['resumo_geral']));
+    // ===== 2. ANÁLISE DE DOADORAS DE SANGUE =====
+    $stmt = $db->prepare("
+        SELECT 
+            CASE 
+                WHEN f.doador IS NULL OR TRIM(f.doador) = '' THEN 'Não Informado'
+                WHEN UPPER(TRIM(f.doador)) IN ('SIM', 'S', '1', 'TRUE', 'VERDADEIRO') THEN 'Doador'
+                ELSE 'Não Doador'
+            END as status_doador,
+            COUNT(DISTINCT a.id) as quantidade,
+            ROUND((COUNT(DISTINCT a.id) * 100.0 / (
+                SELECT COUNT(DISTINCT a2.id) 
+                FROM Associados a2 
+                WHERE a2.situacao = 'Filiado'
+            )), 2) as percentual
+        FROM Associados a 
+        LEFT JOIN Financeiro f ON a.id = f.associado_id 
+        WHERE a.situacao = 'Filiado'
+        GROUP BY CASE 
+            WHEN f.doador IS NULL OR TRIM(f.doador) = '' THEN 'Não Informado'
+            WHEN UPPER(TRIM(f.doador)) IN ('SIM', 'S', '1', 'TRUE', 'VERDADEIRO') THEN 'Doador'
+            ELSE 'Não Doador'
+        END
+        ORDER BY quantidade DESC
+    ");
+    $stmt->execute();
+    $stats['doadoras_sangue'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // ===== 2. ANÁLISE DETALHADA DE PATENTES =====
+    // ===== 3. SITUAÇÃO FINANCEIRA =====
+    $stmt = $db->prepare("
+        SELECT 
+            CASE 
+                WHEN f.situacaoFinanceira IS NULL OR TRIM(f.situacaoFinanceira) = '' THEN 'Não Informado'
+                ELSE TRIM(f.situacaoFinanceira)
+            END as situacao_financeira,
+            COUNT(DISTINCT a.id) as quantidade,
+            ROUND((COUNT(DISTINCT a.id) * 100.0 / (
+                SELECT COUNT(DISTINCT a2.id) 
+                FROM Associados a2 
+                WHERE a2.situacao = 'Filiado'
+            )), 2) as percentual
+        FROM Associados a 
+        LEFT JOIN Financeiro f ON a.id = f.associado_id 
+        WHERE a.situacao = 'Filiado'
+        GROUP BY CASE 
+            WHEN f.situacaoFinanceira IS NULL OR TRIM(f.situacaoFinanceira) = '' THEN 'Não Informado'
+            ELSE TRIM(f.situacaoFinanceira)
+        END
+        ORDER BY quantidade DESC
+    ");
+    $stmt->execute();
+    $stats['situacao_financeira'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // ===== 4. TOP BAIRROS DE GOIÂNIA (para gráfico) =====
+    $stmt = $db->prepare("
+        SELECT 
+            CASE 
+                WHEN e.bairro IS NULL OR TRIM(e.bairro) = '' THEN 'Não Informado'
+                ELSE UPPER(TRIM(e.bairro))
+            END as bairro,
+            COUNT(DISTINCT a.id) as quantidade,
+            ROUND((COUNT(DISTINCT a.id) * 100.0 / (
+                SELECT COUNT(DISTINCT a2.id) 
+                FROM Associados a2 
+                LEFT JOIN Endereco e2 ON a2.id = e2.associado_id
+                WHERE a2.situacao = 'Filiado' 
+                AND UPPER(TRIM(COALESCE(e2.cidade, ''))) LIKE '%GOIÂNIA%'
+            )), 2) as percentual
+        FROM Associados a 
+        LEFT JOIN Endereco e ON a.id = e.associado_id 
+        WHERE a.situacao = 'Filiado'
+        AND UPPER(TRIM(COALESCE(e.cidade, ''))) LIKE '%GOIÂNIA%'
+        GROUP BY CASE 
+            WHEN e.bairro IS NULL OR TRIM(e.bairro) = '' THEN 'Não Informado'
+            ELSE UPPER(TRIM(e.bairro))
+        END
+        HAVING quantidade >= 5
+        ORDER BY quantidade DESC
+        LIMIT 10
+    ");
+    $stmt->execute();
+    $stats['bairros_goiania'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // ===== 5. TODOS OS BAIRROS DE GOIÂNIA (para modal) =====
+    $stmt = $db->prepare("
+        SELECT 
+            CASE 
+                WHEN e.bairro IS NULL OR TRIM(e.bairro) = '' THEN 'Não Informado'
+                ELSE UPPER(TRIM(e.bairro))
+            END as bairro,
+            COUNT(DISTINCT a.id) as quantidade,
+            ROUND((COUNT(DISTINCT a.id) * 100.0 / (
+                SELECT COUNT(DISTINCT a2.id) 
+                FROM Associados a2 
+                LEFT JOIN Endereco e2 ON a2.id = e2.associado_id
+                WHERE a2.situacao = 'Filiado' 
+                AND UPPER(TRIM(COALESCE(e2.cidade, ''))) LIKE '%GOIÂNIA%'
+            )), 2) as percentual
+        FROM Associados a 
+        LEFT JOIN Endereco e ON a.id = e.associado_id 
+        WHERE a.situacao = 'Filiado'
+        AND UPPER(TRIM(COALESCE(e.cidade, ''))) LIKE '%GOIÂNIA%'
+        GROUP BY CASE 
+            WHEN e.bairro IS NULL OR TRIM(e.bairro) = '' THEN 'Não Informado'
+            ELSE UPPER(TRIM(e.bairro))
+        END
+        HAVING quantidade >= 1
+        ORDER BY quantidade DESC
+    ");
+    $stmt->execute();
+    $stats['todos_bairros'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // ===== 6. ANÁLISE DE VÍNCULO SERVIDOR =====
+    $stmt = $db->prepare("
+        SELECT 
+            CASE 
+                WHEN f.vinculoServidor IS NULL OR TRIM(f.vinculoServidor) = '' THEN 'Não Informado'
+                ELSE TRIM(f.vinculoServidor)
+            END as vinculo_servidor,
+            COUNT(DISTINCT a.id) as quantidade,
+            ROUND((COUNT(DISTINCT a.id) * 100.0 / (
+                SELECT COUNT(DISTINCT a2.id) 
+                FROM Associados a2 
+                WHERE a2.situacao = 'Filiado'
+            )), 2) as percentual
+        FROM Associados a 
+        LEFT JOIN Financeiro f ON a.id = f.associado_id 
+        WHERE a.situacao = 'Filiado'
+        GROUP BY CASE 
+            WHEN f.vinculoServidor IS NULL OR TRIM(f.vinculoServidor) = '' THEN 'Não Informado'
+            ELSE TRIM(f.vinculoServidor)
+        END
+        ORDER BY quantidade DESC
+    ");
+    $stmt->execute();
+    $stats['vinculo_servidor'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // ===== DADOS ORIGINAIS MANTIDOS =====
+    
+    // Patentes
     $stmt = $db->prepare("
         SELECT 
             CASE 
@@ -69,9 +204,7 @@ try {
     $stmt->execute();
     $stats['por_patente'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    error_log("Patentes encontradas: " . count($stats['por_patente']));
-
-    // ===== 3. ANÁLISE POR CORPORAÇÃO =====
+    // Corporações
     $stmt = $db->prepare("
         SELECT 
             CASE 
@@ -95,12 +228,7 @@ try {
             COUNT(DISTINCT a.id) as quantidade,
             COUNT(DISTINCT CASE WHEN UPPER(TRIM(COALESCE(m.categoria, ''))) = 'ATIVA' THEN a.id END) as ativa,
             COUNT(DISTINCT CASE WHEN UPPER(TRIM(COALESCE(m.categoria, ''))) = 'RESERVA' THEN a.id END) as reserva,
-            COUNT(DISTINCT CASE WHEN UPPER(TRIM(COALESCE(m.categoria, ''))) = 'PENSIONISTA' THEN a.id END) as pensionista,
-            ROUND((COUNT(DISTINCT a.id) * 100.0 / (
-                SELECT COUNT(DISTINCT a2.id) 
-                FROM Associados a2 
-                WHERE a2.situacao = 'Filiado'
-            )), 2) as percentual
+            COUNT(DISTINCT CASE WHEN UPPER(TRIM(COALESCE(m.categoria, ''))) = 'PENSIONISTA' THEN a.id END) as pensionista
         FROM Associados a 
         LEFT JOIN Militar m ON a.id = m.associado_id 
         WHERE a.situacao = 'Filiado'
@@ -128,7 +256,7 @@ try {
     $stmt->execute();
     $stats['por_corporacao_detalhada'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // ===== 4. ANÁLISE POR LOTAÇÃO =====
+    // Lotações
     $stmt = $db->prepare("
         SELECT 
             CASE 
@@ -155,7 +283,7 @@ try {
     $stmt->execute();
     $stats['por_lotacao'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // ===== 5. PATENTES POR CORPORAÇÃO =====
+    // Patentes por Corporação
     $stmt = $db->prepare("
         SELECT 
             CASE 
@@ -220,7 +348,7 @@ try {
         ];
     }
 
-    // ===== 6. DISTRIBUIÇÃO GEOGRÁFICA =====
+    // Cidades
     $stmt = $db->prepare("
         SELECT 
             CASE 
@@ -249,7 +377,7 @@ try {
     $stmt->execute();
     $stats['por_cidade'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // ===== 7. ANÁLISE ETÁRIA (CORRIGIDA) =====
+    // Faixa Etária
     $stmt = $db->prepare("
         SELECT 
             CASE 
@@ -283,29 +411,14 @@ try {
     $stmt->execute();
     $stats['por_faixa_etaria'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // ===== 8. CRESCIMENTO (12 MESES) =====
-    $stmt = $db->prepare("
-        SELECT 
-            MONTHNAME(c.dataFiliacao) as mes_nome,
-            YEAR(c.dataFiliacao) as ano,
-            COUNT(DISTINCT a.id) as novos_associados
-        FROM Associados a
-        INNER JOIN Contrato c ON a.id = c.associado_id
-        WHERE a.situacao = 'Filiado'
-        AND c.dataFiliacao >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH)
-        GROUP BY YEAR(c.dataFiliacao), MONTH(c.dataFiliacao), MONTHNAME(c.dataFiliacao)
-        ORDER BY YEAR(c.dataFiliacao), MONTH(c.dataFiliacao)
-        LIMIT 12
-    ");
-    $stmt->execute();
-    $stats['crescimento_12_meses'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-    error_log("Todas as estatísticas calculadas com sucesso");
+    error_log("Todas as estatísticas otimizadas calculadas com sucesso");
+    error_log("Total de bairros encontrados: " . count($stats['todos_bairros']));
 
     // Retorna sucesso
     echo json_encode([
         'status' => 'success',
         'data' => $stats,
+        'total_queries' => 10, // Número de consultas realizadas (removidas 3)
         'gerado_em' => date('Y-m-d H:i:s')
     ], JSON_UNESCAPED_UNICODE);
     
