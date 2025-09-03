@@ -2,24 +2,20 @@
 /**
  * Componente Header Premium do Sistema ASSEGO
  * components/Header.php
- * VERSÃO COM SISTEMA DE PERMISSÕES DO BANCO DE DADOS
+ * VERSÃO SEM SISTEMA DE PERMISSÕES - TODAS AS ABAS LIBERADAS
  * Versão com cores oficiais ASSEGO: Azul Royal (#003C8F) e Dourado (#FFB800)
  */
 
 // Evita redeclaração usando require_once e verificação de classe
 $basePath = dirname(dirname(__DIR__)); // Volta 2 níveis: components -> pages -> comercial
 
-// Carrega apenas a classe Permissoes (que já inclui o PermissoesManager internamente)
-if (!class_exists('Permissoes')) {
-    require_once $basePath . '/classes/Permissoes.php';
-}
-
-// Se Auth existir, carrega também
+// Se Auth existir, carrega
 if (!class_exists('Auth') && file_exists($basePath . '/classes/Auth.php')) {
     require_once $basePath . '/classes/Auth.php';
 }
 
-class HeaderComponent {
+class HeaderComponent
+{
     private $usuario;
     private $isDiretor;
     private $activePage;
@@ -28,12 +24,13 @@ class HeaderComponent {
     private $departamento_id;
     private $cargo;
 
-    public function __construct($config = []) {
+    public function __construct($config = [])
+    {
         // Pega dados da sessão
         $this->funcionario_id = $_SESSION['funcionario_id'] ?? null;
         $this->departamento_id = $_SESSION['departamento_id'] ?? null;
         $this->cargo = $_SESSION['funcionario_cargo'] ?? null;
-        
+
         // Configura dados do usuário
         $this->usuario = $config['usuario'] ?? [
             'nome' => $_SESSION['funcionario_nome'] ?? 'Usuário',
@@ -41,37 +38,38 @@ class HeaderComponent {
             'email' => $_SESSION['funcionario_email'] ?? 'usuario@assego.com.br',
             'avatar' => $_SESSION['funcionario_foto'] ?? null
         ];
-        
+
         // Verifica se é diretor
         $this->isDiretor = $config['isDiretor'] ?? ($this->cargo === 'Diretor');
-        
+
         // Conta notificações
         $this->notificationCount = $config['notificationCount'] ?? $this->contarNotificacoes();
-        
+
         // Detecta página ativa
         $this->activePage = $config['activePage'] ?? $this->detectActivePage();
     }
-    
+
     /**
      * Conta notificações não lidas do banco
      */
-    private function contarNotificacoes() {
+    private function contarNotificacoes()
+    {
         if (!$this->funcionario_id || !$this->departamento_id) {
             return 0;
         }
-        
+
         try {
             global $mysqli;
             if (!isset($mysqli) || !$mysqli) {
                 return 0;
             }
-            
+
             $sql = "SELECT COUNT(*) as total 
                     FROM Notificacoes 
                     WHERE lida = 0 
                     AND ativo = 1 
                     AND (departamento_id = ? OR funcionario_id = ?)";
-            
+
             $stmt = $mysqli->prepare($sql);
             if ($stmt) {
                 $stmt->bind_param("ii", $this->departamento_id, $this->funcionario_id);
@@ -84,16 +82,17 @@ class HeaderComponent {
         } catch (Exception $e) {
             error_log("Erro ao contar notificações: " . $e->getMessage());
         }
-        
+
         return 0;
     }
-    
+
     /**
      * Detecta automaticamente qual é a página ativa
      */
-    private function detectActivePage() {
+    private function detectActivePage()
+    {
         $currentFile = basename($_SERVER['PHP_SELF']);
-        
+
         $pageMap = [
             'dashboard.php' => 'associados',
             'index.php' => 'associados',
@@ -110,19 +109,20 @@ class HeaderComponent {
             'documentos.php' => 'documentos',
             'notificacoes.php' => 'notificacoes'
         ];
-        
+
         return $pageMap[$currentFile] ?? 'associados';
     }
 
     /**
      * Renderiza o CSS do componente
      */
-    public function renderCSS() {
-        
+    public function renderCSS()
+    {
+
         ?>
         <style>
             @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
-            
+
             :root {
                 /* Cores ASSEGO Oficiais */
                 --assego-blue: #003C8F;
@@ -131,13 +131,13 @@ class HeaderComponent {
                 --assego-gold: #FFB800;
                 --assego-gold-dark: #E5A200;
                 --assego-gold-light: #FFF4E0;
-                
+
                 /* Cores Principais */
                 --primary: var(--assego-blue);
                 --primary-dark: var(--assego-blue-dark);
                 --primary-light: var(--assego-blue-light);
                 --primary-gradient: linear-gradient(135deg, var(--assego-blue) 0%, var(--assego-blue-dark) 100%);
-                
+
                 /* Cores Secundárias */
                 --secondary: var(--assego-gold);
                 --accent: var(--assego-gold);
@@ -145,7 +145,7 @@ class HeaderComponent {
                 --success: #16A34A;
                 --warning: var(--assego-gold);
                 --info: #0EA5E9;
-                
+
                 /* Tons de Cinza */
                 --gray-50: #F9FAFB;
                 --gray-100: #F3F4F6;
@@ -158,19 +158,19 @@ class HeaderComponent {
                 --gray-800: #1F2937;
                 --gray-900: #111827;
                 --white: #FFFFFF;
-                
+
                 /* Configurações */
                 --header-height: 72px;
                 --header-bg: rgba(255, 255, 255, 0.98);
                 --backdrop-blur: blur(20px);
-                
+
                 /* Sombras */
                 --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
                 --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.06);
                 --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
                 --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
                 --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
-                
+
                 /* Transições */
                 --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
                 --transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
@@ -182,7 +182,7 @@ class HeaderComponent {
                 padding: 0;
                 box-sizing: border-box;
             }
-            
+
 
             body {
                 font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -212,7 +212,7 @@ class HeaderComponent {
                 transition: all var(--transition-base);
                 box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
             }
-            
+
             .header-container::before {
                 content: '';
                 position: absolute;
@@ -220,11 +220,11 @@ class HeaderComponent {
                 left: 0;
                 right: 0;
                 height: 1px;
-                background: linear-gradient(90deg, 
-                    transparent, 
-                    var(--assego-gold), 
-                    var(--assego-gold), 
-                    transparent);
+                background: linear-gradient(90deg,
+                        transparent,
+                        var(--assego-gold),
+                        var(--assego-gold),
+                        transparent);
                 opacity: 0.3;
             }
 
@@ -259,10 +259,10 @@ class HeaderComponent {
             .logo-container:hover {
                 transform: scale(1.02);
             }
-            
+
             .logo-container:hover .logo-icon {
                 box-shadow: 0 6px 20px rgba(0, 60, 143, 0.3),
-                           0 0 0 2px rgba(255, 184, 0, 0.2);
+                    0 0 0 2px rgba(255, 184, 0, 0.2);
             }
 
             /* Estilo da logo com imagem */
@@ -287,7 +287,7 @@ class HeaderComponent {
                 object-fit: contain !important;
                 filter: none !important;
             }
-            
+
             /* Fallback quando não tem imagem */
             .logo-icon.logo-letter {
                 background: var(--assego-blue) !important;
@@ -296,7 +296,7 @@ class HeaderComponent {
                 font-size: 20px;
                 padding: 0 !important;
             }
-            
+
             .logo-icon::after {
                 content: '';
                 position: absolute;
@@ -304,14 +304,14 @@ class HeaderComponent {
                 left: -50%;
                 width: 200%;
                 height: 200%;
-                background: linear-gradient(45deg, 
-                    transparent, 
-                    rgba(255, 184, 0, 0.4), 
-                    transparent);
+                background: linear-gradient(45deg,
+                        transparent,
+                        rgba(255, 184, 0, 0.4),
+                        transparent);
                 transform: rotate(45deg) translateX(-100%);
                 transition: transform 0.6s;
             }
-            
+
             .logo-container:hover .logo-icon::after {
                 transform: rotate(45deg) translateX(100%);
             }
@@ -329,7 +329,7 @@ class HeaderComponent {
                 line-height: 1;
                 transition: all var(--transition-base);
             }
-            
+
             .logo-container:hover .logo-text {
                 color: var(--assego-blue-dark);
                 text-shadow: 0 0 20px rgba(255, 184, 0, 0.3);
@@ -343,7 +343,7 @@ class HeaderComponent {
                 letter-spacing: 0.025em;
                 transition: all var(--transition-base);
             }
-            
+
             .logo-container:hover .logo-subtitle {
                 color: var(--assego-gold-dark);
             }
@@ -438,9 +438,17 @@ class HeaderComponent {
             }
 
             @keyframes pulse {
-                0% { box-shadow: 0 0 0 0 rgba(255, 184, 0, 0.7); }
-                70% { box-shadow: 0 0 0 5px rgba(255, 184, 0, 0); }
-                100% { box-shadow: 0 0 0 0 rgba(255, 184, 0, 0); }
+                0% {
+                    box-shadow: 0 0 0 0 rgba(255, 184, 0, 0.7);
+                }
+
+                70% {
+                    box-shadow: 0 0 0 5px rgba(255, 184, 0, 0);
+                }
+
+                100% {
+                    box-shadow: 0 0 0 0 rgba(255, 184, 0, 0);
+                }
             }
 
             .nav-link i {
@@ -490,8 +498,15 @@ class HeaderComponent {
             }
 
             @keyframes gentleGlow {
-                0%, 100% { box-shadow: 0 2px 8px rgba(0, 60, 143, 0.1); }
-                50% { box-shadow: 0 2px 8px rgba(255, 184, 0, 0.4); }
+
+                0%,
+                100% {
+                    box-shadow: 0 2px 8px rgba(0, 60, 143, 0.1);
+                }
+
+                50% {
+                    box-shadow: 0 2px 8px rgba(255, 184, 0, 0.4);
+                }
             }
 
             .notification-btn.active {
@@ -523,9 +538,19 @@ class HeaderComponent {
             }
 
             @keyframes fadeInBounce {
-                0% { opacity: 0; transform: scale(0.3); }
-                50% { transform: scale(1.1); }
-                100% { opacity: 1; transform: scale(1); }
+                0% {
+                    opacity: 0;
+                    transform: scale(0.3);
+                }
+
+                50% {
+                    transform: scale(1.1);
+                }
+
+                100% {
+                    opacity: 1;
+                    transform: scale(1);
+                }
             }
 
             .notification-badge.pulse {
@@ -533,9 +558,17 @@ class HeaderComponent {
             }
 
             @keyframes badgePulse {
-                0% { transform: scale(1); }
-                50% { transform: scale(1.3); }
-                100% { transform: scale(1); }
+                0% {
+                    transform: scale(1);
+                }
+
+                50% {
+                    transform: scale(1.3);
+                }
+
+                100% {
+                    transform: scale(1);
+                }
             }
 
             /* Tooltip para o botão de notificação */
@@ -903,8 +936,8 @@ class HeaderComponent {
                 background: linear-gradient(135deg, #FFF9E6 0%, #FFF4D6 100%);
                 border: 2px solid var(--assego-gold);
                 border-radius: 16px;
-                box-shadow: 0 10px 40px rgba(255, 184, 0, 0.3), 
-                            0 0 60px rgba(255, 184, 0, 0.1);
+                box-shadow: 0 10px 40px rgba(255, 184, 0, 0.3),
+                    0 0 60px rgba(255, 184, 0, 0.1);
                 z-index: 2000;
                 animation: slideDownBounce 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
                 overflow: hidden;
@@ -915,12 +948,15 @@ class HeaderComponent {
                     opacity: 0;
                     transform: translateX(-50%) translateY(-100px);
                 }
+
                 60% {
                     transform: translateX(-50%) translateY(20px);
                 }
+
                 80% {
                     transform: translateX(-50%) translateY(-5px);
                 }
+
                 100% {
                     opacity: 1;
                     transform: translateX(-50%) translateY(0);
@@ -959,15 +995,17 @@ class HeaderComponent {
             @keyframes pulseShadow {
                 0% {
                     box-shadow: 0 4px 15px rgba(255, 184, 0, 0.4),
-                                0 0 0 0 rgba(255, 184, 0, 0.7);
+                        0 0 0 0 rgba(255, 184, 0, 0.7);
                 }
+
                 50% {
                     box-shadow: 0 4px 15px rgba(255, 184, 0, 0.4),
-                                0 0 0 15px rgba(255, 184, 0, 0);
+                        0 0 0 15px rgba(255, 184, 0, 0);
                 }
+
                 100% {
                     box-shadow: 0 4px 15px rgba(255, 184, 0, 0.4),
-                                0 0 0 0 rgba(255, 184, 0, 0);
+                        0 0 0 0 rgba(255, 184, 0, 0);
                 }
             }
 
@@ -1064,10 +1102,10 @@ class HeaderComponent {
                 bottom: 0;
                 left: 0;
                 height: 4px;
-                background: linear-gradient(90deg, 
-                    var(--assego-gold) 0%, 
-                    #FFD700 50%, 
-                    var(--assego-gold) 100%);
+                background: linear-gradient(90deg,
+                        var(--assego-gold) 0%,
+                        #FFD700 50%,
+                        var(--assego-gold) 100%);
                 animation: progressMove 3s linear infinite;
                 width: 100%;
             }
@@ -1076,6 +1114,7 @@ class HeaderComponent {
                 0% {
                     background-position: 0% 50%;
                 }
+
                 100% {
                     background-position: 100% 50%;
                 }
@@ -1094,9 +1133,26 @@ class HeaderComponent {
             }
 
             @keyframes shakeAlert {
-                0%, 100% { transform: translateX(-50%) translateX(0); }
-                10%, 30%, 50%, 70%, 90% { transform: translateX(-50%) translateX(-5px); }
-                20%, 40%, 60%, 80% { transform: translateX(-50%) translateX(5px); }
+
+                0%,
+                100% {
+                    transform: translateX(-50%) translateX(0);
+                }
+
+                10%,
+                30%,
+                50%,
+                70%,
+                90% {
+                    transform: translateX(-50%) translateX(-5px);
+                }
+
+                20%,
+                40%,
+                60%,
+                80% {
+                    transform: translateX(-50%) translateX(5px);
+                }
             }
 
             /* ===== SISTEMA DE NOTIFICAÇÕES - CSS INTEGRADO ===== */
@@ -1109,15 +1165,15 @@ class HeaderComponent {
                 background: var(--white);
                 border-radius: 16px;
                 box-shadow: 0 20px 60px rgba(0, 60, 143, 0.15),
-                            0 0 0 1px rgba(0, 60, 143, 0.05);
+                    0 0 0 1px rgba(0, 60, 143, 0.05);
                 border-top: 3px solid var(--assego-gold);
                 z-index: 2000;
-                
+
                 opacity: 0;
                 visibility: hidden;
                 transform: translateY(-20px) scale(0.95);
                 transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-                
+
                 backdrop-filter: blur(20px);
                 -webkit-backdrop-filter: blur(20px);
             }
@@ -1269,8 +1325,15 @@ class HeaderComponent {
             }
 
             @keyframes slideInNotification {
-                from { opacity: 0; transform: translateX(-20px); }
-                to { opacity: 1; transform: translateX(0); }
+                from {
+                    opacity: 0;
+                    transform: translateX(-20px);
+                }
+
+                to {
+                    opacity: 1;
+                    transform: translateX(0);
+                }
             }
 
             .notificacao-item:last-child {
@@ -1283,9 +1346,9 @@ class HeaderComponent {
             }
 
             .notificacao-item.nao-lida {
-                background: linear-gradient(90deg, 
-                    rgba(255, 184, 0, 0.02) 0%, 
-                    rgba(255, 255, 255, 1) 8%);
+                background: linear-gradient(90deg,
+                        rgba(255, 184, 0, 0.02) 0%,
+                        rgba(255, 255, 255, 1) 8%);
                 border-left: 3px solid var(--assego-gold);
             }
 
@@ -1311,8 +1374,15 @@ class HeaderComponent {
             }
 
             @keyframes urgentPulse {
-                0%, 100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.3); }
-                50% { box-shadow: 0 0 0 4px rgba(220, 53, 69, 0); }
+
+                0%,
+                100% {
+                    box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.3);
+                }
+
+                50% {
+                    box-shadow: 0 0 0 4px rgba(220, 53, 69, 0);
+                }
             }
 
             /* Ícone da notificação */
@@ -1418,7 +1488,7 @@ class HeaderComponent {
                 background: var(--assego-gold);
                 border-radius: 50%;
                 box-shadow: 0 0 0 2px var(--white),
-                            0 2px 4px rgba(255, 184, 0, 0.4);
+                    0 2px 4px rgba(255, 184, 0, 0.4);
                 animation: pulse 2s infinite;
             }
 
@@ -1472,8 +1542,13 @@ class HeaderComponent {
             }
 
             @keyframes spin {
-                0% { transform: rotate(0deg); }
-                100% { transform: rotate(360deg); }
+                0% {
+                    transform: rotate(0deg);
+                }
+
+                100% {
+                    transform: rotate(360deg);
+                }
             }
 
             .notificacoes-vazio {
@@ -1561,7 +1636,7 @@ class HeaderComponent {
                 font-size: 14px;
                 font-weight: 500;
                 z-index: 3000;
-                
+
                 opacity: 0;
                 transform: translateX(100%);
                 transition: all 0.3s ease;
@@ -1593,7 +1668,7 @@ class HeaderComponent {
                     padding: 10px 12px;
                     font-size: 13px;
                 }
-                
+
                 .nav-link i {
                     font-size: 15px;
                 }
@@ -1614,43 +1689,44 @@ class HeaderComponent {
             }
 
             @media (max-width: 768px) {
+
                 .notification-btn::before,
                 .notification-btn::after {
                     display: none;
                 }
-                
+
                 .alerta-senha-padrao {
                     width: 95%;
                     top: calc(var(--header-height) + 5px);
                 }
-                
+
                 .alerta-senha-container {
                     flex-direction: column;
                     text-align: center;
                     padding: 15px;
                 }
-                
+
                 .alerta-senha-content {
                     padding-right: 0;
                 }
-                
+
                 .alerta-senha-actions {
                     flex-direction: row;
                     width: 100%;
                     justify-content: space-between;
                     margin-top: 10px;
                 }
-                
+
                 .alerta-senha-instrucoes {
                     font-size: 12px;
                     text-align: left;
                 }
-                
+
                 .btn-alerta-perfil {
                     flex: 1;
                     justify-content: center;
                 }
-                
+
                 .painel-notificacoes {
                     width: calc(100vw - 40px);
                     max-width: 380px;
@@ -1658,25 +1734,25 @@ class HeaderComponent {
                     right: 20px;
                     margin: 0 auto;
                 }
-                
+
                 .notificacao-item {
                     padding: 12px 16px;
                     gap: 12px;
                 }
-                
+
                 .notif-icon {
                     width: 36px;
                     height: 36px;
                     font-size: 14px;
                 }
-                
+
                 .painel-header,
                 .painel-filtros,
                 .painel-footer {
                     padding-left: 16px;
                     padding-right: 16px;
                 }
-                
+
                 .toast-notificacao {
                     right: 20px;
                     left: 20px;
@@ -1702,28 +1778,28 @@ class HeaderComponent {
                 .alerta-senha-titulo {
                     font-size: 16px;
                 }
-                
+
                 .alerta-senha-mensagem {
                     font-size: 13px;
                 }
-                
+
                 .alerta-senha-icon {
                     width: 50px;
                     height: 50px;
                     font-size: 24px;
                 }
-                
+
                 .painel-notificacoes {
                     width: calc(100vw - 20px);
                     left: 10px !important;
                     right: 10px;
                 }
-                
+
                 .filtro-btn {
                     font-size: 12px;
                     padding: 6px 12px;
                 }
-                
+
                 .notif-mensagem {
                     -webkit-line-clamp: 2;
                 }
@@ -1733,88 +1809,65 @@ class HeaderComponent {
     }
 
     /**
-     * Gera os itens de navegação baseado em permissões do banco de dados
+     * Gera os itens de navegação - TODOS LIBERADOS SEM VERIFICAÇÃO DE PERMISSÃO
      */
-    private function getNavigationItems() {
+    private function getNavigationItems()
+    {
         $items = [];
-        
-        // ========================================
-        // ASSOCIADOS - Verifica permissão
-        // ========================================
-        if (Permissoes::tem('associados.visualizar')) {
-            $items[] = [
-                'id' => 'associados',
-                'label' => 'Associados',
-                'icon' => 'fas fa-users',
-                'href' => 'dashboard.php',
-                'badge' => null
-            ];
-        }
 
-        // ========================================
-        // FUNCIONÁRIOS - Verifica permissão
-        // ========================================
-        if (Permissoes::tem('funcionarios.visualizar')) {
-            $items[] = [
-                'id' => 'funcionarios',
-                'label' => 'Funcionários',
-                'icon' => 'fas fa-user-tie',
-                'href' => 'funcionarios.php',
-                'badge' => null
-            ];
-        }
+        // ASSOCIADOS - Liberado para todos
+        $items[] = [
+            'id' => 'associados',
+            'label' => 'Associados',
+            'icon' => 'fas fa-users',
+            'href' => 'dashboard.php',
+            'badge' => null
+        ];
 
-        // ========================================
-        // COMERCIAL - Verifica permissão
-        // ========================================
-        if (Permissoes::tem('comercial.visualizar')) {
-            $items[] = [
-                'id' => 'comercial',
-                'label' => 'Comercial',
-                'icon' => 'fas fa-briefcase',
-                'href' => 'comercial.php',
-                'badge' => null
-            ];
-        }
+        // FUNCIONÁRIOS - Liberado para todos
+        $items[] = [
+            'id' => 'funcionarios',
+            'label' => 'Funcionários',
+            'icon' => 'fas fa-user-tie',
+            'href' => 'funcionarios.php',
+            'badge' => null
+        ];
 
-        // ========================================
-        // FINANCEIRO - Verifica permissão
-        // ========================================
-        if (Permissoes::tem('financeiro.visualizar')) {
-            $items[] = [
-                'id' => 'financeiro',
-                'label' => 'Financeiro',
-                'icon' => 'fas fa-dollar-sign',
-                'href' => 'financeiro.php',
-                'badge' => null
-            ];
-        }
+        // COMERCIAL - Liberado para todos
+        $items[] = [
+            'id' => 'comercial',
+            'label' => 'Comercial',
+            'icon' => 'fas fa-briefcase',
+            'href' => 'comercial.php',
+            'badge' => null
+        ];
 
-        // ========================================
-        // DOCUMENTOS - Verifica permissão
-        // ========================================
-        if (Permissoes::tem('documentos.visualizar')) {
-            $items[] = [
-                'id' => 'documentos',
-                'label' => 'Documentos',
-                'icon' => 'fas fa-folder-open',
-                'href' => 'documentos.php',
-                'badge' => null
-            ];
-        }
+        // FINANCEIRO - Liberado para todos
+        $items[] = [
+            'id' => 'financeiro',
+            'label' => 'Financeiro',
+            'icon' => 'fas fa-dollar-sign',
+            'href' => 'financeiro.php',
+            'badge' => null
+        ];
 
-        // ========================================
-        // RELATÓRIOS - Verifica permissão
-        // ========================================
-        if (Permissoes::tem('relatorios.visualizar')) {
-            $items[] = [
-                'id' => 'relatorios',
-                'label' => 'Relatórios',
-                'icon' => 'fas fa-chart-line',
-                'href' => 'relatorios.php',
-                'badge' => null
-            ];
-        }
+        // DOCUMENTOS - Liberado para todos
+        $items[] = [
+            'id' => 'documentos',
+            'label' => 'Documentos',
+            'icon' => 'fas fa-folder-open',
+            'href' => 'documentos.php',
+            'badge' => null
+        ];
+
+        // RELATÓRIOS - Liberado para todos
+        $items[] = [
+            'id' => 'relatorios',
+            'label' => 'Relatórios',
+            'icon' => 'fas fa-chart-line',
+            'href' => 'relatorios.php',
+            'badge' => null
+        ];
 
         if (Permissoes::tem('estatisticas.visualizar') || $this->isDiretor) {
     $items[] = [
@@ -1839,31 +1892,32 @@ class HeaderComponent {
             ];
         }
 
-        // ========================================
-        // PRESIDÊNCIA - Verifica permissão
-        // ========================================
-        if (Permissoes::tem('presidencia.visualizar')) {
-            $items[] = [
-                'id' => 'presidencia',
-                'label' => 'Presidência',
-                'icon' => 'fas fa-landmark',
-                'href' => 'presidencia.php',
-                'badge' => null
-            ];
-        }
+        // AUDITORIA - Liberado para todos
+        $items[] = [
+            'id' => 'auditoria',
+            'label' => 'Auditoria',
+            'icon' => 'fas fa-user-shield',
+            'href' => 'auditoria.php',
+            'badge' => null
+        ];
 
-        // ========================================
-        // NOTIFICAÇÕES - Todos têm acesso
-        // ========================================
-        if (Permissoes::tem('notificacoes.visualizar')) {
-            $items[] = [
-                'id' => 'notificacoes',
-                'label' => 'Notificações',
-                'icon' => 'fas fa-bell',
-                'href' => 'notificacoes.php',
-                'badge' => $this->notificationCount > 0 ? $this->notificationCount : null
-            ];
-        }
+        // PRESIDÊNCIA - Liberado para todos
+        $items[] = [
+            'id' => 'presidencia',
+            'label' => 'Presidência',
+            'icon' => 'fas fa-landmark',
+            'href' => 'presidencia.php',
+            'badge' => null
+        ];
+
+        // NOTIFICAÇÕES - Liberado para todos
+        $items[] = [
+            'id' => 'notificacoes',
+            'label' => 'Notificações',
+            'icon' => 'fas fa-bell',
+            'href' => 'notificacoes.php',
+            'badge' => $this->notificationCount > 0 ? $this->notificationCount : null
+        ];
 
         return $items;
     }
@@ -1871,8 +1925,10 @@ class HeaderComponent {
     /**
      * Gera as iniciais do usuário
      */
-    private function getUserInitials($nome) {
-        if (empty($nome)) return '?';
+    private function getUserInitials($nome)
+    {
+        if (empty($nome))
+            return '?';
         $parts = explode(' ', trim($nome));
         if (count($parts) >= 2) {
             return strtoupper(substr($parts[0], 0, 1) . substr(end($parts), 0, 1));
@@ -1883,18 +1939,20 @@ class HeaderComponent {
     /**
      * Verifica se um item está ativo
      */
-    private function isItemActive($itemId) {
+    private function isItemActive($itemId)
+    {
         return $this->activePage === $itemId;
     }
 
     /**
      * Verifica se deve mostrar alerta de senha padrão
      */
-    private function verificarSenhaPadrao() {
+    private function verificarSenhaPadrao()
+    {
         if (!class_exists('Auth')) {
             return false;
         }
-        
+
         try {
             $auth = new Auth();
             if ($auth->isUsingSenhaDefault() && !$auth->foiNotificadoSenhaPadrao()) {
@@ -1904,35 +1962,36 @@ class HeaderComponent {
         } catch (Exception $e) {
             error_log("Erro ao verificar senha padrão: " . $e->getMessage());
         }
-        
+
         return false;
     }
 
     /**
      * Renderiza o JavaScript
      */
-    public function renderJS() {
+    public function renderJS()
+    {
         ?>
         <script>
-            document.addEventListener('DOMContentLoaded', function() {
+            document.addEventListener('DOMContentLoaded', function () {
                 // Adiciona classe ao body para garantir padding
                 document.body.classList.add('has-header');
-                
+
                 // User Dropdown
                 const userMenuTrigger = document.getElementById('userMenuTrigger');
                 const userDropdown = document.getElementById('userDropdown');
 
                 if (userMenuTrigger && userDropdown) {
-                    userMenuTrigger.addEventListener('click', function(e) {
+                    userMenuTrigger.addEventListener('click', function (e) {
                         e.stopPropagation();
                         userDropdown.classList.toggle('show');
                     });
 
-                    document.addEventListener('click', function() {
+                    document.addEventListener('click', function () {
                         userDropdown.classList.remove('show');
                     });
 
-                    userDropdown.addEventListener('click', function(e) {
+                    userDropdown.addEventListener('click', function (e) {
                         e.stopPropagation();
                     });
                 }
@@ -1943,10 +2002,10 @@ class HeaderComponent {
                 const mobileNavOverlay = document.getElementById('mobileNavOverlay');
 
                 if (mobileMenuToggle && mobileNav) {
-                    mobileMenuToggle.addEventListener('click', function() {
+                    mobileMenuToggle.addEventListener('click', function () {
                         mobileNav.classList.toggle('show');
                         mobileNavOverlay.classList.toggle('show');
-                        
+
                         const icon = this.querySelector('i');
                         if (mobileNav.classList.contains('show')) {
                             icon.classList.remove('fa-bars');
@@ -1959,10 +2018,10 @@ class HeaderComponent {
                 }
 
                 if (mobileNavOverlay) {
-                    mobileNavOverlay.addEventListener('click', function() {
+                    mobileNavOverlay.addEventListener('click', function () {
                         mobileNav.classList.remove('show');
                         mobileNavOverlay.classList.remove('show');
-                        
+
                         const icon = mobileMenuToggle.querySelector('i');
                         icon.classList.remove('fa-times');
                         icon.classList.add('fa-bars');
@@ -1972,16 +2031,16 @@ class HeaderComponent {
                 // Header scroll effect
                 let lastScroll = 0;
                 const header = document.querySelector('.header-container');
-                
-                window.addEventListener('scroll', function() {
+
+                window.addEventListener('scroll', function () {
                     const currentScroll = window.pageYOffset;
-                    
+
                     if (currentScroll > 100) {
                         header.style.boxShadow = '0 4px 20px rgba(0, 60, 143, 0.1)';
                     } else {
                         header.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.05)';
                     }
-                    
+
                     lastScroll = currentScroll;
                 });
 
@@ -1993,7 +2052,7 @@ class HeaderComponent {
                             fecharAlertaSenha();
                         }
                     }, 30000);
-                    
+
                     setInterval(() => {
                         if (alertaSenha && alertaSenha.style.display !== 'none' && !alertaSenha.classList.contains('hiding')) {
                             alertaSenha.style.animation = 'none';
@@ -2014,7 +2073,7 @@ class HeaderComponent {
             });
 
             // Ajusta padding do body baseado na altura do header
-            window.addEventListener('load', function() {
+            window.addEventListener('load', function () {
                 const header = document.querySelector('.header-container');
                 if (header) {
                     const headerHeight = header.offsetHeight;
@@ -2046,36 +2105,36 @@ class HeaderComponent {
                     this.panelAberto = false;
                     this.notificacoes = [];
                     this.totalNaoLidas = 0;
-                    
+
                     this.init();
                 }
-                
+
                 init() {
                     if (this.isInitialized) return;
-                    
+
                     this.botaoNotificacao = document.getElementById('notificationBtn');
                     this.badgeNotificacao = this.botaoNotificacao?.querySelector('.notification-badge');
-                    
+
                     if (!this.botaoNotificacao) {
                         console.log('⚠️ Botão de notificação não encontrado.');
                         return;
                     }
-                    
+
                     this.criarPainelNotificacoes();
                     this.configurarEventos();
                     this.buscarNotificacoes();
                     this.iniciarAtualizacaoAutomatica();
-                    
+
                     this.isInitialized = true;
                     console.log('✅ Sistema de Notificações inicializado!');
                 }
-                
+
                 criarPainelNotificacoes() {
                     const painelExistente = document.getElementById('painelNotificacoes');
                     if (painelExistente) {
                         painelExistente.remove();
                     }
-                    
+
                     const painel = document.createElement('div');
                     painel.id = 'painelNotificacoes';
                     painel.className = 'painel-notificacoes';
@@ -2116,31 +2175,31 @@ class HeaderComponent {
                             </button>
                         </div>
                     `;
-                    
+
                     document.body.appendChild(painel);
                     this.configurarFiltros();
                 }
-                
+
                 configurarEventos() {
                     this.botaoNotificacao.addEventListener('click', (e) => {
                         e.stopPropagation();
                         this.togglePainel();
                     });
-                    
+
                     document.addEventListener('click', (e) => {
                         const painel = document.getElementById('painelNotificacoes');
                         if (painel && !painel.contains(e.target) && !this.botaoNotificacao.contains(e.target)) {
                             this.fecharPainel();
                         }
                     });
-                    
+
                     document.addEventListener('keydown', (e) => {
                         if (e.ctrlKey && e.key === 'n') {
                             e.preventDefault();
                             this.togglePainel();
                         }
                     });
-                    
+
                     document.addEventListener('visibilitychange', () => {
                         if (document.hidden) {
                             this.pararAtualizacaoAutomatica();
@@ -2150,20 +2209,20 @@ class HeaderComponent {
                         }
                     });
                 }
-                
+
                 configurarFiltros() {
                     const filtros = document.querySelectorAll('.filtro-btn');
                     filtros.forEach(filtro => {
                         filtro.addEventListener('click', () => {
                             filtros.forEach(f => f.classList.remove('active'));
                             filtro.classList.add('active');
-                            
+
                             const tipoFiltro = filtro.dataset.filtro;
                             this.filtrarNotificacoes(tipoFiltro);
                         });
                     });
                 }
-                
+
                 togglePainel() {
                     if (this.panelAberto) {
                         this.fecharPainel();
@@ -2171,55 +2230,55 @@ class HeaderComponent {
                         this.abrirPainel();
                     }
                 }
-                
+
                 abrirPainel() {
                     const painel = document.getElementById('painelNotificacoes');
                     if (!painel) return;
-                    
+
                     this.posicionarPainel();
                     painel.classList.add('show');
                     this.botaoNotificacao.classList.add('active');
                     this.panelAberto = true;
-                    
+
                     this.buscarNotificacoes();
                 }
-                
+
                 fecharPainel() {
                     const painel = document.getElementById('painelNotificacoes');
                     if (!painel) return;
-                    
+
                     painel.classList.remove('show');
                     this.botaoNotificacao.classList.remove('active');
                     this.panelAberto = false;
                 }
-                
+
                 posicionarPainel() {
                     const painel = document.getElementById('painelNotificacoes');
                     const botao = this.botaoNotificacao;
-                    
+
                     if (!painel || !botao) return;
-                    
+
                     const rect = botao.getBoundingClientRect();
                     const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
                     const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
-                    
+
                     let top = rect.bottom + scrollTop + 8;
                     let left = rect.right + scrollLeft - 380;
-                    
+
                     if (left < 20) left = 20;
                     if (left + 380 > window.innerWidth - 20) {
                         left = window.innerWidth - 400;
                     }
-                    
+
                     painel.style.top = top + 'px';
                     painel.style.left = left + 'px';
                 }
-                
+
                 async buscarNotificacoes() {
                     try {
                         const response = await fetch('../api/notificacoes.php?acao=buscar&limite=20');
                         const data = await response.json();
-                        
+
                         if (data.status === 'success') {
                             this.notificacoes = data.data;
                             this.atualizarPainel();
@@ -2230,12 +2289,12 @@ class HeaderComponent {
                         this.mostrarErro('Erro de conexão');
                     }
                 }
-                
+
                 async buscarContagem() {
                     try {
                         const response = await fetch('../api/notificacoes.php?acao=contar');
                         const data = await response.json();
-                        
+
                         if (data.status === 'success') {
                             this.totalNaoLidas = data.total;
                             this.atualizarBadge();
@@ -2244,19 +2303,19 @@ class HeaderComponent {
                         console.error('❌ Erro ao buscar contagem:', error);
                     }
                 }
-                
+
                 atualizarBadge() {
                     if (!this.badgeNotificacao) {
                         this.badgeNotificacao = document.createElement('span');
                         this.badgeNotificacao.className = 'notification-badge';
                         this.botaoNotificacao.appendChild(this.badgeNotificacao);
                     }
-                    
+
                     if (this.totalNaoLidas > 0) {
                         this.badgeNotificacao.textContent = this.totalNaoLidas > 9 ? '9+' : this.totalNaoLidas;
                         this.badgeNotificacao.style.display = 'flex';
                         this.botaoNotificacao.classList.add('has-notifications');
-                        
+
                         this.badgeNotificacao.classList.add('pulse');
                         setTimeout(() => {
                             this.badgeNotificacao?.classList.remove('pulse');
@@ -2265,17 +2324,17 @@ class HeaderComponent {
                         this.badgeNotificacao.style.display = 'none';
                         this.botaoNotificacao.classList.remove('has-notifications');
                     }
-                    
+
                     const badgeContador = document.getElementById('badgeContador');
                     if (badgeContador) {
                         badgeContador.textContent = this.totalNaoLidas;
                     }
                 }
-                
+
                 atualizarPainel() {
                     const conteudo = document.getElementById('painelConteudo');
                     if (!conteudo) return;
-                    
+
                     if (this.notificacoes.length === 0) {
                         conteudo.innerHTML = `
                             <div class="notificacoes-vazio">
@@ -2288,15 +2347,15 @@ class HeaderComponent {
                         `;
                         return;
                     }
-                    
+
                     const html = this.notificacoes.map(notif => this.criarItemNotificacao(notif)).join('');
                     conteudo.innerHTML = html;
                 }
-                
+
                 criarItemNotificacao(notif) {
-                    const prioridadeClass = notif.prioridade === 'ALTA' ? 'priority-high' : 
-                                           notif.prioridade === 'URGENTE' ? 'priority-urgent' : '';
-                    
+                    const prioridadeClass = notif.prioridade === 'ALTA' ? 'priority-high' :
+                        notif.prioridade === 'URGENTE' ? 'priority-urgent' : '';
+
                     return `
                         <div class="notificacao-item ${notif.lida ? 'lida' : 'nao-lida'} ${prioridadeClass}" 
                              data-id="${notif.id}" 
@@ -2327,26 +2386,26 @@ class HeaderComponent {
                         </div>
                     `;
                 }
-                
+
                 async marcarComoLida(notificacaoId) {
                     try {
                         const formData = new FormData();
                         formData.append('acao', 'marcar_lida');
                         formData.append('notificacao_id', notificacaoId);
-                        
+
                         const response = await fetch('../api/notificacoes.php', {
                             method: 'POST',
                             body: formData
                         });
-                        
+
                         const data = await response.json();
-                        
+
                         if (data.status === 'success') {
                             const notif = this.notificacoes.find(n => n.id == notificacaoId);
                             if (notif) {
                                 notif.lida = true;
                             }
-                            
+
                             const item = document.querySelector(`[data-id="${notificacaoId}"]`);
                             if (item) {
                                 item.classList.add('lida');
@@ -2354,46 +2413,46 @@ class HeaderComponent {
                                 const indicator = item.querySelector('.notif-indicator');
                                 if (indicator) indicator.remove();
                             }
-                            
+
                             this.buscarContagem();
                         }
                     } catch (error) {
                         console.error('❌ Erro ao marcar notificação:', error);
                     }
                 }
-                
+
                 async marcarTodasLidas() {
                     if (this.totalNaoLidas === 0) {
                         this.mostrarToast('Não há notificações não lidas', 'info');
                         return;
                     }
-                    
+
                     try {
                         const formData = new FormData();
                         formData.append('acao', 'marcar_todas_lidas');
-                        
+
                         const response = await fetch('../api/notificacoes.php', {
                             method: 'POST',
                             body: formData
                         });
-                        
+
                         const data = await response.json();
-                        
+
                         if (data.status === 'success') {
                             this.notificacoes.forEach(notif => {
                                 notif.lida = true;
                             });
-                            
+
                             document.querySelectorAll('.notificacao-item.nao-lida').forEach(item => {
                                 item.classList.add('lida');
                                 item.classList.remove('nao-lida');
                                 const indicator = item.querySelector('.notif-indicator');
                                 if (indicator) indicator.remove();
                             });
-                            
+
                             this.totalNaoLidas = 0;
                             this.atualizarBadge();
-                            
+
                             this.mostrarToast(data.message || 'Notificações marcadas como lidas', 'success');
                         }
                     } catch (error) {
@@ -2401,14 +2460,14 @@ class HeaderComponent {
                         this.mostrarToast('Erro de conexão', 'error');
                     }
                 }
-                
+
                 filtrarNotificacoes(filtro) {
                     const items = document.querySelectorAll('.notificacao-item');
-                    
+
                     items.forEach(item => {
                         const tipo = item.dataset.tipo;
                         let mostrar = true;
-                        
+
                         switch (filtro) {
                             case 'financeiro':
                                 mostrar = tipo === 'ALTERACAO_FINANCEIRO';
@@ -2421,38 +2480,38 @@ class HeaderComponent {
                                 mostrar = true;
                                 break;
                         }
-                        
+
                         item.style.display = mostrar ? 'flex' : 'none';
                     });
                 }
-                
+
                 iniciarAtualizacaoAutomatica() {
                     this.pararAtualizacaoAutomatica();
-                    
+
                     this.updateInterval = setInterval(() => {
                         if (!document.hidden) {
                             this.buscarContagem();
-                            
+
                             if (this.panelAberto) {
                                 this.buscarNotificacoes();
                             }
                         }
                     }, this.refreshRate);
                 }
-                
+
                 pararAtualizacaoAutomatica() {
                     if (this.updateInterval) {
                         clearInterval(this.updateInterval);
                         this.updateInterval = null;
                     }
                 }
-                
+
                 atualizarNotificacoes() {
                     this.buscarNotificacoes();
                     this.buscarContagem();
                     this.mostrarToast('Notificações atualizadas', 'success');
                 }
-                
+
                 mostrarErro(mensagem) {
                     const conteudo = document.getElementById('painelConteudo');
                     if (conteudo) {
@@ -2471,27 +2530,27 @@ class HeaderComponent {
                         `;
                     }
                 }
-                
+
                 mostrarToast(mensagem, tipo = 'info') {
                     document.querySelectorAll('.toast-notificacao').forEach(toast => toast.remove());
-                    
+
                     const toast = document.createElement('div');
                     toast.className = `toast-notificacao toast-${tipo}`;
                     toast.innerHTML = `
                         <i class="fas fa-${tipo === 'success' ? 'check-circle' : tipo === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
                         <span>${mensagem}</span>
                     `;
-                    
+
                     document.body.appendChild(toast);
-                    
+
                     setTimeout(() => toast.classList.add('show'), 100);
-                    
+
                     setTimeout(() => {
                         toast.classList.remove('show');
                         setTimeout(() => toast.remove(), 300);
                     }, 3000);
                 }
-                
+
                 destruir() {
                     this.pararAtualizacaoAutomatica();
                     const painel = document.getElementById('painelNotificacoes');
@@ -2511,52 +2570,53 @@ class HeaderComponent {
     /**
      * Renderiza o componente HTML
      */
-    public function render() {
+    public function render()
+    {
         $mostrarAlertaSenha = $this->verificarSenhaPadrao();
         $navigationItems = $this->getNavigationItems();
         $userInitials = $this->getUserInitials($this->usuario['nome']);
         ?>
-        
+
         <!-- NOTIFICAÇÃO DE SENHA PADRÃO -->
         <?php if ($mostrarAlertaSenha): ?>
-        <div id="alertaSenhaPadrao" class="alerta-senha-padrao">
-            <div class="alerta-senha-container">
-                <div class="alerta-senha-icon-wrapper">
-                    <div class="alerta-senha-icon pulse">
-                        <i class="fas fa-exclamation-triangle"></i>
+            <div id="alertaSenhaPadrao" class="alerta-senha-padrao">
+                <div class="alerta-senha-container">
+                    <div class="alerta-senha-icon-wrapper">
+                        <div class="alerta-senha-icon pulse">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                    </div>
+
+                    <div class="alerta-senha-content">
+                        <div class="alerta-senha-titulo">
+                            <i class="fas fa-lock me-2"></i>
+                            Atenção: Você está usando a senha padrão!
+                        </div>
+                        <div class="alerta-senha-mensagem">
+                            Por questões de segurança, é <strong>obrigatório</strong> alterar sua senha padrão.
+                        </div>
+                        <div class="alerta-senha-instrucoes">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Como alterar: Clique no seu <strong>nome</strong> no canto superior direito →
+                            <strong>Meu Perfil</strong> → <strong>Alterar Senha</strong>
+                        </div>
+                    </div>
+
+                    <div class="alerta-senha-actions">
+                        <button onclick="irParaPerfil()" class="btn-alerta-perfil">
+                            <i class="fas fa-user-cog me-1"></i>
+                            Ir para Meu Perfil
+                        </button>
+                        <button onclick="fecharAlertaSenha()" class="btn-alerta-fechar" title="Fechar temporariamente">
+                            <i class="fas fa-times"></i>
+                        </button>
                     </div>
                 </div>
-                
-                <div class="alerta-senha-content">
-                    <div class="alerta-senha-titulo">
-                        <i class="fas fa-lock me-2"></i>
-                        Atenção: Você está usando a senha padrão!
-                    </div>
-                    <div class="alerta-senha-mensagem">
-                        Por questões de segurança, é <strong>obrigatório</strong> alterar sua senha padrão.
-                    </div>
-                    <div class="alerta-senha-instrucoes">
-                        <i class="fas fa-info-circle me-1"></i>
-                        Como alterar: Clique no seu <strong>nome</strong> no canto superior direito → 
-                        <strong>Meu Perfil</strong> → <strong>Alterar Senha</strong>
-                    </div>
-                </div>
-                
-                <div class="alerta-senha-actions">
-                    <button onclick="irParaPerfil()" class="btn-alerta-perfil">
-                        <i class="fas fa-user-cog me-1"></i>
-                        Ir para Meu Perfil
-                    </button>
-                    <button onclick="fecharAlertaSenha()" class="btn-alerta-fechar" title="Fechar temporariamente">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
+
+                <div class="alerta-senha-progress"></div>
             </div>
-            
-            <div class="alerta-senha-progress"></div>
-        </div>
         <?php endif; ?>
-        
+
         <header class="header-container">
             <div class="header-content">
                 <!-- Left Section -->
@@ -2568,10 +2628,10 @@ class HeaderComponent {
 
                     <!-- Logo -->
                     <a href="dashboard.php" class="logo-container">
-                        <?php 
+                        <?php
                         $logoPath = 'img/logo-assego.jpeg';
-                        if (file_exists($logoPath)): 
-                        ?>
+                        if (file_exists($logoPath)):
+                            ?>
                             <div class="logo-icon">
                                 <img src="<?php echo $logoPath; ?>" alt="Logo ASSEGO" class="logo-img">
                             </div>
@@ -2588,8 +2648,8 @@ class HeaderComponent {
                         <?php foreach ($navigationItems as $item): ?>
                             <?php $isActive = $this->isItemActive($item['id']); ?>
                             <div class="nav-item <?php echo $isActive ? 'active' : ''; ?>">
-                                <a href="<?php echo htmlspecialchars($item['href']); ?>" 
-                                   class="nav-link <?php echo $isActive ? 'active' : ''; ?>">
+                                <a href="<?php echo htmlspecialchars($item['href']); ?>"
+                                    class="nav-link <?php echo $isActive ? 'active' : ''; ?>">
                                     <i class="<?php echo htmlspecialchars($item['icon']); ?>"></i>
                                     <span><?php echo htmlspecialchars($item['label']); ?></span>
                                     <?php if (!empty($item['badge'])): ?>
@@ -2622,8 +2682,8 @@ class HeaderComponent {
                             </div>
                             <div class="user-avatar">
                                 <?php if (!empty($this->usuario['avatar'])): ?>
-                                    <img src="<?php echo htmlspecialchars($this->usuario['avatar']); ?>" 
-                                         alt="<?php echo htmlspecialchars($this->usuario['nome']); ?>">
+                                    <img src="<?php echo htmlspecialchars($this->usuario['avatar']); ?>"
+                                        alt="<?php echo htmlspecialchars($this->usuario['nome']); ?>">
                                 <?php else: ?>
                                     <?php echo $userInitials; ?>
                                 <?php endif; ?>
@@ -2637,21 +2697,20 @@ class HeaderComponent {
                                 <div class="user-dropdown-name"><?php echo htmlspecialchars($this->usuario['nome']); ?></div>
                                 <div class="user-dropdown-email"><?php echo htmlspecialchars($this->usuario['email']); ?></div>
                             </div>
-                            
+
                             <a href="perfil.php" class="dropdown-item">
                                 <i class="fas fa-user-circle"></i>
                                 <span>Meu Perfil</span>
                             </a>
-                            
-                            <?php if (Permissoes::tem('sistema.configuracoes')): ?>
+
+                            <!-- Configurações sempre visível para todos -->
                             <a href="configuracoes.php" class="dropdown-item">
                                 <i class="fas fa-cog"></i>
                                 <span>Configurações</span>
                             </a>
-                            <?php endif; ?>
-                            
+
                             <div class="dropdown-divider"></div>
-                            
+
                             <a href="logout.php" class="dropdown-item">
                                 <i class="fas fa-sign-out-alt"></i>
                                 <span>Sair</span>
@@ -2668,11 +2727,11 @@ class HeaderComponent {
                 <div class="user-dropdown-name"><?php echo htmlspecialchars($this->usuario['nome']); ?></div>
                 <div class="user-dropdown-email"><?php echo htmlspecialchars($this->usuario['cargo']); ?></div>
             </div>
-            
+
             <?php foreach ($navigationItems as $item): ?>
                 <?php $isActive = $this->isItemActive($item['id']); ?>
-                <a href="<?php echo htmlspecialchars($item['href']); ?>" 
-                   class="mobile-nav-item <?php echo $isActive ? 'active' : ''; ?>">
+                <a href="<?php echo htmlspecialchars($item['href']); ?>"
+                    class="mobile-nav-item <?php echo $isActive ? 'active' : ''; ?>">
                     <i class="<?php echo htmlspecialchars($item['icon']); ?>"></i>
                     <span><?php echo htmlspecialchars($item['label']); ?></span>
                     <?php if (!empty($item['badge'])): ?>
@@ -2680,38 +2739,38 @@ class HeaderComponent {
                     <?php endif; ?>
                 </a>
             <?php endforeach; ?>
-            
+
             <div class="mobile-nav-divider"></div>
-            
+
             <a href="perfil.php" class="mobile-nav-item">
                 <i class="fas fa-user-circle"></i>
                 <span>Meu Perfil</span>
             </a>
-            
-            <?php if (Permissoes::tem('sistema.configuracoes')): ?>
+
+            <!-- Configurações sempre visível para todos -->
             <a href="configuracoes.php" class="mobile-nav-item">
                 <i class="fas fa-cog"></i>
                 <span>Configurações</span>
             </a>
-            <?php endif; ?>
-            
+
             <div class="mobile-nav-divider"></div>
-            
+
             <a href="logout.php" class="mobile-nav-item">
                 <i class="fas fa-sign-out-alt"></i>
                 <span>Sair</span>
             </a>
         </nav>
-        
+
         <div class="mobile-nav-overlay" id="mobileNavOverlay"></div>
-        
+
         <?php
     }
 
     /**
      * Método estático para uso rápido
      */
-    public static function create($config = []) {
+    public static function create($config = [])
+    {
         $header = new self($config);
         return $header;
     }
@@ -2721,7 +2780,8 @@ class HeaderComponent {
 /**
  * Função helper para renderização rápida
  */
-function renderHeader($config = []) {
+function renderHeader($config = [])
+{
     $header = new HeaderComponent($config);
     $header->renderCSS();
     $header->render();

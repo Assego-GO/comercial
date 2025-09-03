@@ -535,17 +535,24 @@ function renderizarTabela(dados) {
 
             <td>
     <div class="action-buttons-table">
-        <button class="btn-icon view" onclick="visualizarAssociado(${associado.id})" title="Visualizar">
-            <i class="fas fa-eye"></i>
-        </button>
-        ${associado.telefone ? `
+        ${permissoesUsuario.podeVisualizar ? `
+            <button class="btn-icon view" onclick="visualizarAssociado(${associado.id})" title="Visualizar">
+                <i class="fas fa-eye"></i>
+            </button>
+        ` : ''}
+        
+        ${associado.telefone && (permissoesUsuario.podeEditarContato || permissoesUsuario.podeEditarCompleto) ? `
             <button class="btn-icon whatsapp" onclick="abrirWhatsApp('${associado.telefone}')" title="WhatsApp" style="background: #25D366;">
                 <i class="fab fa-whatsapp" style="color: white;"></i>
             </button>
         ` : ''}
-        <button class="btn-icon edit" onclick="editarAssociadoNovo(${associado.id})" title="Editar">
-            <i class="fas fa-edit"></i>
-        </button>
+        
+        ${(permissoesUsuario.podeEditarContato || permissoesUsuario.podeEditarCompleto) ? `
+            <button class="btn-icon edit" onclick="editarAssociadoNovo(${associado.id})" title="Editar">
+                <i class="fas fa-edit"></i>
+            </button>
+        ` : ''}
+        
         ${permissoesUsuario.podeExcluir ? `
             <button class="btn-icon delete" onclick="excluirAssociado(${associado.id})" title="Excluir">
                 <i class="fas fa-trash"></i>
@@ -1542,7 +1549,13 @@ function preencherTabContato(associado) {
                     <i class="fas fa-phone"></i>
                 </div>
                 <h3 class="section-title">Informações de Contato</h3>
+                ${(permissoesUsuario.podeEditarContato || permissoesUsuario.podeEditarCompleto) ? `
+                    <button class="btn-modern btn-primary btn-sm" onclick="abrirModalEditarContato(${associado.id}, '${associado.nome.replace(/'/g, "\\'")}')">
+                        <i class="fas fa-edit"></i> Editar Contato
+                    </button>
+                ` : ''}
             </div>
+
             
             <div class="detail-grid">
                 <div class="detail-item">
@@ -2701,7 +2714,7 @@ function excluirAssociado(id) {
     console.log('Excluindo associado ID:', id);
     event.stopPropagation();
 
-    // ADICIONE ESTA VERIFICAÇÃO NO INÍCIO:
+    // Verificação de permissão
     if (!permissoesUsuario.podeExcluir) {
         alert('Você não tem permissão para excluir associados.');
         return;
