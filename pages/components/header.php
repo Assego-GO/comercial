@@ -99,12 +99,13 @@ class HeaderComponent
             'associados.php' => 'associados',
             'funcionarios.php' => 'funcionarios',
             'comercial.php' => 'comercial',
+            'estatisticas_pre.php' => 'estatisticas',
             'financeiro.php' => 'financeiro',
             'auditoria.php' => 'auditoria',
             'presidencia.php' => 'presidencia',
             'relatorios.php' => 'relatorios',
             'relatorio_financeiro.php' => 'relatorios',
-            'estatisticas.php' => 'relatorios',
+            'estatisticas.php' => 'rel  atorios',
             'documentos.php' => 'documentos',
             'notificacoes.php' => 'notificacoes'
         ];
@@ -1868,6 +1869,29 @@ class HeaderComponent
             'badge' => null
         ];
 
+        if (Permissoes::tem('estatisticas.visualizar') || $this->isDiretor) {
+    $items[] = [
+        'id' => 'estatisticas',
+        'label' => 'Estatísticas', 
+        'icon' => 'fas fa-chart-pie',
+        'href' => 'estatisticas_pre.php',
+        'badge' => null
+    ];
+}
+
+        // ========================================
+        // AUDITORIA - Verifica permissão
+        // ========================================
+        if (Permissoes::tem('sistema.auditoria')) {
+            $items[] = [
+                'id' => 'auditoria',
+                'label' => 'Auditoria',
+                'icon' => 'fas fa-user-shield',
+                'href' => 'auditoria.php',
+                'badge' => null
+            ];
+        }
+
         // AUDITORIA - Liberado para todos
         $items[] = [
             'id' => 'auditoria',
@@ -2697,7 +2721,7 @@ class HeaderComponent
             </div>
         </header>
 
-        <!-- Mobile Navigation -->
+        <!-- Mobile Navigation kkkkkkkkkkkkkkkkkkkkkk-->
         <nav class="mobile-nav" id="mobileNav">
             <div class="mobile-nav-header">
                 <div class="user-dropdown-name"><?php echo htmlspecialchars($this->usuario['nome']); ?></div>
@@ -2751,6 +2775,7 @@ class HeaderComponent
         return $header;
     }
 }
+
 
 /**
  * Função helper para renderização rápida
