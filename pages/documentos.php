@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Página de Gerenciamento do Fluxo de Assinatura - VERSÃO SIMPLIFICADA
  * pages/documentos_fluxo.php
@@ -100,6 +101,232 @@ $headerComponent = HeaderComponent::create([
     <!-- CSS do Header Component -->
     <?php $headerComponent->renderCSS(); ?>
     <link rel="stylesheet" href="estilizacao/documentos.css">
+    <style>
+/* === KPIs MODERNOS - FLUXO DE DOCUMENTOS === */
+
+/* Card Principal */
+.dual-stat-card {
+    position: relative;
+    overflow: visible;
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 20px;
+    padding: 0;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+    min-width: 320px;
+    width: 100%;
+}
+
+.dual-stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(135deg, #007bff 0%, #17a2b8 100%);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.4s ease;
+}
+
+.dual-stat-card:hover::before {
+    transform: scaleX(1);
+}
+
+.dual-stat-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.12);
+    border-color: rgba(0, 123, 255, 0.2);
+}
+
+/* Header do Card */
+.dual-stat-header {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid #e9ecef;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.dual-stat-title {
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: #343a40;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.dual-stat-percentage {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #007bff;
+    background: rgba(0, 123, 255, 0.1);
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+}
+
+/* Layout Desktop - Vertical */
+.dual-stats-row {
+    display: flex;
+    align-items: stretch;
+    padding: 0;
+    min-height: 120px;
+    width: 100%;
+}
+
+.dual-stat-item {
+    flex: 1;
+    min-width: 0;
+    padding: 1.5rem 0.75rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 1rem;
+    transition: all 0.3s ease;
+    position: relative;
+    width: 50%;
+}
+
+.dual-stat-item:hover {
+    background: rgba(0, 123, 255, 0.02);
+}
+
+.dual-stat-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    flex-shrink: 0;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.dual-stat-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    text-align: center;
+    align-items: center;
+}
+
+.dual-stat-value {
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: #343a40;
+    line-height: 1;
+    margin-bottom: 0.25rem;
+    transition: all 0.3s ease;
+}
+
+.dual-stat-label {
+    font-size: 0.875rem;
+    color: #6c757d;
+    font-weight: 600;
+    line-height: 1;
+}
+
+/* Separador vertical */
+.dual-stats-separator {
+    width: 1px;
+    background: linear-gradient(to bottom, transparent, #dee2e6, transparent);
+    margin: 1.5rem 0;
+    flex-shrink: 0;
+}
+
+/* Cores específicas dos ícones - FLUXO DE DOCUMENTOS */
+.envio-icon {
+    background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+    color: white;
+}
+
+.presidencia-icon {
+    background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
+    color: white;
+}
+
+.assinados-icon {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    color: white;
+}
+
+.finalizados-icon {
+    background: linear-gradient(135deg, #007bff 0%, #6610f2 100%);
+    color: white;
+}
+
+/* Ajuste do grid para 2 cards lado a lado */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+/* Responsividade */
+@media (max-width: 1200px) {
+    .stats-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .dual-stats-row {
+        flex-direction: column;
+        min-height: auto;
+    }
+
+    .dual-stats-separator {
+        width: 80%;
+        height: 1px;
+        margin: 0.75rem auto;
+        background: linear-gradient(to right, transparent, #dee2e6, transparent);
+    }
+
+    .dual-stat-item {
+        padding: 1.25rem;
+        width: 100%;
+        min-width: 0;
+        flex-direction: row !important;
+        align-items: center !important;
+        text-align: left !important;
+        gap: 1rem !important;
+        justify-content: flex-start !important;
+    }
+
+    .dual-stat-info {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        text-align: left !important;
+    }
+
+    .dual-stat-value {
+        font-size: 1.75rem;
+    }
+
+    .dual-stat-icon {
+        width: 48px;
+        height: 48px;
+        font-size: 1.25rem;
+        flex-shrink: 0;
+    }
+}
+</style>
 </head>
 
 <body>
@@ -126,60 +353,114 @@ $headerComponent = HeaderComponent::create([
                     1. Ficha é anexada durante o pré-cadastro → 2. Envio para presidência → 3. Assinatura → 4. Retorno ao comercial → 5. Aprovação do pré-cadastro
                 </div>
             </div>
-            
+
             <?php if (isset($_GET['novo']) && $_GET['novo'] == '1'): ?>
-            <div class="alert alert-success alert-dismissible fade show" role="alert">
-                <i class="fas fa-check-circle me-2"></i>
-                <strong>Pré-cadastro criado com sucesso!</strong> 
-                A ficha de filiação foi anexada e está aguardando envio para assinatura.
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    <i class="fas fa-check-circle me-2"></i>
+                    <strong>Pré-cadastro criado com sucesso!</strong>
+                    A ficha de filiação foi anexada e está aguardando envio para assinatura.
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
             <?php endif; ?>
 
-            <!-- Stats Grid -->
+            <!-- Stats Grid - KPIs Modernos do Fluxo -->
             <div class="stats-grid" data-aos="fade-up">
-                <?php if (isset($statsFluxo['por_status'])): ?>
-                    <?php foreach ($statsFluxo['por_status'] as $status): ?>
-                        <div class="stat-card">
-                            <div class="stat-header">
-                                <div>
-                                    <div class="stat-value"><?php echo number_format($status['total'] ?? 0, 0, ',', '.'); ?>
-                                    </div>
-                                    <div class="stat-label">
-                                        <?php
-                                        $labels = [
-                                            'DIGITALIZADO' => 'Aguardando Envio',
-                                            'AGUARDANDO_ASSINATURA' => 'Na Presidência',
-                                            'ASSINADO' => 'Assinados',
-                                            'FINALIZADO' => 'Finalizados'
-                                        ];
-                                        echo $labels[$status['status_fluxo']] ?? $status['status_fluxo'];
-                                        ?>
-                                    </div>
-                                </div>
-                                <div class="stat-icon <?php
-                                echo match ($status['status_fluxo']) {
-                                    'DIGITALIZADO' => 'info',
-                                    'AGUARDANDO_ASSINATURA' => 'warning',
-                                    'ASSINADO' => 'success',
-                                    'FINALIZADO' => 'primary',
-                                    default => 'secondary'
-                                };
-                                ?>">
-                                    <i class="fas <?php
-                                    echo match ($status['status_fluxo']) {
-                                        'DIGITALIZADO' => 'fa-upload',
-                                        'AGUARDANDO_ASSINATURA' => 'fa-clock',
-                                        'ASSINADO' => 'fa-check',
-                                        'FINALIZADO' => 'fa-flag-checkered',
-                                        default => 'fa-file'
-                                    };
-                                    ?>"></i>
-                                </div>
+                <?php
+                // Organizar dados do fluxo para os cards duplos
+                $aguardandoEnvio = 0;
+                $naPresidencia = 0;
+                $assinados = 0;
+                $finalizados = 0;
+
+                if (isset($statsFluxo['por_status'])) {
+                    foreach ($statsFluxo['por_status'] as $status) {
+                        switch ($status['status_fluxo']) {
+                            case 'DIGITALIZADO':
+                                $aguardandoEnvio = $status['total'] ?? 0;
+                                break;
+                            case 'AGUARDANDO_ASSINATURA':
+                                $naPresidencia = $status['total'] ?? 0;
+                                break;
+                            case 'ASSINADO':
+                                $assinados = $status['total'] ?? 0;
+                                break;
+                            case 'FINALIZADO':
+                                $finalizados = $status['total'] ?? 0;
+                                break;
+                        }
+                    }
+                }
+                ?>
+
+                <!-- Card 1: Pendentes (Aguardando Envio + Na Presidência) -->
+                <div class="stat-card dual-stat-card documentos-pendentes-pie">
+                    <div class="dual-stat-header">
+                        <div class="dual-stat-title">
+                            <i class="fas fa-clock"></i>
+                            Documentos Pendentes
+                        </div>
+                        <div class="dual-stat-percentage" id="pendentePercent">
+                            <i class="fas fa-hourglass-half"></i>
+                            Em Processo
+                        </div>
+                    </div>
+                    <div class="dual-stats-row vertical-layout">
+                        <div class="dual-stat-item envio-item">
+                            <div class="dual-stat-icon envio-icon">
+                                <i class="fas fa-upload"></i>
+                            </div>
+                            <div class="dual-stat-info">
+                                <div class="dual-stat-value"><?php echo number_format($aguardandoEnvio, 0, ',', '.'); ?></div>
+                                <div class="dual-stat-label">Aguardando Envio</div>
                             </div>
                         </div>
-                    <?php endforeach; ?>
-                <?php endif; ?>
+                        <div class="dual-stats-separator"></div>
+                        <div class="dual-stat-item presidencia-item">
+                            <div class="dual-stat-icon presidencia-icon">
+                                <i class="fas fa-signature"></i>
+                            </div>
+                            <div class="dual-stat-info">
+                                <div class="dual-stat-value"><?php echo number_format($naPresidencia, 0, ',', '.'); ?></div>
+                                <div class="dual-stat-label">Na Presidência</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 2: Processados (Assinados + Finalizados) -->
+                <div class="stat-card dual-stat-card documentos-processados-pie">
+                    <div class="dual-stat-header">
+                        <div class="dual-stat-title">
+                            <i class="fas fa-check-circle"></i>
+                            Documentos Processados
+                        </div>
+                        <div class="dual-stat-percentage" id="processadosPercent">
+                            <i class="fas fa-chart-line"></i>
+                            Concluídos
+                        </div>
+                    </div>
+                    <div class="dual-stats-row vertical-layout">
+                        <div class="dual-stat-item assinados-item">
+                            <div class="dual-stat-icon assinados-icon">
+                                <i class="fas fa-check"></i>
+                            </div>
+                            <div class="dual-stat-info">
+                                <div class="dual-stat-value"><?php echo number_format($assinados, 0, ',', '.'); ?></div>
+                                <div class="dual-stat-label">Assinados</div>
+                            </div>
+                        </div>
+                        <div class="dual-stats-separator"></div>
+                        <div class="dual-stat-item finalizados-item">
+                            <div class="dual-stat-icon finalizados-icon">
+                                <i class="fas fa-flag-checkered"></i>
+                            </div>
+                            <div class="dual-stat-info">
+                                <div class="dual-stat-value"><?php echo number_format($finalizados, 0, ',', '.'); ?></div>
+                                <div class="dual-stat-label">Finalizados</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- Filters -->
@@ -198,8 +479,8 @@ $headerComponent = HeaderComponent::create([
 
                     <div class="filter-group">
                         <label class="filter-label">Buscar Associado</label>
-                        <input type="text" class="filter-input" id="filtroBuscaFluxo" 
-                               placeholder="Nome ou CPF do associado">
+                        <input type="text" class="filter-input" id="filtroBuscaFluxo"
+                            placeholder="Nome ou CPF do associado">
                     </div>
 
                     <div class="filter-group">
@@ -311,11 +592,9 @@ $headerComponent = HeaderComponent::create([
 
     <!-- JavaScript do Header Component -->
     <?php $headerComponent->renderJS(); ?>
-    
+
     <!-- JavaScript customizado para os botões do header -->
     <script>
-        
-        
         function toggleNotifications() {
             // Implementar painel de notificações
             console.log('Painel de notificações');
@@ -328,7 +607,7 @@ $headerComponent = HeaderComponent::create([
             window.location.href = './funcionarios.php';
         }
     </script>
-    
+
     <script>
         // Inicializa AOS
         AOS.init({
@@ -341,7 +620,7 @@ $headerComponent = HeaderComponent::create([
         let filtrosAtuais = {};
 
         // Inicialização
-        $(document).ready(function () {
+        $(document).ready(function() {
             carregarDocumentosFluxo();
             configurarUploadAssinatura();
         });
@@ -358,7 +637,7 @@ $headerComponent = HeaderComponent::create([
                 </div>
             `);
 
-            $.get('../api/documentos/documentos_fluxo_listar.php', filtros, function (response) {
+            $.get('../api/documentos/documentos_fluxo_listar.php', filtros, function(response) {
                 if (response.status === 'success') {
                     renderizarDocumentosFluxo(response.data);
                 } else {
@@ -372,7 +651,7 @@ $headerComponent = HeaderComponent::create([
                         </div>
                     `);
                 }
-            }).fail(function () {
+            }).fail(function() {
                 container.html(`
                     <div class="col-12">
                         <div class="empty-state">
@@ -386,11 +665,11 @@ $headerComponent = HeaderComponent::create([
         }
 
         function renderizarDocumentosFluxo(documentos) {
-    const container = $('#documentosFluxoList');
-    container.empty();
+            const container = $('#documentosFluxoList');
+            container.empty();
 
-    if (documentos.length === 0) {
-        container.html(`
+            if (documentos.length === 0) {
+                container.html(`
             <div class="col-12">
                 <div class="empty-state">
                     <i class="fas fa-exchange-alt"></i>
@@ -399,12 +678,12 @@ $headerComponent = HeaderComponent::create([
                 </div>
             </div>
         `);
-        return;
-    }
+                return;
+            }
 
-    documentos.forEach(doc => {
-        const statusClass = doc.status_fluxo.toLowerCase().replace('_', '-');
-        const cardHtml = `
+            documentos.forEach(doc => {
+                const statusClass = doc.status_fluxo.toLowerCase().replace('_', '-');
+                const cardHtml = `
             <div class="document-card" data-aos="fade-up">
                 <div class="document-header">
                     <div class="document-icon pdf">
@@ -496,75 +775,75 @@ $headerComponent = HeaderComponent::create([
             </div>
         `;
 
-        container.append(cardHtml);
-    });
-}
+                container.append(cardHtml);
+            });
+        }
 
         function getAcoesFluxo(doc) {
-    let acoes = '';
+            let acoes = '';
 
-    switch (doc.status_fluxo) {
-        case 'DIGITALIZADO':
-            acoes = `
+            switch (doc.status_fluxo) {
+                case 'DIGITALIZADO':
+                    acoes = `
                 <button class="btn-modern btn-warning btn-sm" onclick="enviarParaAssinatura(${doc.id})" title="Enviar para Assinatura">
                     <i class="fas fa-paper-plane"></i>
                     Enviar
                 </button>
             `;
-            break;
+                    break;
 
-        case 'AGUARDANDO_ASSINATURA':
-            // Verificar se usuário tem permissão para assinar (apenas presidência)
-            <?php if ($auth->isDiretor() || $usuarioLogado['departamento_id'] == 2): ?>
-            acoes = `
+                case 'AGUARDANDO_ASSINATURA':
+                    // Verificar se usuário tem permissão para assinar (apenas presidência)
+                    <?php if ($auth->isDiretor() || $usuarioLogado['departamento_id'] == 2): ?>
+                        acoes = `
                 <button class="btn-modern btn-success btn-sm" onclick="abrirModalAssinatura(${doc.id})" title="Assinar">
                     <i class="fas fa-signature"></i>
                     Assinar
                 </button>
             `;
-            <?php endif; ?>
-            break;
+                    <?php endif; ?>
+                    break;
 
-        case 'ASSINADO':
-            acoes = `
+                case 'ASSINADO':
+                    acoes = `
                 <button class="btn-modern btn-info btn-sm" onclick="finalizarProcesso(${doc.id})" title="Finalizar">
                     <i class="fas fa-flag-checkered"></i>
                     Finalizar
                 </button>
             `;
-            break;
+                    break;
 
-        case 'FINALIZADO':
-            acoes = `
+                case 'FINALIZADO':
+                    acoes = `
                 <button class="btn-modern btn-success btn-sm" disabled title="Processo Concluído">
                     <i class="fas fa-check-circle"></i>
                     Concluído
                 </button>
             `;
-            break;
-    }
+                    break;
+            }
 
-    return acoes;
-}
+            return acoes;
+        }
 
-// Obter ícone do status
-function getStatusIcon(status) {
-    const icons = {
-        'DIGITALIZADO': 'upload',
-        'AGUARDANDO_ASSINATURA': 'clock',
-        'ASSINADO': 'check',
-        'FINALIZADO': 'flag-checkered'
-    };
-    return icons[status] || 'file';
-}
+        // Obter ícone do status
+        function getStatusIcon(status) {
+            const icons = {
+                'DIGITALIZADO': 'upload',
+                'AGUARDANDO_ASSINATURA': 'clock',
+                'ASSINADO': 'check',
+                'FINALIZADO': 'flag-checkered'
+            };
+            return icons[status] || 'file';
+        }
 
         function enviarParaAssinatura(documentoId) {
-    mostrarConfirmacaoEnvio(documentoId);
-}
+            mostrarConfirmacaoEnvio(documentoId);
+        }
 
         function mostrarConfirmacaoEnvio(documentoId) {
-    // Cria o modal HTML
-    const modalHtml = `
+            // Cria o modal HTML
+            const modalHtml = `
         <div class="modal fade confirmation-modal" id="confirmationModal" tabindex="-1">
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content">
@@ -617,61 +896,61 @@ function getStatusIcon(status) {
             </div>
         </div>
     `;
-    
-    // Remove modal anterior se existir
-    $('#confirmationModal').remove();
-    
-    // Adiciona o novo modal ao body
-    $('body').append(modalHtml);
-    
-    // Mostra o modal
-    const modal = new bootstrap.Modal(document.getElementById('confirmationModal'));
-    modal.show();
-}
 
-// Função para confirmar o envio
-function confirmarEnvioAssinatura(documentoId) {
-    // Adiciona loading ao botão
-    const btn = event.target;
-    btn.classList.add('loading');
-    btn.innerHTML = '<i class="fas fa-spinner"></i> Enviando...';
-    
-    // Faz a requisição
-    $.ajax({
-        url: '../api/documentos/documentos_enviar_assinatura.php',
-        type: 'POST',
-        contentType: 'application/json',
-        data: JSON.stringify({
-            documento_id: documentoId,
-            observacao: 'Documento enviado para assinatura'
-        }),
-        success: function(response) {
-            if (response.status === 'success') {
-                // Fecha o modal
-                bootstrap.Modal.getInstance(document.getElementById('confirmationModal')).hide();
-                
-                // Mostra notificação de sucesso
-                mostrarNotificacaoSucesso('Documento enviado com sucesso!');
-                
-                // Recarrega a lista
-                carregarDocumentosFluxo(filtrosAtuais);
-            } else {
-                // Restaura o botão
-                btn.classList.remove('loading');
-                btn.innerHTML = '<i class="fas fa-check"></i> Confirmar Envio';
-                alert('Erro: ' + response.message);
-            }
-        },
-        error: function() {
-            btn.classList.remove('loading');
-            btn.innerHTML = '<i class="fas fa-check"></i> Confirmar Envio';
-            alert('Erro ao enviar documento');
+            // Remove modal anterior se existir
+            $('#confirmationModal').remove();
+
+            // Adiciona o novo modal ao body
+            $('body').append(modalHtml);
+
+            // Mostra o modal
+            const modal = new bootstrap.Modal(document.getElementById('confirmationModal'));
+            modal.show();
         }
-    });
-}
 
-function mostrarNotificacaoSucesso(mensagem) {
-    const toastHtml = `
+        // Função para confirmar o envio
+        function confirmarEnvioAssinatura(documentoId) {
+            // Adiciona loading ao botão
+            const btn = event.target;
+            btn.classList.add('loading');
+            btn.innerHTML = '<i class="fas fa-spinner"></i> Enviando...';
+
+            // Faz a requisição
+            $.ajax({
+                url: '../api/documentos/documentos_enviar_assinatura.php',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    documento_id: documentoId,
+                    observacao: 'Documento enviado para assinatura'
+                }),
+                success: function(response) {
+                    if (response.status === 'success') {
+                        // Fecha o modal
+                        bootstrap.Modal.getInstance(document.getElementById('confirmationModal')).hide();
+
+                        // Mostra notificação de sucesso
+                        mostrarNotificacaoSucesso('Documento enviado com sucesso!');
+
+                        // Recarrega a lista
+                        carregarDocumentosFluxo(filtrosAtuais);
+                    } else {
+                        // Restaura o botão
+                        btn.classList.remove('loading');
+                        btn.innerHTML = '<i class="fas fa-check"></i> Confirmar Envio';
+                        alert('Erro: ' + response.message);
+                    }
+                },
+                error: function() {
+                    btn.classList.remove('loading');
+                    btn.innerHTML = '<i class="fas fa-check"></i> Confirmar Envio';
+                    alert('Erro ao enviar documento');
+                }
+            });
+        }
+
+        function mostrarNotificacaoSucesso(mensagem) {
+            const toastHtml = `
         <div class="position-fixed top-0 end-0 p-3" style="z-index: 9999">
             <div class="toast align-items-center text-white bg-success border-0" role="alert">
                 <div class="d-flex">
@@ -684,16 +963,16 @@ function mostrarNotificacaoSucesso(mensagem) {
             </div>
         </div>
     `;
-    
-    $('body').append(toastHtml);
-    const toast = new bootstrap.Toast($('.toast')[0]);
-    toast.show();
-    
-    // Remove após 5 segundos
-    setTimeout(() => {
-        $('.toast').remove();
-    }, 5000);
-}
+
+            $('body').append(toastHtml);
+            const toast = new bootstrap.Toast($('.toast')[0]);
+            toast.show();
+
+            // Remove após 5 segundos
+            setTimeout(() => {
+                $('.toast').remove();
+            }, 5000);
+        }
 
 
         // Abrir modal de assinatura
@@ -730,7 +1009,7 @@ function mostrarNotificacaoSucesso(mensagem) {
                 data: formData,
                 processData: false,
                 contentType: false,
-                success: function (response) {
+                success: function(response) {
                     if (response.status === 'success') {
                         alert('Documento assinado com sucesso!');
                         $('#assinaturaModal').modal('hide');
@@ -739,10 +1018,10 @@ function mostrarNotificacaoSucesso(mensagem) {
                         alert('Erro: ' + response.message);
                     }
                 },
-                error: function () {
+                error: function() {
                     alert('Erro ao assinar documento');
                 },
-                complete: function () {
+                complete: function() {
                     btnAssinar.disabled = false;
                     btnAssinar.innerHTML = btnText;
                 }
@@ -760,7 +1039,7 @@ function mostrarNotificacaoSucesso(mensagem) {
                         documento_id: documentoId,
                         observacao: 'Processo finalizado - Documento pronto para aprovação do pré-cadastro'
                     }),
-                    success: function (response) {
+                    success: function(response) {
                         if (response.status === 'success') {
                             alert('Processo finalizado com sucesso!\n\nO pré-cadastro já pode ser aprovado.');
                             carregarDocumentosFluxo(filtrosAtuais);
@@ -768,7 +1047,7 @@ function mostrarNotificacaoSucesso(mensagem) {
                             alert('Erro: ' + response.message);
                         }
                     },
-                    error: function () {
+                    error: function() {
                         alert('Erro ao finalizar processo');
                     }
                 });
@@ -777,7 +1056,9 @@ function mostrarNotificacaoSucesso(mensagem) {
 
         // Ver histórico
         function verHistorico(documentoId) {
-            $.get('../api/documentos/documentos_historico_fluxo.php', { documento_id: documentoId }, function (response) {
+            $.get('../api/documentos/documentos_historico_fluxo.php', {
+                documento_id: documentoId
+            }, function(response) {
                 if (response.status === 'success') {
                     renderizarHistorico(response.data);
                     $('#historicoModal').modal('show');
@@ -954,14 +1235,14 @@ function mostrarNotificacaoSucesso(mensagem) {
         }
 
         // Fecha modal quando pressiona ESC
-        $(document).on('keydown', function (e) {
+        $(document).on('keydown', function(e) {
             if (e.key === 'Escape') {
                 $('.modal').modal('hide');
             }
         });
 
         // Limpa formulários quando modais são fechados
-        $('#assinaturaModal').on('hidden.bs.modal', function () {
+        $('#assinaturaModal').on('hidden.bs.modal', function() {
             $('#assinaturaForm')[0].reset();
             arquivoAssinaturaSelecionado = null;
             $('#assinaturaFilesList').empty();

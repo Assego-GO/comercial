@@ -1,8 +1,9 @@
 <?php
 
 /**
- * Formulário de Cadastro de Associados - VERSÃO COM SALVAMENTO EM CADA STEP
- * pages/cadastroForm.php
+ * Página de Serviços Financeiros - Sistema ASSEGO
+ * pages/financeiro.php
+ * VERSÃO COMPLETA COM TODAS AS FUNCIONALIDADES ORIGINAIS
  */
 
 // Configuração e includes
@@ -11,6 +12,7 @@ require_once '../config/database.php';
 require_once '../classes/Database.php';
 require_once '../classes/Auth.php';
 require_once '../classes/Associados.php';
+require_once './components/header.php';
 
 // Inicia autenticação
 $auth = new Auth();
@@ -25,7 +27,95 @@ if (!$auth->isLoggedIn()) {
 $usuarioLogado = $auth->getUser();
 
 // Define o título da página
-$page_title = 'Filiar Novo Associado - ASSEGO';
+$page_title = 'Serviços Financeiros - ASSEGO';
+
+// Verificar permissões para setor financeiro - APENAS FINANCEIRO E PRESIDÊNCIA
+$temPermissaoFinanceiro = false;
+$motivoNegacao = '';
+$isFinanceiro = false;
+$isPresidencia = false;
+$departamentoUsuario = null;
+
+error_log("=== DEBUG PERMISSÕES SERVIÇOS FINANCEIROS - RESTRITO ===");
+error_log("Usuário: " . $usuarioLogado['nome']);
+error_log("Departamento ID: " . ($usuarioLogado['departamento_id'] ?? 'NULL'));
+error_log("É Diretor: " . ($auth->isDiretor() ? 'SIM' : 'NÃO'));
+
+// Verificação de permissões: APENAS financeiro (ID: 2) OU presidência (ID: 1)
+if (isset($usuarioLogado['departamento_id'])) {
+    $deptId = $usuarioLogado['departamento_id'];
+    $departamentoUsuario = $deptId;
+
+    if ($deptId == 2) { // Financeiro
+        $temPermissaoFinanceiro = true;
+        $isFinanceiro = true;
+        error_log("✅ Permissão concedida: Usuário pertence ao Setor Financeiro (ID: 2)");
+    } elseif ($deptId == 1) { // Presidência
+        $temPermissaoFinanceiro = true;
+        $isPresidencia = true;
+        error_log("✅ Permissão concedida: Usuário pertence à Presidência (ID: 1)");
+    } else {
+        $motivoNegacao = 'Acesso restrito EXCLUSIVAMENTE ao Setor Financeiro e Presidência.';
+        error_log("❌ Acesso negado. Departamento: '$deptId'. Permitido apenas: Financeiro (ID: 2) ou Presidência (ID: 1)");
+    }
+} else {
+    $motivoNegacao = 'Departamento não identificado no perfil do usuário.';
+    error_log("❌ departamento_id não existe no array do usuário");
+}
+
+// Log final do resultado
+if (!$temPermissaoFinanceiro) {
+    error_log("❌ ACESSO NEGADO AOS SERVIÇOS FINANCEIROS: " . $motivoNegacao);
+}
+
+// Se não tem permissão, só renderiza a tela de acesso negado
+if (!$temPermissaoFinanceiro) {
+    $headerComponent = HeaderComponent::create([
+        'usuario' => $usuarioLogado,
+        'isDiretor' => $auth->isDiretor(),
+        'activeTab' => 'financeiro',
+        'notificationCount' => 0,
+        'showSearch' => true
+    ]);
+    ?>
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title><?php echo $page_title; ?></title>
+        <link rel="icon" href="../assets/img/favicon.ico" type="image/x-icon">
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+        <?php $headerComponent->renderCSS(); ?>
+        <style>
+            body { font-family: 'Plus Jakarta Sans', sans-serif; background: #f8f9fa; }
+            .main-wrapper { min-height: 100vh; display: flex; flex-direction: column; }
+            .content-area { flex: 1; padding: 2rem; }
+        </style>
+    </head>
+    <body>
+        <div class="main-wrapper">
+            <?php $headerComponent->render(); ?>
+            <div class="content-area">
+                <div class="alert alert-danger">
+                    <h4><i class="fas fa-ban me-2"></i>Acesso Negado aos Serviços Financeiros</h4>
+                    <p class="mb-3"><?php echo htmlspecialchars($motivoNegacao); ?></p>
+                    <a href="dashboard.php" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left me-1"></i>
+                        Voltar ao Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+        <?php $headerComponent->renderJS(); ?>
+    </body>
+    </html>
+    <?php
+    exit;
+}
+
+// CONTINUA COM O FORMULÁRIO COMPLETO ORIGINAL SE TEM PERMISSÃO...
 
 // Verifica se é edição
 $isEdit = isset($_GET['id']) && is_numeric($_GET['id']);
@@ -117,7 +207,6 @@ if ($isEdit) {
             $associadoData['agencia'] = $dadosFinanceiro['agencia'];
             $associadoData['operacao'] = $dadosFinanceiro['operacao'];
             $associadoData['contaCorrente'] = $dadosFinanceiro['contaCorrente'];
-
             $associadoData['doador'] = $dadosFinanceiro['doador'];
             error_log("✓ Dados financeiros carregados");
         }
@@ -153,7 +242,7 @@ if ($isEdit) {
         exit;
     }
 
-    $page_title = 'Editar Associado - ASSEGO';
+    $page_title = 'Editar Associado - ASSEGO (Setor Financeiro)';
 }
 
 try {
@@ -613,6 +702,15 @@ $patentes = [
         'Civil'
     ]
 ];
+
+// Cria instância do Header Component
+$headerComponent = HeaderComponent::create([
+    'usuario' => $usuarioLogado,
+    'isDiretor' => $auth->isDiretor(),
+    'activeTab' => 'financeiro',
+    'notificationCount' => 0,
+    'showSearch' => true
+]);
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -643,6 +741,9 @@ $patentes = [
 
     <!-- jQuery Mask -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.mask/1.14.16/jquery.mask.min.js"></script>
+
+    <!-- CSS do Header Component -->
+    <?php $headerComponent->renderCSS(); ?>
 
     <!-- Custom CSS Files -->
     <link rel="stylesheet" href="estilizacao/cadastroForm.css">
@@ -720,6 +821,40 @@ $patentes = [
         .step-save-indicator.show {
             opacity: 1;
         }
+
+        /* ADIÇÃO ESPECÍFICA PARA INDICAR QUE É O SETOR FINANCEIRO */
+        .page-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #28a745, #20c997);
+            border-radius: 0 0 8px 8px;
+        }
+
+        .page-header {
+            position: relative;
+            background: rgba(40, 167, 69, 0.05);
+            border: 1px solid rgba(40, 167, 69, 0.2);
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .setor-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
     </style>
 
     <!-- Passar dados para o JavaScript -->
@@ -742,21 +877,8 @@ $patentes = [
         <div class="loading-text">Processando...</div>
     </div>
 
-    <!-- Header -->
-    <header class="main-header">
-        <div class="header-left">
-            <div class="logo-section">
-                <div
-                    style="width: 40px; height: 40px; background: var(--primary); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white; font-weight: 800;">
-                    A
-                </div>
-                <div>
-                    <h1 class="logo-text">ASSEGO</h1>
-                    <p class="system-subtitle">Sistema de Gestão</p>
-                </div>
-            </div>
-        </div>
-    </header>
+    <!-- Header Component -->
+    <?php $headerComponent->render(); ?>
 
     <!-- Breadcrumb -->
     <div class="breadcrumb-container">
@@ -767,7 +889,7 @@ $patentes = [
             <ol class="breadcrumb-custom">
                 <li><a href="dashboard.php"><i class="fas fa-home"></i> Dashboard</a></li>
                 <li class="separator"><i class="fas fa-chevron-right"></i></li>
-                <li><a href="dashboard.php">Associados</a></li>
+                <li><a href="dashboard.php">Setor Financeiro</a></li>
                 <li class="separator"><i class="fas fa-chevron-right"></i></li>
                 <li class="active"><?php echo $isEdit ? 'Editar' : 'Nova Filiação'; ?></li>
             </ol>
@@ -776,24 +898,21 @@ $patentes = [
 
     <!-- Content Area -->
     <div class="content-area">
-        <!-- Page Header -->
-        <div class="page-header">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                <div>
-                    <h1 class="page-title">
-                        <i class="fas fa-user-plus"></i>
-                        <?php echo $isEdit ? 'Editar Associado' : 'Filiar Novo Associado'; ?>
-                    </h1>
-                    <p class="page-subtitle">
-                        <?php echo $isEdit ? 'Atualize os dados do associado' : 'Preencha todos os campos obrigatórios para filiar um novo associado'; ?>
-                    </p>
-                </div>
-                <button type="button" class="btn-dashboard" onclick="window.location.href='dashboard.php'">
-                    <i class="fas fa-arrow-left"></i>
-                    Voltar ao Dashboard
-                    <span style="font-size: 0.7rem; opacity: 0.8; margin-left: 0.5rem;">(ESC)</span>
-                </button>
+        <!-- Page Header Simples -->
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2rem;">
+            <div>
+                <h1 style="font-size: 1.75rem; font-weight: 700; color: #343a40; margin: 0 0 0.5rem 0;">
+                    <?php echo $isEdit ? 'Editar Associado' : 'Filiar Novo Associado'; ?>
+                </h1>
+                <p style="color: #6c757d; margin: 0; font-size: 0.95rem;">
+                    <?php echo $isEdit ? 'Atualize os dados do associado' : 'Preencha todos os campos obrigatórios para filiar um novo associado'; ?>
+                </p>
             </div>
+            <button type="button" class="btn-dashboard" onclick="window.location.href='dashboard.php'">
+                <i class="fas fa-arrow-left"></i>
+                Voltar ao Dashboard
+                <span style="font-size: 0.7rem; opacity: 0.8; margin-left: 0.5rem;">(ESC)</span>
+            </button>
         </div>
 
         <!-- Alert Messages -->
@@ -1133,7 +1252,6 @@ $patentes = [
                                 <option value="">Selecione...</option>
                                 <option value="Polícia Militar" <?php echo (isset($associadoData['corporacao']) && $associadoData['corporacao'] == 'Polícia Militar') ? 'selected' : ''; ?>>Polícia Militar</option>
                                 <option value="Bombeiro Militar" <?php echo (isset($associadoData['corporacao']) && $associadoData['corporacao'] == 'Bombeiro Militar') ? 'selected' : ''; ?>>Bombeiro Militar</option>
-
                             </select>
                         </div>
 
@@ -1635,6 +1753,9 @@ $patentes = [
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/i18n/pt-BR.min.js"></script>
+
+    <!-- JavaScript do Header Component -->
+    <?php $headerComponent->renderJS(); ?>
 
     <!-- Scripts separados para melhor organização -->
     <script src="js/cadastroForm.js"></script>
