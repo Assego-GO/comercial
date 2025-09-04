@@ -625,6 +625,7 @@ class HeaderComponent
             /* Menu do Usuário */
             .user-menu-container {
                 position: relative;
+                flex-shrink: 0;
             }
 
             .user-menu-trigger {
@@ -637,18 +638,16 @@ class HeaderComponent
                 border-radius: 14px;
                 cursor: pointer;
                 transition: all var(--transition-base);
-            }
-
-            .user-menu-trigger:hover {
-                background: var(--assego-blue-light);
-                border-color: var(--assego-blue);
-                transform: translateY(-2px);
-                box-shadow: var(--shadow-md);
+                min-width: 0;
+                max-width: 280px;
             }
 
             .user-info {
                 text-align: right;
                 padding-right: 4px;
+                min-width: 0;
+                flex: 1;
+                overflow: hidden;
             }
 
             .user-name {
@@ -656,6 +655,10 @@ class HeaderComponent
                 font-weight: 600;
                 color: var(--gray-900);
                 line-height: 1.2;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                max-width: 200px;
             }
 
             .user-role {
@@ -663,6 +666,10 @@ class HeaderComponent
                 color: var(--gray-500);
                 margin-top: 2px;
                 font-weight: 500;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                max-width: 200px;
             }
 
             .user-avatar {
@@ -1923,7 +1930,6 @@ class HeaderComponent
                 'badge' => null
             ];
         }
-
         // PRESIDÊNCIA - Verifica permissão
         if ($this->permissoes->hasPermission('PRESIDENCIA_DASHBOARD', 'VIEW')) {
             $items[] = [
@@ -1934,8 +1940,6 @@ class HeaderComponent
                 'badge' => null
             ];
         }
-
-
         return $items;
     }
 
