@@ -71,7 +71,7 @@ try {
     if (isset($usuarioLogado['departamento_id'])) {
         $deptId = $usuarioLogado['departamento_id'];
         // Apenas financeiro (ID: 5) ou presidência (ID: 1)
-        if ($deptId == 5 || $deptId == 1) {
+        if ($deptId == 2 || $deptId == 1) {
             $temPermissao = true;
         }
     }

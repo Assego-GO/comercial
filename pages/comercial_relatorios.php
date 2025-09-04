@@ -837,7 +837,6 @@ if (empty($patentesDB)) {
             <!-- Page Header -->
             <div class="page-header animate__animated animate__fadeInDown">
                 <h1 class="page-title">
-                    <i class="fas fa-file-alt"></i>
                     Relatórios Comerciais
                 </h1>
                 <p class="page-subtitle">
