@@ -932,7 +932,6 @@ $headerComponent = HeaderComponent::create([
             <!-- Page Header -->
             <div class="page-header animate__animated animate__fadeInDown">
                 <h1 class="page-title">
-                    <i class="fas fa-exchange-alt me-2"></i>
                     Fluxo de Assinatura de Documentos
                 </h1>
                 <p class="page-subtitle">
