@@ -322,7 +322,7 @@ window.NeoConsig = (function() {
                 params.append('rubrica', rubrica.value);
             }
 
-            const url = `../pages/neoconsig.php?${params.toString()}`;
+            const url = `../pages/gerar_recorrencia.php?${params.toString()}`;
             
             // Fazer download do arquivo
             const link = document.createElement('a');
