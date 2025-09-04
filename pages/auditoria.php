@@ -286,8 +286,8 @@ $headerComponent = HeaderComponent::create([
             <!-- Page Header -->
             <div class="page-header" data-aos="fade-right">
                 <h1 class="page-title">
-                    <div class="page-title-icon">
-                        <i class="fas fa-shield-alt"></i>
+                    <div class="page">
+                        <i class="fas"></i>
                     </div>
                     Sistema de Auditoria
                     <?php if (!$isPresidencia): ?>
@@ -301,29 +301,6 @@ $headerComponent = HeaderComponent::create([
                         Monitoramento de atividades do seu departamento
                     <?php endif; ?>
                 </p>
-            </div>
-
-            <!-- Alert informativo sobre o nível de acesso -->
-            <div class="alert alert-<?php echo $isPresidencia ? 'info' : 'warning'; ?>" data-aos="fade-up">
-                <div class="d-flex align-items-center">
-                    <i class="fas fa-<?php echo $isPresidencia ? 'globe' : 'building'; ?> fa-2x me-3"></i>
-                    <div>
-                        <h6 class="mb-1">
-                            <?php if ($isPresidencia): ?>
-                                <i class="fas fa-crown text-warning"></i> Acesso Total - Presidência
-                            <?php else: ?>
-                                <i class="fas fa-user-tie text-info"></i> Acesso Departamental - Diretor
-                            <?php endif; ?>
-                        </h6>
-                        <small>
-                            <?php if ($isPresidencia): ?>
-                                Você tem acesso a todos os registros de auditoria do sistema.
-                            <?php else: ?>
-                                Você tem acesso aos registros relacionados ao departamento <strong><?php echo htmlspecialchars($departamentoUsuario); ?></strong>.
-                            <?php endif; ?>
-                        </small>
-                    </div>
-                </div>
             </div>
 
             <!-- Stats Grid -->
