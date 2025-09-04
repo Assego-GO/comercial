@@ -239,24 +239,16 @@ $headerComponent = HeaderComponent::create([
         }
 
         .page-title {
-            font-size: 2rem;
-            font-weight: 800;
-            color: var(--dark);
-            margin-bottom: 0.5rem;
-            letter-spacing: -0.5px;
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-        }
-
-        .page-title i {
-            color: var(--primary);
+        font-size: 2rem;
+        font-weight: 800;
+        color: var(--dark);
+        margin: 0 0 0.5rem 0;
         }
 
         .page-subtitle {
-            color: #64748b;
             font-size: 1rem;
-            font-weight: 500;
+            color: var(--gray-600);
+            margin: 0;
         }
 
         /* Stats Grid Premium */
@@ -920,13 +912,12 @@ $headerComponent = HeaderComponent::create([
         <!-- Content Area -->
         <div class="content-area">
             <!-- Page Header -->
-            <div class="page-header animate__animated animate__fadeInDown">
+            <div class="page-header">
                 <h1 class="page-title">
-                    <i class="fas fa-handshake me-2"></i>
-                    Serviços Comerciais
+                    <i class="fas me-2"></i>Serviços Comerciais
                 </h1>
                 <p class="page-subtitle">
-                    Gerencie cadastros, desfiliações e serviços do setor comercial com eficiência
+                          Gerencie cadastros, desfiliações e serviços do setor comercial com eficiência
                 </p>
             </div>
 
