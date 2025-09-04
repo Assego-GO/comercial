@@ -1,11 +1,9 @@
 <?php
-
 /**
  * Página de Serviços Financeiros - Sistema ASSEGO
  * pages/financeiro.php
- * VERSÃO ATUALIZADA - Sistema de navegação interno com componentes dinâmicos
- * COM SUPORTE A PARTIALS E CARREGAMENTO DINÂMICO DE SCRIPTS
- * SEM BUSCA FINANCEIRA - ÍCONES PADRONIZADOS E MODERNOS
+ * VERSÃO COM SISTEMA DE PERMISSÕES RBAC/ACL INTEGRADO
+ * Sistema de navegação interno com componentes dinâmicos
  */
 
 // Tratamento de erros para debug
@@ -17,6 +15,7 @@ require_once '../config/database.php';
 require_once '../classes/Database.php';
 require_once '../classes/Auth.php';
 require_once '../classes/Funcionarios.php';
+require_once '../classes/Permissoes.php'; // CLASSE DE PERMISSÕES RBAC/ACL
 require_once './components/header.php';
 
 // Inicia autenticação
@@ -34,117 +33,159 @@ $usuarioLogado = $auth->getUser();
 // Define o título da página
 $page_title = 'Serviços Financeiros - ASSEGO';
 
-// Verificar permissões para setor financeiro - APENAS FINANCEIRO E PRESIDÊNCIA
-$temPermissaoFinanceiro = false;
-$motivoNegacao = '';
-$isFinanceiro = false;
-$isPresidencia = false;
-$departamentoUsuario = null;
+// ===== SISTEMA DE PERMISSÕES RBAC/ACL =====
+$permissoes = Permissoes::getInstance();
 
-error_log("=== DEBUG PERMISSÕES SERVIÇOS FINANCEIROS - RESTRITO ===");
+// Verificar permissão geral para o módulo financeiro
+$temPermissaoFinanceiro = $permissoes->hasPermission('FINANCEIRO_DASHBOARD', 'VIEW');
+
+// Verificar permissões específicas para cada recurso
+$permissoesDetalhadas = [
+    'dashboard' => $permissoes->hasPermission('FINANCEIRO_DASHBOARD', 'VIEW'),
+    'inadimplentes' => [
+        'visualizar' => $permissoes->hasPermission('FINANCEIRO_INADIMPLENTES_VISUALIZAR', 'VIEW'),
+        'exportar' => $permissoes->hasPermission('FINANCEIRO_INADIMPLENTES_EXPORTAR', 'EXPORT'),
+        'gerenciar' => $permissoes->hasPermission('FINANCEIRO_INADIMPLENTES', 'FULL')
+    ],
+    'neoconsig' => [
+        'visualizar' => $permissoes->hasPermission('FINANCEIRO_NEOCONSIG', 'VIEW'),
+        'gerar' => $permissoes->hasPermission('FINANCEIRO_NEOCONSIG_GERAR', 'CREATE'),
+        'historico' => $permissoes->hasPermission('FINANCEIRO_NEOCONSIG_HISTORICO', 'VIEW')
+    ],
+    'asaas' => [
+        'visualizar' => $permissoes->hasPermission('FINANCEIRO_ASAAS', 'VIEW'),
+        'importar' => $permissoes->hasPermission('FINANCEIRO_ASAAS_IMPORTAR', 'CREATE'),
+        'relatorio' => $permissoes->hasPermission('FINANCEIRO_ASAAS_RELATORIO', 'VIEW')
+    ],
+    'peculio' => [
+        'visualizar' => $permissoes->hasPermission('FINANCEIRO_PECULIO', 'VIEW'),
+        'cadastrar' => $permissoes->hasPermission('FINANCEIRO_PECULIO_CADASTRAR', 'CREATE'),
+        'editar' => $permissoes->hasPermission('FINANCEIRO_PECULIO_EDITAR', 'EDIT'),
+        'aprovar' => $permissoes->hasPermission('FINANCEIRO_PECULIO_APROVAR', 'APPROVE')
+    ],
+    'relatorios' => [
+        'visualizar' => $permissoes->hasPermission('FINANCEIRO_RELATORIOS', 'VIEW'),
+        'gerar' => $permissoes->hasPermission('FINANCEIRO_RELATORIOS_GERAR', 'CREATE')
+    ],
+    'pagamentos' => [
+        'visualizar' => $permissoes->hasPermission('FINANCEIRO_PAGAMENTOS', 'VIEW'),
+        'registrar' => $permissoes->hasPermission('FINANCEIRO_PAGAMENTOS_REGISTRAR', 'CREATE'),
+        'estornar' => $permissoes->hasPermission('FINANCEIRO_PAGAMENTOS_ESTORNAR', 'DELETE')
+    ]
+];
+// Verificar se é do departamento financeiro (ID 2) com qualquer role
+$departamentoFinanceiro = 2;
+$isFinanceiro = ($usuarioLogado['departamento_id'] == $departamentoFinanceiro);
+
+// Níveis de acesso baseados em role + departamento
+$isOperadorFinanceiro = $isFinanceiro && $permissoes->hasRole('FUNCIONARIO');
+$isSupervisorFinanceiro = $isFinanceiro && $permissoes->hasRole('SUPERVISOR');
+$isDiretorFinanceiro = $isFinanceiro && $permissoes->hasRole('DIRETOR');
+$isPresidencia = $permissoes->hasRole('PRESIDENTE') ||
+    $permissoes->hasRole('SUPER_ADMIN');
+
+$isDiretor = $permissoes->isDiretor();
+$departamentoUsuario = $usuarioLogado['departamento_id'] ?? null;
+
+// Log de debug das permissões
+error_log("=== DEBUG PERMISSÕES FINANCEIRAS RBAC/ACL ===");
 error_log("Usuário: " . $usuarioLogado['nome']);
-error_log("Departamento ID: " . ($usuarioLogado['departamento_id'] ?? 'NULL'));
-error_log("É Diretor: " . ($auth->isDiretor() ? 'SIM' : 'NÃO'));
+error_log("ID: " . ($usuarioLogado['id'] ?? 'NULL'));
+error_log("Departamento: " . ($departamentoUsuario ?? 'NULL'));
+error_log("Tem permissão financeiro: " . ($temPermissaoFinanceiro ? 'SIM' : 'NÃO'));
+error_log("Roles: Financeiro=" . ($isFinanceiro ? 'SIM' : 'NÃO') .
+    ", Presidência=" . ($isPresidencia ? 'SIM' : 'NÃO') .
+    ", Diretor=" . ($isDiretor ? 'SIM' : 'NÃO'));
 
-// Verificação de permissões: APENAS financeiro (ID: 2) OU presidência (ID: 1)
-if (isset($usuarioLogado['departamento_id'])) {
-    $deptId = $usuarioLogado['departamento_id'];
-    $departamentoUsuario = $deptId;
-
-    if ($deptId == 2) { // Financeiro - CORRIGIDO: usar ID 2 consistentemente
-        $temPermissaoFinanceiro = true;
-        $isFinanceiro = true;
-        error_log("✅ Permissão concedida: Usuário pertence ao Setor Financeiro (ID: 2)");
-    } elseif ($deptId == 1) { // Presidência
-        $temPermissaoFinanceiro = true;
-        $isPresidencia = true;
-        error_log("✅ Permissão concedida: Usuário pertence à Presidência (ID: 1)");
+// Log detalhado de permissões
+foreach ($permissoesDetalhadas as $modulo => $perms) {
+    if (is_array($perms)) {
+        foreach ($perms as $acao => $permitido) {
+            error_log("  $modulo.$acao: " . ($permitido ? '✓' : '✗'));
+        }
     } else {
-        $motivoNegacao = 'Acesso restrito EXCLUSIVAMENTE ao Setor Financeiro e Presidência.';
-        error_log("❌ Acesso negado. Departamento: '$deptId'. Permitido apenas: Financeiro (ID: 2) ou Presidência (ID: 1)");
+        error_log("  $modulo: " . ($perms ? '✓' : '✗'));
     }
-} else {
-    $motivoNegacao = 'Departamento não identificado no perfil do usuário.';
-    error_log("❌ departamento_id não existe no array do usuário");
 }
 
-// Log final do resultado
+$motivoNegacao = '';
 if (!$temPermissaoFinanceiro) {
-    error_log("❌ ACESSO NEGADO AOS SERVIÇOS FINANCEIROS: " . $motivoNegacao);
-} else {
-    error_log("✅ ACESSO PERMITIDO - Usuário " . ($isFinanceiro ? 'do Financeiro' : 'da Presidência'));
+    $motivoNegacao = 'Você não possui permissão para acessar o módulo financeiro. Entre em contato com o administrador do sistema.';
+    error_log("❌ ACESSO NEGADO: Sem permissão FINANCEIRO_DASHBOARD");
 }
 
 // Busca estatísticas do setor financeiro (apenas se tem permissão)
+$totalAssociadosAtivos = 0;
+$pagamentosHoje = 0;
+$associadosInadimplentes = 0;
+$arrecadacaoMes = 0;
+
 if ($temPermissaoFinanceiro) {
     try {
         $db = Database::getInstance(DB_NAME_CADASTRO)->getConnection();
 
-        // 1. Total de associados ativos
-        $sql = "SELECT COUNT(DISTINCT a.id) as total 
-                FROM Associados a 
-                WHERE a.situacao = 'Filiado'";
-        $stmt = $db->prepare($sql);
-        $stmt->execute();
-        $totalAssociadosAtivos = $stmt->fetch(PDO::FETCH_ASSOC)['total'] ?? 0;
-
-        // 2. Arrecadação do mês atual
-        $sql = "SELECT COALESCE(SUM(sa.valor_aplicado), 0) as valor_mes 
-                FROM Servicos_Associado sa
-                INNER JOIN Associados a ON sa.associado_id = a.id
-                WHERE sa.ativo = 1 
-                AND a.situacao = 'Filiado'";
-        $stmt = $db->prepare($sql);
-        $stmt->execute();
-        $result = $stmt->fetch(PDO::FETCH_ASSOC);
-        $arrecadacaoMes = floatval($result['valor_mes'] ?? 0);
-
-        // 3. Pagamentos recebidos hoje
-        $pagamentosHoje = 0;
-        try {
-            $sql = "SELECT COUNT(*) as hoje 
-                    FROM Pagamentos 
-                    WHERE DATE(data_pagamento) = CURDATE() 
-                    AND status_pagamento = 'PAGO'";
+        // Estatísticas apenas se tem permissão de visualizar dashboard
+        if ($permissoesDetalhadas['dashboard']) {
+            // 1. Total de associados ativos
+            $sql = "SELECT COUNT(DISTINCT a.id) as total 
+                    FROM Associados a 
+                    WHERE a.situacao = 'Filiado'";
             $stmt = $db->prepare($sql);
             $stmt->execute();
-            $pagamentosHoje = $stmt->fetch(PDO::FETCH_ASSOC)['hoje'] ?? 0;
-        } catch (Exception $e) {
-            $pagamentosHoje = 0;
+            $totalAssociadosAtivos = $stmt->fetch(PDO::FETCH_ASSOC)['total'] ?? 0;
+
+            // 2. Arrecadação do mês atual
+            $sql = "SELECT COALESCE(SUM(sa.valor_aplicado), 0) as valor_mes 
+                    FROM Servicos_Associado sa
+                    INNER JOIN Associados a ON sa.associado_id = a.id
+                    WHERE sa.ativo = 1 
+                    AND a.situacao = 'Filiado'";
+            $stmt = $db->prepare($sql);
+            $stmt->execute();
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            $arrecadacaoMes = floatval($result['valor_mes'] ?? 0);
         }
 
-        // 4. Associados inadimplentes
-        $sql = "SELECT COUNT(DISTINCT a.id) as inadimplentes 
-                FROM Associados a
-                LEFT JOIN Financeiro f ON a.id = f.associado_id
-                WHERE a.situacao = 'Filiado' 
-                AND (
-                    f.situacaoFinanceira = 'Inadimplente' 
-                    OR f.situacaoFinanceira = 'INADIMPLENTE'
-                    OR f.situacaoFinanceira IS NULL
-                )";
-        $stmt = $db->prepare($sql);
-        $stmt->execute();
-        $associadosInadimplentes = $stmt->fetch(PDO::FETCH_ASSOC)['inadimplentes'] ?? 0;
+        // 3. Pagamentos recebidos hoje (se tem permissão)
+        if ($permissoesDetalhadas['pagamentos']['visualizar']) {
+            try {
+                $sql = "SELECT COUNT(*) as hoje 
+                        FROM Pagamentos_Associado 
+                        WHERE DATE(data_pagamento) = CURDATE() 
+                        AND status_pagamento = 'CONFIRMADO'";
+                $stmt = $db->prepare($sql);
+                $stmt->execute();
+                $pagamentosHoje = $stmt->fetch(PDO::FETCH_ASSOC)['hoje'] ?? 0;
+            } catch (Exception $e) {
+                $pagamentosHoje = 0;
+            }
+        }
+
+        // 4. Associados inadimplentes (se tem permissão)
+        if ($permissoesDetalhadas['inadimplentes']['visualizar']) {
+            $sql = "SELECT COUNT(DISTINCT a.id) as inadimplentes 
+                    FROM Associados a
+                    LEFT JOIN Financeiro f ON a.id = f.associado_id
+                    WHERE a.situacao = 'Filiado' 
+                    AND (
+                        f.situacaoFinanceira = 'Inadimplente' 
+                        OR f.situacaoFinanceira = 'INADIMPLENTE'
+                        OR f.situacaoFinanceira IS NULL
+                    )";
+            $stmt = $db->prepare($sql);
+            $stmt->execute();
+            $associadosInadimplentes = $stmt->fetch(PDO::FETCH_ASSOC)['inadimplentes'] ?? 0;
+        }
 
     } catch (Exception $e) {
         error_log("Erro ao buscar estatísticas financeiras: " . $e->getMessage());
-        $totalAssociadosAtivos = 0;
-        $pagamentosHoje = 0;
-        $associadosInadimplentes = 0;
-        $arrecadacaoMes = 0;
     }
-} else {
-    $totalAssociadosAtivos = 0;
-    $pagamentosHoje = 0;
-    $associadosInadimplentes = 0;
-    $arrecadacaoMes = 0;
 }
 
 // Cria instância do Header Component
 $headerComponent = HeaderComponent::create([
     'usuario' => $usuarioLogado,
-    'isDiretor' => $auth->isDiretor(),
+    'isDiretor' => $isDiretor,
     'activeTab' => 'financeiro',
     'notificationCount' => $associadosInadimplentes,
     'showSearch' => true
@@ -168,7 +209,8 @@ $headerComponent = HeaderComponent::create([
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
 
     <!-- AOS Animation -->
     <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
@@ -367,7 +409,7 @@ $headerComponent = HeaderComponent::create([
             flex-shrink: 0;
         }
 
-        /* ÍCONES MODERNOS E PADRONIZADOS PARA ESTATÍSTICAS */
+        /* ÍCONES MODERNOS E PADRONIZADOS */
         .ativos-icon {
             background: linear-gradient(135deg, var(--finance-green) 0%, #10b981 100%);
             color: white;
@@ -388,7 +430,7 @@ $headerComponent = HeaderComponent::create([
             color: white;
         }
 
-        /* ===== SISTEMA DE NAVEGAÇÃO INTERNO ULTRA COMPACTO ===== */
+        /* ===== SISTEMA DE NAVEGAÇÃO INTERNO ===== */
         .financial-nav {
             background: white;
             border-radius: 15px;
@@ -525,55 +567,55 @@ $headerComponent = HeaderComponent::create([
             font-weight: 600;
         }
 
-        /* ÍCONES ESPECÍFICOS - SEMPRE COLORIDOS COM ALTA ESPECIFICIDADE */
+        /* ÍCONES ESPECÍFICOS */
         .financial-nav-tabs .nav-tab .nav-tab-btn[data-target="lista-inadimplentes"] .nav-tab-icon {
-            background: #dc2626 !important; /* Vermelho para inadimplência */
+            background: #dc2626 !important;
         }
 
         .financial-nav-tabs .nav-tab .nav-tab-btn[data-target="lista-inadimplentes"] .nav-tab-icon::before {
-            content: "\f15c"; /* fa-file-invoice-dollar */
+            content: "\f15c";
             font-family: "Font Awesome 6 Pro", "Font Awesome 6 Free";
             font-weight: 900;
         }
 
         .financial-nav-tabs .nav-tab .nav-tab-btn[data-target="neoconsig"] .nav-tab-icon {
-            background: #2563eb !important; /* Azul como na imagem */
+            background: #2563eb !important;
         }
 
         .financial-nav-tabs .nav-tab .nav-tab-btn[data-target="neoconsig"] .nav-tab-icon::before {
-            content: "\f155"; /* fa-dollar-sign */
+            content: "\f155";
             font-family: "Font Awesome 6 Pro", "Font Awesome 6 Free";
             font-weight: 900;
         }
 
         .financial-nav-tabs .nav-tab .nav-tab-btn[data-target="importar-asaas"] .nav-tab-icon {
-            background: #ea580c !important; /* Laranja como na imagem */
+            background: #ea580c !important;
         }
 
         .financial-nav-tabs .nav-tab .nav-tab-btn[data-target="importar-asaas"] .nav-tab-icon::before {
-            content: "\f0c3"; /* fa-flask */
+            content: "\f0c3";
             font-family: "Font Awesome 6 Pro", "Font Awesome 6 Free";
             font-weight: 900;
         }
 
         .financial-nav-tabs .nav-tab .nav-tab-btn[data-target="gestao-peculio"] .nav-tab-icon {
-            background: #7c3aed !important; /* Roxo para gestão pecúlio */
+            background: #7c3aed !important;
         }
 
         .financial-nav-tabs .nav-tab .nav-tab-btn[data-target="gestao-peculio"] .nav-tab-icon::before {
-            content: "\f19c"; /* fa-university */
+            content: "\f19c";
             font-family: "Font Awesome 6 Pro", "Font Awesome 6 Free";
             font-weight: 900;
         }
 
-        /* CORREÇÃO ULTRA AGRESSIVA - ELIMINAR TODO ESPAÇAMENTO */
+        /* Content Area */
         .financial-content {
             padding: 0 !important;
             margin: 0 !important;
             background: transparent !important;
         }
 
-        .financial-content > * {
+        .financial-content>* {
             margin-top: 0 !important;
             padding-top: 0 !important;
         }
@@ -595,17 +637,15 @@ $headerComponent = HeaderComponent::create([
             animation: fadeIn 0.3s ease-in;
         }
 
-        .content-panel > * {
+        .content-panel>* {
             margin-top: 0 !important;
             padding-top: 0 !important;
         }
 
-        /* Remover headers desnecessários */
         .content-panel .content-header {
             display: none !important;
         }
 
-        /* Forçar todos os IDs das abas */
         #gestao-peculio,
         #lista-inadimplentes,
         #neoconsig,
@@ -619,15 +659,14 @@ $headerComponent = HeaderComponent::create([
             box-shadow: none !important;
         }
 
-        #gestao-peculio > *,
-        #lista-inadimplentes > *,
-        #neoconsig > *,
-        #importar-asaas > * {
+        #gestao-peculio>*,
+        #lista-inadimplentes>*,
+        #neoconsig>*,
+        #importar-asaas>* {
             margin-top: 0 !important;
             padding-top: 0 !important;
         }
 
-        /* Eliminar espaço da navegação */
         .nav-tabs-container {
             margin-bottom: 0 !important;
             padding-bottom: 0 !important;
@@ -637,19 +676,24 @@ $headerComponent = HeaderComponent::create([
             margin-bottom: 0 !important;
         }
 
-        /* Container geral */
-        .content-area > * {
+        .content-area>* {
             margin-top: 0 !important;
         }
 
-        /* Page Header compacto */
         .mb-4 {
             margin-bottom: 0 !important;
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         .content-title {
@@ -669,7 +713,7 @@ $headerComponent = HeaderComponent::create([
             line-height: 1.5;
         }
 
-        /* Loading States COMPACTO */
+        /* Loading States */
         .loading-spinner {
             display: flex;
             justify-content: center;
@@ -691,8 +735,13 @@ $headerComponent = HeaderComponent::create([
         }
 
         @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
         }
 
         /* Alert personalizado */
@@ -708,6 +757,25 @@ $headerComponent = HeaderComponent::create([
         .alert-custom i {
             font-size: 1.25rem;
             margin-right: 0.75rem;
+        }
+
+        /* Indicador de permissão */
+        .permission-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.25rem 0.75rem;
+            background: rgba(0, 86, 210, 0.1);
+            color: var(--primary);
+            border-radius: 50px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            gap: 0.25rem;
+            margin-left: 0.5rem;
+        }
+
+        .permission-badge.denied {
+            background: rgba(220, 38, 38, 0.1);
+            color: var(--danger);
         }
 
         /* Toast */
@@ -791,6 +859,22 @@ $headerComponent = HeaderComponent::create([
                 <div class="alert alert-danger" data-aos="fade-up">
                     <h4><i class="fas fa-ban me-2"></i>Acesso Negado aos Serviços Financeiros</h4>
                     <p class="mb-3"><?php echo htmlspecialchars($motivoNegacao); ?></p>
+
+                    <?php if ($isDiretor && !$isFinanceiro): ?>
+                        <div class="alert alert-info mt-3">
+                            <small>
+                                <i class="fas fa-info-circle me-1"></i>
+                                Você possui cargo de diretor mas não tem role específica do setor financeiro.
+                                Para obter acesso, solicite ao administrador a atribuição de uma das seguintes roles:
+                                <ul class="mt-2 mb-0">
+                                    <li>FINANCEIRO_OPERADOR - Acesso básico aos recursos financeiros</li>
+                                    <li>FINANCEIRO_SUPERVISOR - Acesso intermediário com aprovações</li>
+                                    <li>FINANCEIRO_DIRETOR - Acesso completo ao módulo financeiro</li>
+                                </ul>
+                            </small>
+                        </div>
+                    <?php endif; ?>
+
                     <a href="../pages/dashboard.php" class="btn btn-secondary">
                         <i class="fas fa-arrow-left me-1"></i>
                         Voltar ao Dashboard
@@ -798,76 +882,181 @@ $headerComponent = HeaderComponent::create([
                 </div>
             <?php else: ?>
                 <!-- Com Permissão -->
-                
-                <!-- Page Header COMPACTO -->
+
+                <!-- Page Header -->
                 <div class="mb-0" style="margin-bottom: 0.5rem !important;">
-                    <h1 class="page-title">Serviços Financeiros</h1>
-                    <p class="page-subtitle">Gerencie mensalidades, inadimplência, relatórios financeiros e arrecadação da ASSEGO</p>
+                    <h1 class="page-title">
+                        Serviços Financeiros
+                        <?php if ($isPresidencia): ?>
+                            <span class="permission-badge">
+                                <i class="fas fa-crown"></i> Presidência
+                            </span>
+                        <?php elseif ($isFinanceiro): ?>
+                            <span class="permission-badge">
+                                <i class="fas fa-user-tie"></i> Financeiro
+                            </span>
+                        <?php endif; ?>
+                    </h1>
+                    <p class="page-subtitle">Gerencie mensalidades, inadimplência, relatórios financeiros e arrecadação da
+                        ASSEGO</p>
                 </div>
 
-                <!-- Navegação SEM ESPAÇOS - ÍCONES MODERNOS E PADRONIZADOS -->
+                <!-- KPIs Dashboard (se tem permissão) -->
+                <?php if ($permissoesDetalhadas['dashboard']): ?>
+                    <div class="stats-grid">
+                        <!-- Card Associados Ativos/Inadimplentes -->
+                        <div class="dual-stat-card">
+                            <div class="dual-stat-header">
+                                <span class="dual-stat-title">
+                                    <i class="fas fa-users"></i>
+                                    STATUS DOS ASSOCIADOS
+                                </span>
+                            </div>
+                            <div class="dual-stats-row">
+                                <div class="dual-stat-item">
+                                    <div class="dual-stat-icon ativos-icon">
+                                        <i class="fas fa-user-check"></i>
+                                    </div>
+                                    <div>
+                                        <div class="dual-stat-value">
+                                            <?php echo number_format($totalAssociadosAtivos, 0, ',', '.'); ?>
+                                        </div>
+                                        <div class="dual-stat-label">Ativos</div>
+                                    </div>
+                                </div>
+                                <div class="dual-stats-separator"></div>
+                                <div class="dual-stat-item">
+                                    <div class="dual-stat-icon inadimplentes-icon">
+                                        <i class="fas fa-user-times"></i>
+                                    </div>
+                                    <div>
+                                        <div class="dual-stat-value">
+                                            <?php echo number_format($associadosInadimplentes, 0, ',', '.'); ?>
+                                        </div>
+                                        <div class="dual-stat-label">Inadimplentes</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Card Arrecadação/Pagamentos -->
+                        <div class="dual-stat-card">
+                            <div class="dual-stat-header">
+                                <span class="dual-stat-title">
+                                    <i class="fas fa-chart-line"></i>
+                                    MOVIMENTAÇÃO FINANCEIRA
+                                </span>
+                            </div>
+                            <div class="dual-stats-row">
+                                <div class="dual-stat-item">
+                                    <div class="dual-stat-icon arrecadacao-icon">
+                                        <i class="fas fa-dollar-sign"></i>
+                                    </div>
+                                    <div>
+                                        <div class="dual-stat-value">R$
+                                            <?php echo number_format($arrecadacaoMes, 0, ',', '.'); ?>
+                                        </div>
+                                        <div class="dual-stat-label">Arrecadação/Mês</div>
+                                    </div>
+                                </div>
+                                <div class="dual-stats-separator"></div>
+                                <div class="dual-stat-item">
+                                    <div class="dual-stat-icon pagamentos-icon">
+                                        <i class="fas fa-receipt"></i>
+                                    </div>
+                                    <div>
+                                        <div class="dual-stat-value"><?php echo number_format($pagamentosHoje, 0, ',', '.'); ?>
+                                        </div>
+                                        <div class="dual-stat-label">Pagamentos Hoje</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                <?php endif; ?>
+
+                <!-- Navegação com verificação de permissões -->
                 <div class="nav-tabs-container" style="margin: 0 !important; padding: 0 !important;">
                     <ul class="financial-nav-tabs">
-                        <li class="nav-tab">
-                            <button class="nav-tab-btn active" data-target="lista-inadimplentes">
-                                <div class="nav-tab-icon"></div>
-                                <span class="nav-tab-label">Lista Inadimplentes</span>
-                            </button>
-                        </li>
-                        <li class="nav-tab">
-                            <button class="nav-tab-btn" data-target="neoconsig">
-                                <div class="nav-tab-icon"></div>
-                                <span class="nav-tab-label">NeoConsig</span>
-                            </button>
-                        </li>
-                        <li class="nav-tab">
-                            <button class="nav-tab-btn" data-target="importar-asaas">
-                                <div class="nav-tab-icon"></div>
-                                <span class="nav-tab-label">Importar ASAAS</span>
-                            </button>
-                        </li>
-                        <li class="nav-tab">
-                            <button class="nav-tab-btn" data-target="gestao-peculio">
-                                <div class="nav-tab-icon"></div>
-                                <span class="nav-tab-label">Gestão Pecúlio</span>
-                            </button>
-                        </li>
+                        <?php if ($permissoesDetalhadas['inadimplentes']['visualizar']): ?>
+                            <li class="nav-tab">
+                                <button class="nav-tab-btn active" data-target="lista-inadimplentes">
+                                    <div class="nav-tab-icon"></div>
+                                    <span class="nav-tab-label">Lista Inadimplentes</span>
+                                </button>
+                            </li>
+                        <?php endif; ?>
+
+                        <?php if ($permissoesDetalhadas['neoconsig']['visualizar']): ?>
+                            <li class="nav-tab">
+                                <button class="nav-tab-btn" data-target="neoconsig">
+                                    <div class="nav-tab-icon"></div>
+                                    <span class="nav-tab-label">NeoConsig</span>
+                                </button>
+                            </li>
+                        <?php endif; ?>
+
+                        <?php if ($permissoesDetalhadas['asaas']['visualizar']): ?>
+                            <li class="nav-tab">
+                                <button class="nav-tab-btn" data-target="importar-asaas">
+                                    <div class="nav-tab-icon"></div>
+                                    <span class="nav-tab-label">Importar ASAAS</span>
+                                </button>
+                            </li>
+                        <?php endif; ?>
+
+                        <?php if ($permissoesDetalhadas['peculio']['visualizar']): ?>
+                            <li class="nav-tab">
+                                <button class="nav-tab-btn" data-target="gestao-peculio">
+                                    <div class="nav-tab-icon"></div>
+                                    <span class="nav-tab-label">Gestão Pecúlio</span>
+                                </button>
+                            </li>
+                        <?php endif; ?>
                     </ul>
                 </div>
 
-                <!-- Content Area SEM ESPAÇOS -->
+                <!-- Content Area -->
                 <div class="financial-content" style="margin: 0 !important; padding: 0 !important;">
-                    <!-- Lista Inadimplentes SEM HEADER -->
-                    <div id="lista-inadimplentes" class="content-panel active">
-                        <div class="loading-spinner">
-                            <div class="spinner"></div>
-                            <p class="text-muted">Carregando lista de inadimplentes...</p>
+                    <?php if ($permissoesDetalhadas['inadimplentes']['visualizar']): ?>
+                        <!-- Lista Inadimplentes -->
+                        <div id="lista-inadimplentes" class="content-panel active">
+                            <div class="loading-spinner">
+                                <div class="spinner"></div>
+                                <p class="text-muted">Carregando lista de inadimplentes...</p>
+                            </div>
                         </div>
-                    </div>
+                    <?php endif; ?>
 
-                    <!-- NeoConsig SEM HEADER -->
-                    <div id="neoconsig" class="content-panel">
-                        <div class="loading-spinner">
-                            <div class="spinner"></div>
-                            <p class="text-muted">Carregando gerador de recorrência...</p>
+                    <?php if ($permissoesDetalhadas['neoconsig']['visualizar']): ?>
+                        <!-- NeoConsig -->
+                        <div id="neoconsig" class="content-panel">
+                            <div class="loading-spinner">
+                                <div class="spinner"></div>
+                                <p class="text-muted">Carregando gerador de recorrência...</p>
+                            </div>
                         </div>
-                    </div>
+                    <?php endif; ?>
 
-                    <!-- Importar ASAAS SEM HEADER -->
-                    <div id="importar-asaas" class="content-panel">
-                        <div class="loading-spinner">
-                            <div class="spinner"></div>
-                            <p class="text-muted">Carregando importador ASAAS...</p>
+                    <?php if ($permissoesDetalhadas['asaas']['visualizar']): ?>
+                        <!-- Importar ASAAS -->
+                        <div id="importar-asaas" class="content-panel">
+                            <div class="loading-spinner">
+                                <div class="spinner"></div>
+                                <p class="text-muted">Carregando importador ASAAS...</p>
+                            </div>
                         </div>
-                    </div>
+                    <?php endif; ?>
 
-                    <!-- Gestão Pecúlio SEM HEADER -->
-                    <div id="gestao-peculio" class="content-panel">
-                        <div class="loading-spinner">
-                            <div class="spinner"></div>
-                            <p class="text-muted">Carregando gestão de pecúlio...</p>
+                    <?php if ($permissoesDetalhadas['peculio']['visualizar']): ?>
+                        <!-- Gestão Pecúlio -->
+                        <div id="gestao-peculio" class="content-panel">
+                            <div class="loading-spinner">
+                                <div class="spinner"></div>
+                                <p class="text-muted">Carregando gestão de pecúlio...</p>
+                            </div>
                         </div>
-                    </div>
+                    <?php endif; ?>
                 </div>
             <?php endif; ?>
         </div>
@@ -881,6 +1070,18 @@ $headerComponent = HeaderComponent::create([
     <?php $headerComponent->renderJS(); ?>
 
     <script>
+        // ===== PASSAR PERMISSÕES PARA JAVASCRIPT =====
+        const permissoesUsuario = <?php echo json_encode($permissoesDetalhadas); ?>;
+        const temPermissaoFinanceiro = <?php echo json_encode($temPermissaoFinanceiro); ?>;
+        const isFinanceiro = <?php echo json_encode($isFinanceiro); ?>;
+        const isPresidencia = <?php echo json_encode($isPresidencia); ?>;
+
+        console.log('=== Permissões do Usuário ===');
+        console.log('Tem permissão financeiro:', temPermissaoFinanceiro);
+        console.log('É do financeiro:', isFinanceiro);
+        console.log('É da presidência:', isPresidencia);
+        console.log('Permissões detalhadas:', permissoesUsuario);
+
         // ===== SISTEMA DE NOTIFICAÇÕES =====
         class NotificationSystem {
             constructor() {
@@ -926,11 +1127,11 @@ $headerComponent = HeaderComponent::create([
         const TAB_SCRIPTS = {
             'gestao-peculio': './rend/js/gestao_peculio.js',
             'lista-inadimplentes': './rend/js/lista_inadimplentes.js',
-            'neoconsig': './rend/js/neoconsig.js', 
+            'neoconsig': './rend/js/neoconsig.js',
             'importar-asaas': './rend/js/importar_asaas.js'
         };
 
-        // ===== HELPER PARA CARREGAR SCRIPTS UMA ÚNICA VEZ =====
+        // ===== HELPER PARA CARREGAR SCRIPTS =====
         const loadedScripts = new Set();
 
         function loadScriptOnce(src) {
@@ -960,12 +1161,27 @@ $headerComponent = HeaderComponent::create([
         // ===== SISTEMA DE NAVEGAÇÃO INTERNO =====
         class FinancialNavigation {
             constructor() {
-                this.activeTab = 'lista-inadimplentes';
-                this.loadedTabs = new Set(['lista-inadimplentes']);
+                this.activeTab = this.getFirstAvailableTab();
+                this.loadedTabs = this.activeTab ? new Set([this.activeTab]) : new Set();
                 this.init();
             }
 
+            getFirstAvailableTab() {
+                // Retornar primeira aba disponível baseada em permissões
+                if (permissoesUsuario.inadimplentes?.visualizar) return 'lista-inadimplentes';
+                if (permissoesUsuario.neoconsig?.visualizar) return 'neoconsig';
+                if (permissoesUsuario.asaas?.visualizar) return 'importar-asaas';
+                if (permissoesUsuario.peculio?.visualizar) return 'gestao-peculio';
+                return null;
+            }
+
             init() {
+                // Verificar se há abas disponíveis
+                if (!this.activeTab) {
+                    console.error('Nenhuma aba disponível com as permissões atuais');
+                    return;
+                }
+
                 // Event listeners para as abas
                 document.querySelectorAll('.nav-tab-btn').forEach(btn => {
                     btn.addEventListener('click', (e) => {
@@ -974,12 +1190,35 @@ $headerComponent = HeaderComponent::create([
                     });
                 });
 
+                // Definir primeira aba como ativa
+                document.querySelectorAll('.nav-tab-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+
+                const firstBtn = document.querySelector(`[data-target="${this.activeTab}"]`);
+                if (firstBtn) {
+                    firstBtn.classList.add('active');
+                }
+
                 // Carregar a primeira aba
-                this.loadTabContent('lista-inadimplentes');
+                this.loadTabContent(this.activeTab);
             }
 
             switchTab(tabId) {
                 if (this.activeTab === tabId) return;
+
+                // Verificar permissão para a aba
+                const tabPermissions = {
+                    'lista-inadimplentes': permissoesUsuario.inadimplentes?.visualizar,
+                    'neoconsig': permissoesUsuario.neoconsig?.visualizar,
+                    'importar-asaas': permissoesUsuario.asaas?.visualizar,
+                    'gestao-peculio': permissoesUsuario.peculio?.visualizar
+                };
+
+                if (!tabPermissions[tabId]) {
+                    notifications.show('Você não tem permissão para acessar esta seção', 'warning');
+                    return;
+                }
 
                 // Atualiza botões
                 document.querySelectorAll('.nav-tab-btn').forEach(btn => {
@@ -994,22 +1233,24 @@ $headerComponent = HeaderComponent::create([
 
                 // Mostra novo painel
                 const targetPanel = document.getElementById(tabId);
-                targetPanel.classList.add('active');
+                if (targetPanel) {
+                    targetPanel.classList.add('active');
 
-                // CORREÇÃO AGRESSIVA: Aplicar estilos de limpeza EXTREMOS
-                targetPanel.style.cssText = `
-                    padding: 0 !important;
-                    margin: 0 !important;
-                    min-height: auto !important;
-                    background: transparent !important;
-                    border: none !important;
-                    box-shadow: none !important;
-                `;
+                    // Aplicar estilos de limpeza
+                    targetPanel.style.cssText = `
+                        padding: 0 !important;
+                        margin: 0 !important;
+                        min-height: auto !important;
+                        background: transparent !important;
+                        border: none !important;
+                        box-shadow: none !important;
+                    `;
 
-                // Carrega conteúdo se necessário
-                if (!this.loadedTabs.has(tabId)) {
-                    this.loadTabContent(tabId);
-                    this.loadedTabs.add(tabId);
+                    // Carrega conteúdo se necessário
+                    if (!this.loadedTabs.has(tabId)) {
+                        this.loadTabContent(tabId);
+                        this.loadedTabs.add(tabId);
+                    }
                 }
 
                 this.activeTab = tabId;
@@ -1028,19 +1269,24 @@ $headerComponent = HeaderComponent::create([
 
             async loadTabContent(tabId) {
                 const panel = document.getElementById(tabId);
+                if (!panel) {
+                    console.error(`Painel não encontrado: ${tabId}`);
+                    return;
+                }
+
                 const spinner = panel.querySelector('.loading-spinner');
 
                 try {
                     console.log(`Carregando conteúdo da aba: ${tabId}`);
-                    
-                    const partialUrl = tabId === 'gestao-peculio' 
+
+                    const partialUrl = tabId === 'gestao-peculio'
                         ? '../pages/rend/gestao_peculio_content.php'
                         : `./rend/${tabId.replace('-', '_')}_content.php`;
-                    
+
                     console.log(`Buscando partial: ${partialUrl}`);
-                    
+
                     const response = await fetch(partialUrl);
-                    
+
                     if (!response.ok) {
                         throw new Error(`HTTP ${response.status} - ${response.statusText}`);
                     }
@@ -1052,11 +1298,11 @@ $headerComponent = HeaderComponent::create([
                     if (spinner) {
                         spinner.style.display = 'none';
                     }
-                    
-                    // CORREÇÃO AGRESSIVA: Limpar completamente e injetar sem headers
+
+                    // Limpar e injetar conteúdo
                     panel.innerHTML = htmlContent;
 
-                    // CORREÇÃO ADICIONAL: Aplicar estilos de limpeza AGRESSIVOS
+                    // Aplicar estilos de limpeza
                     panel.style.cssText = `
                         padding: 0 !important;
                         margin: 0 !important;
@@ -1067,14 +1313,14 @@ $headerComponent = HeaderComponent::create([
                         box-shadow: none !important;
                     `;
 
-                    // CORREÇÃO: Remover QUALQUER content-header se existir
+                    // Remover headers desnecessários
                     const contentHeaders = panel.querySelectorAll('.content-header');
                     contentHeaders.forEach(header => header.remove());
 
-                    // CORREÇÃO: Aplicar estilos em todos os filhos diretos
+                    // Aplicar estilos em todos os filhos
                     Array.from(panel.children).forEach(child => {
                         if (child.classList.contains('content-header')) {
-                            child.remove(); // Remover headers completamente
+                            child.remove();
                         } else {
                             child.style.cssText = `
                                 margin-top: 0 !important;
@@ -1083,7 +1329,7 @@ $headerComponent = HeaderComponent::create([
                         }
                     });
 
-                    console.log('✅ Estilos de limpeza aplicados agressivamente');
+                    console.log('✅ Estilos aplicados');
 
                     // Carregar scripts se necessário
                     const scriptSrc = TAB_SCRIPTS[tabId];
@@ -1108,43 +1354,47 @@ $headerComponent = HeaderComponent::create([
 
             async initializeTabModule(tabId) {
                 try {
-                    switch(tabId) {
+                    switch (tabId) {
                         case 'gestao-peculio':
                             if (window.Peculio) {
-                                console.log('Inicializando módulo Peculio...');
+                                console.log('Inicializando módulo Peculio com permissões...');
                                 window.Peculio.init({
                                     temPermissao: temPermissaoFinanceiro,
-                                    isFinanceiro: <?php echo json_encode($isFinanceiro); ?>,
-                                    isPresidencia: <?php echo json_encode($isPresidencia); ?>
+                                    isFinanceiro: isFinanceiro,
+                                    isPresidencia: isPresidencia,
+                                    permissoes: permissoesUsuario.peculio
                                 });
                             } else {
-                                console.error('Módulo Peculio não encontrado após carregamento do script');
+                                console.error('Módulo Peculio não encontrado');
                             }
                             break;
 
                         case 'lista-inadimplentes':
                             if (window.ListaInadimplentes) {
-                                console.log('Inicializando módulo Lista de Inadimplentes...');
+                                console.log('Inicializando módulo Lista de Inadimplentes com permissões...');
                                 window.ListaInadimplentes.init({
-                                    temPermissao: temPermissaoFinanceiro
+                                    temPermissao: temPermissaoFinanceiro,
+                                    permissoes: permissoesUsuario.inadimplentes
                                 });
                             }
                             break;
 
                         case 'neoconsig':
                             if (window.NeoConsig) {
-                                console.log('Inicializando módulo NeoConsig...');
+                                console.log('Inicializando módulo NeoConsig com permissões...');
                                 window.NeoConsig.init({
-                                    temPermissao: temPermissaoFinanceiro
+                                    temPermissao: temPermissaoFinanceiro,
+                                    permissoes: permissoesUsuario.neoconsig
                                 });
                             }
                             break;
 
                         case 'importar-asaas':
                             if (window.ImportarAsaas) {
-                                console.log('Inicializando módulo Importar ASAAS...');
+                                console.log('Inicializando módulo Importar ASAAS com permissões...');
                                 window.ImportarAsaas.init({
-                                    temPermissao: temPermissaoFinanceiro
+                                    temPermissao: temPermissaoFinanceiro,
+                                    permissoes: permissoesUsuario.asaas
                                 });
                             }
                             break;
@@ -1157,47 +1407,54 @@ $headerComponent = HeaderComponent::create([
 
             retryLoad(tabId) {
                 console.log(`Tentando recarregar aba: ${tabId}`);
-                
+
                 this.loadedTabs.delete(tabId);
                 const panel = document.getElementById(tabId);
-                
-                panel.innerHTML = `
-                    <div class="loading-spinner" style="margin: 0 !important; padding: 0 !important;">
-                        <div class="spinner"></div>
-                        <p class="text-muted">Carregando ${this.getTabName(tabId).toLowerCase()}...</p>
-                    </div>
-                `;
 
-                this.loadTabContent(tabId);
-                this.loadedTabs.add(tabId);
+                if (panel) {
+                    panel.innerHTML = `
+                        <div class="loading-spinner" style="margin: 0 !important; padding: 0 !important;">
+                            <div class="spinner"></div>
+                            <p class="text-muted">Carregando ${this.getTabName(tabId).toLowerCase()}...</p>
+                        </div>
+                    `;
+
+                    this.loadTabContent(tabId);
+                    this.loadedTabs.add(tabId);
+                }
             }
         }
 
         // ===== VARIÁVEIS GLOBAIS =====
         const notifications = new NotificationSystem();
         let financialNav;
-        const temPermissaoFinanceiro = <?php echo json_encode($temPermissaoFinanceiro); ?>;
 
         // ===== INICIALIZAÇÃO =====
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             AOS.init({
                 duration: 800,
                 once: true
             });
 
             if (!temPermissaoFinanceiro) {
-                console.log('❌ Usuário sem permissão');
+                console.log('❌ Usuário sem permissão para módulo financeiro');
                 return;
             }
 
             // Inicializa sistema de navegação
             financialNav = new FinancialNavigation();
 
-            notifications.show('Sistema financeiro carregado com sucesso!', 'success', 3000);
-            console.log('✅ Sistema Financeiro inicializado - Ícones modernos e padronizados aplicados');
-        });
+            // Mostrar notificação baseada em permissões
+            if (isPresidencia) {
+                notifications.show('Sistema financeiro carregado - Acesso Presidência', 'success', 3000);
+            } else if (isFinanceiro) {
+                notifications.show('Sistema financeiro carregado - Acesso Setor Financeiro', 'success', 3000);
+            } else {
+                notifications.show('Sistema financeiro carregado', 'success', 3000);
+            }
 
-        console.log('✓ Sistema Financeiro - Ícones modernos com cores temáticas aplicados!');
+            console.log('✅ Sistema Financeiro inicializado com permissões RBAC/ACL');
+        });
     </script>
 </body>
 
