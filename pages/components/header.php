@@ -12,6 +12,10 @@ $basePath = dirname(dirname(__DIR__)); // Volta 2 níveis: components -> pages -
 // Se Auth existir, carrega
 if (!class_exists('Auth') && file_exists($basePath . '/classes/Auth.php')) {
     require_once $basePath . '/classes/Auth.php';
+
+}
+if (!class_exists('Permissoes') && file_exists($basePath . '/classes/Permissoes.php')) {
+    require_once $basePath . '/classes/Permissoes.php';
 }
 
 class HeaderComponent
@@ -23,6 +27,7 @@ class HeaderComponent
     private $funcionario_id;
     private $departamento_id;
     private $cargo;
+    private $permissoes; // Adicione esta linha
 
     public function __construct($config = [])
     {
@@ -38,6 +43,10 @@ class HeaderComponent
             'email' => $_SESSION['funcionario_email'] ?? 'usuario@assego.com.br',
             'avatar' => $_SESSION['funcionario_foto'] ?? null
         ];
+
+        if (class_exists('Permissoes')) {
+            $this->permissoes = Permissoes::getInstance();
+        }
 
         // Verifica se é diretor
         $this->isDiretor = $config['isDiretor'] ?? ($this->cargo === 'Diretor');
@@ -103,11 +112,13 @@ class HeaderComponent
             'financeiro.php' => 'financeiro',
             'auditoria.php' => 'auditoria',
             'presidencia.php' => 'presidencia',
+            'permissoes.php' => 'permissoes',
             'relatorios.php' => 'relatorios',
             'relatorio_financeiro.php' => 'relatorios',
             'estatisticas.php' => 'rel  atorios',
             'documentos.php' => 'documentos',
             'notificacoes.php' => 'notificacoes'
+
         ];
 
         return $pageMap[$currentFile] ?? 'associados';
@@ -1822,74 +1833,95 @@ class HeaderComponent
     {
         $items = [];
 
-        // ASSOCIADOS - Liberado para todos
-        $items[] = [
-            'id' => 'associados',
-            'label' => 'Associados',
-            'icon' => 'fas fa-users',
-            'href' => 'dashboard.php',
-            'badge' => null
-        ];
+        // Se não tem sistema de permissões, retorna vazio
+        if (!class_exists('Permissoes')) {
+            return $items;
+        }
 
-        // FUNCIONÁRIOS - Liberado para todos
-        $items[] = [
-            'id' => 'funcionarios',
-            'label' => 'Funcionários',
-            'icon' => 'fas fa-user-tie',
-            'href' => 'funcionarios.php',
-            'badge' => null
-        ];
+        // Inicializa permissões se ainda não foi feito
+        if (!$this->permissoes) {
+            $this->permissoes = Permissoes::getInstance();
+        }
 
-        // COMERCIAL - Liberado para todos
-        $items[] = [
-            'id' => 'comercial',
-            'label' => 'Comercial',
-            'icon' => 'fas fa-briefcase',
-            'href' => 'comercial.php',
-            'badge' => null
-        ];
+        // ASSOCIADOS - Verifica permissão
+        if ($this->permissoes->hasPermission('ASSOCIADOS_DASHBOARD', 'VIEW')) {
+            $items[] = [
+                'id' => 'associados',
+                'label' => 'Associados',
+                'icon' => 'fas fa-users',
+                'href' => 'dashboard.php',
+                'badge' => null
+            ];
+        }
 
-        // FINANCEIRO - Liberado para todos
-        $items[] = [
-            'id' => 'financeiro',
-            'label' => 'Financeiro',
-            'icon' => 'fas fa-dollar-sign',
-            'href' => 'financeiro.php',
-            'badge' => null
-        ];
+        // FUNCIONÁRIOS - Verifica permissão
+        if ($this->permissoes->hasPermission('FUNCIONARIOS_DASHBOARD', 'VIEW')) {
+            $items[] = [
+                'id' => 'funcionarios',
+                'label' => 'Funcionários',
+                'icon' => 'fas fa-user-tie',
+                'href' => 'funcionarios.php',
+                'badge' => null
+            ];
+        }
 
-        // DOCUMENTOS - Liberado para todos
-        $items[] = [
-            'id' => 'documentos',
-            'label' => 'Documentos',
-            'icon' => 'fas fa-folder-open',
-            'href' => 'documentos.php',
-            'badge' => null
-        ];
+        // COMERCIAL - Verifica permissão
+        if ($this->permissoes->hasPermission('COMERCIAL_DASHBOARD', 'VIEW')) {
+            $items[] = [
+                'id' => 'comercial',
+                'label' => 'Comercial',
+                'icon' => 'fas fa-briefcase',
+                'href' => 'comercial.php',
+                'badge' => null
+            ];
+        }
 
-        // RELATÓRIOS - Liberado para todos
-        $items[] = [
-            'id' => 'relatorios',
-            'label' => 'Relatórios',
-            'icon' => 'fas fa-chart-line',
-            'href' => 'relatorios.php',
-            'badge' => null
-        ];
+        // FINANCEIRO - Verifica permissão
+        if ($this->permissoes->hasPermission('FINANCEIRO_DASHBOARD', 'VIEW')) {
+            $items[] = [
+                'id' => 'financeiro',
+                'label' => 'Financeiro',
+                'icon' => 'fas fa-dollar-sign',
+                'href' => 'financeiro.php',
+                'badge' => null
+            ];
+        }
 
-        if (Permissoes::tem('estatisticas.visualizar') || $this->isDiretor) {
-    $items[] = [
-        'id' => 'estatisticas',
-        'label' => 'Estatísticas', 
-        'icon' => 'fas fa-chart-pie',
-        'href' => 'estatisticas_pre.php',
-        'badge' => null
-    ];
-}
+        // DOCUMENTOS - Verifica permissão
+        if ($this->permissoes->hasPermission('DOCUMENTOS_DASHBOARD', 'VIEW')) {
+            $items[] = [
+                'id' => 'documentos',
+                'label' => 'Documentos',
+                'icon' => 'fas fa-folder-open',
+                'href' => 'documentos.php',
+                'badge' => null
+            ];
+        }
 
-        // ========================================
+        // RELATÓRIOS - Verifica permissão
+        if ($this->permissoes->hasPermission('RELATORIOS_DASHBOARD', 'VIEW')) {
+            $items[] = [
+                'id' => 'relatorios',
+                'label' => 'Relatórios',
+                'icon' => 'fas fa-chart-line',
+                'href' => 'relatorios.php',
+                'badge' => null
+            ];
+        }
+
+        // ESTATÍSTICAS - Verifica permissão
+        if ($this->permissoes->hasPermission('ESTATISTICAS_DASHBOARD', 'VIEW')) {
+            $items[] = [
+                'id' => 'estatisticas',
+                'label' => 'Estatísticas',
+                'icon' => 'fas fa-chart-pie',
+                'href' => 'estatisticas_pre.php',
+                'badge' => null
+            ];
+        }
+
         // AUDITORIA - Verifica permissão
-        // ========================================
-        if (Permissoes::tem('sistema.auditoria')) {
+        if ($this->permissoes->hasPermission('AUDITORIA_DASHBOARD', 'VIEW')) {
             $items[] = [
                 'id' => 'auditoria',
                 'label' => 'Auditoria',
@@ -1898,26 +1930,16 @@ class HeaderComponent
                 'badge' => null
             ];
         }
-
-
-        // PRESIDÊNCIA - Liberado para todos
-        $items[] = [
-            'id' => 'presidencia',
-            'label' => 'Presidência',
-            'icon' => 'fas fa-landmark',
-            'href' => 'presidencia.php',
-            'badge' => null
-        ];
-
-        // NOTIFICAÇÕES - Liberado para todos
-        $items[] = [
-            'id' => 'notificacoes',
-            'label' => 'Notificações',
-            'icon' => 'fas fa-bell',
-            'href' => 'notificacoes.php',
-            'badge' => $this->notificationCount > 0 ? $this->notificationCount : null
-        ];
-
+        // PRESIDÊNCIA - Verifica permissão
+        if ($this->permissoes->hasPermission('PRESIDENCIA_DASHBOARD', 'VIEW')) {
+            $items[] = [
+                'id' => 'presidencia',
+                'label' => 'Presidência',
+                'icon' => 'fas fa-landmark',
+                'href' => 'presidencia.php',
+                'badge' => null
+            ];
+        }
         return $items;
     }
 
@@ -2703,11 +2725,12 @@ class HeaderComponent
                             </a>
 
                             <!-- Configurações sempre visível para todos -->
-                            <a href="configuracoes.php" class="dropdown-item">
-                                <i class="fas fa-cog"></i>
-                                <span>Configurações</span>
-                            </a>
-
+                            <?php if ($this->permissoes && $this->permissoes->hasPermission('SISTEMA_PERMISSOES', 'VIEW')): ?>
+                                <a href="permissoes.php" class="dropdown-item">
+                                    <i class="fas fa-user-shield"></i>
+                                    <span>Gerenciar Permissões</span>
+                                </a>
+                            <?php endif; ?>
                             <div class="dropdown-divider"></div>
 
                             <a href="logout.php" class="dropdown-item">
@@ -2746,11 +2769,12 @@ class HeaderComponent
                 <span>Meu Perfil</span>
             </a>
 
-            <!-- Configurações sempre visível para todos -->
-            <a href="configuracoes.php" class="mobile-nav-item">
-                <i class="fas fa-cog"></i>
-                <span>Configurações</span>
-            </a>
+            <?php if ($this->permissoes && $this->permissoes->hasPermission('SISTEMA_PERMISSOES', 'VIEW')): ?>
+                <a href="permissoes.php" class="mobile-nav-item">
+                    <i class="fas fa-user-shield"></i>
+                    <span>Gerenciar Permissões</span>
+                </a>
+            <?php endif; ?>
 
             <div class="mobile-nav-divider"></div>
 
