@@ -129,12 +129,8 @@ $headerComponent = HeaderComponent::create([
 
         /* Page Header Limpo e Moderno */
         .page-header {
-            background: white;
-            border-radius: var(--rounded-2xl);
             padding: 3rem 2rem;
             margin-bottom: 2.5rem;
-            box-shadow: var(--shadow-sm);
-            border: 1px solid var(--gray-200);
             position: relative;
             overflow: hidden;
         }
@@ -152,7 +148,7 @@ $headerComponent = HeaderComponent::create([
         }
 
         .page-title {
-            font-size: 2.75rem;
+            font-size: 2rem;
             font-weight: 800;
             margin-bottom: 0.75rem;
             position: relative;
@@ -586,7 +582,6 @@ $headerComponent = HeaderComponent::create([
             <!-- Page Header Limpo -->
             <div class="page-header" data-aos="fade-up">
                 <h1 class="page-title">
-                    <i class="fas fa-chart-line"></i>
                     Estatísticas Avançadas
                 </h1>
                 <p class="page-subtitle">
