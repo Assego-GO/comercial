@@ -1229,8 +1229,8 @@ $headerComponent = HeaderComponent::create([
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <h1 class="page-title">
-                            <div class="page-title-icon">
-                                <i class="fas fa-stamp"></i>
+                            <div class="page">
+                                <i class="fas"></i>
                             </div>
                             Área da Presidência
                         </h1>
