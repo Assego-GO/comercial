@@ -5,7 +5,7 @@
  * pages/financeiro.php
  * VERSÃO ATUALIZADA - Sistema de navegação interno com componentes dinâmicos
  * COM SUPORTE A PARTIALS E CARREGAMENTO DINÂMICO DE SCRIPTS
- * SEM BUSCA FINANCEIRA
+ * SEM BUSCA FINANCEIRA - ÍCONES PADRONIZADOS E MODERNOS
  */
 
 // Tratamento de erros para debug
@@ -193,6 +193,11 @@ $headerComponent = HeaderComponent::create([
             --light: #f8f9fa;
             --dark: #343a40;
             --bg-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --finance-blue: #2563eb;
+            --finance-green: #059669;
+            --finance-red: #dc2626;
+            --finance-orange: #ea580c;
+            --finance-purple: #7c3aed;
         }
 
         body {
@@ -362,23 +367,24 @@ $headerComponent = HeaderComponent::create([
             flex-shrink: 0;
         }
 
+        /* ÍCONES MODERNOS E PADRONIZADOS PARA ESTATÍSTICAS */
         .ativos-icon {
-            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            background: linear-gradient(135deg, var(--finance-green) 0%, #10b981 100%);
             color: white;
         }
 
         .inadimplentes-icon {
-            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+            background: linear-gradient(135deg, var(--finance-red) 0%, #ef4444 100%);
             color: white;
         }
 
         .arrecadacao-icon {
-            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+            background: linear-gradient(135deg, var(--finance-blue) 0%, #3b82f6 100%);
             color: white;
         }
 
         .pagamentos-icon {
-            background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
+            background: linear-gradient(135deg, var(--finance-orange) 0%, #f97316 100%);
             color: white;
         }
 
@@ -451,7 +457,7 @@ $headerComponent = HeaderComponent::create([
 
         .nav-tab-btn {
             width: 100%;
-            padding: 1rem 1.5rem;
+            padding: 1.25rem 1.5rem;
             border: none;
             background: transparent;
             color: var(--secondary);
@@ -464,19 +470,21 @@ $headerComponent = HeaderComponent::create([
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 0.5rem;
-            min-height: 80px;
+            gap: 0.75rem;
+            min-height: 85px;
         }
 
         .nav-tab-btn:hover {
             background: rgba(0, 86, 210, 0.1);
             color: var(--primary);
+            transform: translateY(-2px);
         }
 
         .nav-tab-btn.active {
             background: white;
             color: var(--primary);
             box-shadow: 0 -2px 10px rgba(0, 86, 210, 0.1);
+            transform: translateY(-2px);
         }
 
         .nav-tab-btn.active::after {
@@ -486,17 +494,76 @@ $headerComponent = HeaderComponent::create([
             left: 0;
             right: 0;
             height: 3px;
-            background: var(--primary);
+            background: linear-gradient(135deg, var(--primary) 0%, var(--finance-blue) 100%);
         }
 
         .nav-tab-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             font-size: 1.5rem;
-            margin-bottom: 0.25rem;
+            color: white;
+            transition: transform 0.2s ease;
+            margin-bottom: 0.5rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .nav-tab-btn:hover .nav-tab-icon {
+            transform: scale(1.05);
+        }
+
+        .nav-tab-btn.active .nav-tab-icon {
+            transform: scale(1.1);
         }
 
         .nav-tab-label {
             font-size: 0.85rem;
             line-height: 1.2;
+            font-weight: 600;
+        }
+
+        /* ÍCONES ESPECÍFICOS - SEMPRE COLORIDOS COM ALTA ESPECIFICIDADE */
+        .financial-nav-tabs .nav-tab .nav-tab-btn[data-target="lista-inadimplentes"] .nav-tab-icon {
+            background: #dc2626 !important; /* Vermelho para inadimplência */
+        }
+
+        .financial-nav-tabs .nav-tab .nav-tab-btn[data-target="lista-inadimplentes"] .nav-tab-icon::before {
+            content: "\f15c"; /* fa-file-invoice-dollar */
+            font-family: "Font Awesome 6 Pro", "Font Awesome 6 Free";
+            font-weight: 900;
+        }
+
+        .financial-nav-tabs .nav-tab .nav-tab-btn[data-target="neoconsig"] .nav-tab-icon {
+            background: #2563eb !important; /* Azul como na imagem */
+        }
+
+        .financial-nav-tabs .nav-tab .nav-tab-btn[data-target="neoconsig"] .nav-tab-icon::before {
+            content: "\f155"; /* fa-dollar-sign */
+            font-family: "Font Awesome 6 Pro", "Font Awesome 6 Free";
+            font-weight: 900;
+        }
+
+        .financial-nav-tabs .nav-tab .nav-tab-btn[data-target="importar-asaas"] .nav-tab-icon {
+            background: #ea580c !important; /* Laranja como na imagem */
+        }
+
+        .financial-nav-tabs .nav-tab .nav-tab-btn[data-target="importar-asaas"] .nav-tab-icon::before {
+            content: "\f0c3"; /* fa-flask */
+            font-family: "Font Awesome 6 Pro", "Font Awesome 6 Free";
+            font-weight: 900;
+        }
+
+        .financial-nav-tabs .nav-tab .nav-tab-btn[data-target="gestao-peculio"] .nav-tab-icon {
+            background: #7c3aed !important; /* Roxo para gestão pecúlio */
+        }
+
+        .financial-nav-tabs .nav-tab .nav-tab-btn[data-target="gestao-peculio"] .nav-tab-icon::before {
+            content: "\f19c"; /* fa-university */
+            font-family: "Font Awesome 6 Pro", "Font Awesome 6 Free";
+            font-weight: 900;
         }
 
         /* CORREÇÃO ULTRA AGRESSIVA - ELIMINAR TODO ESPAÇAMENTO */
@@ -679,6 +746,9 @@ $headerComponent = HeaderComponent::create([
             .nav-tab-icon {
                 margin-bottom: 0;
                 margin-right: 0.75rem;
+                width: 35px;
+                height: 35px;
+                font-size: 1.5rem;
             }
 
             .dual-stats-row {
@@ -735,93 +805,30 @@ $headerComponent = HeaderComponent::create([
                     <p class="page-subtitle">Gerencie mensalidades, inadimplência, relatórios financeiros e arrecadação da ASSEGO</p>
                 </div>
 
-                <!-- Stats Grid
-                <div class="stats-grid" data-aos="fade-up">
-                    <div class="dual-stat-card">
-                        <div class="dual-stat-header">
-                            <div class="dual-stat-title">
-                                <i class="fas fa-chart-line"></i>
-                                Status dos Associados
-                            </div>
-                        </div>
-                        <div class="dual-stats-row">
-                            <div class="dual-stat-item">
-                                <div class="dual-stat-icon ativos-icon">
-                                    <i class="fas fa-user-check"></i>
-                                </div>
-                                <div>
-                                    <div class="dual-stat-value"><?php echo number_format($totalAssociadosAtivos, 0, ',', '.'); ?></div>
-                                    <div class="dual-stat-label">Associados Ativos</div>
-                                </div>
-                            </div>
-                            <div class="dual-stats-separator"></div>
-                            <div class="dual-stat-item">
-                                <div class="dual-stat-icon inadimplentes-icon">
-                                    <i class="fas fa-exclamation-triangle"></i>
-                                </div>
-                                <div>
-                                    <div class="dual-stat-value"><?php echo number_format($associadosInadimplentes, 0, ',', '.'); ?></div>
-                                    <div class="dual-stat-label">Inadimplentes</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div> 
-
-                    <div class="dual-stat-card">
-                        <div class="dual-stat-header">
-                            <div class="dual-stat-title">
-                                <i class="fas fa-dollar-sign"></i>
-                                Movimentação Financeira
-                            </div>
-                        </div>
-                        <div class="dual-stats-row">
-                            <div class="dual-stat-item">
-                                <div class="dual-stat-icon arrecadacao-icon">
-                                    <i class="fas fa-coins"></i>
-                                </div>
-                                <div>
-                                    <div class="dual-stat-value">R$ <?php echo number_format($arrecadacaoMes, 0, ',', '.'); ?></div>
-                                    <div class="dual-stat-label">Arrecadação/Mês</div>
-                                </div>
-                            </div>
-                            <div class="dual-stats-separator"></div>
-                            <div class="dual-stat-item">
-                                <div class="dual-stat-icon pagamentos-icon">
-                                    <i class="fas fa-receipt"></i>
-                                </div>
-                                <div>
-                                    <div class="dual-stat-value"><?php echo number_format($pagamentosHoje, 0, ',', '.'); ?></div>
-                                    <div class="dual-stat-label">Pagamentos Hoje</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div> -->
-
-                <!-- Navegação SEM ESPAÇOS -->
+                <!-- Navegação SEM ESPAÇOS - ÍCONES MODERNOS E PADRONIZADOS -->
                 <div class="nav-tabs-container" style="margin: 0 !important; padding: 0 !important;">
                     <ul class="financial-nav-tabs">
                         <li class="nav-tab">
                             <button class="nav-tab-btn active" data-target="lista-inadimplentes">
-                                <i class="nav-tab-icon fas fa-list-ul"></i>
+                                <div class="nav-tab-icon"></div>
                                 <span class="nav-tab-label">Lista Inadimplentes</span>
                             </button>
                         </li>
                         <li class="nav-tab">
                             <button class="nav-tab-btn" data-target="neoconsig">
-                                <i class="nav-tab-icon fas fa-file-download"></i>
+                                <div class="nav-tab-icon"></div>
                                 <span class="nav-tab-label">NeoConsig</span>
                             </button>
                         </li>
                         <li class="nav-tab">
                             <button class="nav-tab-btn" data-target="importar-asaas">
-                                <i class="nav-tab-icon fas fa-file-import"></i>
+                                <div class="nav-tab-icon"></div>
                                 <span class="nav-tab-label">Importar ASAAS</span>
                             </button>
                         </li>
                         <li class="nav-tab">
                             <button class="nav-tab-btn" data-target="gestao-peculio">
-                                <i class="nav-tab-icon fas fa-piggy-bank"></i>
+                                <div class="nav-tab-icon"></div>
                                 <span class="nav-tab-label">Gestão Pecúlio</span>
                             </button>
                         </li>
@@ -1187,10 +1194,10 @@ $headerComponent = HeaderComponent::create([
             financialNav = new FinancialNavigation();
 
             notifications.show('Sistema financeiro carregado com sucesso!', 'success', 3000);
-            console.log('✅ Sistema Financeiro inicializado - Layout ultra compacto sem busca financeira');
+            console.log('✅ Sistema Financeiro inicializado - Ícones modernos e padronizados aplicados');
         });
 
-        console.log('✓ Sistema Financeiro - Layout ultra compacto sem espaçamentos e sem busca financeira aplicado!');
+        console.log('✓ Sistema Financeiro - Ícones modernos com cores temáticas aplicados!');
     </script>
 </body>
 
