@@ -165,7 +165,7 @@ window.NeoConsig = (function() {
         
         try {
             // Fazer requisição para o endpoint de preview
-            const response = await fetch(`../pages/neoconsig.php?preview_associados=1&matriculas=${encodeURIComponent(matriculas)}`);
+            const response = await fetch(`../pages/gerar_recorrencia.php?preview_associados=1&matriculas=${encodeURIComponent(matriculas)}`);
             const data = await response.json();
             
             if (loading) loading.style.display = 'none';
