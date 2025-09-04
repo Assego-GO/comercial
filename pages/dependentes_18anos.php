@@ -454,7 +454,6 @@ $headerComponent = HeaderComponent::create([
             <!-- Page Header -->
             <div class="page-header">
                 <h1 class="page-title">
-                    <i class="fas fa-birthday-cake"></i>
                     Controle de Dependentes - 18 Anos
                 </h1>
                 <p class="page-subtitle">
