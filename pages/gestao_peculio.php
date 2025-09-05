@@ -251,6 +251,20 @@ $headerComponent = HeaderComponent::create([
             transform: translateY(-2px);
         }
 
+        .btn-success {
+            background: var(--success);
+            border-color: var(--success);
+            border-radius: 8px;
+            padding: 0.75rem 2rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-success:hover {
+            background: #218838;
+            transform: translateY(-2px);
+        }
+
         /* Dados do Pecúlio */
         .peculio-dados {
             background: white;
@@ -345,6 +359,28 @@ $headerComponent = HeaderComponent::create([
             font-size: 0.9rem;
         }
 
+        /* Botões de Ação */
+        .botoes-acoes {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 12px;
+            padding: 2rem;
+            margin-top: 2rem;
+            text-align: center;
+            border: 2px solid #dee2e6;
+            display: block !important; /* Força exibição */
+        }
+
+        .botoes-acoes h5 {
+            color: var(--dark);
+            margin-bottom: 1.5rem;
+            font-weight: 600;
+        }
+
+        .botoes-acoes .btn {
+            margin: 0.5rem;
+            min-width: 200px;
+        }
+
         /* Alert personalizado */
         .alert-custom {
             border-radius: 12px;
@@ -415,6 +451,13 @@ $headerComponent = HeaderComponent::create([
 
             .dados-grid {
                 grid-template-columns: 1fr;
+            }
+
+            .botoes-acoes .btn {
+                display: block;
+                width: 100%;
+                margin: 0.5rem 0;
+                min-width: auto;
             }
         }
 
@@ -589,16 +632,22 @@ $headerComponent = HeaderComponent::create([
                         </div>
                     </div>
 
-                    <!-- Botões de Ação -->
-                    <div class="mt-4 text-center">
-                        <button type="button" class="btn btn-warning me-2" onclick="editarPeculio()" id="btnEditarPeculio">
-                            <i class="fas fa-edit me-2"></i>
-                            Editar Dados do Pecúlio
-                        </button>
-                        <button type="button" class="btn btn-success" onclick="confirmarRecebimento()" id="btnConfirmarRecebimento">
-                            <i class="fas fa-check-circle me-2"></i>
-                            Confirmar Recebimento
-                        </button>
+                    <!-- Botões de Ação - CORRIGIDO -->
+                    <div id="botoesAcoesContainer" class="botoes-acoes fade-in" style="display: none;">
+                        <h5>
+                            <i class="fas fa-tools me-2"></i>
+                            Ações Disponíveis
+                        </h5>
+                        <div>
+                            <button type="button" class="btn btn-warning" onclick="editarPeculio()" id="btnEditarPeculio">
+                                <i class="fas fa-edit me-2"></i>
+                                Editar Dados do Pecúlio
+                            </button>
+                            <button type="button" class="btn btn-success" onclick="confirmarRecebimento()" id="btnConfirmarRecebimento">
+                                <i class="fas fa-check-circle me-2"></i>
+                                Confirmar Recebimento
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -707,6 +756,7 @@ $headerComponent = HeaderComponent::create([
             const loadingOverlay = document.getElementById('loadingBuscaPeculio');
             const associadoInfo = document.getElementById('associadoInfoContainer');
             const peculioDados = document.getElementById('peculioDadosContainer');
+            const botoesAcoes = document.getElementById('botoesAcoesContainer'); // NOVO
 
             if (!busca) {
                 mostrarAlertBuscaPeculio('Por favor, digite um RG ou nome para consultar.', 'danger');
@@ -718,6 +768,7 @@ $headerComponent = HeaderComponent::create([
             btnBuscar.disabled = true;
             associadoInfo.style.display = 'none';
             peculioDados.style.display = 'none';
+            botoesAcoes.style.display = 'none'; // NOVO
             esconderAlertBuscaPeculio();
 
             try {
@@ -730,8 +781,10 @@ $headerComponent = HeaderComponent::create([
                     dadosPeculioAtual = result.data;
                     exibirDadosPeculio(dadosPeculioAtual);
 
+                    // Exibir todos os containers
                     associadoInfo.style.display = 'block';
                     peculioDados.style.display = 'block';
+                    botoesAcoes.style.display = 'block'; // NOVO
 
                     mostrarAlertBuscaPeculio('Dados do pecúlio carregados com sucesso!', 'success');
 
@@ -755,9 +808,11 @@ $headerComponent = HeaderComponent::create([
             }
         }
 
-        // Exibir dados do pecúlio
-        // Exibir dados do pecúlio
+        // Exibir dados do pecúlio - CORRIGIDA
         function exibirDadosPeculio(dados) {
+            console.log('=== EXIBINDO DADOS DO PECÚLIO ===');
+            console.log('Dados recebidos:', dados);
+
             // Informações do associado
             document.getElementById('associadoNome').textContent = dados.nome || 'Nome não informado';
             document.getElementById('associadoRG').textContent = `RG Militar: ${dados.rg || 'Não informado'}`;
@@ -786,15 +841,48 @@ $headerComponent = HeaderComponent::create([
             } else {
                 elementoRecebimento.className = 'dados-value data';
             }
+
+            // CONTROLE DOS BOTÕES - CORRIGIDO
             const jaRecebeu = dados.data_recebimento && dados.data_recebimento !== '0000-00-00';
             const btnConfirmar = document.getElementById('btnConfirmarRecebimento');
-            if (jaRecebeu) {
-                btnConfirmar.style.display = 'none';
-            } else {
-                btnConfirmar.style.display = 'inline-block';
+            const btnEditar = document.getElementById('btnEditarPeculio');
+            const containerBotoes = document.getElementById('botoesAcoesContainer');
+
+            console.log('Já recebeu?', jaRecebeu);
+            console.log('Container botões:', containerBotoes);
+            console.log('Botão editar:', btnEditar);
+            console.log('Botão confirmar:', btnConfirmar);
+
+            // SEMPRE MOSTRAR O CONTAINER DOS BOTÕES
+            if (containerBotoes) {
+                containerBotoes.style.display = 'block';
+                console.log('✅ Container dos botões exibido');
             }
 
+            // SEMPRE MOSTRAR BOTÃO DE EDITAR
+            if (btnEditar) {
+                btnEditar.style.display = 'inline-block';
+                btnEditar.style.visibility = 'visible';
+                console.log('✅ Botão Editar exibido');
+            } else {
+                console.error('❌ Botão Editar não encontrado');
+            }
 
+            // CONTROLAR BOTÃO DE CONFIRMAR RECEBIMENTO
+            if (btnConfirmar) {
+                if (jaRecebeu) {
+                    btnConfirmar.style.display = 'none';
+                    console.log('🔒 Botão Confirmar ocultado - já recebido');
+                } else {
+                    btnConfirmar.style.display = 'inline-block';
+                    btnConfirmar.style.visibility = 'visible';
+                    console.log('✅ Botão Confirmar exibido');
+                }
+            } else {
+                console.error('❌ Botão Confirmar não encontrado');
+            }
+
+            console.log('=== FIM EXIBIÇÃO DADOS ===');
         }
 
         // Formatação de moeda
@@ -811,6 +899,7 @@ $headerComponent = HeaderComponent::create([
             document.getElementById('rgBuscaPeculio').value = '';
             document.getElementById('associadoInfoContainer').style.display = 'none';
             document.getElementById('peculioDadosContainer').style.display = 'none';
+            document.getElementById('botoesAcoesContainer').style.display = 'none'; // NOVO
             dadosPeculioAtual = null;
             esconderAlertBuscaPeculio();
         }
@@ -871,6 +960,9 @@ $headerComponent = HeaderComponent::create([
 
         // Editar dados do pecúlio
         function editarPeculio() {
+            console.log('=== EDITAR PECÚLIO CHAMADO ===');
+            console.log('Dados atuais:', dadosPeculioAtual);
+
             if (!dadosPeculioAtual) {
                 notifications.show('Nenhum associado selecionado para edição', 'warning');
                 return;
@@ -878,46 +970,46 @@ $headerComponent = HeaderComponent::create([
 
             // Criar modal de edição
             const modalHtml = `
-        <div class="modal fade" id="modalEditarPeculio" tabindex="-1">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title">
-                            <i class="fas fa-edit me-2"></i>
-                            Editar Pecúlio - ${dadosPeculioAtual.nome}
-                        </h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body">
-                        <form id="formEditarPeculio">
-                            <div class="mb-3">
-                                <label class="form-label">Valor do Pecúlio (R$)</label>
-                                <input type="number" class="form-control" id="editValor" 
-                                       step="0.01" min="0" value="${dadosPeculioAtual.valor || 0}">
+                <div class="modal fade" id="modalEditarPeculio" tabindex="-1">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">
+                                    <i class="fas fa-edit me-2"></i>
+                                    Editar Pecúlio - ${dadosPeculioAtual.nome}
+                                </h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                             </div>
-                            <div class="mb-3">
-                                <label class="form-label">Data Prevista</label>
-                                <input type="date" class="form-control" id="editDataPrevista" 
-                                       value="${formatarDataParaInput(dadosPeculioAtual.data_prevista)}">
+                            <div class="modal-body">
+                                <form id="formEditarPeculio">
+                                    <div class="mb-3">
+                                        <label class="form-label">Valor do Pecúlio (R$)</label>
+                                        <input type="number" class="form-control" id="editValor" 
+                                               step="0.01" min="0" value="${dadosPeculioAtual.valor || 0}">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Data Prevista</label>
+                                        <input type="date" class="form-control" id="editDataPrevista" 
+                                               value="${formatarDataParaInput(dadosPeculioAtual.data_prevista)}">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Data de Recebimento</label>
+                                        <input type="date" class="form-control" id="editDataRecebimento" 
+                                               value="${formatarDataParaInput(dadosPeculioAtual.data_recebimento)}">
+                                        <small class="text-muted">Deixe em branco se ainda não recebeu</small>
+                                    </div>
+                                </form>
                             </div>
-                            <div class="mb-3">
-                                <label class="form-label">Data de Recebimento</label>
-                                <input type="date" class="form-control" id="editDataRecebimento" 
-                                       value="${formatarDataParaInput(dadosPeculioAtual.data_recebimento)}">
-                                <small class="text-muted">Deixe em branco se ainda não recebeu</small>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                <button type="button" class="btn btn-warning" onclick="salvarEdicaoPeculio()">
+                                    <i class="fas fa-save me-2"></i>Salvar Alterações
+                                </button>
                             </div>
-                        </form>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                        <button type="button" class="btn btn-warning" onclick="salvarEdicaoPeculio()">
-                            <i class="fas fa-save me-2"></i>Salvar Alterações
-                        </button>
+                        </div>
                     </div>
                 </div>
-            </div>
-        </div>
-    `;
+            `;
 
             // Remove modal anterior se existir
             const modalExistente = document.getElementById('modalEditarPeculio');
@@ -931,10 +1023,14 @@ $headerComponent = HeaderComponent::create([
             // Mostra o modal
             const modal = new bootstrap.Modal(document.getElementById('modalEditarPeculio'));
             modal.show();
+
+            console.log('✅ Modal de edição criado e exibido');
         }
 
         // Confirmar recebimento
         async function confirmarRecebimento() {
+            console.log('=== CONFIRMAR RECEBIMENTO CHAMADO ===');
+            
             if (!dadosPeculioAtual) {
                 notifications.show('Nenhum associado selecionado', 'warning');
                 return;
@@ -1028,6 +1124,8 @@ $headerComponent = HeaderComponent::create([
                 return '';
             }
         }
+
+
     </script>
 
 </body>
