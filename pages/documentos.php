@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Página de Gerenciamento do Fluxo de Assinatura - VERSÃO PADRONIZADA
  * pages/documentos_fluxo.php
@@ -396,7 +397,8 @@ $headerComponent = HeaderComponent::create([
             color: var(--dark);
         }
 
-        .filter-select, .filter-input {
+        .filter-select,
+        .filter-input {
             padding: 0.75rem 1rem;
             border: 2px solid #e2e8f0;
             border-radius: 12px;
@@ -405,7 +407,8 @@ $headerComponent = HeaderComponent::create([
             background: white;
         }
 
-        .filter-select:focus, .filter-input:focus {
+        .filter-select:focus,
+        .filter-input:focus {
             outline: none;
             border-color: var(--primary);
             box-shadow: 0 0 0 4px rgba(0, 86, 210, 0.1);
@@ -872,6 +875,7 @@ $headerComponent = HeaderComponent::create([
                 opacity: 0;
                 transform: translateY(20px);
             }
+
             to {
                 opacity: 1;
                 transform: translateY(0);
@@ -915,6 +919,175 @@ $headerComponent = HeaderComponent::create([
                 display: none;
             }
         }
+        /* === NOVOS ESTILOS PARA KPIs MINIMALISTAS === */
+
+/* Cards minimalistas */
+.dual-stat-card {
+    background: var(--white);
+    border: 1px solid #e9ecef;
+    border-radius: 16px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    position: relative;
+}
+
+.dual-stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--info) 100%);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.3s ease;
+}
+
+.dual-stat-card:hover::before {
+    transform: scaleX(1);
+}
+
+.dual-stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    border-color: rgba(0, 86, 210, 0.2);
+}
+
+/* Header do Card */
+.dual-stat-header {
+    background: #f8f9fa;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid #e9ecef;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.dual-stat-title {
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: #495057;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.dual-stat-percentage {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--primary);
+    background: rgba(74, 144, 226, 0.1);
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+}
+
+.dual-stat-percentage.warning {
+    color: var(--warning);
+    background: rgba(255, 193, 7, 0.1);
+}
+
+/* Layout dos Stats */
+.dual-stats-row {
+    display: flex;
+    align-items: stretch;
+    padding: 0;
+    min-height: 120px;
+}
+
+.dual-stat-item {
+    flex: 1;
+    padding: 1.5rem 0.75rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 1rem;
+    transition: all 0.3s ease;
+}
+
+.dual-stat-item:hover {
+    background: rgba(0, 86, 210, 0.02);
+}
+
+.dual-stat-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    color: white;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.dual-stat-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.dual-stat-value {
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: var(--dark);
+    line-height: 1;
+    margin-bottom: 0.25rem;
+}
+
+.dual-stat-label {
+    font-size: 0.875rem;
+    color: #6c757d;
+    font-weight: 600;
+}
+
+/* Separador */
+.dual-stats-separator {
+    width: 1px;
+    background: linear-gradient(to bottom, transparent, #dee2e6, transparent);
+    margin: 1.5rem 0;
+}
+
+/* Cores dos ícones específicos para documentos */
+.aguardando-icon {
+    background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+}
+
+.presidencia-icon {
+    background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
+}
+
+.assinados-icon {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+}
+
+.finalizados-icon {
+    background: linear-gradient(135deg, #007bff 0%, #6610f2 100%);
+}
+
+/* Responsivo para os novos KPIs */
+@media (max-width: 768px) {
+    .dual-stats-row {
+        flex-direction: column;
+    }
+    
+    .dual-stats-separator {
+        width: 100%;
+        height: 1px;
+        margin: 0.75rem 0;
+    }
+    
+    .dual-stat-item {
+        padding: 1rem;
+    }
+}
     </style>
 </head>
 
@@ -949,62 +1122,85 @@ $headerComponent = HeaderComponent::create([
             </div>
 
             <?php if (isset($_GET['novo']) && $_GET['novo'] == '1'): ?>
-            <div class="alert alert-success alert-dismissible fade show animate__animated animate__fadeIn" role="alert">
-                <i class="fas fa-check-circle me-2"></i>
-                <strong>Pré-cadastro criado com sucesso!</strong>
-                A ficha de filiação foi anexada e está aguardando envio para assinatura.
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
+                <div class="alert alert-success alert-dismissible fade show animate__animated animate__fadeIn" role="alert">
+                    <i class="fas fa-check-circle me-2"></i>
+                    <strong>Pré-cadastro criado com sucesso!</strong>
+                    A ficha de filiação foi anexada e está aguardando envio para assinatura.
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
             <?php endif; ?>
 
             <!-- Stats Grid -->
-            <div class="stats-grid">
-                <div class="stat-card animate__animated animate__fadeInUp" data-aos="fade-up" data-aos-delay="100">
-                    <span class="stat-trend pending">
-                        <i class="fas fa-hourglass-half me-1"></i>
-                        Pendente
-                    </span>
-                    <div class="stat-icon primary">
-                        <i class="fas fa-upload"></i>
+            <!-- Stats Grid -->
+            <div class="stats-grid" data-aos="fade-up">
+                <!-- Card 1: Aguardando Envio + Na Presidência -->
+                <div class="stat-card dual-stat-card">
+                    <div class="dual-stat-header">
+                        <div class="dual-stat-title">
+                            <i class="fas fa-paper-plane"></i>
+                            Em Processo
+                        </div>
+                        <div class="dual-stat-percentage warning">
+                            <i class="fas fa-hourglass-half"></i>
+                            Pendente
+                        </div>
                     </div>
-                    <div class="stat-value"><?php echo number_format($aguardandoEnvio, 0, ',', '.'); ?></div>
-                    <div class="stat-label">Aguardando Envio</div>
+                    <div class="dual-stats-row">
+                        <div class="dual-stat-item">
+                            <div class="dual-stat-icon aguardando-icon">
+                                <i class="fas fa-upload"></i>
+                            </div>
+                            <div class="dual-stat-info">
+                                <div class="dual-stat-value"><?php echo number_format($aguardandoEnvio, 0, ',', '.'); ?></div>
+                                <div class="dual-stat-label">Aguardando Envio</div>
+                            </div>
+                        </div>
+                        <div class="dual-stats-separator"></div>
+                        <div class="dual-stat-item">
+                            <div class="dual-stat-icon presidencia-icon">
+                                <i class="fas fa-signature"></i>
+                            </div>
+                            <div class="dual-stat-info">
+                                <div class="dual-stat-value"><?php echo number_format($naPresidencia, 0, ',', '.'); ?></div>
+                                <div class="dual-stat-label">Na Presidência</div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="stat-card animate__animated animate__fadeInUp" data-aos="fade-up" data-aos-delay="200">
-                    <span class="stat-trend pending">
-                        <i class="fas fa-clock me-1"></i>
-                        Em processo
-                    </span>
-                    <div class="stat-icon warning">
-                        <i class="fas fa-signature"></i>
+                <!-- Card 2: Assinados + Finalizados -->
+                <div class="stat-card dual-stat-card">
+                    <div class="dual-stat-header">
+                        <div class="dual-stat-title">
+                            <i class="fas fa-check-circle"></i>
+                            Concluídos
+                        </div>
+                        <div class="dual-stat-percentage">
+                            <i class="fas fa-chart-line"></i>
+                            Processados
+                        </div>
                     </div>
-                    <div class="stat-value"><?php echo number_format($naPresidencia, 0, ',', '.'); ?></div>
-                    <div class="stat-label">Na Presidência</div>
-                </div>
-
-                <div class="stat-card animate__animated animate__fadeInUp" data-aos="fade-up" data-aos-delay="300">
-                    <span class="stat-trend up">
-                        <i class="fas fa-check me-1"></i>
-                        Prontos
-                    </span>
-                    <div class="stat-icon success">
-                        <i class="fas fa-check"></i>
+                    <div class="dual-stats-row">
+                        <div class="dual-stat-item">
+                            <div class="dual-stat-icon assinados-icon">
+                                <i class="fas fa-check"></i>
+                            </div>
+                            <div class="dual-stat-info">
+                                <div class="dual-stat-value"><?php echo number_format($assinados, 0, ',', '.'); ?></div>
+                                <div class="dual-stat-label">Assinados</div>
+                            </div>
+                        </div>
+                        <div class="dual-stats-separator"></div>
+                        <div class="dual-stat-item">
+                            <div class="dual-stat-icon finalizados-icon">
+                                <i class="fas fa-flag-checkered"></i>
+                            </div>
+                            <div class="dual-stat-info">
+                                <div class="dual-stat-value"><?php echo number_format($finalizados, 0, ',', '.'); ?></div>
+                                <div class="dual-stat-label">Finalizados</div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="stat-value"><?php echo number_format($assinados, 0, ',', '.'); ?></div>
-                    <div class="stat-label">Assinados</div>
-                </div>
-
-                <div class="stat-card animate__animated animate__fadeInUp" data-aos="fade-up" data-aos-delay="400">
-                    <span class="stat-trend up">
-                        <i class="fas fa-trophy me-1"></i>
-                        Concluídos
-                    </span>
-                    <div class="stat-icon danger">
-                        <i class="fas fa-flag-checkered"></i>
-                    </div>
-                    <div class="stat-value"><?php echo number_format($finalizados, 0, ',', '.'); ?></div>
-                    <div class="stat-label">Finalizados</div>
                 </div>
             </div>
 
@@ -1168,7 +1364,7 @@ $headerComponent = HeaderComponent::create([
         // Carregar documentos em fluxo
         function carregarDocumentosFluxo(filtros = {}) {
             const container = document.getElementById('documentosFluxoList');
-            
+
             container.innerHTML = `
                 <div class="text-center py-5">
                     <div class="loading-spinner mb-3"></div>
@@ -1336,7 +1532,7 @@ $headerComponent = HeaderComponent::create([
 
                 case 'AGUARDANDO_ASSINATURA':
                     <?php if ($auth->isDiretor() || $usuarioLogado['departamento_id'] == 2): ?>
-                    acoes = `
+                        acoes = `
                         <button class="btn-modern btn-success-premium btn-sm" onclick="abrirModalAssinatura(${doc.id})">
                             <i class="fas fa-signature me-1"></i>
                             Assinar
@@ -1397,7 +1593,7 @@ $headerComponent = HeaderComponent::create([
             document.getElementById('assinaturaObservacao').value = '';
             document.getElementById('assinaturaFilesList').innerHTML = '';
             arquivoAssinaturaSelecionado = null;
-            
+
             const modal = new bootstrap.Modal(document.getElementById('assinaturaModal'));
             modal.show();
         }
@@ -1476,14 +1672,14 @@ $headerComponent = HeaderComponent::create([
 
         function renderizarHistorico(historico) {
             const container = document.getElementById('historicoContent');
-            
+
             if (historico.length === 0) {
                 container.innerHTML = '<p class="text-muted text-center">Nenhum histórico disponível</p>';
                 return;
             }
 
             let timelineHtml = '<div class="timeline">';
-            
+
             historico.forEach(item => {
                 timelineHtml += `
                     <div class="timeline-item">
@@ -1504,7 +1700,7 @@ $headerComponent = HeaderComponent::create([
                     </div>
                 `;
             });
-            
+
             timelineHtml += '</div>';
             container.innerHTML = timelineHtml;
         }
