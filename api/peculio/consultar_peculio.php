@@ -29,62 +29,80 @@ try {
     // Conectar no banco
     $db = Database::getInstance(DB_NAME_CADASTRO)->getConnection();
     
-    // Query para buscar associado + pecúlio
+    // Query para buscar associado + pecúlio (SEM LIMIT 1!)
     if ($rg) {
-        $sql = "SELECT 
-                    a.id,
-                    a.nome,
-                    a.rg,
-                    a.email,
-                    a.telefone,
-                    p.valor,
-                    p.data_prevista,
-                    p.data_recebimento
-                FROM Associados a
-                LEFT JOIN Peculio p ON a.id = p.associado_id
-                WHERE a.rg = ?
-                LIMIT 1";
+        $sql = "SELECT
+            a.id,
+            a.nome,
+            a.rg,
+            a.email,
+            a.telefone,
+            p.valor,
+            p.data_prevista,
+            p.data_recebimento
+        FROM Associados a
+        LEFT JOIN Peculio p ON a.id = p.associado_id
+        WHERE a.rg = ?
+        ORDER BY a.nome ASC";
         $params = [$rg];
+        $tipoBusca = "RG";
     } else {
-        $sql = "SELECT 
-                    a.id,
-                    a.nome,
-                    a.rg,
-                    a.email,
-                    a.telefone,
-                    p.valor,
-                    p.data_prevista,
-                    p.data_recebimento
-                FROM Associados a
-                LEFT JOIN Peculio p ON a.id = p.associado_id
-                WHERE a.nome LIKE ?
-                LIMIT 1";
+        $sql = "SELECT
+            a.id,
+            a.nome,
+            a.rg,
+            a.email,
+            a.telefone,
+            p.valor,
+            p.data_prevista,
+            p.data_recebimento
+        FROM Associados a
+        LEFT JOIN Peculio p ON a.id = p.associado_id
+        WHERE a.nome LIKE ?
+        ORDER BY a.nome ASC
+        LIMIT 10"; // Limitar busca por nome para evitar muitos resultados
         $params = ['%' . $nome . '%'];
+        $tipoBusca = "Nome";
     }
     
     $stmt = $db->prepare($sql);
     $stmt->execute($params);
-    $resultado = $stmt->fetch(PDO::FETCH_ASSOC);
+    $resultados = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
-    if (!$resultado) {
-        jsonResponse('error', 'Associado não encontrado');
+    if (!$resultados || count($resultados) === 0) {
+        jsonResponse('error', "Nenhum associado encontrado com $tipoBusca informado");
     }
     
-    // Formatar resposta (corrigindo datas inválidas)
-    $dados = [
-        'id' => $resultado['id'],
-        'nome' => $resultado['nome'],
-        'rg' => $resultado['rg'],
-        'email' => $resultado['email'],
-        'telefone' => $resultado['telefone'],
-        'valor' => $resultado['valor'] ?: 0,
-        'data_prevista' => ($resultado['data_prevista'] && $resultado['data_prevista'] !== '0000-00-00') ? $resultado['data_prevista'] : null,
-        'data_recebimento' => ($resultado['data_recebimento'] && $resultado['data_recebimento'] !== '0000-00-00') ? $resultado['data_recebimento'] : null
-    ];
+    // Processar resultados
+    $dadosProcessados = [];
+    foreach ($resultados as $resultado) {
+        $dadosProcessados[] = [
+            'id' => $resultado['id'],
+            'nome' => $resultado['nome'],
+            'rg' => $resultado['rg'],
+            'email' => $resultado['email'],
+            'telefone' => $resultado['telefone'],
+            'valor' => $resultado['valor'] ?: 0,
+            'data_prevista' => ($resultado['data_prevista'] && $resultado['data_prevista'] !== '0000-00-00') ? $resultado['data_prevista'] : null,
+            'data_recebimento' => ($resultado['data_recebimento'] && $resultado['data_recebimento'] !== '0000-00-00') ? $resultado['data_recebimento'] : null
+        ];
+    }
     
-    jsonResponse('success', 'Dados do pecúlio carregados!', $dados);
+    // Verificar se há múltiplos resultados
+    if (count($dadosProcessados) > 1) {
+        // Múltiplos resultados encontrados
+        $message = count($dadosProcessados) . " associados encontrados com $tipoBusca: " . ($rg ?: $nome);
+        
+        // Usar padrão do sistema para múltiplos resultados
+        jsonResponse('multiple_results', $message, $dadosProcessados);
+    } else {
+        // Resultado único
+        $message = "Dados do pecúlio carregados para: " . $dadosProcessados[0]['nome'];
+        jsonResponse('success', $message, $dadosProcessados[0]);
+    }
     
 } catch (Exception $e) {
+    error_log("ERRO na consulta do pecúlio: " . $e->getMessage());
     jsonResponse('error', 'Erro interno: ' . $e->getMessage());
 }
 ?>
