@@ -698,6 +698,27 @@ $headerComponent = HeaderComponent::create([
                 <!-- Visão Geral Tab -->
                 <div id="overview-tab" class="tab-content active">
                     <!-- Conteúdo será inserido dinamicamente -->
+                    
+                    <!-- NOVA SEÇÃO: Observações Recentes -->
+                    <div class="observacoes-overview-section" style="margin-top: 2rem; padding: 1rem 2rem; border-top: 1px solid #e5e7eb;">
+                        <div class="observacoes-overview-header" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid #e5e7eb;">
+                            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                <div style="width: 36px; height: 36px; background: linear-gradient(135deg, #7c3aed, #5b21b6); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white;">
+                                    <i class="fas fa-sticky-note"></i>
+                                </div>
+                                <h4 style="margin: 0; color: #1f2937; font-weight: 600;">Observações Recentes</h4>
+                            </div>
+                            <button onclick="abrirModalNovaObservacao()" style="background: #7c3aed; color: white; border: none; padding: 0.5rem; border-radius: 6px; cursor: pointer; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;" title="Nova Observação">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        </div>
+                        <div id="overviewObservacoes" style="background: #f9fafb; border-radius: 8px; padding: 1rem; min-height: 100px;">
+                            <div style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 2rem; color: #6b7280;">
+                                <i class="fas fa-spinner fa-spin"></i>
+                                <span>Carregando observações...</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Militar Tab -->
@@ -1691,6 +1712,77 @@ $headerComponent = HeaderComponent::create([
                 grid-template-columns: 1fr;
             }
         }
+
+        /* === ESTILOS SIMPLES PARA OBSERVAÇÕES NA VISÃO GERAL === */
+        .observacao-item-overview {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            transition: all 0.3s ease;
+        }
+
+        .observacao-item-overview:hover {
+            border-color: #d1d5db;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .observacao-item-overview:last-child {
+            margin-bottom: 0;
+        }
+
+        .observacao-header-overview {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 0.5rem;
+        }
+
+        .observacao-categoria-badge {
+            background: #3b82f6;
+            color: white;
+            padding: 0.2rem 0.6rem;
+            border-radius: 12px;
+            font-size: 0.65rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .observacao-texto-overview {
+            color: #4b5563;
+            font-size: 0.875rem;
+            line-height: 1.5;
+            margin-bottom: 0.5rem;
+        }
+
+        .observacao-footer-overview {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.75rem;
+            color: #9ca3af;
+        }
+
+        .ver-todas-observacoes {
+            display: block;
+            text-align: center;
+            background: #f3f4f6;
+            color: #7c3aed;
+            padding: 0.75rem;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 500;
+            margin-top: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .ver-todas-observacoes:hover {
+            background: #e5e7eb;
+            color: #5b21b6;
+            text-decoration: none;
+        }
     </style>
 
     <script>
@@ -1996,8 +2088,172 @@ $headerComponent = HeaderComponent::create([
             console.log('Estatísticas calculadas localmente');
         }
 
+        // NOVA FUNÇÃO: Carregar observações na visão geral (SIMPLES)
+        function carregarObservacoesVisaoGeral(associadoId) {
+            const container = document.getElementById('overviewObservacoes');
+            if (!container) return;
+            
+            // Mostrar loading
+            container.innerHTML = `
+                <div style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 2rem; color: #6b7280;">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <span>Carregando observações...</span>
+                </div>
+            `;
+
+            // Fazer requisição para o endpoint de observações
+            fetch(`../api/observacoes/listar.php?associado_id=${associadoId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        const observacoes = data.data || [];
+                        
+                        // Atualizar contador na aba de observações
+                        const countBadge = document.getElementById('observacoesCountBadge');
+                        if (countBadge) {
+                            const totalObs = data.estatisticas?.total || observacoes.length;
+                            if (totalObs > 0) {
+                                countBadge.textContent = totalObs;
+                                countBadge.style.display = 'inline-block';
+                            } else {
+                                countBadge.style.display = 'none';
+                            }
+                        }
+
+                        // Renderizar observações na visão geral (apenas as 3 mais recentes)
+                        renderizarObservacoesSimples(observacoes.slice(0, 3), observacoes.length);
+                        
+                    } else {
+                        container.innerHTML = `
+                            <div style="text-align: center; padding: 2rem; color: #9ca3af;">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                <p>Erro ao carregar observações</p>
+                            </div>
+                        `;
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro ao carregar observações:', error);
+                    container.innerHTML = `
+                        <div style="text-align: center; padding: 2rem; color: #9ca3af;">
+                            <i class="fas fa-wifi"></i>
+                            <p>Erro de conexão</p>
+                        </div>
+                    `;
+                });
+        }
+
+        // NOVA FUNÇÃO: Renderizar observações simples
+        function renderizarObservacoesSimples(observacoes, totalObservacoes) {
+            const container = document.getElementById('overviewObservacoes');
+            
+            if (!observacoes || observacoes.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 2rem; color: #9ca3af;">
+                        <i class="fas fa-clipboard-list" style="font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.5;"></i>
+                        <p>Nenhuma observação registrada</p>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '';
+            
+            observacoes.forEach(obs => {
+                const dataFormatada = formatarDataSimples(obs.data_criacao);
+                
+                html += `
+                    <div class="observacao-item-overview">
+                        <div class="observacao-header-overview">
+                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                <span class="observacao-categoria-badge">
+                                    ${(obs.categoria || 'geral').toUpperCase()}
+                                </span>
+                                ${obs.importante === '1' ? '<i class="fas fa-star" style="color: #f59e0b;" title="Importante"></i>' : ''}
+                            </div>
+                            <span style="font-size: 0.7rem; color: #9ca3af;">${dataFormatada}</span>
+                        </div>
+                        <div class="observacao-texto-overview">
+                            ${truncarTexto(obs.observacao, 120)}
+                        </div>
+                        <div class="observacao-footer-overview">
+                            <span style="font-weight: 500; color: #6b7280;">Por: ${obs.criado_por_nome || 'Sistema'}</span>
+                        </div>
+                    </div>
+                `;
+            });
+
+            // Adicionar link para ver todas as observações se houver mais de 3
+            if (totalObservacoes > 3) {
+                html += `
+                    <a href="#" class="ver-todas-observacoes" onclick="abrirTab('observacoes'); return false;">
+                        <i class="fas fa-eye" style="margin-right: 0.5rem;"></i>
+                        Ver todas as ${totalObservacoes} observações
+                    </a>
+                `;
+            }
+
+            container.innerHTML = html;
+        }
+
+        // Funções auxiliares simples
+        function formatarDataSimples(dataStr) {
+            if (!dataStr) return 'Data não informada';
+            
+            try {
+                const data = new Date(dataStr);
+                const agora = new Date();
+                const diffMs = agora - data;
+                const diffMins = Math.floor(diffMs / 60000);
+                const diffHoras = Math.floor(diffMs / 3600000);
+                const diffDias = Math.floor(diffMs / 86400000);
+
+                if (diffMins < 1) return 'Agora mesmo';
+                if (diffMins < 60) return `${diffMins}min atrás`;
+                if (diffHoras < 24) return `${diffHoras}h atrás`;
+                if (diffDias < 7) return `${diffDias}d atrás`;
+                
+                return data.toLocaleDateString('pt-BR');
+            } catch (e) {
+                return 'Data inválida';
+            }
+        }
+
+        function truncarTexto(texto, limite) {
+            if (!texto) return '';
+            if (texto.length <= limite) return texto;
+            return texto.substring(0, limite) + '...';
+        }
+
+        // Modificar a função abrirTab para carregar observações quando necessário
+        function abrirTab(tabName) {
+            // Esconder todas as abas
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Remover classe active dos botões
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Mostrar a aba selecionada
+            document.getElementById(tabName + '-tab').classList.add('active');
+            
+            // Ativar o botão correspondente
+            document.querySelector(`[onclick="abrirTab('${tabName}')"]`).classList.add('active');
+            
+            // Se for a aba overview e temos um associado, carregar observações
+            if (tabName === 'overview' && associadoAtual) {
+                carregarObservacoesVisaoGeral(associadoAtual.id);
+            }
+        }
+
         // Verifica se deve carregar estatísticas
         const podeVerKPIs = <?php echo $podeVerKPIs ? 'true' : 'false'; ?>;
+
+        // Variável global para armazenar o associado atual
+        // let associadoAtual = null;
 
         // Carrega quando a página está pronta
         document.addEventListener('DOMContentLoaded', function () {
