@@ -922,40 +922,77 @@ $headerComponent = HeaderComponent::create([
             </div>
 
             <!-- Stats Grid -->
-            <div class="stats-grid">
-                <div class="stat-card animate__animated animate__fadeInUp" data-aos="fade-up" data-aos-delay="100">
-                    <span class="stat-trend">+12%</span>
-                    <div class="stat-icon primary">
-                        <i class="fas fa-users"></i>
-                    </div>
-                    <div class="stat-value"><?php echo number_format($totalAssociadosAtivos, 0, ',', '.'); ?></div>
-                    <div class="stat-label">Associados Ativos</div>
+<div class="stats-grid" data-aos="fade-up">
+    <!-- Card 1: Associados Ativos -->
+    <div class="stat-card dual-stat-card">
+        <div class="dual-stat-header">
+            <div class="dual-stat-title">
+                <i class="fas fa-users"></i>
+                Associados
+            </div>
+            <div class="dual-stat-percentage">
+                <i class="fas fa-chart-line"></i>
+                +12%
+            </div>
+        </div>
+        <div class="dual-stats-row">
+            <div class="dual-stat-item">
+                <div class="dual-stat-icon ativos-icon">
+                    <i class="fas fa-user-check"></i>
                 </div>
-
-                <div class="stat-card animate__animated animate__fadeInUp" data-aos="fade-up" data-aos-delay="200">
-                    <div class="stat-icon success">
-                        <i class="fas fa-user-plus"></i>
-                    </div>
-                    <div class="stat-value"><?php echo $cadastrosHoje; ?></div>
-                    <div class="stat-label">Cadastros Hoje</div>
-                </div>
-
-                <div class="stat-card animate__animated animate__fadeInUp" data-aos="fade-up" data-aos-delay="300">
-                    <div class="stat-icon warning">
-                        <i class="fas fa-clock"></i>
-                    </div>
-                    <div class="stat-value"><?php echo $preCadastrosPendentes; ?></div>
-                    <div class="stat-label">Pré-Filiados Pendentes</div>
-                </div>
-
-                <div class="stat-card animate__animated animate__fadeInUp" data-aos="fade-up" data-aos-delay="400">
-                    <div class="stat-icon danger">
-                        <i class="fas fa-user-times"></i>
-                    </div>
-                    <div class="stat-value"><?php echo $desfiliacoesRecentes; ?></div>
-                    <div class="stat-label">Desfiliações (30 dias)</div>
+                <div class="dual-stat-info">
+                    <div class="dual-stat-value"><?php echo number_format($totalAssociadosAtivos, 0, ',', '.'); ?></div>
+                    <div class="dual-stat-label">Ativos</div>
                 </div>
             </div>
+            <div class="dual-stats-separator"></div>
+            <div class="dual-stat-item">
+                <div class="dual-stat-icon novos-icon">
+                    <i class="fas fa-user-plus"></i>
+                </div>
+                <div class="dual-stat-info">
+                    <div class="dual-stat-value"><?php echo $cadastrosHoje; ?></div>
+                    <div class="dual-stat-label">Hoje</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Card 2: Pendências -->
+    <div class="stat-card dual-stat-card">
+        <div class="dual-stat-header">
+            <div class="dual-stat-title">
+                <i class="fas fa-clock"></i>
+                Pendências
+            </div>
+            <div class="dual-stat-percentage warning">
+                <i class="fas fa-exclamation-triangle"></i>
+                Atenção
+            </div>
+        </div>
+        <div class="dual-stats-row">
+            <div class="dual-stat-item">
+                <div class="dual-stat-icon pendentes-icon">
+                    <i class="fas fa-hourglass-half"></i>
+                </div>
+                <div class="dual-stat-info">
+                    <div class="dual-stat-value"><?php echo $preCadastrosPendentes; ?></div>
+                    <div class="dual-stat-label">Pré-Filiados</div>
+                </div>
+            </div>
+            <div class="dual-stats-separator"></div>
+            <div class="dual-stat-item">
+                <div class="dual-stat-icon desfiliacao-icon">
+                    <i class="fas fa-user-times"></i>
+                </div>
+                <div class="dual-stat-info">
+                    <div class="dual-stat-value"><?php echo $desfiliacoesRecentes; ?></div>
+                    <div class="dual-stat-label">Desfiliações (30d)</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
             <!-- Actions Container -->
             <div class="actions-container animate__animated animate__fadeIn" data-aos="fade-up" data-aos-delay="500">
@@ -1260,6 +1297,347 @@ $headerComponent = HeaderComponent::create([
                     </div>
                 </div>
             </div>
+
+            <style>
+/* Variáveis CSS minimalistas */
+:root {
+    --primary: #0056d2;
+    --primary-light: #4A90E2;
+    --secondary: #6c757d;
+    --success: #28a745;
+    --danger: #dc3545;
+    --warning: #ffc107;
+    --info: #17a2b8;
+    --dark: #343a40;
+    --white: #ffffff;
+    --gray-100: #f8f9fa;
+    --gray-200: #e9ecef;
+    --gray-300: #dee2e6;
+    --gray-600: #6c757d;
+    --gray-700: #495057;
+    --border-light: #e9ecef;
+    --shadow-sm: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    --shadow-md: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    --shadow-lg: 0 1rem 3rem rgba(0, 0, 0, 0.175);
+}
+
+body {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    background: var(--gray-100);
+    color: var(--dark);
+}
+
+.main-wrapper {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.content-area {
+    flex: 1;
+    padding: 2rem;
+    margin-left: 0;
+}
+
+/* Page Header */
+.page-header {
+    margin-bottom: 2rem;
+}
+
+.page-title {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--dark);
+    margin: 0 0 0.5rem 0;
+}
+
+.page-subtitle {
+    font-size: 1rem;
+    color: var(--gray-600);
+    margin: 0;
+}
+
+/* Stats Grid */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+/* Cards minimalistas */
+.stat-card, .dual-stat-card {
+    background: var(--white);
+    border: 1px solid var(--border-light);
+    border-radius: 16px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    box-shadow: var(--shadow-sm);
+}
+
+.dual-stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--info) 100%);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.3s ease;
+}
+
+.dual-stat-card:hover::before {
+    transform: scaleX(1);
+}
+
+.dual-stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+    border-color: rgba(0, 86, 210, 0.2);
+}
+
+/* Header do Card */
+.dual-stat-header {
+    background: var(--gray-100);
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--border-light);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.dual-stat-title {
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: var(--gray-700);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.dual-stat-percentage {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--primary);
+    background: rgba(74, 144, 226, 0.1);
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+}
+
+.dual-stat-percentage.warning {
+    color: var(--warning);
+    background: rgba(255, 193, 7, 0.1);
+}
+
+/* Layout dos Stats */
+.dual-stats-row {
+    display: flex;
+    align-items: stretch;
+    padding: 0;
+    min-height: 120px;
+}
+
+.dual-stat-item {
+    flex: 1;
+    padding: 1.5rem 0.75rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 1rem;
+    transition: all 0.3s ease;
+}
+
+.dual-stat-item:hover {
+    background: rgba(0, 86, 210, 0.02);
+}
+
+.dual-stat-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    color: white;
+    box-shadow: var(--shadow-sm);
+}
+
+.dual-stat-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.dual-stat-value {
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: var(--dark);
+    line-height: 1;
+    margin-bottom: 0.25rem;
+}
+
+.dual-stat-label {
+    font-size: 0.875rem;
+    color: var(--gray-600);
+    font-weight: 600;
+}
+
+/* Separador */
+.dual-stats-separator {
+    width: 1px;
+    background: linear-gradient(to bottom, transparent, var(--gray-300), transparent);
+    margin: 1.5rem 0;
+}
+
+/* Cores dos ícones */
+.ativos-icon {
+    background: linear-gradient(135deg, var(--success) 0%, #20c997 100%);
+}
+
+.novos-icon {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+}
+
+.pendentes-icon {
+    background: linear-gradient(135deg, var(--warning) 0%, #fd7e14 100%);
+}
+
+.desfiliacao-icon {
+    background: linear-gradient(135deg, var(--danger) 0%, #e74c3c 100%);
+}
+
+/* Actions Container */
+.actions-container {
+    background: var(--white);
+    border-radius: 16px;
+    padding: 2rem;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border-light);
+}
+
+.actions-header {
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border-light);
+}
+
+.actions-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--dark);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.actions-title i {
+    width: 36px;
+    height: 36px;
+    background: var(--primary);
+    color: white;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+}
+
+.actions-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1rem;
+}
+
+.action-card {
+    background: var(--white);
+    border: 1px solid var(--border-light);
+    border-radius: 12px;
+    padding: 1.5rem;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.action-card:hover {
+    transform: translateY(-2px);
+    border-color: var(--primary);
+    box-shadow: var(--shadow-md);
+}
+
+.action-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    color: white;
+    flex-shrink: 0;
+}
+
+.action-icon.primary { background: var(--success); }
+.action-icon.success { background: var(--primary); }
+.action-icon.warning { background: var(--warning); }
+.action-icon.info { background: var(--info); }
+
+.action-content h5 {
+    margin: 0 0 0.25rem 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--dark);
+}
+
+.action-content p {
+    margin: 0;
+    font-size: 0.875rem;
+    color: var(--gray-600);
+}
+
+.action-card.disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.no-permission-overlay {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    background: var(--danger);
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 6px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    z-index: 10;
+}
+
+/* Responsivo */
+@media (max-width: 768px) {
+    .content-area {
+        padding: 1rem;
+    }
+    
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .actions-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
 
             <!-- Scripts -->
             <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
