@@ -350,86 +350,74 @@ $headerComponent = HeaderComponent::create([
             </div>
 
 
-            <!-- Stats Grid -->
-            <div class="stats-grid" data-aos="fade-up">
-                <!-- Card 1: Relatórios + Modelos -->
-                <div class="stat-card dual-stat-card">
-                    <div class="dual-stat-header">
-                        <div class="dual-stat-title">
-                            <i class="fas fa-file-alt"></i>
-                            Relatórios
-                        </div>
-                        <div class="dual-stat-percentage">
-                            <i class="fas fa-chart-line"></i>
-                            Sistema
-                        </div>
-                    </div>
-                    <div class="dual-stats-row">
-                        <div class="dual-stat-item">
-                            <div class="dual-stat-icon relatorios-icon">
-                                <i class="fas fa-file-contract"></i>
-                            </div>
-                            <div class="dual-stat-info">
-                                <div class="dual-stat-value"><?php echo $estatisticas['totais']['total'] ?? 0; ?></div>
-                                <div class="dual-stat-label">Gerados</div>
-                            </div>
-                        </div>
-                        <div class="dual-stats-separator"></div>
-                        <div class="dual-stat-item">
-                            <div class="dual-stat-icon modelos-icon">
-                                <i class="fas fa-layer-group"></i>
-                            </div>
-                            <div class="dual-stat-info">
-                                <div class="dual-stat-value"><?php echo count($modelosDisponiveis); ?></div>
-                                <div class="dual-stat-label">Modelos Salvos</div>
-                            </div>
-                        </div>
-                    </div>
+            <!-- Dashboard Sections -->
+<div class="dashboard-sections" data-aos="fade-up">
+    <!-- Seção: Relatórios -->
+    <div class="dashboard-section primary">
+        <div class="section-header">
+            <h3 class="section-title">
+                <i class="fas fa-file-alt"></i> Relatórios
+            </h3>
+        </div>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon relatorios-icon">
+                    <i class="fas fa-file-contract"></i>
                 </div>
-
-                <!-- Card 2: Atividade + Execuções -->
-                <div class="stat-card dual-stat-card">
-                    <div class="dual-stat-header">
-                        <div class="dual-stat-title">
-                            <i class="fas fa-users"></i>
-                            Atividade
-                        </div>
-                        <div class="dual-stat-percentage">
-                            <i class="fas fa-pulse"></i>
-                            Uso
-                        </div>
-                    </div>
-                    <div class="dual-stats-row">
-                        <div class="dual-stat-item">
-                            <div class="dual-stat-icon usuarios-icon">
-                                <i class="fas fa-user-check"></i>
-                            </div>
-                            <div class="dual-stat-info">
-                                <div class="dual-stat-value"><?php echo $estatisticas['totais']['total_usuarios'] ?? 0; ?></div>
-                                <div class="dual-stat-label">Usuários Ativos</div>
-                            </div>
-                        </div>
-                        <div class="dual-stats-separator"></div>
-                        <div class="dual-stat-item">
-                            <div class="dual-stat-icon execucoes-icon">
-                                <i class="fas fa-chart-bar"></i>
-                            </div>
-                            <div class="dual-stat-info">
-                                <div class="dual-stat-value">
-                                    <?php
-                                    $mediaExecucoes = 0;
-                                    if (!empty($estatisticas['mais_utilizados'])) {
-                                        $mediaExecucoes = array_sum(array_column($estatisticas['mais_utilizados'], 'total_execucoes')) / count($estatisticas['mais_utilizados']);
-                                    }
-                                    echo number_format($mediaExecucoes, 1);
-                                    ?>
-                                </div>
-                                <div class="dual-stat-label">Média Execuções</div>
-                            </div>
-                        </div>
-                    </div>
+                <div class="stat-content">
+                    <div class="stat-value"><?php echo $estatisticas['totais']['total'] ?? 0; ?></div>
+                    <div class="stat-label">Gerados</div>
                 </div>
             </div>
+            <div class="stat-card">
+                <div class="stat-icon modelos-icon">
+                    <i class="fas fa-layer-group"></i>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-value"><?php echo count($modelosDisponiveis); ?></div>
+                    <div class="stat-label">Modelos Salvos</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Seção: Atividade -->
+    <div class="dashboard-section info">
+        <div class="section-header">
+            <h3 class="section-title">
+                <i class="fas fa-users"></i> Atividade
+            </h3>
+        </div>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon usuarios-icon">
+                    <i class="fas fa-user-check"></i>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-value"><?php echo $estatisticas['totais']['total_usuarios'] ?? 0; ?></div>
+                    <div class="stat-label">Usuários Ativos</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon execucoes-icon">
+                    <i class="fas fa-chart-bar"></i>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-value">
+                        <?php
+                        $mediaExecucoes = 0;
+                        if (!empty($estatisticas['mais_utilizados'])) {
+                            $mediaExecucoes = array_sum(array_column($estatisticas['mais_utilizados'], 'total_execucoes')) / count($estatisticas['mais_utilizados']);
+                        }
+                        echo number_format($mediaExecucoes, 1);
+                        ?>
+                    </div>
+                    <div class="stat-label">Média Execuções</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
             <!-- Available Reports Section -->
             <div class="section-card" data-aos="fade-up" data-aos-delay="100">
