@@ -17,6 +17,9 @@ let carregamentoIniciado = false;
 let carregamentoCompleto = false;
 let imagensCarregadas = new Set();
 
+// Variável global para armazenar o associado atual
+let associadoAtual = null;
+
 // Variáveis de paginação
 let paginaAtual = 1;
 let registrosPorPagina = 25;
@@ -214,8 +217,6 @@ function carregarAssociados() {
         }
     });
 }
-
-
 
 function preencherFiltrosOtimizado(response) {
     console.log('🔧 Preenchendo filtros otimizados...');
@@ -532,34 +533,33 @@ function renderizarTabela(dados) {
             <td>${associado.corporacao || '-'}</td>
             <td>${associado.patente || '-'}</td>
             <td>${formatarData(associado.data_filiacao)}</td>
-
             <td>
-    <div class="action-buttons-table">
-        ${permissoesUsuario.podeVisualizar ? `
-            <button class="btn-icon view" onclick="visualizarAssociado(${associado.id})" title="Visualizar">
-                <i class="fas fa-eye"></i>
-            </button>
-        ` : ''}
-        
-        ${associado.telefone && (permissoesUsuario.podeEditarContato || permissoesUsuario.podeEditarCompleto) ? `
-            <button class="btn-icon whatsapp" onclick="abrirWhatsApp('${associado.telefone}')" title="WhatsApp" style="background: #25D366;">
-                <i class="fab fa-whatsapp" style="color: white;"></i>
-            </button>
-        ` : ''}
-        
-        ${(permissoesUsuario.podeEditarContato || permissoesUsuario.podeEditarCompleto) ? `
-            <button class="btn-icon edit" onclick="editarAssociadoNovo(${associado.id})" title="Editar">
-                <i class="fas fa-edit"></i>
-            </button>
-        ` : ''}
-        
-        ${permissoesUsuario.podeExcluir ? `
-            <button class="btn-icon delete" onclick="excluirAssociado(${associado.id})" title="Excluir">
-                <i class="fas fa-trash"></i>
-            </button>
-        ` : ''}
-    </div>
-</td>
+                <div class="action-buttons-table">
+                    ${permissoesUsuario.podeVisualizar ? `
+                        <button class="btn-icon view" onclick="visualizarAssociado(${associado.id})" title="Visualizar">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    ` : ''}
+                    
+                    ${associado.telefone && (permissoesUsuario.podeEditarContato || permissoesUsuario.podeEditarCompleto) ? `
+                        <button class="btn-icon whatsapp" onclick="abrirWhatsApp('${associado.telefone}')" title="WhatsApp" style="background: #25D366;">
+                            <i class="fab fa-whatsapp" style="color: white;"></i>
+                        </button>
+                    ` : ''}
+                    
+                    ${(permissoesUsuario.podeEditarContato || permissoesUsuario.podeEditarCompleto) ? `
+                        <button class="btn-icon edit" onclick="editarAssociadoNovo(${associado.id})" title="Editar">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                    ` : ''}
+                    
+                    ${permissoesUsuario.podeExcluir ? `
+                        <button class="btn-icon delete" onclick="excluirAssociado(${associado.id})" title="Excluir">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    ` : ''}
+                </div>
+            </td>
         `;
         tbody.appendChild(row);
     });
@@ -608,7 +608,7 @@ function limparFiltros() {
     renderizarPagina();
 }
 
-// 🚀 3. SUBSTITUA a função visualizarAssociado() existente por esta:
+// Função para visualizar associado
 function visualizarAssociado(id) {
     console.log('👁️ Visualizando associado:', id);
     let associado = todosAssociados.find(a => a.id == id);
@@ -619,7 +619,7 @@ function visualizarAssociado(id) {
         return;
     }
 
-    // 🚀 Se não tem detalhes carregados, carrega via API
+    // Se não tem detalhes carregados, carrega via API
     if (!associado.detalhes_carregados) {
         console.log('📋 Carregando detalhes completos...');
         
@@ -661,8 +661,7 @@ function visualizarAssociado(id) {
     }
 }
 
-
-// 🚀 4. ADICIONE esta nova função:
+// Função para carregar detalhes do associado
 function carregarDetalhesAssociado(id) {
     return new Promise((resolve, reject) => {
         $.ajax({
@@ -688,9 +687,12 @@ function carregarDetalhesAssociado(id) {
     });
 }
 
-// 🚀 5. ADICIONE esta nova função (renomeada da original):
+// Função principal para abrir modal do associado
 function abrirModalAssociadoCompleto(associado) {
-    // NOVA LINHA: Resetar dados de observações ao abrir novo modal
+    // CORREÇÃO: Definir associadoAtual GLOBALMENTE
+    associadoAtual = associado;
+
+    // Resetar dados de observações ao abrir novo modal
     resetarObservacoes();
 
     // Atualiza o header do modal
@@ -704,13 +706,14 @@ function abrirModalAssociadoCompleto(associado) {
     preencherTabDependentes(associado);
     preencherTabDocumentos(associado);
 
-    // NOVA LINHA: Carregar apenas o contador de observações
+    // Carregar apenas o contador de observações
     carregarContadorObservacoes(associado.id);
 
     // Modal já está aberto, apenas força active na tab overview
-    abrirTab('overview');
+    // abrirTab('overview');
 }
-// 2. NOVA FUNÇÃO: Resetar observações ao trocar de associado
+
+// Função para resetar observações ao trocar de associado
 function resetarObservacoes() {
     // Resetar variáveis globais
     observacoesData = [];
@@ -747,7 +750,7 @@ function resetarObservacoes() {
     });
 }
 
-// 3. NOVA FUNÇÃO: Carregar apenas o contador de observações (mais rápido)
+// Função para carregar apenas o contador de observações (mais rápido)
 function carregarContadorObservacoes(associadoId) {
     if (!associadoId) return;
 
@@ -979,7 +982,34 @@ function preencherTabVisaoGeral(associado) {
                 </div>
             </div>
         </div>
+        
+        <!-- NOVA SEÇÃO: Observações Recentes -->
+        <div class="observacoes-overview-section" style="margin-top: 2rem; padding: 1rem 2rem; border-top: 1px solid #e5e7eb;">
+            <div class="observacoes-overview-header" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid #e5e7eb;">
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <div style="width: 36px; height: 36px; background: linear-gradient(135deg, #7c3aed, #5b21b6); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white;">
+                        <i class="fas fa-sticky-note"></i>
+                    </div>
+                    <h4 style="margin: 0; color: #1f2937; font-weight: 600;">Observações Recentes</h4>
+                </div>
+                <button onclick="abrirModalNovaObservacao()" style="background: #7c3aed; color: white; border: none; padding: 0.5rem; border-radius: 6px; cursor: pointer; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;" title="Nova Observação">
+                    <i class="fas fa-plus"></i>
+                </button>
+            </div>
+            <div id="overviewObservacoes" style="background: #f9fafb; border-radius: 8px; padding: 1rem; min-height: 100px;">
+                <div style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 2rem; color: #6b7280;">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <span>Carregando observações...</span>
+                </div>
+            </div>
+        </div>
     `;
+
+    // CORREÇÃO PRINCIPAL: Carregar observações imediatamente após criar o HTML
+    if (associado && associado.id) {
+        console.log('🔄 Carregando observações para visão geral do associado:', associado.id);
+        carregarObservacoesVisaoGeral(associado.id);
+    }
 }
 
 // Preenche tab Militar
@@ -1021,7 +1051,7 @@ function preencherTabMilitar(associado) {
     `;
 }
 
-// FUNÇÃO ATUALIZADA: Preenche tab Financeiro (SEM OBSERVAÇÕES)
+// Preenche tab Financeiro
 function preencherTabFinanceiro(associado) {
     const financeiroTab = document.getElementById('financeiro-tab');
 
@@ -1533,11 +1563,6 @@ function buscarServicosAssociado(associadoId) {
         });
 }
 
-// [RESTO DO CÓDIGO CONTINUA IGUAL...]
-// Incluindo todas as outras funções: preencherTabContato, preencherTabDependentes, 
-// preencherTabDocumentos, renderizarDocumentosUpload, e todas as funções de observações
-// que permanecem exatamente iguais ao código original...
-
 // Preenche tab Contato
 function preencherTabContato(associado) {
     const contatoTab = document.getElementById('contato-tab');
@@ -1663,7 +1688,6 @@ function preencherTabDependentes(associado) {
 
     dependentesTab.innerHTML = dependentesHtml;
 }
-
 
 function preencherTabDocumentos(associado) {
     const documentosTab = document.getElementById('documentos-tab');
@@ -2042,242 +2066,6 @@ function downloadDocumentoUpload(id) {
     window.open('../api/documentos/upload_documentos_download.php?id=' + id, '_blank');
 }
 
-// NEW FUNCTION: Handle file drop
-function handleFileDrop(event) {
-    event.preventDefault();
-    const files = event.dataTransfer.files;
-    if (files.length > 0) {
-        document.getElementById('arquivoDocumento').files = files;
-        updateFileInfo(document.getElementById('arquivoDocumento'));
-    }
-    // Reset visual state
-    event.target.style.borderColor = 'var(--gray-300)';
-    event.target.style.background = 'var(--gray-50)';
-}
-
-function updateFileInfo(input) {
-    const fileInfo = document.getElementById('fileInfo');
-    if (input.files.length > 0) {
-        const file = input.files[0];
-        const fileSize = (file.size / 1024 / 1024).toFixed(2);
-
-        fileInfo.innerHTML = `
-            <div class="alert alert-info d-flex align-items-center" style="margin: 0;">
-                <i class="fas fa-file me-2"></i>
-                <div>
-                    <strong>${file.name}</strong><br>
-                    <small>${fileSize} MB</small>
-                </div>
-            </div>
-        `;
-        fileInfo.style.display = 'block';
-    } else {
-        fileInfo.style.display = 'none';
-    }
-}
-
-// NEW FUNCTION: Send document
-function enviarDocumento() {
-    const form = document.getElementById('uploadDocumentoForm');
-    const formData = new FormData(form);
-    const uploadProgress = document.getElementById('uploadProgress');
-    const progressBar = uploadProgress.querySelector('.progress-bar');
-
-    // Validate form
-    if (!form.checkValidity()) {
-        form.reportValidity();
-        return;
-    }
-
-    // Validate file
-    const arquivo = document.getElementById('arquivoDocumento').files[0];
-    if (!arquivo) {
-        alert('Por favor, selecione um arquivo.');
-        return;
-    }
-
-    // Check file size (5MB max)
-    if (arquivo.size > 5 * 1024 * 1024) {
-        alert('Arquivo muito grande. Máximo: 5MB');
-        return;
-    }
-
-    // Show progress
-    uploadProgress.style.display = 'block';
-
-    // Disable buttons
-    const buttons = document.querySelectorAll('#uploadDocumentoModal button');
-    buttons.forEach(btn => btn.disabled = true);
-
-    // Upload with progress
-    const xhr = new XMLHttpRequest();
-
-    xhr.upload.addEventListener('progress', function (e) {
-        if (e.lengthComputable) {
-            const percent = (e.loaded / e.total) * 100;
-            progressBar.style.width = percent + '%';
-        }
-    });
-
-    xhr.addEventListener('load', function () {
-        if (xhr.status === 200) {
-            try {
-                const response = JSON.parse(xhr.responseText);
-                if (response.status === 'success') {
-                    alert('Documento enviado com sucesso!');
-
-                    // Close modal
-                    const modal = bootstrap.Modal.getInstance(document.getElementById('uploadDocumentoModal'));
-                    modal.hide();
-
-                    // Reload documents tab
-                    const associadoId = document.getElementById('modalId').textContent.replace('ID: ', '');
-                    const associado = todosAssociados.find(a => a.id == associadoId);
-                    if (associado) {
-                        preencherTabDocumentos(associado);
-                    }
-                } else {
-                    alert('Erro: ' + response.message);
-                }
-            } catch (e) {
-                alert('Erro ao processar resposta');
-            }
-        } else {
-            alert('Erro ao enviar arquivo');
-        }
-
-        // Re-enable buttons
-        buttons.forEach(btn => btn.disabled = false);
-        uploadProgress.style.display = 'none';
-    });
-
-    xhr.addEventListener('error', function () {
-        alert('Erro de conexão');
-        buttons.forEach(btn => btn.disabled = false);
-        uploadProgress.style.display = 'none';
-    });
-
-    xhr.open('POST', '../api/documentos/documentos_upload.php');
-    xhr.send(formData);
-}
-
-// FUNÇÃO ATUALIZADA: Renderizar documentos no modal com validação extra
-function renderizarDocumentosNoModal(documentos, container) {
-    let html = '<div class="document-flow-container">';
-
-    // Adiciona contador de documentos
-    html += `
-                <div class="document-count-info" style="margin-bottom: 1rem; padding: 1rem; background: var(--gray-100); border-radius: 8px;">
-                    <i class="fas fa-info-circle" style="color: var(--primary); margin-right: 0.5rem;"></i>
-                    <span style="font-size: 0.875rem; color: var(--gray-600);">
-                        ${documentos.length} documento${documentos.length > 1 ? 's' : ''} em fluxo de assinatura
-                    </span>
-                </div>
-            `;
-
-    documentos.forEach(doc => {
-        const statusClass = doc.status_fluxo.toLowerCase().replace('_', '-');
-
-        html += `
-                    <div class="document-flow-card">
-                        <span class="status-badge-modal ${statusClass}">
-                            <i class="fas fa-${getStatusIcon(doc.status_fluxo)} me-1"></i>
-                            ${doc.status_descricao}
-                        </span>
-                        
-                        <div class="document-flow-header">
-                            <div class="document-flow-icon">
-                                <i class="fas fa-file-pdf"></i>
-                            </div>
-                            <div class="document-flow-info">
-                                <h6>Ficha de Filiação</h6>
-                                <p>${doc.tipo_origem === 'VIRTUAL' ? 'Gerada no Sistema' : 'Digitalizada'}</p>
-                            </div>
-                        </div>
-                        
-                        <div class="document-meta-modal">
-                            <div class="meta-item-modal">
-                                <i class="fas fa-calendar"></i>
-                                <span>Cadastrado em ${formatarDataDocumento(doc.data_upload)}</span>
-                            </div>
-                            ${doc.departamento_atual_nome ? `
-                                <div class="meta-item-modal">
-                                    <i class="fas fa-building"></i>
-                                    <span>${doc.departamento_atual_nome}</span>
-                                </div>
-                            ` : ''}
-                            ${doc.dias_em_processo > 0 ? `
-                                <div class="meta-item-modal">
-                                    <i class="fas fa-hourglass-half"></i>
-                                    <span>${doc.dias_em_processo} dia${doc.dias_em_processo > 1 ? 's' : ''} em processo</span>
-                                </div>
-                            ` : ''}
-                            ${doc.funcionario_upload ? `
-                                <div class="meta-item-modal">
-                                    <i class="fas fa-user"></i>
-                                    <span>Por: ${doc.funcionario_upload}</span>
-                                </div>
-                            ` : ''}
-                        </div>
-                        
-                        <!-- Progress do Fluxo -->
-                        <div class="fluxo-progress-modal">
-                            <div class="fluxo-steps-modal">
-                                <div class="fluxo-step-modal ${doc.status_fluxo !== 'DIGITALIZADO' ? 'completed' : 'active'}">
-                                    <div class="fluxo-step-icon-modal">
-                                        <i class="fas fa-upload"></i>
-                                    </div>
-                                    <div class="fluxo-step-label-modal">Digitalizado</div>
-                                    <div class="fluxo-line-modal"></div>
-                                </div>
-                                <div class="fluxo-step-modal ${doc.status_fluxo === 'AGUARDANDO_ASSINATURA' ? 'active' : (doc.status_fluxo === 'ASSINADO' || doc.status_fluxo === 'FINALIZADO' ? 'completed' : '')}">
-                                    <div class="fluxo-step-icon-modal">
-                                        <i class="fas fa-signature"></i>
-                                    </div>
-                                    <div class="fluxo-step-label-modal">Assinatura</div>
-                                    <div class="fluxo-line-modal"></div>
-                                </div>
-                                <div class="fluxo-step-modal ${doc.status_fluxo === 'ASSINADO' ? 'active' : (doc.status_fluxo === 'FINALIZADO' ? 'completed' : '')}">
-                                    <div class="fluxo-step-icon-modal">
-                                        <i class="fas fa-check"></i>
-                                    </div>
-                                    <div class="fluxo-step-label-modal">Assinado</div>
-                                    <div class="fluxo-line-modal"></div>
-                                </div>
-                                <div class="fluxo-step-modal ${doc.status_fluxo === 'FINALIZADO' ? 'completed' : ''}">
-                                    <div class="fluxo-step-icon-modal">
-                                        <i class="fas fa-flag-checkered"></i>
-                                    </div>
-                                    <div class="fluxo-step-label-modal">Finalizado</div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Informações adicionais baseadas no status -->
-                        ${renderizarInfoAdicional(doc)}
-                        
-                        <div class="document-actions-modal">
-                            <button class="btn-modern btn-primary btn-sm" onclick="downloadDocumentoModal(${doc.id})">
-                                <i class="fas fa-download"></i>
-                                Baixar
-                            </button>
-                            
-                            ${getAcoesFluxoModal(doc)}
-                            
-                            <button class="btn-modern btn-secondary btn-sm" onclick="verHistoricoModal(${doc.id})">
-                                <i class="fas fa-history"></i>
-                                Histórico
-                            </button>
-                        </div>
-                    </div>
-                `;
-    });
-
-    html += '</div>';
-    container.innerHTML = html;
-}
-
-
 function abrirModalUploadDocumento(associadoId, associadoNome) {
     const uploadModalHtml = `
         <div class="modal fade" id="uploadDocumentoModal" tabindex="-1" aria-hidden="true">
@@ -2388,230 +2176,83 @@ function abrirModalUploadDocumento(associadoId, associadoNome) {
     });
 }
 
-// NOVA FUNÇÃO: Renderizar informações adicionais baseadas no status
-function renderizarInfoAdicional(doc) {
-    let html = '';
+function updateFileInfo(input) {
+    const fileInfo = document.getElementById('fileInfo');
+    if (input.files.length > 0) {
+        const file = input.files[0];
+        const fileSize = (file.size / 1024 / 1024).toFixed(2);
 
-    switch (doc.status_fluxo) {
-        case 'DIGITALIZADO':
-            html = `
-                        <div class="alert-info-custom" style="margin: 1rem 0; padding: 0.75rem; background: rgba(0, 123, 255, 0.1); border-radius: 8px;">
-                            <i class="fas fa-info-circle" style="color: var(--info);"></i>
-                            <span style="font-size: 0.8125rem;">Documento aguardando envio para assinatura</span>
-                        </div>
-                    `;
-            break;
-
-        case 'AGUARDANDO_ASSINATURA':
-            html = `
-                        <div class="alert-warning-custom" style="margin: 1rem 0; padding: 0.75rem; background: rgba(255, 193, 7, 0.1); border-radius: 8px;">
-                            <i class="fas fa-clock" style="color: var(--warning);"></i>
-                            <span style="font-size: 0.8125rem;">Documento na presidência aguardando assinatura</span>
-                        </div>
-                    `;
-            break;
-
-        case 'ASSINADO':
-            html = `
-                        <div class="alert-success-custom" style="margin: 1rem 0; padding: 0.75rem; background: rgba(40, 167, 69, 0.1); border-radius: 8px;">
-                            <i class="fas fa-check-circle" style="color: var(--success);"></i>
-                            <span style="font-size: 0.8125rem;">Documento assinado e retornado ao comercial</span>
-                        </div>
-                    `;
-            break;
-
-        case 'FINALIZADO':
-            html = `
-                        <div class="alert-primary-custom" style="margin: 1rem 0; padding: 0.75rem; background: rgba(0, 86, 210, 0.1); border-radius: 8px;">
-                            <i class="fas fa-flag-checkered" style="color: var(--primary);"></i>
-                            <span style="font-size: 0.8125rem;">Processo concluído com sucesso</span>
-                        </div>
-                    `;
-            break;
-    }
-
-    return html;
-}
-
-// NOVA FUNÇÃO: Obter ícone do status
-function getStatusIcon(status) {
-    const icons = {
-        'DIGITALIZADO': 'upload',
-        'AGUARDANDO_ASSINATURA': 'clock',
-        'ASSINADO': 'check',
-        'FINALIZADO': 'flag-checkered'
-    };
-    return icons[status] || 'file';
-}
-
-// NOVA FUNÇÃO: Obter ações do fluxo para o modal
-
-
-// NOVA FUNÇÃO: Formatar data para documentos
-function formatarDataDocumento(dataStr) {
-    if (!dataStr) return '-';
-    const data = new Date(dataStr);
-    return data.toLocaleDateString('pt-BR', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-    });
-}
-
-// NOVA FUNÇÃO: Download documento no modal
-function downloadDocumentoModal(id) {
-    window.open('../api/documentos/documentos_download.php?id=' + id, '_blank');
-}
-
-// FUNÇÃO ATUALIZADA: Ver histórico no modal com mais detalhes
-function verHistoricoModal(documentoId) {
-    // Criar um modal secundário para o histórico
-    const historicoHtml = `
-                <div class="modal fade" id="historicoDocumentoModal" tabindex="-1" aria-hidden="true">
-                    <div class="modal-dialog modal-lg">
-                        <div class="modal-content">
-                            <div class="modal-header">
-                                <h5 class="modal-title">
-                                    <i class="fas fa-history me-2" style="color: var(--primary);"></i>
-                                    Histórico do Documento
-                                </h5>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                            </div>
-                            <div class="modal-body">
-                                <div id="historicoDocumentoContent">
-                                    <div class="text-center py-5">
-                                        <div class="loading-spinner mb-3"></div>
-                                        <p class="text-muted">Carregando histórico...</p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="modal-footer">
-                                <button type="button" class="btn-modern btn-secondary" data-bs-dismiss="modal">
-                                    Fechar
-                                </button>
-                            </div>
-                        </div>
-                    </div>
+        fileInfo.innerHTML = `
+            <div class="alert alert-info d-flex align-items-center" style="margin: 0;">
+                <i class="fas fa-file me-2"></i>
+                <div>
+                    <strong>${file.name}</strong><br>
+                    <small>${fileSize} MB</small>
                 </div>
-            `;
-
-    // Remove modal anterior se existir
-    $('#historicoDocumentoModal').remove();
-
-    // Adiciona o novo modal ao body
-    $('body').append(historicoHtml);
-
-    // Abre o modal
-    const modalHistorico = new bootstrap.Modal(document.getElementById('historicoDocumentoModal'));
-    modalHistorico.show();
-
-    // Busca o histórico
-    $.get('../api/documentos/documentos_historico_fluxo.php', { documento_id: documentoId }, function (response) {
-        if (response.status === 'success' && response.data) {
-            renderizarHistoricoNoModal(response.data);
-        } else {
-            $('#historicoDocumentoContent').html(`
-                        <div class="alert alert-warning">
-                            <i class="fas fa-exclamation-triangle me-2"></i>
-                            Não foi possível carregar o histórico do documento
-                        </div>
-                    `);
-        }
-    }).fail(function () {
-        $('#historicoDocumentoContent').html(`
-                    <div class="alert alert-danger">
-                        <i class="fas fa-times-circle me-2"></i>
-                        Erro ao carregar histórico
-                    </div>
-                `);
-    });
+            </div>
+        `;
+        fileInfo.style.display = 'block';
+    } else {
+        fileInfo.style.display = 'none';
+    }
 }
 
-// NOVA FUNÇÃO: Renderizar histórico no modal
-function renderizarHistoricoNoModal(historico) {
-    if (!historico || historico.length === 0) {
-        $('#historicoDocumentoContent').html(`
-                    <div class="alert alert-info">
-                        <i class="fas fa-info-circle me-2"></i>
-                        Nenhum histórico disponível para este documento
-                    </div>
-                `);
+// NEW FUNCTION: Send document
+function enviarDocumento() {
+    const form = document.getElementById('uploadDocumentoForm');
+    const formData = new FormData(form);
+    const uploadProgress = document.getElementById('uploadProgress');
+    const progressBar = uploadProgress.querySelector('.progress-bar');
+
+    // Validate form
+    if (!form.checkValidity()) {
+        form.reportValidity();
         return;
     }
 
-    let html = '<div class="timeline">';
+    // Validate file
+    const arquivo = document.getElementById('arquivoDocumento').files[0];
+    if (!arquivo) {
+        alert('Por favor, selecione um arquivo.');
+        return;
+    }
 
-    historico.forEach((item, index) => {
-        const isLast = index === historico.length - 1;
-        html += `
-                    <div class="timeline-item ${isLast ? 'last' : ''}">
-                        <div class="timeline-marker">
-                            <i class="fas fa-${getIconForStatus(item.status_novo)}"></i>
-                        </div>
-                        <div class="timeline-content">
-                            <div class="timeline-header">
-                                <h6 class="timeline-title">${getStatusLabel(item.status_novo)}</h6>
-                                <span class="timeline-date">${formatarDataDocumento(item.data_acao)}</span>
-                            </div>
-                            <p class="timeline-description">${item.observacao || 'Sem observações'}</p>
-                            <div class="timeline-meta">
-                                <small class="text-muted">
-                                    <i class="fas fa-user me-1"></i> ${item.funcionario_nome || 'Sistema'}
-                                    ${item.dept_origem_nome ? `<br><i class="fas fa-building me-1"></i> De: ${item.dept_origem_nome}` : ''}
-                                    ${item.dept_destino_nome ? ` → Para: ${item.dept_destino_nome}` : ''}
-                                </small>
-                            </div>
-                        </div>
-                    </div>
-                `;
+    // Check file size (5MB max)
+    if (arquivo.size > 5 * 1024 * 1024) {
+        alert('Arquivo muito grande. Máximo: 5MB');
+        return;
+    }
+
+    // Show progress
+    uploadProgress.style.display = 'block';
+
+    // Disable buttons
+    const buttons = document.querySelectorAll('#uploadDocumentoModal button');
+    buttons.forEach(btn => btn.disabled = true);
+
+    // Upload with progress
+    const xhr = new XMLHttpRequest();
+
+    xhr.upload.addEventListener('progress', function (e) {
+        if (e.lengthComputable) {
+            const percent = (e.loaded / e.total) * 100;
+            progressBar.style.width = percent + '%';
+        }
     });
 
-    html += '</div>';
-    $('#historicoDocumentoContent').html(html);
-}
-
-// FUNÇÃO AUXILIAR: Obter ícone para status
-function getIconForStatus(status) {
-    const icons = {
-        'DIGITALIZADO': 'fa-upload',
-        'AGUARDANDO_ASSINATURA': 'fa-clock',
-        'ENVIADO_PRESIDENCIA': 'fa-paper-plane',
-        'ASSINADO': 'fa-signature',
-        'FINALIZADO': 'fa-flag-checkered'
-    };
-    return icons[status] || 'fa-circle';
-}
-
-// FUNÇÃO AUXILIAR: Obter label para status
-function getStatusLabel(status) {
-    const labels = {
-        'DIGITALIZADO': 'Documento Digitalizado',
-        'AGUARDANDO_ASSINATURA': 'Enviado para Assinatura',
-        'ENVIADO_PRESIDENCIA': 'Na Presidência',
-        'ASSINADO': 'Documento Assinado',
-        'FINALIZADO': 'Processo Finalizado'
-    };
-    return labels[status] || status;
-}
-
-// NOVA FUNÇÃO: Enviar para assinatura no modal
-function enviarParaAssinaturaModal(documentoId) {
-    if (confirm('Deseja enviar este documento para assinatura na presidência?')) {
-        $.ajax({
-            url: '../api/documentos/documentos_enviar_assinatura.php',
-            type: 'POST',
-            contentType: 'application/json',
-            data: JSON.stringify({
-                documento_id: documentoId,
-                observacao: 'Documento enviado para assinatura via modal'
-            }),
-            success: function (response) {
+    xhr.addEventListener('load', function () {
+        if (xhr.status === 200) {
+            try {
+                const response = JSON.parse(xhr.responseText);
                 if (response.status === 'success') {
-                    alert('Documento enviado para assinatura com sucesso!');
-                    // Recarrega a tab de documentos
-                    const associadoId = document.getElementById('modalId').textContent.replace('ID: ', '');
+                    alert('Documento enviado com sucesso!');
+
+                    // Close modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('uploadDocumentoModal'));
+                    modal.hide();
+
+                    // Reload documents tab
+                    const associadoId = document.getElementById('modalId').textContent.replace('Matrícula: ', '').trim();
                     const associado = todosAssociados.find(a => a.id == associadoId);
                     if (associado) {
                         preencherTabDocumentos(associado);
@@ -2619,59 +2260,47 @@ function enviarParaAssinaturaModal(documentoId) {
                 } else {
                     alert('Erro: ' + response.message);
                 }
-            },
-            error: function () {
-                alert('Erro ao enviar documento para assinatura');
+            } catch (e) {
+                alert('Erro ao processar resposta');
             }
-        });
-    }
+        } else {
+            alert('Erro ao enviar arquivo');
+        }
+
+        // Re-enable buttons
+        buttons.forEach(btn => btn.disabled = false);
+        uploadProgress.style.display = 'none';
+    });
+
+    xhr.addEventListener('error', function () {
+        alert('Erro de conexão');
+        buttons.forEach(btn => btn.disabled = false);
+        uploadProgress.style.display = 'none';
+    });
+
+    xhr.open('POST', '../api/documentos/documentos_upload.php');
+    xhr.send(formData);
 }
 
-// NOVA FUNÇÃO: Finalizar processo no modal
-function finalizarProcessoModal(documentoId) {
-    if (confirm('Deseja finalizar o processo deste documento?')) {
-        $.ajax({
-            url: '../api/documentos/documentos_finalizar.php',
-            type: 'POST',
-            contentType: 'application/json',
-            data: JSON.stringify({
-                documento_id: documentoId,
-                observacao: 'Processo finalizado via modal'
-            }),
-            success: function (response) {
-                if (response.status === 'success') {
-                    alert('Processo finalizado com sucesso!');
-                    // Recarrega a tab de documentos
-                    const associadoId = document.getElementById('modalId').textContent.replace('ID: ', '');
-                    const associado = todosAssociados.find(a => a.id == associadoId);
-                    if (associado) {
-                        preencherTabDocumentos(associado);
-                    }
-                } else {
-                    alert('Erro: ' + response.message);
-                }
-            },
-            error: function () {
-                alert('Erro ao finalizar processo');
-            }
-        });
-    }
-}
-
-// Função para fechar modal
 function fecharModal() {
     const modal = document.getElementById('modalAssociado');
+    
+    // Remover IMEDIATAMENTE sem delays
     modal.classList.remove('show');
     document.body.style.overflow = 'auto';
-
-    // NOVA LINHA: Resetar observações ao fechar
-    resetarObservacoes();
-
-    // Volta para a primeira tab
-    abrirTab('overview');
+    
+    // Limpar dados DEPOIS da animação de fechamento
+    setTimeout(() => {
+        associadoAtual = null;
+        
+        // Reset de observações mais tarde
+        setTimeout(() => {
+            resetarObservacoes();
+        }, 100);
+    }, 200);
 }
 
-// Função para trocar de tab
+// FUNÇÃO CORRIGIDA: Trocar de tab com carregamento de observações na visão geral
 function abrirTab(tabName) {
     // Remove active de todas as tabs
     document.querySelectorAll('.tab-button').forEach(btn => {
@@ -2692,21 +2321,27 @@ function abrirTab(tabName) {
     if (activeContent) {
         activeContent.classList.add('active');
     }
-}
 
-// Função para editar associado
-// Função para editar associado
-function editarAssociado(id) {
-    console.log('Editando associado ID:', id);
-    event.stopPropagation();
-
-    // ADICIONE ESTA VERIFICAÇÃO NO INÍCIO:
-    if (!permissoesUsuario.podeEditar) {
-        alert('Você não tem permissão para editar associados.');
-        return;
+    // CORREÇÃO PRINCIPAL: Se for a aba overview e temos um associado, carregar observações
+    if (tabName === 'overview' && associadoAtual && associadoAtual.id) {
+        console.log('🔄 Aba overview aberta, carregando observações para associado:', associadoAtual.id);
+        // Aguardar um pouco para garantir que o HTML foi renderizado
+        setTimeout(() => {
+            carregarObservacoesVisaoGeral(associadoAtual.id);
+        }, 100);
     }
 
-    window.location.href = `cadastroForm.php?id=${id}`;
+    // Se for a aba de observações, carregar dados completos
+    if (tabName === 'observacoes' && associadoAtual && associadoAtual.id) {
+        const associadoId = associadoAtual.id;
+        // Só carrega se ainda não carregou para este associado
+        if (currentAssociadoIdObs !== associadoId || observacoesData.length === 0) {
+            carregarObservacoes(associadoId);
+        } else {
+            // Se já tem dados, apenas renderiza novamente
+            renderizarObservacoes();
+        }
+    }
 }
 
 // Função para excluir associado
@@ -2779,6 +2414,336 @@ document.addEventListener('keydown', function (event) {
     }
 });
 
+// FUNÇÃO CORRIGIDA: Carregar observações na visão geral
+function carregarObservacoesVisaoGeral(associadoId) {
+    const container = document.getElementById('overviewObservacoes');
+    if (!container) {
+        console.warn('Container overviewObservacoes não encontrado');
+        return;
+    }
+    
+    console.log('🔄 Carregando observações para visão geral, associado:', associadoId);
+    
+    // Mostrar loading
+    container.innerHTML = `
+        <div style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 2rem; color: #6b7280;">
+            <i class="fas fa-spinner fa-spin"></i>
+            <span>Carregando observações...</span>
+        </div>
+    `;
+
+    // Fazer requisição para o endpoint de observações
+    fetch(`../api/observacoes/listar.php?associado_id=${associadoId}`)
+        .then(response => response.json())
+        .then(data => {
+            console.log('📋 Dados de observações recebidos:', data);
+            if (data.status === 'success') {
+                const observacoes = data.data || [];
+                
+                // Atualizar contador na aba de observações
+                const countBadge = document.getElementById('observacoesCountBadge');
+                if (countBadge) {
+                    const totalObs = data.estatisticas?.total || observacoes.length;
+                    if (totalObs > 0) {
+                        countBadge.textContent = totalObs;
+                        countBadge.style.display = 'inline-block';
+                    } else {
+                        countBadge.style.display = 'none';
+                    }
+                }
+
+                // Renderizar observações na visão geral (apenas as 3 mais recentes)
+                renderizarObservacoesSimples(observacoes.slice(0, 3), observacoes.length);
+                
+            } else {
+                console.error('Erro na resposta:', data.message);
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 2rem; color: #9ca3af;">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <p>Erro ao carregar observações</p>
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            console.error('Erro ao carregar observações:', error);
+            container.innerHTML = `
+                <div style="text-align: center; padding: 2rem; color: #9ca3af;">
+                    <i class="fas fa-wifi"></i>
+                    <p>Erro de conexão</p>
+                </div>
+            `;
+        });
+}
+
+// Função para renderizar observações simples
+function renderizarObservacoesSimples(observacoes, totalObservacoes) {
+    const container = document.getElementById('overviewObservacoes');
+    
+    if (!observacoes || observacoes.length === 0) {
+        container.innerHTML = `
+            <div style="text-align: center; padding: 2rem; color: #9ca3af;">
+                <i class="fas fa-clipboard-list" style="font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.5;"></i>
+                <p>Nenhuma observação registrada</p>
+            </div>
+        `;
+        return;
+    }
+
+    let html = '';
+    
+    observacoes.forEach(obs => {
+        const dataFormatada = formatarDataSimples(obs.data_criacao);
+        
+        html += `
+            <div class="observacao-item-overview">
+                <div class="observacao-header-overview">
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <span class="observacao-categoria-badge">
+                            ${(obs.categoria || 'geral').toUpperCase()}
+                        </span>
+                        ${obs.importante === '1' ? '<i class="fas fa-star" style="color: #f59e0b;" title="Importante"></i>' : ''}
+                    </div>
+                    <span style="font-size: 0.7rem; color: #9ca3af;">${dataFormatada}</span>
+                </div>
+                <div class="observacao-texto-overview">
+                    ${truncarTexto(obs.observacao, 120)}
+                </div>
+                <div class="observacao-footer-overview">
+                    <span style="font-weight: 500; color: #6b7280;">Por: ${obs.criado_por_nome || 'Sistema'}</span>
+                </div>
+            </div>
+        `;
+    });
+
+    // Adicionar link para ver todas as observações se houver mais de 3
+    if (totalObservacoes > 3) {
+        html += `
+            <a href="#" class="ver-todas-observacoes" onclick="abrirTab('observacoes'); return false;">
+                <i class="fas fa-eye" style="margin-right: 0.5rem;"></i>
+                Ver todas as ${totalObservacoes} observações
+            </a>
+        `;
+    }
+
+    container.innerHTML = html;
+}
+
+// Funções auxiliares simples
+function formatarDataSimples(dataStr) {
+    if (!dataStr) return 'Data não informada';
+    
+    try {
+        const data = new Date(dataStr);
+        const agora = new Date();
+        const diffMs = agora - data;
+        const diffMins = Math.floor(diffMs / 60000);
+        const diffHoras = Math.floor(diffMs / 3600000);
+        const diffDias = Math.floor(diffMs / 86400000);
+
+        if (diffMins < 1) return 'Agora mesmo';
+        if (diffMins < 60) return `${diffMins}min atrás`;
+        if (diffHoras < 24) return `${diffHoras}h atrás`;
+        if (diffDias < 7) return `${diffDias}d atrás`;
+        
+        return data.toLocaleDateString('pt-BR');
+    } catch (e) {
+        return 'Data inválida';
+    }
+}
+
+function truncarTexto(texto, limite) {
+    if (!texto) return '';
+    if (texto.length <= limite) return texto;
+    return texto.substring(0, limite) + '...';
+}
+
+function abrirWhatsApp(telefone) {
+    event.stopPropagation();
+
+    // Remove caracteres não numéricos
+    const numero = telefone.replace(/\D/g, '');
+
+    // Adiciona código do país se não tiver
+    const numeroFormatado = numero.startsWith('55') ? numero : '55' + numero;
+
+    // Abre WhatsApp Web
+    window.open(`https://wa.me/${numeroFormatado}`, '_blank');
+}
+
+// Nova função de edição com lógica de permissão
+function editarAssociadoNovo(id) {
+    event.stopPropagation();
+
+    const associado = todosAssociados.find(a => a.id == id);
+    if (!associado) {
+        alert('Associado não encontrado!');
+        return;
+    }
+
+    // Se pode editar completo, vai para o formulário
+    if (permissoesUsuario.podeEditarCompleto) {
+        window.location.href = `cadastroForm.php?id=${id}`;
+    } else {
+        // Senão, abre modal de edição de contato
+        abrirModalEditarContato(associado);
+    }
+}
+
+// Função para remover documento
+function removerDocumento(documentoId) {
+    // Mostrar loading no botão
+    const botaoRemover = document.querySelector(`button[onclick*="removerDocumento(${documentoId})"]`);
+    if (botaoRemover) {
+        const textoOriginal = botaoRemover.innerHTML;
+        botaoRemover.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Removendo...';
+        botaoRemover.disabled = true;
+
+        // Restaurar botão em caso de erro
+        const restaurarBotao = () => {
+            botaoRemover.innerHTML = textoOriginal;
+            botaoRemover.disabled = false;
+        };
+    }
+
+    // Fazer requisição AJAX para remover
+    $.ajax({
+        url: '../api/documentos/upload_documentos_remover.php',
+        method: 'POST',
+        data: JSON.stringify({ id: documentoId }),
+        contentType: 'application/json',
+        dataType: 'json',
+        success: function (response) {
+            if (response.status === 'success') {
+                // Mostrar mensagem de sucesso
+                mostrarNotificacaoDoc('Documento removido com sucesso!', 'success');
+
+                // Recarregar a aba de documentos
+                const associadoId = document.getElementById('modalId').textContent.replace('Matrícula: ', '').trim();
+                const associado = todosAssociados.find(a => a.id == associadoId);
+                if (associado) {
+                    preencherTabDocumentos(associado);
+                }
+            } else {
+                alert('Erro ao remover documento: ' + (response.message || 'Erro desconhecido'));
+                if (botaoRemover) restaurarBotao();
+            }
+        },
+        error: function (xhr, status, error) {
+            console.error('Erro ao remover documento:', error);
+
+            let mensagem = 'Erro ao remover documento';
+            if (xhr.status === 404) {
+                mensagem = 'Documento não encontrado';
+            } else if (xhr.status === 403) {
+                mensagem = 'Sem permissão para remover documento';
+            } else if (xhr.status === 500) {
+                mensagem = 'Erro interno do servidor';
+            }
+
+            alert(mensagem + '. Tente novamente.');
+            if (botaoRemover) restaurarBotao();
+        }
+    });
+}
+
+// Função auxiliar para mostrar notificações de documentos
+function mostrarNotificacaoDoc(mensagem, tipo = 'info') {
+    // Criar elemento de notificação
+    const notificacao = document.createElement('div');
+    notificacao.className = `alert alert-${tipo} alert-dismissible fade show position-fixed`;
+    notificacao.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);';
+    notificacao.innerHTML = `
+        <i class="fas fa-${tipo === 'success' ? 'check-circle' : tipo === 'error' ? 'times-circle' : 'info-circle'} me-2"></i>
+        ${mensagem}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+
+    document.body.appendChild(notificacao);
+
+    // Remover após 4 segundos
+    setTimeout(() => {
+        if (notificacao && notificacao.parentNode) {
+            notificacao.remove();
+        }
+    }, 4000);
+}
+
+// Função para abrir modal de edição de contato
+function abrirModalEditarContato(associado) {
+    // Preenche os campos
+    document.getElementById('editContatoId').value = associado.id;
+    document.getElementById('editContatoNome').textContent = associado.nome;
+    document.getElementById('editContatoTelefone').value = associado.telefone || '';
+    document.getElementById('editContatoEmail').value = associado.email || '';
+    document.getElementById('editContatoCep').value = associado.cep || '';
+    document.getElementById('editContatoEndereco').value = associado.endereco || '';
+    document.getElementById('editContatoNumero').value = associado.numero || '';
+    document.getElementById('editContatoComplemento').value = associado.complemento || '';
+    document.getElementById('editContatoBairro').value = associado.bairro || '';
+    document.getElementById('editContatoCidade').value = associado.cidade || '';
+
+    // Abre o modal
+    const modal = new bootstrap.Modal(document.getElementById('modalEditarContato'));
+    modal.show();
+}
+
+// Função para salvar contato editado
+function salvarContatoEditado() {
+    const form = document.getElementById('formEditarContato');
+    const formData = new FormData(form);
+
+    // Mostrar loading no botão
+    const btnSalvar = document.querySelector('#modalEditarContato button[onclick="salvarContatoEditado()"]');
+    const textoOriginal = btnSalvar.innerHTML;
+    btnSalvar.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Salvando...';
+    btnSalvar.disabled = true;
+
+    // Fazer requisição
+    $.ajax({
+        url: '../api/editar_contato_associado.php',
+        method: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function (response) {
+            if (response.status === 'success') {
+                // Fechar modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('modalEditarContato'));
+                modal.hide();
+
+                // Atualizar dados locais
+                const associadoId = document.getElementById('editContatoId').value;
+                const associado = todosAssociados.find(a => a.id == associadoId);
+                if (associado) {
+                    associado.telefone = document.getElementById('editContatoTelefone').value;
+                    associado.email = document.getElementById('editContatoEmail').value;
+                    associado.cep = document.getElementById('editContatoCep').value;
+                    associado.endereco = document.getElementById('editContatoEndereco').value;
+                    associado.numero = document.getElementById('editContatoNumero').value;
+                    associado.complemento = document.getElementById('editContatoComplemento').value;
+                    associado.bairro = document.getElementById('editContatoBairro').value;
+                    associado.cidade = document.getElementById('editContatoCidade').value;
+                }
+
+                // Recarregar tabela
+                aplicarFiltros();
+
+                alert('Informações de contato atualizadas com sucesso!');
+            } else {
+                alert('Erro: ' + (response.message || 'Erro desconhecido'));
+            }
+        },
+        error: function () {
+            alert('Erro ao salvar alterações. Tente novamente.');
+        },
+        complete: function () {
+            btnSalvar.innerHTML = textoOriginal;
+            btnSalvar.disabled = false;
+        }
+    });
+}
+
 // Event listeners - só adiciona UMA VEZ
 document.addEventListener('DOMContentLoaded', function () {
     // Adiciona listeners aos filtros
@@ -2824,7 +2789,6 @@ document.addEventListener('DOMContentLoaded', function () {
 console.log('Sistema inicializado com Header Component e Fluxo de Documentos!');
 
 // ========================================
-// ADICIONAR AO FINAL DO dashboard.js
 // FUNCIONALIDADES DA ABA DE OBSERVAÇÕES
 // ========================================
 
@@ -2913,7 +2877,6 @@ function carregarObservacoes(associadoId, forceReload = false) {
         }
     });
 }
-
 
 // Função para renderizar observações
 function renderizarObservacoes() {
@@ -3010,7 +2973,6 @@ function criarCardObservacao(obs) {
                         <button class="btn-observacao-action" title="${isImportante ? 'Remover importância' : 'Marcar como importante'}" onclick="toggleImportanteObs(${obs.id})">
                             <i class="${isImportante ? 'fas' : 'far'} fa-star ${isImportante ? 'text-warning' : ''}"></i>
                         </button>
-                        
                     </div>
                 </div>
                 <div class="observacao-date">
@@ -3036,7 +2998,6 @@ function criarCardObservacao(obs) {
         </div>
     `;
 }
-
 
 // Função para criar tag
 function criarTagObs(texto) {
@@ -3162,8 +3123,15 @@ function salvarObservacao() {
                 document.getElementById('formNovaObservacao').reset();
                 delete document.getElementById('formNovaObservacao').dataset.editId;
 
-                // *** CORREÇÃO PRINCIPAL: Forçar recarregamento das observações ***
+                // CORREÇÃO PRINCIPAL: Forçar recarregamento das observações
                 carregarObservacoes(currentAssociadoIdObs, true); // true = forçar reload
+
+                // ATUALIZAR TAMBÉM AS OBSERVAÇÕES DA VISÃO GERAL
+                if (associadoAtual && associadoAtual.id) {
+                    setTimeout(() => {
+                        carregarObservacoesVisaoGeral(associadoAtual.id);
+                    }, 500);
+                }
 
                 // Mostrar mensagem de sucesso
                 mostrarNotificacaoObs(response.message || 'Operação realizada com sucesso!', 'success');
@@ -3181,7 +3149,6 @@ function salvarObservacao() {
         }
     });
 }
-
 
 // Função para editar observação
 function editarObservacao(id) {
@@ -3346,6 +3313,14 @@ function criarModalConfirmacaoExclusao() {
             success: function (response) {
                 if (response.status === 'success') {
                     carregarObservacoes(currentAssociadoIdObs);
+                    
+                    // ATUALIZAR TAMBÉM AS OBSERVAÇÕES DA VISÃO GERAL
+                    if (associadoAtual && associadoAtual.id) {
+                        setTimeout(() => {
+                            carregarObservacoesVisaoGeral(associadoAtual.id);
+                        }, 500);
+                    }
+                    
                     mostrarNotificacaoObs('📋 Observação excluída com sucesso!', 'success');
                 } else {
                     alert('❌ Erro ao excluir observação: ' + (response.message || 'Erro desconhecido'));
@@ -3392,8 +3367,16 @@ function toggleImportanteObs(id) {
         dataType: 'json',
         success: function (response) {
             if (response.status === 'success') {
-                // *** CORREÇÃO: Forçar recarregamento após toggle ***
+                // CORREÇÃO: Forçar recarregamento após toggle
                 carregarObservacoes(currentAssociadoIdObs, true); // true = forçar reload
+                
+                // ATUALIZAR TAMBÉM AS OBSERVAÇÕES DA VISÃO GERAL
+                if (associadoAtual && associadoAtual.id) {
+                    setTimeout(() => {
+                        carregarObservacoesVisaoGeral(associadoAtual.id);
+                    }, 500);
+                }
+                
                 const novoStatus = response.data.importante;
                 mostrarNotificacaoObs(
                     novoStatus ? 'Marcada como importante!' : 'Removida das importantes',
@@ -3464,118 +3447,6 @@ function mostrarNotificacaoObs(mensagem, tipo = 'info') {
     }, 3000);
 }
 
-function abrirWhatsApp(telefone) {
-    event.stopPropagation();
-
-    // Remove caracteres não numéricos
-    const numero = telefone.replace(/\D/g, '');
-
-    // Adiciona código do país se não tiver
-    const numeroFormatado = numero.startsWith('55') ? numero : '55' + numero;
-
-    // Abre WhatsApp Web
-    window.open(`https://wa.me/${numeroFormatado}`, '_blank');
-}
-
-// Nova função de edição com lógica de permissão
-function editarAssociadoNovo(id) {
-    event.stopPropagation();
-
-    const associado = todosAssociados.find(a => a.id == id);
-    if (!associado) {
-        alert('Associado não encontrado!');
-        return;
-    }
-
-    // Se pode editar completo, vai para o formulário
-    if (permissoesUsuario.podeEditarCompleto) {
-        window.location.href = `cadastroForm.php?id=${id}`;
-    } else {
-        // Senão, abre modal de edição de contato
-        abrirModalEditarContato(associado);
-    }
-}
-
-
-// Função para remover documento (ESTAVA FALTANDO)
-function removerDocumento(documentoId) {
-    // Mostrar loading no botão
-    const botaoRemover = document.querySelector(`button[onclick*="removerDocumento(${documentoId})"]`);
-    if (botaoRemover) {
-        const textoOriginal = botaoRemover.innerHTML;
-        botaoRemover.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Removendo...';
-        botaoRemover.disabled = true;
-
-        // Restaurar botão em caso de erro
-        const restaurarBotao = () => {
-            botaoRemover.innerHTML = textoOriginal;
-            botaoRemover.disabled = false;
-        };
-    }
-
-    // Fazer requisição AJAX para remover
-    $.ajax({
-        url: '../api/documentos/upload_documentos_remover.php',
-        method: 'POST',
-        data: JSON.stringify({ id: documentoId }),
-        contentType: 'application/json',
-        dataType: 'json',
-        success: function (response) {
-            if (response.status === 'success') {
-                // Mostrar mensagem de sucesso
-                mostrarNotificacaoDoc('Documento removido com sucesso!', 'success');
-
-                // Recarregar a aba de documentos
-                const associadoId = document.getElementById('modalId').textContent.replace('Matrícula: ', '').trim();
-                const associado = todosAssociados.find(a => a.id == associadoId);
-                if (associado) {
-                    preencherTabDocumentos(associado);
-                }
-            } else {
-                alert('Erro ao remover documento: ' + (response.message || 'Erro desconhecido'));
-                if (botaoRemover) restaurarBotao();
-            }
-        },
-        error: function (xhr, status, error) {
-            console.error('Erro ao remover documento:', error);
-
-            let mensagem = 'Erro ao remover documento';
-            if (xhr.status === 404) {
-                mensagem = 'Documento não encontrado';
-            } else if (xhr.status === 403) {
-                mensagem = 'Sem permissão para remover documento';
-            } else if (xhr.status === 500) {
-                mensagem = 'Erro interno do servidor';
-            }
-
-            alert(mensagem + '. Tente novamente.');
-            if (botaoRemover) restaurarBotao();
-        }
-    });
-}
-
-// Função auxiliar para mostrar notificações de documentos
-function mostrarNotificacaoDoc(mensagem, tipo = 'info') {
-    // Criar elemento de notificação
-    const notificacao = document.createElement('div');
-    notificacao.className = `alert alert-${tipo} alert-dismissible fade show position-fixed`;
-    notificacao.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);';
-    notificacao.innerHTML = `
-        <i class="fas fa-${tipo === 'success' ? 'check-circle' : tipo === 'error' ? 'times-circle' : 'info-circle'} me-2"></i>
-        ${mensagem}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    `;
-
-    document.body.appendChild(notificacao);
-
-    // Remover após 4 segundos
-    setTimeout(() => {
-        if (notificacao && notificacao.parentNode) {
-            notificacao.remove();
-        }
-    }, 4000);
-}
-
 // Função para mostrar erro nas observações
 function mostrarErroObservacoes(mensagem) {
     const container = document.getElementById('observacoesContainer');
@@ -3588,122 +3459,6 @@ function mostrarErroObservacoes(mensagem) {
         </div>
     `;
 }
-
-// Função para abrir modal de edição de contato
-function abrirModalEditarContato(associado) {
-    // Preenche os campos
-    document.getElementById('editContatoId').value = associado.id;
-    document.getElementById('editContatoNome').textContent = associado.nome;
-    document.getElementById('editContatoTelefone').value = associado.telefone || '';
-    document.getElementById('editContatoEmail').value = associado.email || '';
-    document.getElementById('editContatoCep').value = associado.cep || '';
-    document.getElementById('editContatoEndereco').value = associado.endereco || '';
-    document.getElementById('editContatoNumero').value = associado.numero || '';
-    document.getElementById('editContatoComplemento').value = associado.complemento || '';
-    document.getElementById('editContatoBairro').value = associado.bairro || '';
-    document.getElementById('editContatoCidade').value = associado.cidade || '';
-
-    // Abre o modal
-    const modal = new bootstrap.Modal(document.getElementById('modalEditarContato'));
-    modal.show();
-}
-
-// Função para salvar contato editado
-function salvarContatoEditado() {
-    const form = document.getElementById('formEditarContato');
-    const formData = new FormData(form);
-
-    // Mostrar loading no botão
-    const btnSalvar = document.querySelector('#modalEditarContato button[onclick="salvarContatoEditado()"]');
-    const textoOriginal = btnSalvar.innerHTML;
-    btnSalvar.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Salvando...';
-    btnSalvar.disabled = true;
-
-    // Fazer requisição
-    $.ajax({
-        url: '../api/editar_contato_associado.php',
-        method: 'POST',
-        data: formData,
-        processData: false,
-        contentType: false,
-        success: function (response) {
-            if (response.status === 'success') {
-                // Fechar modal
-                const modal = bootstrap.Modal.getInstance(document.getElementById('modalEditarContato'));
-                modal.hide();
-
-                // Atualizar dados locais
-                const associadoId = document.getElementById('editContatoId').value;
-                const associado = todosAssociados.find(a => a.id == associadoId);
-                if (associado) {
-                    associado.telefone = document.getElementById('editContatoTelefone').value;
-                    associado.email = document.getElementById('editContatoEmail').value;
-                    associado.cep = document.getElementById('editContatoCep').value;
-                    associado.endereco = document.getElementById('editContatoEndereco').value;
-                    associado.numero = document.getElementById('editContatoNumero').value;
-                    associado.complemento = document.getElementById('editContatoComplemento').value;
-                    associado.bairro = document.getElementById('editContatoBairro').value;
-                    associado.cidade = document.getElementById('editContatoCidade').value;
-                }
-
-                // Recarregar tabela
-                aplicarFiltros();
-
-                alert('Informações de contato atualizadas com sucesso!');
-            } else {
-                alert('Erro: ' + (response.message || 'Erro desconhecido'));
-            }
-        },
-        error: function () {
-            alert('Erro ao salvar alterações. Tente novamente.');
-        },
-        complete: function () {
-            btnSalvar.innerHTML = textoOriginal;
-            btnSalvar.disabled = false;
-        }
-    });
-}
-
-// Atualizar a função abrirTab existente para carregar observações
-const abrirTabOriginal = window.abrirTab;
-window.abrirTab = function (tabName) {
-    // Remove active de todas as tabs
-    document.querySelectorAll('.tab-button').forEach(btn => {
-        btn.classList.remove('active');
-    });
-
-    document.querySelectorAll('.tab-content').forEach(content => {
-        content.classList.remove('active');
-    });
-
-    // Adiciona active na tab selecionada
-    const activeButton = document.querySelector(`.tab-button[onclick="abrirTab('${tabName}')"]`);
-    if (activeButton) {
-        activeButton.classList.add('active');
-    }
-
-    const activeContent = document.getElementById(`${tabName}-tab`);
-    if (activeContent) {
-        activeContent.classList.add('active');
-    }
-
-    // Se for a aba de observações, carregar dados APENAS se ainda não carregou
-    if (tabName === 'observacoes') {
-        const modalId = document.getElementById('modalId')?.textContent;
-        if (modalId) {
-            const associadoId = modalId.replace('Matrícula: ', '').trim();
-            if (associadoId && associadoId !== '-') {
-                // Só carrega se ainda não carregou para este associado
-                if (currentAssociadoIdObs !== associadoId || observacoesData.length === 0) {
-                    carregarObservacoes(associadoId);
-                } else {
-                    // Se já tem dados, apenas renderiza novamente
-                    renderizarObservacoes();
-                }
-            }
-        }
-    }
-};
 
 // Event Listeners para observações
 $(document).ready(function () {
