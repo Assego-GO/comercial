@@ -3,7 +3,7 @@
  * Página de Relatórios Comerciais - Sistema ASSEGO
  * pages/comercial_relatorios.php
  * 
- * VERSÃO FINAL - Sem Estatísticas Gerais
+ * VERSÃO COMPLETA - Com visualização de associados indicados
  */
 
 require_once '../config/config.php';
@@ -51,30 +51,6 @@ $headerComponent = HeaderComponent::create([
 try {
     $db = Database::getInstance(DB_NAME_CADASTRO)->getConnection();
 
-    // Total de associados
-    $stmt = $db->prepare("SELECT COUNT(*) as total FROM Associados WHERE situacao = 'Filiado'");
-    $stmt->execute();
-    $totalAssociados = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
-
-    // Total de desfiliações no mês
-    $stmt = $db->prepare("
-        SELECT COUNT(*) as total FROM Associados 
-        WHERE situacao IN ('DESFILIADO', 'Desfiliado') 
-        AND MONTH(data_desfiliacao) = MONTH(CURDATE())
-        AND YEAR(data_desfiliacao) = YEAR(CURDATE())
-    ");
-    $stmt->execute();
-    $desfiliacoesmes = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
-
-    // Total de novos cadastros no mês
-    $stmt = $db->prepare("
-        SELECT COUNT(*) as total FROM Associados 
-        WHERE MONTH(data_aprovacao) = MONTH(CURDATE())
-        AND YEAR(data_aprovacao) = YEAR(CURDATE())
-    ");
-    $stmt->execute();
-    $novosCadastrosMes = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
-
     // BUSCAR CORPORAÇÕES ÚNICAS DO BANCO
     $stmt = $db->prepare("
         SELECT DISTINCT corporacao 
@@ -94,17 +70,17 @@ try {
         AND patente != '' 
         ORDER BY 
             CASE 
-                WHEN patente LIKE '%Aluno%' THEN 1
-                WHEN patente LIKE '%Soldado%' THEN 2
-                WHEN patente LIKE '%Cabo%' THEN 3
-                WHEN patente LIKE '%Sargento%' THEN 4
-                WHEN patente LIKE '%Subtenente%' THEN 5
-                WHEN patente LIKE '%Suboficial%' THEN 6
-                WHEN patente LIKE '%Aspirante%' THEN 7
-                WHEN patente LIKE '%Tenente%' THEN 8
-                WHEN patente LIKE '%Capitão%' THEN 9
-                WHEN patente LIKE '%Major%' THEN 10
-                WHEN patente LIKE '%Coronel%' THEN 11
+                WHEN patente LIKE '%Coronel%' THEN 1
+                WHEN patente LIKE '%Tenente-Coronel%' THEN 2
+                WHEN patente LIKE '%Major%' THEN 3
+                WHEN patente LIKE '%Capitão%' THEN 4
+                WHEN patente LIKE '%Tenente%' THEN 5
+                WHEN patente LIKE '%Aspirante%' THEN 6
+                WHEN patente LIKE '%Subtenente%' THEN 7
+                WHEN patente LIKE '%Sargento%' THEN 8
+                WHEN patente LIKE '%Cabo%' THEN 9
+                WHEN patente LIKE '%Soldado%' THEN 10
+                WHEN patente LIKE '%Aluno%' THEN 11
                 ELSE 12
             END,
             patente
@@ -112,7 +88,7 @@ try {
     $stmt->execute();
     $patentesDB = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
-    // BUSCAR LOTAÇÕES ÚNICAS DO BANCO (limitado às 50 mais usadas)
+    // BUSCAR LOTAÇÕES ÚNICAS DO BANCO
     $stmt = $db->prepare("
         SELECT lotacao, COUNT(*) as total 
         FROM Militar 
@@ -120,13 +96,12 @@ try {
         AND lotacao != '' 
         GROUP BY lotacao 
         ORDER BY total DESC 
-        LIMIT 50
+        LIMIT 100
     ");
     $stmt->execute();
     $lotacoesDB = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
 } catch (Exception $e) {
-    $totalAssociados = $desfiliacoesmes = $novosCadastrosMes = 0;
     $corporacoesDB = [];
     $patentesDB = [];
     $lotacoesDB = [];
@@ -140,24 +115,21 @@ if (empty($corporacoesDB)) {
 
 if (empty($patentesDB)) {
     $patentesDB = [
-        'Aluno Soldado',
-        'Soldado 2ª Classe',
-        'Soldado 1ª Classe',
-        'Cabo',
-        'Terceiro Sargento',
-        'Terceiro-Sargento',
-        'Segundo Sargento',
-        'Segundo-Sargento',
-        'Primeiro Sargento',
-        'Primeiro-Sargento',
-        'Subtenente',
-        'Aspirante-a-Oficial',
-        'Segundo-Tenente',
-        'Primeiro-Tenente',
-        'Capitão',
-        'Major',
+        'Coronel',
         'Tenente-Coronel',
-        'Coronel'
+        'Major',
+        'Capitão',
+        'Primeiro-Tenente',
+        'Segundo-Tenente',
+        'Aspirante-a-Oficial',
+        'Subtenente',
+        'Primeiro-Sargento',
+        'Segundo-Sargento',
+        'Terceiro-Sargento',
+        'Cabo',
+        'Soldado 1ª Classe',
+        'Soldado 2ª Classe',
+        'Aluno Soldado'
     ];
 }
 ?>
@@ -179,17 +151,16 @@ if (empty($patentesDB)) {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap"
-        rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
     <!-- DataTables CSS -->
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/dataTables.bootstrap5.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.3.6/css/buttons.bootstrap5.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.4.1/css/responsive.bootstrap5.min.css">
 
     <!-- Select2 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css"
-        rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
 
     <!-- AOS Animation -->
     <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
@@ -235,7 +206,7 @@ if (empty($patentesDB)) {
 
         body {
             font-family: 'Plus Jakarta Sans', sans-serif;
-            background: #f5f7fa;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%);
             min-height: 100vh;
             position: relative;
         }
@@ -253,155 +224,75 @@ if (empty($patentesDB)) {
             animation: fadeIn 0.5s ease-in-out;
         }
 
-        /* Page Header */
+        /* Page Header Premium */
         .page-header {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.95) 100%);
+            backdrop-filter: blur(10px);
+            border-radius: 24px;
+            padding: 2.5rem;
             margin-bottom: 2rem;
-            padding: 0 0 1rem 0;
+            box-shadow: var(--shadow-lg);
+            border: 1px solid rgba(0, 86, 210, 0.1);
             position: relative;
+            overflow: hidden;
+        }
+
+        .page-header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -10%;
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, rgba(0, 86, 210, 0.05) 0%, transparent 70%);
+            border-radius: 50%;
         }
 
         .page-title {
-            font-size: 2rem;
+            font-size: 2.5rem;
             font-weight: 800;
-            color: var(--dark);
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
             margin-bottom: 0.5rem;
             letter-spacing: -0.5px;
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-        }
-
-        .page-title i {
-            color: var(--primary);
+            position: relative;
+            z-index: 1;
         }
 
         .page-subtitle {
             color: #64748b;
-            font-size: 1rem;
+            font-size: 1.125rem;
             font-weight: 500;
+            position: relative;
+            z-index: 1;
         }
 
-        /* Back Button */
+        /* Back Button Premium */
         .btn-back {
             display: inline-flex;
             align-items: center;
             gap: 0.5rem;
-            padding: 0.75rem 1.5rem;
+            padding: 0.875rem 1.75rem;
             background: linear-gradient(135deg, #64748b 0%, #475569 100%);
             color: white;
-            border-radius: 12px;
+            border-radius: 14px;
             text-decoration: none;
             font-weight: 600;
-            transition: all 0.3s ease;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             margin-bottom: 1.5rem;
             font-size: 0.95rem;
+            box-shadow: var(--shadow-md);
         }
 
         .btn-back:hover {
-            transform: translateX(-4px);
+            transform: translateX(-4px) translateY(-2px);
             color: white;
-            box-shadow: var(--shadow-lg);
+            box-shadow: var(--shadow-xl);
         }
 
-        /* Stats Grid */
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 2.5rem;
-        }
-
-        .stat-card {
-            background: white;
-            border-radius: 20px;
-            padding: 1.75rem;
-            position: relative;
-            overflow: hidden;
-            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            box-shadow: var(--shadow-md);
-            border: 1px solid rgba(0, 86, 210, 0.1);
-        }
-
-        .stat-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 4px;
-            background: linear-gradient(90deg, var(--primary), var(--primary-light));
-            transform: scaleX(0);
-            transform-origin: left;
-            transition: transform 0.4s ease;
-        }
-
-        .stat-card:hover::before {
-            transform: scaleX(1);
-        }
-
-        .stat-card:hover {
-            transform: translateY(-8px) scale(1.02);
-            box-shadow: var(--shadow-2xl);
-        }
-
-        .stat-icon {
-            width: 60px;
-            height: 60px;
-            border-radius: 16px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-            margin-bottom: 1.25rem;
-            position: relative;
-            z-index: 1;
-            box-shadow: var(--shadow-lg);
-        }
-
-        .stat-icon::after {
-            content: '';
-            position: absolute;
-            inset: -2px;
-            border-radius: 18px;
-            background: inherit;
-            filter: blur(10px);
-            opacity: 0.4;
-            z-index: -1;
-        }
-
-        .stat-icon.primary {
-            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-            color: white;
-        }
-
-        .stat-icon.success {
-            background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
-            color: white;
-        }
-
-        .stat-icon.danger {
-            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-            color: white;
-        }
-
-        .stat-value {
-            font-size: 2.25rem;
-            font-weight: 800;
-            color: var(--dark);
-            margin-bottom: 0.5rem;
-            line-height: 1;
-            letter-spacing: -1px;
-        }
-
-        .stat-label {
-            font-size: 0.875rem;
-            color: #64748b;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        /* Report Type Selector */
+        /* Report Type Selector Premium */
         .report-selector-container {
             background: white;
             border-radius: 24px;
@@ -410,31 +301,18 @@ if (empty($patentesDB)) {
             position: relative;
             overflow: hidden;
             margin-bottom: 2rem;
-        }
-
-        .report-selector-container::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 200px;
-            background: linear-gradient(180deg, rgba(0, 86, 210, 0.03) 0%, transparent 100%);
-            pointer-events: none;
+            border: 1px solid rgba(0, 86, 210, 0.05);
         }
 
         .section-header {
             margin-bottom: 2rem;
             padding-bottom: 1.5rem;
-            border-bottom: 2px solid transparent;
-            background: linear-gradient(90deg, var(--light) 0%, var(--light) 50%, transparent 50%);
-            background-size: 20px 2px;
-            background-repeat: repeat-x;
-            background-position: bottom;
+            border-bottom: 2px solid #f1f5f9;
+            position: relative;
         }
 
         .section-title {
-            font-size: 1.5rem;
+            font-size: 1.75rem;
             font-weight: 700;
             color: var(--dark);
             display: flex;
@@ -443,33 +321,34 @@ if (empty($patentesDB)) {
         }
 
         .section-title i {
-            width: 40px;
-            height: 40px;
+            width: 48px;
+            height: 48px;
             background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
             color: white;
-            border-radius: 12px;
+            border-radius: 14px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.125rem;
+            font-size: 1.25rem;
+            box-shadow: 0 8px 16px rgba(0, 86, 210, 0.2);
         }
 
         .report-type-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-            gap: 1.25rem;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
         }
 
         .report-type-card {
             background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
             border: 2px solid transparent;
-            border-radius: 16px;
-            padding: 1.75rem;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 18px;
+            padding: 2rem;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             cursor: pointer;
             display: flex;
             align-items: center;
-            gap: 1.25rem;
+            gap: 1.5rem;
             position: relative;
             overflow: hidden;
         }
@@ -477,101 +356,88 @@ if (empty($patentesDB)) {
         .report-type-card::before {
             content: '';
             position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 0;
-            height: 0;
-            border-radius: 50%;
-            background: rgba(0, 86, 210, 0.1);
-            transform: translate(-50%, -50%);
-            transition: width 0.6s, height 0.6s;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 100%;
+            background: linear-gradient(135deg, transparent 0%, rgba(0, 86, 210, 0.03) 100%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
         }
 
         .report-type-card:hover::before {
-            width: 400px;
-            height: 400px;
+            opacity: 1;
         }
 
         .report-type-card:hover,
         .report-type-card.active {
-            transform: translateY(-4px);
+            transform: translateY(-6px) scale(1.02);
             border-color: var(--primary);
-            box-shadow: 0 12px 24px rgba(0, 86, 210, 0.15);
-            background: white;
+            box-shadow: 0 20px 40px rgba(0, 86, 210, 0.15);
         }
 
         .report-type-card.active {
-            border-width: 3px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+        }
+
+        .report-type-card.active .report-content h5,
+        .report-type-card.active .report-content p {
+            color: white;
+        }
+
+        .report-type-card.active .report-icon {
+            background: white;
+            color: var(--primary);
         }
 
         .report-icon {
-            width: 56px;
-            height: 56px;
-            border-radius: 16px;
+            width: 64px;
+            height: 64px;
+            border-radius: 18px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.375rem;
+            font-size: 1.5rem;
             flex-shrink: 0;
             transition: all 0.3s ease;
             position: relative;
             z-index: 1;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            color: white;
+            box-shadow: 0 8px 16px rgba(0, 86, 210, 0.2);
         }
 
         .report-type-card:hover .report-icon {
-            transform: rotate(5deg) scale(1.1);
-        }
-
-        .report-icon.danger {
-            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-            color: white;
-            box-shadow: 0 4px 14px rgba(239, 68, 68, 0.4);
-        }
-
-        .report-icon.success {
-            background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
-            color: white;
-            box-shadow: 0 4px 14px rgba(34, 197, 94, 0.4);
-        }
-
-        .report-icon.warning {
-            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-            color: white;
-            box-shadow: 0 4px 14px rgba(245, 158, 11, 0.4);
-        }
-
-        .report-icon.primary {
-            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-            color: white;
-            box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4);
+            transform: rotate(10deg) scale(1.1);
         }
 
         .report-content h5 {
-            margin: 0 0 0.375rem 0;
-            font-size: 1.125rem;
+            margin: 0 0 0.5rem 0;
+            font-size: 1.25rem;
             font-weight: 700;
             color: var(--dark);
         }
 
         .report-content p {
             margin: 0;
-            font-size: 0.9rem;
+            font-size: 0.95rem;
             color: #64748b;
             line-height: 1.5;
         }
 
-        /* Filters Section */
+        /* Filters Section Premium */
         .filters-container {
             background: white;
             border-radius: 20px;
-            padding: 2rem;
+            padding: 2.5rem;
             box-shadow: var(--shadow-lg);
             margin-bottom: 2rem;
+            border: 1px solid rgba(0, 86, 210, 0.05);
         }
 
         .filter-row {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             gap: 1.5rem;
             margin-bottom: 1.5rem;
         }
@@ -588,6 +454,11 @@ if (empty($patentesDB)) {
             display: flex;
             align-items: center;
             gap: 0.5rem;
+        }
+
+        .form-label-premium i {
+            color: var(--primary);
+            font-size: 1rem;
         }
 
         .form-control-premium,
@@ -608,28 +479,16 @@ if (empty($patentesDB)) {
             outline: none;
         }
 
-        /* Info badges */
-        .filter-info-badge {
-            display: inline-block;
-            background: var(--info);
-            color: white;
-            padding: 0.25rem 0.5rem;
-            border-radius: 6px;
-            font-size: 0.7rem;
-            margin-left: 0.5rem;
-            font-weight: 600;
-        }
-
-        /* Buttons */
+        /* Buttons Premium */
         .btn-premium {
-            padding: 0.75rem 1.5rem;
-            border-radius: 12px;
+            padding: 0.875rem 2rem;
+            border-radius: 14px;
             font-weight: 600;
-            font-size: 0.95rem;
+            font-size: 1rem;
             border: none;
             position: relative;
             overflow: hidden;
-            transition: all 0.3s ease;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             text-transform: uppercase;
             letter-spacing: 0.5px;
             box-shadow: var(--shadow-md);
@@ -660,31 +519,43 @@ if (empty($patentesDB)) {
         }
 
         .btn-primary-premium:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(0, 86, 210, 0.3);
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 0 12px 24px rgba(0, 86, 210, 0.3);
             color: white;
         }
 
-        /* Results Container */
+        .btn-secondary-premium {
+            background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+            color: white;
+        }
+
+        .btn-secondary-premium:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(100, 116, 139, 0.3);
+            color: white;
+        }
+
+        /* Results Container Premium */
         .results-container {
             background: white;
             border-radius: 20px;
-            padding: 2rem;
+            padding: 2.5rem;
             box-shadow: var(--shadow-lg);
-            min-height: 400px;
+            min-height: 500px;
+            border: 1px solid rgba(0, 86, 210, 0.05);
         }
 
         .results-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 1.5rem;
-            padding-bottom: 1rem;
+            margin-bottom: 2rem;
+            padding-bottom: 1.5rem;
             border-bottom: 2px solid #f1f5f9;
         }
 
         .results-title {
-            font-size: 1.25rem;
+            font-size: 1.5rem;
             font-weight: 700;
             color: var(--dark);
             display: flex;
@@ -692,24 +563,27 @@ if (empty($patentesDB)) {
             gap: 0.75rem;
         }
 
+        .results-title i {
+            color: var(--primary);
+        }
+
         .export-buttons {
             display: flex;
-            gap: 0.5rem;
+            gap: 0.75rem;
         }
 
         .btn-export {
-            padding: 0.5rem 1rem;
-            border-radius: 8px;
-            font-size: 0.875rem;
+            padding: 0.625rem 1.25rem;
+            border-radius: 10px;
+            font-size: 0.9rem;
             font-weight: 600;
             border: none;
             transition: all 0.3s ease;
             cursor: pointer;
-        }
-
-        .btn-export-csv {
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-            color: white;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            box-shadow: var(--shadow-sm);
         }
 
         .btn-export-excel {
@@ -722,30 +596,42 @@ if (empty($patentesDB)) {
             color: white;
         }
 
-        .btn-export:hover {
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-lg);
+        .btn-export-print {
+            background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+            color: white;
         }
 
-        /* Loading */
+        .btn-export:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        /* Loading Premium */
         .loading-container {
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            padding: 3rem;
+            padding: 4rem;
         }
 
         .spinner-premium {
-            width: 60px;
-            height: 60px;
+            width: 80px;
+            height: 80px;
             border: 4px solid rgba(0, 86, 210, 0.1);
             border-top-color: var(--primary);
             border-radius: 50%;
-            animation: spin 1s linear infinite;
+            animation: spin 1s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite;
         }
 
-        /* Toast */
+        .loading-text {
+            margin-top: 1.5rem;
+            font-size: 1.125rem;
+            color: #64748b;
+            font-weight: 500;
+        }
+
+        /* Toast Premium */
         .toast-container {
             position: fixed;
             top: 20px;
@@ -753,17 +639,175 @@ if (empty($patentesDB)) {
             z-index: 9999;
         }
 
+        .toast-premium {
+            background: white;
+            border-radius: 12px;
+            padding: 1rem 1.5rem;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            animation: slideIn 0.3s ease;
+            border-left: 4px solid;
+            min-width: 300px;
+        }
+
+        .toast-premium.success {
+            border-left-color: var(--success);
+        }
+
+        .toast-premium.error {
+            border-left-color: var(--danger);
+        }
+
+        .toast-premium.warning {
+            border-left-color: var(--warning);
+        }
+
+        .toast-premium.info {
+            border-left-color: var(--info);
+        }
+
         /* DataTable Custom Style */
+        .dataTables_wrapper {
+            padding-top: 1rem;
+        }
+
         .dataTables_wrapper .dataTables_paginate .paginate_button.current {
-            background: var(--primary) !important;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%) !important;
             color: white !important;
             border: none !important;
+            border-radius: 8px !important;
         }
 
         .dataTables_wrapper .dataTables_paginate .paginate_button:hover {
             background: var(--primary-light) !important;
             color: white !important;
             border: none !important;
+            border-radius: 8px !important;
+        }
+
+        table.dataTable {
+            border-collapse: separate !important;
+            border-spacing: 0;
+            width: 100% !important;
+        }
+
+        table.dataTable thead th {
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            font-weight: 600;
+            color: var(--dark);
+            border-bottom: 2px solid #e2e8f0;
+            white-space: nowrap;
+        }
+
+        table.dataTable tbody tr:hover {
+            background: rgba(0, 86, 210, 0.03);
+        }
+
+        table.dataTable tbody td {
+            vertical-align: middle;
+        }
+
+        /* Badge Premium */
+        .badge-premium {
+            padding: 0.375rem 0.75rem;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.875rem;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            color: white;
+            box-shadow: 0 2px 4px rgba(0, 86, 210, 0.2);
+        }
+
+        .badge-status {
+            padding: 0.25rem 0.75rem;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.825rem;
+            display: inline-block;
+        }
+
+        .badge-status.ativo {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+        }
+
+        .badge-status.inativo {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+        }
+
+        .badge-status.pre-cadastro {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: white;
+        }
+
+        /* Alert Premium */
+        .alert-premium {
+            border-radius: 14px;
+            padding: 1.25rem;
+            border: none;
+            box-shadow: var(--shadow-sm);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .alert-premium.info {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(59, 130, 246, 0.05) 100%);
+            color: var(--info);
+        }
+
+        /* Indicações Card Especial */
+        .indicacao-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid #e2e8f0;
+            margin-bottom: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .indicacao-card:hover {
+            box-shadow: var(--shadow-md);
+            transform: translateY(-2px);
+        }
+
+        .indicacao-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .indicacao-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+
+        .info-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .info-label {
+            font-size: 0.825rem;
+            color: #64748b;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .info-value {
+            font-size: 0.95rem;
+            color: var(--dark);
+            font-weight: 500;
         }
 
         /* Animações */
@@ -772,7 +816,6 @@ if (empty($patentesDB)) {
                 opacity: 0;
                 transform: translateY(20px);
             }
-
             to {
                 opacity: 1;
                 transform: translateY(0);
@@ -785,13 +828,23 @@ if (empty($patentesDB)) {
             }
         }
 
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
         /* Responsivo */
         @media (max-width: 768px) {
             .content-area {
-                padding: 1.5rem;
+                padding: 1rem;
             }
 
-            .stats-grid,
             .report-type-grid {
                 grid-template-columns: 1fr;
             }
@@ -801,17 +854,22 @@ if (empty($patentesDB)) {
             }
 
             .page-title {
-                font-size: 1.75rem;
+                font-size: 2rem;
             }
 
             .results-header {
                 flex-direction: column;
                 gap: 1rem;
+                align-items: flex-start;
             }
 
             .export-buttons {
                 width: 100%;
-                justify-content: center;
+                justify-content: flex-start;
+            }
+
+            table.dataTable {
+                font-size: 0.875rem;
             }
         }
     </style>
@@ -819,7 +877,7 @@ if (empty($patentesDB)) {
 
 <body>
     <!-- Toast Container -->
-    <div class="toast-container position-fixed top-0 end-0 p-3"></div>
+    <div class="toast-container"></div>
 
     <!-- Main Content -->
     <div class="main-wrapper">
@@ -835,76 +893,48 @@ if (empty($patentesDB)) {
             </a>
 
             <!-- Page Header -->
-            <div class="page-header animate__animated animate__fadeInDown">
+            <div class="page-header" data-aos="fade-down" data-aos-duration="600">
                 <h1 class="page-title">
+                    <i class="fas fa-chart-line me-3"></i>
                     Relatórios Comerciais
                 </h1>
                 <p class="page-subtitle">
-                    Gere relatórios detalhados sobre cadastros, desfiliações e indicações
+                    Sistema avançado de geração de relatórios para análise comercial e estratégica
                 </p>
             </div>
 
-            <!-- Stats Grid -->
-            <div class="stats-grid" data-aos="fade-up" data-aos-delay="100">
-                <div class="stat-card">
-                    <div class="stat-icon primary">
-                        <i class="fas fa-users"></i>
-                    </div>
-                    <div class="stat-value"><?php echo number_format($totalAssociados, 0, ',', '.'); ?></div>
-                    <div class="stat-label">Total de Associados</div>
-                </div>
-
-                <div class="stat-card">
-                    <div class="stat-icon success">
-                        <i class="fas fa-user-plus"></i>
-                    </div>
-                    <div class="stat-value"><?php echo $novosCadastrosMes; ?></div>
-                    <div class="stat-label">Novos no Mês</div>
-                </div>
-
-                <div class="stat-card">
-                    <div class="stat-icon danger">
-                        <i class="fas fa-user-times"></i>
-                    </div>
-                    <div class="stat-value"><?php echo $desfiliacoesmes; ?></div>
-                    <div class="stat-label">Desfiliações no Mês</div>
-                </div>
-            </div>
-
-            <!-- Report Type Selector - SEM ESTATÍSTICAS -->
-            <div class="report-selector-container" data-aos="fade-up" data-aos-delay="200">
+            <!-- Report Type Selector -->
+            <div class="report-selector-container" data-aos="fade-up" data-aos-delay="100">
                 <div class="section-header">
                     <h3 class="section-title">
-                        <i class="fas fa-chart-bar"></i>
+                        <i class="fas fa-clipboard-list"></i>
                         Selecione o Tipo de Relatório
                     </h3>
                 </div>
 
                 <div class="report-type-grid">
-                    <div class="report-type-card" data-type="desfiliacoes"
-                        onclick="selecionarRelatorio('desfiliacoes')">
-                        <div class="report-icon danger">
+                    <div class="report-type-card active" data-type="desfiliacoes" onclick="selecionarRelatorio('desfiliacoes')">
+                        <div class="report-icon">
                             <i class="fas fa-user-times"></i>
                         </div>
                         <div class="report-content">
                             <h5>Desfiliações</h5>
-                            <p>Associados desfiliados por período</p>
+                            <p>Análise de associados desfiliados</p>
                         </div>
                     </div>
 
                     <div class="report-type-card" data-type="indicacoes" onclick="selecionarRelatorio('indicacoes')">
-                        <div class="report-icon success">
+                        <div class="report-icon">
                             <i class="fas fa-user-plus"></i>
                         </div>
                         <div class="report-content">
                             <h5>Indicações</h5>
-                            <p>Ranking de indicadores</p>
+                            <p>Relatório completo de indicações</p>
                         </div>
                     </div>
 
-                    <div class="report-type-card" data-type="aniversariantes"
-                        onclick="selecionarRelatorio('aniversariantes')">
-                        <div class="report-icon warning">
+                    <div class="report-type-card" data-type="aniversariantes" onclick="selecionarRelatorio('aniversariantes')">
+                        <div class="report-icon">
                             <i class="fas fa-birthday-cake"></i>
                         </div>
                         <div class="report-content">
@@ -913,25 +943,24 @@ if (empty($patentesDB)) {
                         </div>
                     </div>
 
-                    <div class="report-type-card" data-type="novos_cadastros"
-                        onclick="selecionarRelatorio('novos_cadastros')">
-                        <div class="report-icon primary">
+                    <div class="report-type-card" data-type="novos_cadastros" onclick="selecionarRelatorio('novos_cadastros')">
+                        <div class="report-icon">
                             <i class="fas fa-user-check"></i>
                         </div>
                         <div class="report-content">
                             <h5>Novos Cadastros</h5>
-                            <p>Associados cadastrados no período</p>
+                            <p>Associados recém cadastrados</p>
                         </div>
                     </div>
                 </div>
             </div>
 
             <!-- Filters Section -->
-            <div class="filters-container" data-aos="fade-up" data-aos-delay="300">
+            <div class="filters-container" data-aos="fade-up" data-aos-delay="200">
                 <div class="section-header">
                     <h3 class="section-title">
                         <i class="fas fa-filter"></i>
-                        Filtros do Relatório
+                        Configuração de Filtros
                     </h3>
                 </div>
 
@@ -941,7 +970,7 @@ if (empty($patentesDB)) {
                     <div class="filter-row">
                         <div class="form-group-premium">
                             <label class="form-label-premium">
-                                <i class="fas fa-calendar"></i>
+                                <i class="fas fa-calendar-alt"></i>
                                 Data Inicial
                             </label>
                             <input type="date" name="data_inicio" class="form-control-premium" id="dataInicio"
@@ -950,7 +979,7 @@ if (empty($patentesDB)) {
 
                         <div class="form-group-premium">
                             <label class="form-label-premium">
-                                <i class="fas fa-calendar"></i>
+                                <i class="fas fa-calendar-check"></i>
                                 Data Final
                             </label>
                             <input type="date" name="data_fim" class="form-control-premium" id="dataFim"
@@ -961,9 +990,6 @@ if (empty($patentesDB)) {
                             <label class="form-label-premium">
                                 <i class="fas fa-building"></i>
                                 Corporação
-                                <?php if(count($corporacoesDB) > 0): ?>
-                                    <span class="filter-info-badge"><?php echo count($corporacoesDB); ?> opções</span>
-                                <?php endif; ?>
                             </label>
                             <select name="corporacao" class="form-select-premium select2" id="corporacao">
                                 <option value="">Todas as corporações</option>
@@ -981,9 +1007,6 @@ if (empty($patentesDB)) {
                             <label class="form-label-premium">
                                 <i class="fas fa-star"></i>
                                 Patente
-                                <?php if(count($patentesDB) > 0): ?>
-                                    <span class="filter-info-badge"><?php echo count($patentesDB); ?> patentes</span>
-                                <?php endif; ?>
                             </label>
                             <select name="patente" class="form-select-premium select2" id="patente">
                                 <option value="">Todas as patentes</option>
@@ -1003,9 +1026,6 @@ if (empty($patentesDB)) {
                             <label class="form-label-premium">
                                 <i class="fas fa-map-marker-alt"></i>
                                 Lotação
-                                <?php if(count($lotacoesDB) > 0): ?>
-                                    <span class="filter-info-badge">Top <?php echo count($lotacoesDB); ?> lotações</span>
-                                <?php endif; ?>
                             </label>
                             <select name="lotacao" class="form-select-premium select2" id="lotacao">
                                 <option value="">Todas as lotações</option>
@@ -1021,13 +1041,13 @@ if (empty($patentesDB)) {
 
                         <div class="form-group-premium">
                             <label class="form-label-premium">
-                                <i class="fas fa-sort"></i>
+                                <i class="fas fa-sort-alpha-down"></i>
                                 Ordenar Por
                             </label>
                             <select name="ordenacao" class="form-select-premium" id="ordenacao">
-                                <option value="nome">Nome</option>
-                                <option value="data">Data</option>
-                                <option value="patente">Patente</option>
+                                <option value="nome">Nome (A-Z)</option>
+                                <option value="data">Data (Mais recente)</option>
+                                <option value="patente">Patente (Hierarquia)</option>
                                 <option value="corporacao">Corporação</option>
                             </select>
                         </div>
@@ -1035,10 +1055,10 @@ if (empty($patentesDB)) {
                         <div class="form-group-premium">
                             <label class="form-label-premium">
                                 <i class="fas fa-search"></i>
-                                Buscar
+                                Busca Rápida
                             </label>
                             <input type="text" name="busca" class="form-control-premium" id="busca"
-                                placeholder="Nome, CPF ou RG do associado...">
+                                placeholder="Nome, CPF ou RG...">
                         </div>
 
                         <div class="form-group-premium d-flex align-items-end">
@@ -1050,9 +1070,9 @@ if (empty($patentesDB)) {
                         </div>
                     </div>
 
-                    <!-- Botão de reset dos filtros -->
+                    <!-- Botões de ação -->
                     <div class="text-center mt-3">
-                        <button type="button" class="btn btn-secondary btn-sm" onclick="limparFiltros()">
+                        <button type="button" class="btn btn-premium btn-secondary-premium" onclick="limparFiltros()">
                             <i class="fas fa-eraser me-2"></i>
                             Limpar Filtros
                         </button>
@@ -1061,25 +1081,25 @@ if (empty($patentesDB)) {
             </div>
 
             <!-- Results Container -->
-            <div class="results-container" data-aos="fade-up" data-aos-delay="400">
+            <div class="results-container" data-aos="fade-up" data-aos-delay="300">
                 <div class="results-header">
                     <h5 class="results-title">
                         <i class="fas fa-table"></i>
-                        <span id="tituloResultado">Resultado do Relatório</span>
-                        <span class="badge bg-primary ms-2" id="totalRegistros" style="display: none;">0</span>
+                        <span id="tituloResultado">Aguardando Geração do Relatório</span>
+                        <span class="badge-premium ms-3" id="totalRegistros" style="display: none;">0</span>
                     </h5>
                     <div class="export-buttons" id="exportButtons" style="display: none;">
-                        <button class="btn-export btn-export-csv" onclick="exportarRelatorio('csv')">
-                            <i class="fas fa-file-csv me-1"></i>
-                            CSV
-                        </button>
                         <button class="btn-export btn-export-excel" onclick="exportarRelatorio('excel')">
-                            <i class="fas fa-file-excel me-1"></i>
+                            <i class="fas fa-file-excel"></i>
                             Excel
                         </button>
                         <button class="btn-export btn-export-pdf" onclick="exportarRelatorio('pdf')">
-                            <i class="fas fa-file-pdf me-1"></i>
+                            <i class="fas fa-file-pdf"></i>
                             PDF
+                        </button>
+                        <button class="btn-export btn-export-print" onclick="imprimirRelatorio()">
+                            <i class="fas fa-print"></i>
+                            Imprimir
                         </button>
                     </div>
                 </div>
@@ -1087,26 +1107,27 @@ if (empty($patentesDB)) {
                 <!-- Loading -->
                 <div id="loadingContainer" class="loading-container" style="display: none;">
                     <div class="spinner-premium"></div>
-                    <p class="mt-3 text-muted">Gerando relatório, aguarde...</p>
+                    <p class="loading-text">Processando relatório...</p>
                 </div>
 
                 <!-- Results -->
                 <div id="resultsContainer">
-                    <div class="alert alert-info">
-                        <i class="fas fa-info-circle me-2"></i>
-                        Selecione o tipo de relatório e configure os filtros desejados, depois clique em "Gerar Relatório".
+                    <div class="alert-premium info">
+                        <i class="fas fa-info-circle fa-lg"></i>
+                        <div>
+                            <strong>Pronto para gerar relatórios!</strong><br>
+                            Configure os filtros desejados e clique em "Gerar Relatório" para visualizar os dados.
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.4/js/dataTables.bootstrap5.min.js"></script>
-
-    <!-- Bibliotecas para botões do DataTables -->
     <script src="https://cdn.datatables.net/buttons/2.3.6/js/dataTables.buttons.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.bootstrap5.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
@@ -1114,9 +1135,8 @@ if (empty($patentesDB)) {
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
     <script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.html5.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.print.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.colVis.min.js"></script>
-
-    <!-- Select2 e AOS -->
+    <script src="https://cdn.datatables.net/responsive/2.4.1/js/dataTables.responsive.min.js"></script>
+    <script src="https://cdn.datatables.net/responsive/2.4.1/js/responsive.bootstrap5.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
 
@@ -1128,9 +1148,6 @@ if (empty($patentesDB)) {
         let currentReportType = 'desfiliacoes';
         let currentReportData = null;
         let dataTable = null;
-        let currentPage = 1;
-        let totalPages = 1;
-        let registrosPorPagina = 50;
 
         // Inicialização
         $(document).ready(function () {
@@ -1141,8 +1158,8 @@ if (empty($patentesDB)) {
                 offset: 50
             });
 
-            // Inicializar Select2 com busca melhorada
-            $('#corporacao, #patente, #lotacao').select2({
+            // Inicializar Select2
+            $('.select2').select2({
                 theme: 'bootstrap-5',
                 width: '100%',
                 placeholder: function() {
@@ -1152,46 +1169,14 @@ if (empty($patentesDB)) {
                 language: {
                     noResults: function() {
                         return "Nenhum resultado encontrado";
-                    },
-                    searching: function() {
-                        return "Buscando...";
-                    },
-                    inputTooShort: function() {
-                        return "Digite para buscar";
                     }
                 }
             });
-
-            // Adiciona efeito de ondulação nos cards
-            document.querySelectorAll('.report-type-card').forEach(card => {
-                card.addEventListener('click', function (e) {
-                    document.querySelectorAll('.report-type-card').forEach(c => c.classList.remove('active'));
-                    this.classList.add('active');
-                });
-            });
-
-            // Marcar o primeiro como ativo
-            document.querySelector('.report-type-card[data-type="desfiliacoes"]').classList.add('active');
         });
-
-        // Função para limpar filtros
-        function limparFiltros() {
-            $('#formFiltros')[0].reset();
-            
-            // Limpar Select2
-            $('#corporacao, #patente, #lotacao').val(null).trigger('change');
-            
-            // Resetar datas para o padrão
-            $('#dataInicio').val(new Date().toISOString().slice(0, 8) + '01');
-            $('#dataFim').val(new Date().toISOString().slice(0, 10));
-            
-            showToast('Filtros limpos!', 'info');
-        }
 
         // Selecionar tipo de relatório
         function selecionarRelatorio(tipo) {
             currentReportType = tipo;
-            currentPage = 1;
             document.getElementById('tipoRelatorio').value = tipo;
 
             // Atualizar visual dos cards
@@ -1202,19 +1187,21 @@ if (empty($patentesDB)) {
                 }
             });
 
-            ajustarFiltros(tipo);
-            showToast(`Relatório de ${getNomeTipoRelatorio(tipo)} selecionado`, 'info');
-        }
+            // Limpar resultados anteriores
+            document.getElementById('resultsContainer').innerHTML = `
+                <div class="alert-premium info">
+                    <i class="fas fa-info-circle fa-lg"></i>
+                    <div>
+                        <strong>Tipo de relatório alterado!</strong><br>
+                        Configure os filtros e clique em "Gerar Relatório" para visualizar os dados.
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('exportButtons').style.display = 'none';
+            document.getElementById('totalRegistros').style.display = 'none';
 
-        // Ajustar filtros baseado no tipo de relatório
-        function ajustarFiltros(tipo) {
-            if (tipo === 'aniversariantes') {
-                document.getElementById('dataInicio').value = new Date().toISOString().slice(0, 8) + '01';
-                document.getElementById('dataFim').value = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().slice(0, 10);
-            } else {
-                document.getElementById('dataInicio').value = new Date().toISOString().slice(0, 8) + '01';
-                document.getElementById('dataFim').value = new Date().toISOString().slice(0, 10);
-            }
+            showToast(`Relatório de ${getNomeTipoRelatorio(tipo)} selecionado`, 'info');
         }
 
         // Obter nome do tipo de relatório
@@ -1228,15 +1215,10 @@ if (empty($patentesDB)) {
             return nomes[tipo] || 'Relatório';
         }
 
-        // Gerar relatório com paginação
-        async function gerarRelatorio(pagina = 1) {
-            currentPage = pagina;
+        // Gerar relatório
+        async function gerarRelatorio() {
             const formData = new FormData(document.getElementById('formFiltros'));
-
-            // Adicionar parâmetros de paginação
             const params = new URLSearchParams(formData);
-            params.append('pagina', pagina);
-            params.append('registros_por_pagina', registrosPorPagina);
 
             // Validar datas
             const dataInicio = document.getElementById('dataInicio').value;
@@ -1257,22 +1239,16 @@ if (empty($patentesDB)) {
             document.getElementById('resultsContainer').innerHTML = '';
             document.getElementById('exportButtons').style.display = 'none';
             document.getElementById('totalRegistros').style.display = 'none';
+            document.getElementById('tituloResultado').textContent = 'Processando...';
 
             try {
                 const response = await fetch(`../api/relatorios/gerar_relatorio_comercial.php?${params.toString()}`);
-                const text = await response.text();
-                let data;
-
-                try {
-                    data = JSON.parse(text);
-                } catch (e) {
-                    console.error('Resposta não é JSON:', text);
-                    throw new Error('Erro ao processar resposta do servidor');
-                }
-
+                
                 if (!response.ok) {
-                    throw new Error(data.message || `Erro HTTP: ${response.status}`);
+                    throw new Error(`Erro HTTP: ${response.status}`);
                 }
+
+                const data = await response.json();
 
                 if (data.success) {
                     currentReportData = data;
@@ -1280,99 +1256,178 @@ if (empty($patentesDB)) {
                     document.getElementById('exportButtons').style.display = 'flex';
                     showToast('Relatório gerado com sucesso!', 'success');
                 } else {
-                    mostrarErro(data.message || 'Erro ao gerar relatório');
+                    throw new Error(data.message || 'Erro ao gerar relatório');
                 }
             } catch (error) {
                 console.error('Erro:', error);
-                mostrarErro(error.message || 'Erro ao processar relatório. Verifique sua conexão.');
+                mostrarErro(error.message || 'Erro ao processar relatório');
             } finally {
                 document.getElementById('loadingContainer').style.display = 'none';
             }
         }
 
-        // Renderizar relatório com controles de paginação
+        // Renderizar relatório
         function renderizarRelatorio(response) {
             const container = document.getElementById('resultsContainer');
             const data = response.data || [];
-            const paginacao = response.paginacao;
 
             // Atualizar título
-            document.getElementById('tituloResultado').textContent = `${getNomeTipoRelatorio(currentReportType)} - Resultados`;
-
-            // Atualizar contador com informações de paginação
-            if (paginacao) {
-                document.getElementById('totalRegistros').innerHTML = `
-                    ${paginacao.registros_inicio}-${paginacao.registros_fim} de ${paginacao.total_registros}
-                `;
-                document.getElementById('totalRegistros').style.display = 'inline-block';
-                totalPages = paginacao.total_paginas;
-            } else {
-                document.getElementById('totalRegistros').textContent = data.length;
-                document.getElementById('totalRegistros').style.display = 'inline-block';
-            }
+            document.getElementById('tituloResultado').textContent = `${getNomeTipoRelatorio(currentReportType)} - ${data.length} registros`;
+            document.getElementById('totalRegistros').textContent = data.length;
+            document.getElementById('totalRegistros').style.display = 'inline-block';
 
             if (data.length === 0) {
                 container.innerHTML = `
-                    <div class="alert alert-warning">
-                        <i class="fas fa-exclamation-triangle me-2"></i>
-                        Nenhum registro encontrado com os filtros aplicados.
-                        <br><small class="text-muted mt-2">
-                            Tente ajustar os filtros ou verificar se os dados existem no período selecionado.
-                        </small>
+                    <div class="alert-premium info">
+                        <i class="fas fa-exclamation-circle fa-lg"></i>
+                        <div>
+                            <strong>Nenhum registro encontrado</strong><br>
+                            Tente ajustar os filtros ou verificar se existem dados no período selecionado.
+                        </div>
                     </div>
                 `;
                 return;
             }
 
-            // Criar tabela HTML
+            // Renderização especial para INDICAÇÕES com dados do associado indicado
+            if (currentReportType === 'indicacoes') {
+                renderizarRelatorioIndicacoes(data);
+                return;
+            }
+
+            // Criar tabela para outros relatórios
             let tableHTML = '<div class="table-responsive"><table id="reportTable" class="table table-striped table-hover">';
-
-            // Headers baseados no tipo de relatório
+            
+            // Headers
             const headers = getTableHeaders(currentReportType);
-            tableHTML += '<thead class="table-dark"><tr>';
-
-            // Adicionar coluna de número
+            tableHTML += '<thead><tr>';
             tableHTML += '<th width="50">#</th>';
-
             headers.forEach(header => {
                 tableHTML += `<th>${header.label}</th>`;
             });
             tableHTML += '</tr></thead><tbody>';
 
-            // Dados com numeração
-            const startIndex = paginacao ? paginacao.registros_inicio : 1;
+            // Dados
             data.forEach((row, index) => {
                 tableHTML += '<tr>';
-                tableHTML += `<td>${startIndex + index}</td>`;
+                tableHTML += `<td>${index + 1}</td>`;
                 headers.forEach(header => {
-                    const value = row[header.key] || '';
+                    const value = row[header.key] || '-';
                     tableHTML += `<td>${formatValue(value, header.type)}</td>`;
                 });
                 tableHTML += '</tr>';
             });
 
             tableHTML += '</tbody></table></div>';
-
-            // Adicionar controles de paginação
-            if (paginacao && paginacao.total_paginas > 1) {
-                tableHTML += renderizarPaginacao(paginacao);
-            }
-
             container.innerHTML = tableHTML;
 
-            // Inicializar DataTable sem paginação própria
+            inicializarDataTable();
+        }
+
+        // Renderizar relatório de indicações especial
+        function renderizarRelatorioIndicacoes(data) {
+            const container = document.getElementById('resultsContainer');
+            
+            // Criar tabela detalhada para indicações
+            let tableHTML = `
+                <div class="table-responsive">
+                    <table id="reportTable" class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th width="40">#</th>
+                                <th>Data</th>
+                                <th colspan="3" style="background: #e0f2fe;">INDICADOR (Quem indicou)</th>
+                                <th colspan="6" style="background: #dcfce7;">ASSOCIADO INDICADO</th>
+                                <th>Status</th>
+                                <th>Totais</th>
+                            </tr>
+                            <tr>
+                                <th></th>
+                                <th>Indicação</th>
+                                <!-- Indicador -->
+                                <th style="background: #f0f9ff;">Nome</th>
+                                <th style="background: #f0f9ff;">Patente</th>
+                                <th style="background: #f0f9ff;">Corporação</th>
+                                <!-- Associado Indicado -->
+                                <th style="background: #f0fdf4;">Nome</th>
+                                <th style="background: #f0fdf4;">CPF</th>
+                                <th style="background: #f0fdf4;">Telefone</th>
+                                <th style="background: #f0fdf4;">Patente</th>
+                                <th style="background: #f0fdf4;">Corporação</th>
+                                <th style="background: #f0fdf4;">Lotação</th>
+                                <!-- Status e Totais -->
+                                <th>Situação</th>
+                                <th>Indicações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+
+            // Processar dados
+            data.forEach((row, index) => {
+                // Determinar cor do status
+                let statusClass = 'badge-status ';
+                let statusText = row.status_simplificado || row.situacao_associado || 'Desconhecido';
+                
+                if (statusText.toLowerCase().includes('ativo') || statusText.toLowerCase().includes('filiado')) {
+                    statusClass += 'ativo';
+                } else if (statusText.toLowerCase().includes('desfil') || statusText.toLowerCase().includes('inativ')) {
+                    statusClass += 'inativo';
+                } else if (row.tipo_cadastro === 'Pré-cadastro') {
+                    statusClass += 'pre-cadastro';
+                }
+
+                tableHTML += '<tr>';
+                tableHTML += `<td>${index + 1}</td>`;
+                tableHTML += `<td>${formatValue(row.data_indicacao, 'date')}</td>`;
+                
+                // Dados do Indicador
+                tableHTML += `<td style="background: #f0f9ff;"><strong>${row.indicador_nome || '-'}</strong></td>`;
+                tableHTML += `<td style="background: #f0f9ff;">${row.indicador_patente || '-'}</td>`;
+                tableHTML += `<td style="background: #f0f9ff;">${row.indicador_corporacao || '-'}</td>`;
+                
+                // Dados do Associado Indicado
+                tableHTML += `<td style="background: #f0fdf4;"><strong>${row.associado_indicado_nome || '-'}</strong></td>`;
+                tableHTML += `<td style="background: #f0fdf4;">${formatValue(row.associado_indicado_cpf_formatado || row.associado_indicado_cpf, 'cpf')}</td>`;
+                tableHTML += `<td style="background: #f0fdf4;">${formatValue(row.associado_indicado_telefone_formatado || row.associado_indicado_telefone, 'phone')}</td>`;
+                tableHTML += `<td style="background: #f0fdf4;">${row.associado_indicado_patente || '-'}</td>`;
+                tableHTML += `<td style="background: #f0fdf4;">${row.associado_indicado_corporacao || '-'}</td>`;
+                tableHTML += `<td style="background: #f0fdf4;">${row.associado_indicado_lotacao || '-'}</td>`;
+                
+                // Status
+                tableHTML += `<td><span class="${statusClass}">${statusText}</span></td>`;
+                
+                // Total de indicações do indicador
+                const totalIndicacoes = row.total_indicacoes_do_indicador || 0;
+                const totalAtivos = row.total_indicados_ativos || 0;
+                tableHTML += `<td>
+                    <span class="badge bg-primary">${totalIndicacoes} total</span>
+                    <span class="badge bg-success ms-1">${totalAtivos} ativos</span>
+                </td>`;
+                
+                tableHTML += '</tr>';
+            });
+
+            tableHTML += '</tbody></table></div>';
+            container.innerHTML = tableHTML;
+
+            inicializarDataTable();
+        }
+
+        // Inicializar DataTable
+        function inicializarDataTable() {
+            // Destruir DataTable anterior se existir
             if (dataTable) {
                 dataTable.destroy();
             }
 
+            // Inicializar novo DataTable
             dataTable = $('#reportTable').DataTable({
                 language: {
                     url: '//cdn.datatables.net/plug-ins/1.13.4/i18n/pt-BR.json'
                 },
-                paging: false, // Desabilitar paginação do DataTable
-                info: false,   // Desabilitar info do DataTable
+                pageLength: 25,
                 responsive: true,
-                order: [[1, 'asc']], // Ordenar pela segunda coluna (primeira é o número)
                 dom: 'Bfrtip',
                 buttons: [
                     {
@@ -1381,163 +1436,62 @@ if (empty($patentesDB)) {
                         className: 'btn btn-sm btn-secondary'
                     },
                     {
+                        extend: 'excel',
+                        text: '<i class="fas fa-file-excel"></i> Excel',
+                        className: 'btn btn-sm btn-success',
+                        title: `Relatório_${currentReportType}_${new Date().toISOString().split('T')[0]}`
+                    },
+                    {
+                        extend: 'pdf',
+                        text: '<i class="fas fa-file-pdf"></i> PDF',
+                        className: 'btn btn-sm btn-danger',
+                        title: `Relatório_${currentReportType}_${new Date().toISOString().split('T')[0]}`,
+                        orientation: 'landscape',
+                        pageSize: 'A4'
+                    },
+                    {
                         extend: 'print',
                         text: '<i class="fas fa-print"></i> Imprimir',
-                        className: 'btn btn-sm btn-secondary'
+                        className: 'btn btn-sm btn-info'
                     }
                 ]
             });
         }
 
-        // Renderizar controles de paginação
-        function renderizarPaginacao(paginacao) {
-            let paginationHTML = `
-                <div class="d-flex justify-content-between align-items-center mt-3">
-                    <div class="pagination-info">
-                        <select id="registrosPorPagina" class="form-select form-select-sm" style="width: auto; display: inline-block;" onchange="mudarRegistrosPorPagina(this.value)">
-                            <option value="25" ${registrosPorPagina == 25 ? 'selected' : ''}>25 por página</option>
-                            <option value="50" ${registrosPorPagina == 50 ? 'selected' : ''}>50 por página</option>
-                            <option value="100" ${registrosPorPagina == 100 ? 'selected' : ''}>100 por página</option>
-                        </select>
-                    </div>
-                    <nav>
-                        <ul class="pagination pagination-sm mb-0">
-            `;
-
-            // Botão Primeira página
-            if (paginacao.pagina_atual > 1) {
-                paginationHTML += `
-                    <li class="page-item">
-                        <a class="page-link" href="#" onclick="gerarRelatorio(1); return false;">
-                            <i class="fas fa-angle-double-left"></i>
-                        </a>
-                    </li>
-                `;
-            }
-
-            // Botão Anterior
-            if (paginacao.pagina_atual > 1) {
-                paginationHTML += `
-                    <li class="page-item">
-                        <a class="page-link" href="#" onclick="gerarRelatorio(${paginacao.pagina_atual - 1}); return false;">
-                            <i class="fas fa-angle-left"></i>
-                        </a>
-                    </li>
-                `;
-            }
-
-            // Páginas numeradas
-            let startPage = Math.max(1, paginacao.pagina_atual - 2);
-            let endPage = Math.min(paginacao.total_paginas, startPage + 4);
-
-            if (endPage - startPage < 4) {
-                startPage = Math.max(1, endPage - 4);
-            }
-
-            for (let i = startPage; i <= endPage; i++) {
-                const active = i === paginacao.pagina_atual ? 'active' : '';
-                paginationHTML += `
-                    <li class="page-item ${active}">
-                        <a class="page-link" href="#" onclick="gerarRelatorio(${i}); return false;">${i}</a>
-                    </li>
-                `;
-            }
-
-            // Botão Próxima
-            if (paginacao.pagina_atual < paginacao.total_paginas) {
-                paginationHTML += `
-                    <li class="page-item">
-                        <a class="page-link" href="#" onclick="gerarRelatorio(${paginacao.pagina_atual + 1}); return false;">
-                            <i class="fas fa-angle-right"></i>
-                        </a>
-                    </li>
-                `;
-            }
-
-            // Botão Última página
-            if (paginacao.pagina_atual < paginacao.total_paginas) {
-                paginationHTML += `
-                    <li class="page-item">
-                        <a class="page-link" href="#" onclick="gerarRelatorio(${paginacao.total_paginas}); return false;">
-                            <i class="fas fa-angle-double-right"></i>
-                        </a>
-                    </li>
-                `;
-            }
-
-            paginationHTML += `
-                        </ul>
-                    </nav>
-                </div>
-            `;
-
-            return paginationHTML;
-        }
-
-        // Mudar quantidade de registros por página
-        function mudarRegistrosPorPagina(valor) {
-            registrosPorPagina = parseInt(valor);
-            currentPage = 1;
-            gerarRelatorio(1);
-        }
-
-        // Obter headers da tabela baseado no tipo
+        // Obter headers da tabela
         function getTableHeaders(tipo) {
             const headers = {
                 'desfiliacoes': [
                     { key: 'nome', label: 'Nome', type: 'text' },
-                    { key: 'rg', label: 'RG', type: 'text' },
                     { key: 'cpf', label: 'CPF', type: 'cpf' },
-                    { key: 'telefone', label: 'Telefone', type: 'phone' },
-                    { key: 'email', label: 'E-mail', type: 'text' },
                     { key: 'patente', label: 'Patente', type: 'text' },
                     { key: 'corporacao', label: 'Corporação', type: 'text' },
-                    { key: 'lotacao', label: 'Lotação', type: 'text' },
                     { key: 'data_desfiliacao', label: 'Data Desfiliação', type: 'date' }
-                ],
-                'indicacoes': [
-                    { key: 'indicador', label: 'Nome do Indicador', type: 'text' },
-                    { key: 'patente', label: 'Patente', type: 'text' },
-                    { key: 'corporacao', label: 'Corporação', type: 'text' },
-                    { key: 'total_indicacoes', label: 'Total Indicações', type: 'number' },
-                    { key: 'indicacoes_periodo', label: 'Indicações no Período', type: 'number' },
-                    { key: 'ultima_indicacao', label: 'Última Indicação', type: 'date' }
                 ],
                 'aniversariantes': [
                     { key: 'nome', label: 'Nome', type: 'text' },
                     { key: 'data_nascimento', label: 'Data Nascimento', type: 'date' },
                     { key: 'idade', label: 'Idade', type: 'number' },
-                    { key: 'dia_aniversario', label: 'Dia', type: 'number' },
-                    { key: 'mes_aniversario', label: 'Mês', type: 'number' },
                     { key: 'patente', label: 'Patente', type: 'text' },
                     { key: 'corporacao', label: 'Corporação', type: 'text' },
-                    { key: 'lotacao', label: 'Lotação', type: 'text' },
-                    { key: 'telefone', label: 'Telefone', type: 'phone' },
-                    { key: 'email', label: 'E-mail', type: 'text' }
+                    { key: 'telefone', label: 'Telefone', type: 'phone' }
                 ],
                 'novos_cadastros': [
                     { key: 'nome', label: 'Nome', type: 'text' },
-                    { key: 'rg', label: 'RG', type: 'text' },
                     { key: 'cpf', label: 'CPF', type: 'cpf' },
-                    { key: 'telefone', label: 'Telefone', type: 'phone' },
-                    { key: 'email', label: 'E-mail', type: 'text' },
                     { key: 'patente', label: 'Patente', type: 'text' },
                     { key: 'corporacao', label: 'Corporação', type: 'text' },
-                    { key: 'lotacao', label: 'Lotação', type: 'text' },
+                    { key: 'indicado_por', label: 'Indicado Por', type: 'text' },
                     { key: 'data_aprovacao', label: 'Data Cadastro', type: 'date' },
-                    { key: 'indicacao', label: 'Indicado por', type: 'text' },
-                    { key: 'tipo_cadastro', label: 'Tipo Cadastro', type: 'text' }
+                    { key: 'tipo_cadastro', label: 'Tipo', type: 'text' }
                 ]
             };
-
             return headers[tipo] || [];
         }
 
-        // Formatar valores para exibição
+        // Formatar valores
         function formatValue(value, type) {
-            if (!value || value === null || value === undefined || value === '') {
-                return '-';
-            }
+            if (!value || value === null || value === '' || value === undefined) return '-';
 
             switch (type) {
                 case 'date':
@@ -1546,59 +1500,20 @@ if (empty($patentesDB)) {
                     return formatCPF(value);
                 case 'phone':
                     return formatPhone(value);
-                case 'currency':
-                    return formatCurrency(value);
-                case 'percent':
-                    return value + '%';
                 case 'number':
-                    return parseInt(value).toLocaleString('pt-BR');
+                    const num = parseInt(value);
+                    if (isNaN(num)) return '0';
+                    return num.toLocaleString('pt-BR');
                 default:
-                    return value;
+                    return value || '-';
             }
         }
 
         // Formatar data
         function formatDate(date) {
-            if (!date || date === null || date === undefined || date === '') {
-                return '-';
-            }
-
-            date = date.toString().trim();
-
-            if (date === '0000-00-00' || date === '0000-00-00 00:00:00') {
-                return '-';
-            }
-
-            try {
-                let dateObj;
-
-                if (date.includes('T')) {
-                    dateObj = new Date(date);
-                } else if (date.includes(' ')) {
-                    date = date.replace(' ', 'T');
-                    dateObj = new Date(date);
-                } else {
-                    dateObj = new Date(date + 'T00:00:00');
-                }
-
-                if (isNaN(dateObj.getTime())) {
-                    return '-';
-                }
-
-                const dia = String(dateObj.getDate()).padStart(2, '0');
-                const mes = String(dateObj.getMonth() + 1).padStart(2, '0');
-                const ano = dateObj.getFullYear();
-
-                if (ano < 1900 || ano > 2100) {
-                    return '-';
-                }
-
-                return `${dia}/${mes}/${ano}`;
-
-            } catch (e) {
-                console.error('Erro ao formatar data:', date, e);
-                return '-';
-            }
+            if (!date || date === '0000-00-00' || date === '') return '-';
+            const [year, month, day] = date.split('-');
+            return `${day}/${month}/${year}`;
         }
 
         // Formatar CPF
@@ -1623,66 +1538,42 @@ if (empty($patentesDB)) {
             return phone || '-';
         }
 
-        // Formatar moeda
-        function formatCurrency(value) {
-            if (!value || value === 0) return 'R$ 0,00';
-            return new Intl.NumberFormat('pt-BR', {
-                style: 'currency',
-                currency: 'BRL'
-            }).format(value);
+        // Limpar filtros
+        function limparFiltros() {
+            document.getElementById('formFiltros').reset();
+            $('.select2').val(null).trigger('change');
+            document.getElementById('dataInicio').value = new Date().toISOString().slice(0, 8) + '01';
+            document.getElementById('dataFim').value = new Date().toISOString().slice(0, 10);
+            showToast('Filtros limpos com sucesso!', 'info');
         }
 
         // Exportar relatório
-        async function exportarRelatorio(formato) {
+        function exportarRelatorio(formato) {
             if (!currentReportData || !currentReportData.data || currentReportData.data.length === 0) {
-                showToast('Nenhum relatório gerado para exportar', 'warning');
+                showToast('Nenhum relatório para exportar', 'warning');
                 return;
             }
 
-            showToast(`Preparando exportação completa em formato ${formato.toUpperCase()}...`, 'info');
-
-            // Para exportação, buscar TODOS os registros (sem paginação)
-            const formData = new FormData(document.getElementById('formFiltros'));
-            const params = new URLSearchParams(formData);
-            params.append('pagina', 1);
-            params.append('registros_por_pagina', 999999); // Buscar todos
-
-            try {
-                const response = await fetch(`../api/relatorios/gerar_relatorio_comercial.php?${params.toString()}`);
-                const data = await response.json();
-
-                if (data.success) {
-                    // Criar form para download
-                    const form = document.createElement('form');
-                    form.method = 'POST';
-                    form.action = '../api/relatorios/exportar_relatorio.php';
-                    form.target = '_blank';
-
-                    const campos = {
-                        tipo: currentReportType,
-                        formato: formato,
-                        data: JSON.stringify(data.data),
-                        filtros: JSON.stringify(Object.fromEntries(new FormData(document.getElementById('formFiltros'))))
-                    };
-
-                    for (let [key, value] of Object.entries(campos)) {
-                        const input = document.createElement('input');
-                        input.type = 'hidden';
-                        input.name = key;
-                        input.value = value;
-                        form.appendChild(input);
-                    }
-
-                    document.body.appendChild(form);
-                    form.submit();
-                    document.body.removeChild(form);
-
-                    setTimeout(() => {
-                        showToast(`Arquivo ${formato.toUpperCase()} com todos os ${data.paginacao.total_registros} registros gerado com sucesso!`, 'success');
-                    }, 1000);
+            // Usar DataTables export
+            if (dataTable) {
+                switch(formato) {
+                    case 'excel':
+                        dataTable.button('.buttons-excel').trigger();
+                        break;
+                    case 'pdf':
+                        dataTable.button('.buttons-pdf').trigger();
+                        break;
                 }
-            } catch (error) {
-                showToast('Erro ao preparar exportação', 'danger');
+                showToast(`Exportando para ${formato.toUpperCase()}...`, 'success');
+            }
+        }
+
+        // Imprimir relatório
+        function imprimirRelatorio() {
+            if (dataTable) {
+                dataTable.button('.buttons-print').trigger();
+            } else {
+                window.print();
             }
         }
 
@@ -1692,56 +1583,36 @@ if (empty($patentesDB)) {
                 <div class="alert alert-danger">
                     <i class="fas fa-exclamation-triangle me-2"></i>
                     <strong>Erro:</strong> ${mensagem}
-                    <br><small class="text-muted">Verifique os filtros selecionados e tente novamente.</small>
                 </div>
             `;
-            showToast(mensagem, 'danger');
+            document.getElementById('tituloResultado').textContent = 'Erro ao gerar relatório';
+            showToast(mensagem, 'error');
         }
 
         // Sistema de Toast
         function showToast(message, type = 'success') {
-            const toastHTML = `
-                <div class="toast align-items-center text-white bg-${type} border-0" role="alert">
-                    <div class="d-flex">
-                        <div class="toast-body">
-                            <i class="fas fa-${getToastIcon(type)} me-2"></i>
-                            ${message}
-                        </div>
-                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-                    </div>
-                </div>
+            const toast = document.createElement('div');
+            toast.className = `toast-premium ${type}`;
+            
+            const icon = {
+                'success': 'check-circle',
+                'error': 'times-circle',
+                'warning': 'exclamation-triangle',
+                'info': 'info-circle'
+            }[type] || 'info-circle';
+
+            toast.innerHTML = `
+                <i class="fas fa-${icon} fa-lg"></i>
+                <span>${message}</span>
             `;
 
-            const container = document.querySelector('.toast-container');
-            const toastElement = document.createElement('div');
-            toastElement.innerHTML = toastHTML;
-            container.appendChild(toastElement.firstElementChild);
-
-            const toast = new bootstrap.Toast(container.lastElementChild, {
-                autohide: true,
-                delay: type === 'danger' ? 5000 : 3000
-            });
-            toast.show();
+            document.querySelector('.toast-container').appendChild(toast);
 
             setTimeout(() => {
-                if (container.lastElementChild) {
-                    container.lastElementChild.remove();
-                }
-            }, type === 'danger' ? 6000 : 4000);
-        }
-
-        // Obter ícone para toast
-        function getToastIcon(type) {
-            const icons = {
-                'success': 'check-circle',
-                'danger': 'times-circle',
-                'warning': 'exclamation-triangle',
-                'info': 'info-circle',
-                'primary': 'info-circle'
-            };
-            return icons[type] || 'info-circle';
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
         }
     </script>
 </body>
-
 </html>

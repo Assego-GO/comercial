@@ -2,7 +2,7 @@
 
 /**
  * Página de Serviços Financeiros - Sistema ASSEGO
- * pages/financeiro.php
+ * pages/cadastroForm.php
  * VERSÃO COMPLETA COM TODAS AS FUNCIONALIDADES ORIGINAIS
  */
 
@@ -13,6 +13,7 @@ require_once '../classes/Database.php';
 require_once '../classes/Auth.php';
 require_once '../classes/Associados.php';
 require_once './components/header.php';
+require_once '../classes/Permissoes.php';
 
 // Inicia autenticação
 $auth = new Auth();
@@ -29,24 +30,31 @@ $usuarioLogado = $auth->getUser();
 // Define o título da página
 $page_title = 'Serviços Financeiros - ASSEGO';
 
-// Verificar permissões para setor financeiro - APENAS FINANCEIRO E PRESIDÊNCIA
+// Verificar permissões - FINANCEIRO, PRESIDÊNCIA OU PERMISSÃO COMERCIAL
 $temPermissaoFinanceiro = false;
 $motivoNegacao = '';
 $isFinanceiro = false;
 $isPresidencia = false;
+$isComercialComPermissao = false;
 $departamentoUsuario = null;
 
-error_log("=== DEBUG PERMISSÕES SERVIÇOS FINANCEIROS - RESTRITO ===");
+error_log("=== DEBUG PERMISSÕES CADASTRO FORM ===");
 error_log("Usuário: " . $usuarioLogado['nome']);
 error_log("Departamento ID: " . ($usuarioLogado['departamento_id'] ?? 'NULL'));
-error_log("É Diretor: " . ($auth->isDiretor() ? 'SIM' : 'NÃO'));
 
-// Verificação de permissões: APENAS financeiro (ID: 2) OU presidência (ID: 1)
-if (isset($usuarioLogado['departamento_id'])) {
+// Primeiro verifica a permissão COMERCIAL_CRIAR_ASSOCIADO
+if (Permissoes::tem('COMERCIAL_CRIAR_ASSOCIADO')) {
+    $temPermissaoFinanceiro = true;
+    $isComercialComPermissao = true;
+    error_log("✅ Permissão concedida: Usuário tem COMERCIAL_CRIAR_ASSOCIADO");
+}
+
+// Se não tem a permissão específica, verifica departamento
+if (!$temPermissaoFinanceiro && isset($usuarioLogado['departamento_id'])) {
     $deptId = $usuarioLogado['departamento_id'];
     $departamentoUsuario = $deptId;
 
-    if ($deptId == 2) { // Financeiro
+    if ($deptId == 10) { // Comercial
         $temPermissaoFinanceiro = true;
         $isFinanceiro = true;
         error_log("✅ Permissão concedida: Usuário pertence ao Setor Financeiro (ID: 2)");
@@ -55,12 +63,21 @@ if (isset($usuarioLogado['departamento_id'])) {
         $isPresidencia = true;
         error_log("✅ Permissão concedida: Usuário pertence à Presidência (ID: 1)");
     } else {
-        $motivoNegacao = 'Acesso restrito EXCLUSIVAMENTE ao Setor Financeiro e Presidência.';
-        error_log("❌ Acesso negado. Departamento: '$deptId'. Permitido apenas: Financeiro (ID: 2) ou Presidência (ID: 1)");
+        $motivoNegacao = 'Acesso restrito a: Setor Financeiro, Presidência ou usuários com permissão de criar associados.';
+        error_log("❌ Acesso negado. Sem permissão COMERCIAL_CRIAR_ASSOCIADO e departamento não autorizado.");
     }
+} else if (!$temPermissaoFinanceiro) {
+    $motivoNegacao = 'Você não tem permissão para acessar este formulário.';
+    error_log("❌ Sem permissão e sem departamento identificado");
+}
+
+// Log final
+if (!$temPermissaoFinanceiro) {
+    error_log("❌ ACESSO NEGADO AO FORMULÁRIO: " . $motivoNegacao);
 } else {
-    $motivoNegacao = 'Departamento não identificado no perfil do usuário.';
-    error_log("❌ departamento_id não existe no array do usuário");
+    error_log("✅ ACESSO PERMITIDO - Tipo: " . 
+        ($isComercialComPermissao ? "Comercial com permissão" : 
+        ($isFinanceiro ? "Financeiro" : "Presidência")));
 }
 
 // Log final do resultado

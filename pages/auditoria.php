@@ -179,12 +179,14 @@ if ($temPermissaoAuditoria) {
 }
 
 // Cria instância do Header Component
+// Cria instância do Header Component
 $headerComponent = HeaderComponent::create([
     'usuario' => [
         'nome' => $usuarioLogado['nome'],
         'cargo' => $usuarioLogado['cargo'] ?? 'Funcionário',
+        'email' => $usuarioLogado['email'] ?? $_SESSION['funcionario_email'] ?? 'usuario@assego.com.br', // ← ADICIONAR ESTA LINHA
         'avatar' => $usuarioLogado['avatar'] ?? null,
-        'departamento_id' => $usuarioLogado['departamento_id'] ?? null // ← IMPORTANTE: Adicionar departamento_id
+        'departamento_id' => $usuarioLogado['departamento_id'] ?? null
     ],
     'isDiretor' => $auth->isDiretor(),
     'activeTab' => 'auditoria',
