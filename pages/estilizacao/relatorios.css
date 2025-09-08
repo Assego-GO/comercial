@@ -60,17 +60,19 @@ body {
             margin-bottom: 2rem;
         }
 
-        /* Cada seção do dashboard */
+        /* Cada seção do dashboard - CORRIGIDO: Removido border-radius superior e linha azul */
         .dashboard-section {
             background: var(--white);
-            border-radius: 16px;
+            border-radius: 0 0 16px 16px; /* Removido border-radius superior */
             overflow: hidden;
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
             border: 1px solid #e5e7eb;
             position: relative;
         }
 
-        /* Barra colorida na parte superior da seção */
+        /* REMOVIDO: Barra colorida na parte superior da seção */
+        /* .dashboard-section::before - Comentado para remover as linhas azuis */
+        /*
         .dashboard-section::before {
             content: '';
             position: absolute;
@@ -81,6 +83,7 @@ body {
             background: var(--section-color, #3b82f6);
             z-index: 1;
         }
+        */
 
         .dashboard-section.primary::before {
             background: #3b82f6;
@@ -1062,25 +1065,60 @@ body {
             flex: 1;
         }
 
-        /* Responsivo */
+        /* Responsivo - ESTILO MODERNO */
         @media (max-width: 768px) {
             .dashboard-sections {
                 grid-template-columns: 1fr;
                 gap: 1rem;
             }
 
+            .dashboard-section {
+                min-width: 0;
+                margin: 0 auto;
+                max-width: 100%;
+                overflow: hidden;
+            }
+
             .stats-grid {
-                grid-template-columns: 1fr;
+                flex-direction: column;
+                min-height: auto;
             }
 
             .stat-card {
-                padding: 1rem;
+                padding: 1.25rem !important;
+                width: 100% !important;
+                min-width: 0 !important;
+                flex-direction: column !important;
+                align-items: center !important;
+                text-align: center !important;
+                gap: 0.75rem !important;
+                justify-content: center !important;
                 border-right: none;
                 border-bottom: 1px solid #f1f5f9;
+                box-sizing: border-box;
+                position: relative;
             }
 
             .stat-card:last-child {
                 border-bottom: none;
+            }
+
+            .stat-content {
+                display: flex !important;
+                flex-direction: column !important;
+                align-items: center !important;
+                text-align: center !important;
+                width: 100%;
+            }
+
+            .stat-value {
+                font-size: 1.5rem !important;
+            }
+
+            .stat-icon {
+                width: 40px !important;
+                height: 40px !important;
+                font-size: 1rem !important;
             }
 
             .report-grid {
@@ -1099,10 +1137,6 @@ body {
 
             .date-range-simple {
                 flex-direction: column;
-            }
-
-            .stat-value {
-                font-size: 1.5rem;
             }
         }
 
