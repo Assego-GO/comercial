@@ -958,7 +958,7 @@ $headerComponent = HeaderComponent::create([
 /* Header do Card */
 .dual-stat-header {
     background: #f8f9fa;
-    padding: 1rem 1.25rem;
+    padding: 2rem 1.25rem;
     border-bottom: 1px solid #e9ecef;
     display: flex;
     justify-content: space-between;
@@ -1113,13 +1113,6 @@ $headerComponent = HeaderComponent::create([
             </div>
 
             <!-- Alert Informativo -->
-            <div class="alert-premium alert-info-premium animate__animated animate__fadeIn">
-                <i class="fas fa-info-circle fa-lg"></i>
-                <div>
-                    <strong>Como funciona o fluxo:</strong><br>
-                    1. Ficha anexada no pré-cadastro → 2. Envio para presidência → 3. Assinatura → 4. Retorno ao comercial → 5. Aprovação do pré-cadastro
-                </div>
-            </div>
 
             <?php if (isset($_GET['novo']) && $_GET['novo'] == '1'): ?>
                 <div class="alert alert-success alert-dismissible fade show animate__animated animate__fadeIn" role="alert">
@@ -1168,6 +1161,8 @@ $headerComponent = HeaderComponent::create([
                     </div>
                 </div>
 
+                
+
                 <!-- Card 2: Assinados + Finalizados -->
                 <div class="stat-card dual-stat-card">
                     <div class="dual-stat-header">
@@ -1204,6 +1199,13 @@ $headerComponent = HeaderComponent::create([
                 </div>
             </div>
 
+            <div class="alert-premium alert-info-premium animate__animated animate__fadeIn">
+                <i class="fas fa-info-circle fa-lg"></i>
+                <div>
+                    <strong>Como funciona o fluxo:</strong><br>
+                    1. Ficha anexada no pré-cadastro → 2. Envio para presidência → 3. Assinatura → 4. Retorno ao comercial → 5. Aprovação do pré-cadastro
+                </div>
+            </div>
             <!-- Filters Bar -->
             <div class="filters-bar animate__animated animate__fadeIn" data-aos="fade-up" data-aos-delay="500">
                 <div class="filters-row">
