@@ -303,79 +303,121 @@ $headerComponent = HeaderComponent::create([
                 </p>
             </div>
 
-            <!-- Stats Grid -->
-            <div class="stats-grid" data-aos="fade-up">
-                <div class="stat-card">
-                    <div class="stat-header">
-                        <div>
-                            <div class="stat-value"><?php echo number_format($totalRegistros); ?></div>
-                            <div class="stat-label">Total de Registros<?php echo !$isPresidencia ? ' (Dept.)' : ''; ?></div>
-                            <div class="stat-change neutral">
-                                <i class="fas fa-database"></i>
-                                <?php echo $isPresidencia ? 'Todas as ações' : 'Seu departamento'; ?>
-                            </div>
-                        </div>
-                        <div class="stat-icon primary">
-                            <i class="fas fa-list"></i>
-                        </div>
-                    </div>
+            <!-- Stats Grid com Dual Cards - Auditoria -->
+<div class="stats-grid" data-aos="fade-up">
+    <!-- Card 1: Total de Registros + Ações Hoje -->
+    <div class="stat-card dual-stat-card">
+        <div class="dual-stat-header">
+            <div class="dual-stat-title">
+                <i class="fas fa-database"></i>
+                Atividade Geral
+                <?php echo !$isPresidencia ? ' (Dept.)' : ''; ?>
+            </div>
+            <div class="dual-stat-percentage" id="atividadePercent">
+                <i class="fas fa-chart-line"></i>
+                Status
+            </div>
+        </div>
+        <div class="dual-stats-row">
+            <div class="dual-stat-item">
+                <div class="dual-stat-icon registros-icon">
+                    <i class="fas fa-list"></i>
                 </div>
-
-                <div class="stat-card">
-                    <div class="stat-header">
-                        <div>
-                            <div class="stat-value"><?php echo $acoesHoje; ?></div>
-                            <div class="stat-label">Ações Hoje<?php echo !$isPresidencia ? ' (Dept.)' : ''; ?></div>
-                            <div class="stat-change positive">
-                                <i class="fas fa-arrow-up"></i>
-                                Atividade atual
-                            </div>
-                        </div>
-                        <div class="stat-icon success">
-                            <i class="fas fa-clock"></i>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="stat-card">
-                    <div class="stat-header">
-                        <div>
-                            <div class="stat-value"><?php echo $usuariosAtivos; ?></div>
-                            <div class="stat-label">Usuários Ativos<?php echo !$isPresidencia ? ' (Dept.)' : ''; ?></div>
-                            <div class="stat-change neutral">
-                                <i class="fas fa-users"></i>
-                                Últimas 24h
-                            </div>
-                        </div>
-                        <div class="stat-icon warning">
-                            <i class="fas fa-user-check"></i>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="stat-card">
-                    <div class="stat-header">
-                        <div>
-                            <div class="stat-value"><?php echo $alertas; ?></div>
-                            <div class="stat-label">Alertas de Segurança<?php echo !$isPresidencia ? ' (Dept.)' : ''; ?></div>
-                            <?php if ($alertas > 0): ?>
-                            <div class="stat-change negative">
-                                <i class="fas fa-exclamation-triangle"></i>
-                                Requer atenção
-                            </div>
-                            <?php else: ?>
-                            <div class="stat-change positive">
-                                <i class="fas fa-check-circle"></i>
-                                Sistema seguro
-                            </div>
-                            <?php endif; ?>
-                        </div>
-                        <div class="stat-icon <?php echo $alertas > 0 ? 'warning' : 'success'; ?>">
-                            <i class="fas fa-shield-alt"></i>
-                        </div>
-                    </div>
+                <div class="dual-stat-info">
+                    <div class="dual-stat-value"><?php echo number_format($totalRegistros); ?></div>
+                    <div class="dual-stat-label">Total Registros</div>
                 </div>
             </div>
+            <div class="dual-stats-separator"></div>
+            <div class="dual-stat-item">
+                <div class="dual-stat-icon acoes-icon">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <div class="dual-stat-info">
+                    <div class="dual-stat-value"><?php echo $acoesHoje; ?></div>
+                    <div class="dual-stat-label">Ações Hoje</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Card 2: Usuários Ativos + Alertas -->
+    <div class="stat-card dual-stat-card">
+        <div class="dual-stat-header">
+            <div class="dual-stat-title">
+                <i class="fas fa-users"></i>
+                Monitoramento
+                <?php echo !$isPresidencia ? ' (Dept.)' : ''; ?>
+            </div>
+            <div class="dual-stat-percentage" id="monitoramentoPercent">
+                <i class="fas fa-shield-alt"></i>
+                Segurança
+            </div>
+        </div>
+        <div class="dual-stats-row">
+            <div class="dual-stat-item">
+                <div class="dual-stat-icon usuarios-icon">
+                    <i class="fas fa-user-check"></i>
+                </div>
+                <div class="dual-stat-info">
+                    <div class="dual-stat-value"><?php echo $usuariosAtivos; ?></div>
+                    <div class="dual-stat-label">Usuários Ativos</div>
+                </div>
+            </div>
+            <div class="dual-stats-separator"></div>
+            <div class="dual-stat-item">
+                <div class="dual-stat-icon alertas-icon">
+                    <i class="fas fa-shield-alt"></i>
+                </div>
+                <div class="dual-stat-info">
+                    <div class="dual-stat-value"><?php echo $alertas; ?></div>
+                    <div class="dual-stat-label">Alertas</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Card 3: Performance Temporal -->
+    <div class="stat-card dual-stat-card">
+        <div class="dual-stat-header">
+            <div class="dual-stat-title">
+                <i class="fas fa-chart-area"></i>
+                Performance Temporal
+                <?php echo !$isPresidencia ? ' (Dept.)' : ''; ?>
+            </div>
+            <div class="dual-stat-percentage" id="performancePercent">
+                <i class="fas fa-trending-up"></i>
+                Tendência
+            </div>
+        </div>
+        <div class="dual-stats-row">
+            <div class="dual-stat-item">
+                <div class="dual-stat-icon hoje-icon">
+                    <i class="fas fa-calendar-day"></i>
+                </div>
+                <div class="dual-stat-info">
+                    <div class="dual-stat-value"><?php echo $acoesHoje; ?></div>
+                    <div class="dual-stat-label">Hoje</div>
+                </div>
+            </div>
+            <div class="dual-stats-separator"></div>
+            <div class="dual-stat-item">
+                <div class="dual-stat-icon periodo-icon">
+                    <i class="fas fa-calendar-week"></i>
+                </div>
+                <div class="dual-stat-info">
+                    <div class="dual-stat-value"><?php 
+                        // Calculate a simple trend - you can modify this logic
+                        $tendencia = $totalRegistros > 0 ? round(($acoesHoje / max($totalRegistros, 1)) * 100, 1) : 0;
+                        echo $tendencia . '%';
+                    ?></div>
+                    <div class="dual-stat-label">Taxa Atividade</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 
             <!-- Quick Actions -->
             <div class="quick-actions" data-aos="fade-up" data-aos-delay="100">
@@ -751,6 +793,10 @@ $headerComponent = HeaderComponent::create([
             }
 
             // Carregar dados automaticamente
+            setTimeout(atualizarPercentuaisKPI, 1000);
+    
+            // Update every 30 seconds along with the data refresh
+            setInterval(atualizarPercentuaisKPI, 30000);
             carregarRegistrosAuditoria();
             configurarFiltros();
             configurarEventos();
@@ -2865,6 +2911,35 @@ $headerComponent = HeaderComponent::create([
             
             return originalShow.call(this, contextMessage, type, duration);
         };
+
+        function atualizarPercentuaisKPI() {
+            const totalRegistros = <?php echo $totalRegistros; ?>;
+            const acoesHoje = <?php echo $acoesHoje; ?>;
+            const usuariosAtivos = <?php echo $usuariosAtivos; ?>;
+            const alertas = <?php echo $alertas; ?>;
+            
+            // Calculate activity percentage
+            const atividadePercent = totalRegistros > 0 ? Math.min(100, Math.round((acoesHoje / totalRegistros) * 100)) : 0;
+            document.getElementById('atividadePercent').innerHTML = `
+                <i class="fas fa-chart-line"></i>
+                ${atividadePercent}%
+            `;
+            
+            // Calculate security status
+            const segurancaStatus = alertas === 0 ? 'Seguro' : alertas < 5 ? 'Atenção' : 'Crítico';
+            const segurancaIcon = alertas === 0 ? 'fa-shield-alt' : alertas < 5 ? 'fa-exclamation-triangle' : 'fa-exclamation-circle';
+            document.getElementById('monitoramentoPercent').innerHTML = `
+                <i class="fas ${segurancaIcon}"></i>
+                ${segurancaStatus}
+            `;
+            
+            // Calculate performance trend
+            const performanceTrend = acoesHoje > usuariosAtivos ? '+' + Math.round((acoesHoje / Math.max(usuariosAtivos, 1)) * 10) + '%' : 'Estável';
+            document.getElementById('performancePercent').innerHTML = `
+                <i class="fas fa-trending-up"></i>
+                ${performanceTrend}
+            `;
+        }
 
         // Log final de confirmação
         console.log('🎯 Sistema configurado para:', {
