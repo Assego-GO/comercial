@@ -3,7 +3,7 @@
  * Página de Relatórios Comerciais - Sistema ASSEGO
  * pages/comercial_relatorios.php
  * 
- * VERSÃO COMPLETA - Com visualização de associados indicados
+ * VERSÃO PADRONIZADA - Estilo minimalista
  */
 
 require_once '../config/config.php';
@@ -162,9 +162,6 @@ if (empty($patentesDB)) {
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
 
-    <!-- AOS Animation -->
-    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
-
     <!-- jQuery -->
     <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
 
@@ -174,41 +171,34 @@ if (empty($patentesDB)) {
     <!-- Custom CSS -->
     <link rel="stylesheet" href="./estilizacao/style.css">
 
-    <!-- Estilos Personalizados Premium -->
+    <!-- Estilos Padronizados - Estilo Minimalista -->
     <style>
+        /* Variáveis CSS minimalistas */
         :root {
             --primary: #0056d2;
             --primary-light: #4A90E2;
-            --primary-dark: #003d94;
             --secondary: #6c757d;
-            --success: #10b981;
-            --danger: #ef4444;
-            --warning: #f59e0b;
-            --info: #3b82f6;
-            --dark: #1e293b;
-            --light: #f8fafc;
-            --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            --gradient-success: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%);
-            --gradient-danger: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-            --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.1);
-            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
-            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
-            --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1);
-            --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
-            --shadow-premium: 0 10px 40px rgba(0, 86, 210, 0.15);
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+            --success: #28a745;
+            --danger: #dc3545;
+            --warning: #ffc107;
+            --info: #17a2b8;
+            --dark: #343a40;
+            --white: #ffffff;
+            --gray-100: #f8f9fa;
+            --gray-200: #e9ecef;
+            --gray-300: #dee2e6;
+            --gray-600: #6c757d;
+            --gray-700: #495057;
+            --border-light: #e9ecef;
+            --shadow-sm: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+            --shadow-md: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+            --shadow-lg: 0 1rem 3rem rgba(0, 0, 0, 0.175);
         }
 
         body {
             font-family: 'Plus Jakarta Sans', sans-serif;
-            background: linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%);
-            min-height: 100vh;
-            position: relative;
+            background: var(--gray-100);
+            color: var(--dark);
         }
 
         .main-wrapper {
@@ -221,98 +211,68 @@ if (empty($patentesDB)) {
             flex: 1;
             padding: 2rem;
             margin-left: 0;
-            animation: fadeIn 0.5s ease-in-out;
         }
 
-        /* Page Header Premium */
+        /* Page Header - Fora de cards */
         .page-header {
-            background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.95) 100%);
-            backdrop-filter: blur(10px);
-            border-radius: 24px;
-            padding: 2.5rem;
             margin-bottom: 2rem;
-            box-shadow: var(--shadow-lg);
-            border: 1px solid rgba(0, 86, 210, 0.1);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .page-header::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            right: -10%;
-            width: 500px;
-            height: 500px;
-            background: radial-gradient(circle, rgba(0, 86, 210, 0.05) 0%, transparent 70%);
-            border-radius: 50%;
         }
 
         .page-title {
-            font-size: 2.5rem;
-            font-weight: 800;
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin-bottom: 0.5rem;
-            letter-spacing: -0.5px;
-            position: relative;
-            z-index: 1;
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--dark);
+            margin: 0 0 0.5rem 0;
         }
 
         .page-subtitle {
-            color: #64748b;
-            font-size: 1.125rem;
-            font-weight: 500;
-            position: relative;
-            z-index: 1;
+            font-size: 1rem;
+            color: var(--gray-600);
+            margin: 0;
         }
 
-        /* Back Button Premium */
+        /* Back Button */
         .btn-back {
             display: inline-flex;
             align-items: center;
             gap: 0.5rem;
-            padding: 0.875rem 1.75rem;
-            background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+            padding: 0.625rem 1.25rem;
+            background: var(--secondary);
             color: white;
-            border-radius: 14px;
+            border-radius: 8px;
             text-decoration: none;
             font-weight: 600;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.3s ease;
             margin-bottom: 1.5rem;
-            font-size: 0.95rem;
-            box-shadow: var(--shadow-md);
+            font-size: 0.9rem;
+            box-shadow: var(--shadow-sm);
         }
 
         .btn-back:hover {
-            transform: translateX(-4px) translateY(-2px);
+            transform: translateX(-2px);
             color: white;
-            box-shadow: var(--shadow-xl);
+            box-shadow: var(--shadow-md);
+            background: #5a6268;
         }
 
-        /* Report Type Selector Premium */
-        .report-selector-container {
-            background: white;
-            border-radius: 24px;
-            padding: 2.5rem;
-            box-shadow: var(--shadow-xl);
-            position: relative;
-            overflow: hidden;
+        /* Actions Container - Estilo Minimalista */
+        .actions-container {
+            background: var(--white);
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--border-light);
             margin-bottom: 2rem;
-            border: 1px solid rgba(0, 86, 210, 0.05);
         }
 
-        .section-header {
-            margin-bottom: 2rem;
-            padding-bottom: 1.5rem;
-            border-bottom: 2px solid #f1f5f9;
-            position: relative;
+        .actions-header {
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-light);
         }
 
-        .section-title {
-            font-size: 1.75rem;
+        .actions-title {
+            font-size: 1.25rem;
             font-weight: 700;
             color: var(--dark);
             display: flex;
@@ -320,133 +280,107 @@ if (empty($patentesDB)) {
             gap: 0.75rem;
         }
 
-        .section-title i {
-            width: 48px;
-            height: 48px;
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+        .actions-title i {
+            width: 36px;
+            height: 36px;
+            background: var(--primary);
             color: white;
-            border-radius: 14px;
+            border-radius: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.25rem;
-            box-shadow: 0 8px 16px rgba(0, 86, 210, 0.2);
+            font-size: 1rem;
         }
 
-        .report-type-grid {
+        .actions-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 1.5rem;
+            gap: 1rem;
         }
 
-        .report-type-card {
-            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-            border: 2px solid transparent;
-            border-radius: 18px;
-            padding: 2rem;
-            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        .action-card {
+            background: var(--white);
+            border: 1px solid var(--border-light);
+            border-radius: 12px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
             cursor: pointer;
             display: flex;
             align-items: center;
-            gap: 1.5rem;
+            gap: 1rem;
             position: relative;
-            overflow: hidden;
         }
 
-        .report-type-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 100%;
-            background: linear-gradient(135deg, transparent 0%, rgba(0, 86, 210, 0.03) 100%);
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-
-        .report-type-card:hover::before {
-            opacity: 1;
-        }
-
-        .report-type-card:hover,
-        .report-type-card.active {
-            transform: translateY(-6px) scale(1.02);
+        .action-card:hover {
+            transform: translateY(-2px);
             border-color: var(--primary);
-            box-shadow: 0 20px 40px rgba(0, 86, 210, 0.15);
+            box-shadow: var(--shadow-md);
         }
 
-        .report-type-card.active {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+        .action-card.active {
+            background: linear-gradient(135deg, rgba(0, 86, 210, 0.05) 0%, rgba(74, 144, 226, 0.05) 100%);
+            border-color: var(--primary);
         }
 
-        .report-type-card.active .report-content h5,
-        .report-type-card.active .report-content p {
-            color: white;
-        }
-
-        .report-type-card.active .report-icon {
-            background: white;
-            color: var(--primary);
-        }
-
-        .report-icon {
-            width: 64px;
-            height: 64px;
-            border-radius: 18px;
+        .action-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.5rem;
-            flex-shrink: 0;
-            transition: all 0.3s ease;
-            position: relative;
-            z-index: 1;
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
-            color: white;
-            box-shadow: 0 8px 16px rgba(0, 86, 210, 0.2);
-        }
-
-        .report-type-card:hover .report-icon {
-            transform: rotate(10deg) scale(1.1);
-        }
-
-        .report-content h5 {
-            margin: 0 0 0.5rem 0;
             font-size: 1.25rem;
-            font-weight: 700;
+            color: white;
+            flex-shrink: 0;
+        }
+
+        .action-icon.primary { background: var(--primary); }
+        .action-icon.success { background: var(--success); }
+        .action-icon.warning { background: var(--warning); }
+        .action-icon.info { background: var(--info); }
+
+        .action-content h5 {
+            margin: 0 0 0.25rem 0;
+            font-size: 1rem;
+            font-weight: 600;
             color: var(--dark);
         }
 
-        .report-content p {
+        .action-content p {
             margin: 0;
-            font-size: 0.95rem;
-            color: #64748b;
-            line-height: 1.5;
+            font-size: 0.875rem;
+            color: var(--gray-600);
         }
 
-        /* Filters Section Premium */
+        /* Filters Container */
         .filters-container {
-            background: white;
-            border-radius: 20px;
-            padding: 2.5rem;
-            box-shadow: var(--shadow-lg);
+            background: var(--white);
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--border-light);
             margin-bottom: 2rem;
-            border: 1px solid rgba(0, 86, 210, 0.05);
         }
 
-        .filter-row {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 1.5rem;
+        /* Forms */
+        .form-control-custom,
+        .form-select-custom {
+            padding: 0.625rem 1rem;
+            border: 1px solid var(--border-light);
+            border-radius: 8px;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+            background: white;
         }
 
-        .form-group-premium {
-            position: relative;
+        .form-control-custom:focus,
+        .form-select-custom:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(0, 86, 210, 0.1);
+            outline: none;
         }
 
-        .form-label-premium {
+        .form-label-custom {
             font-weight: 600;
             color: var(--dark);
             margin-bottom: 0.5rem;
@@ -456,106 +390,66 @@ if (empty($patentesDB)) {
             gap: 0.5rem;
         }
 
-        .form-label-premium i {
+        .form-label-custom i {
             color: var(--primary);
-            font-size: 1rem;
+            font-size: 0.9rem;
         }
 
-        .form-control-premium,
-        .form-select-premium {
-            padding: 0.875rem 1.25rem;
-            border: 2px solid #e2e8f0;
-            border-radius: 12px;
-            font-size: 0.95rem;
-            transition: all 0.3s ease;
-            background: white;
-            width: 100%;
-        }
-
-        .form-control-premium:focus,
-        .form-select-premium:focus {
-            border-color: var(--primary);
-            box-shadow: 0 0 0 4px rgba(0, 86, 210, 0.1);
-            outline: none;
-        }
-
-        /* Buttons Premium */
-        .btn-premium {
-            padding: 0.875rem 2rem;
-            border-radius: 14px;
+        /* Buttons */
+        .btn-custom {
+            padding: 0.625rem 1.5rem;
+            border-radius: 8px;
             font-weight: 600;
-            font-size: 1rem;
+            font-size: 0.95rem;
             border: none;
-            position: relative;
-            overflow: hidden;
-            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            box-shadow: var(--shadow-md);
+            transition: all 0.3s ease;
+            box-shadow: var(--shadow-sm);
             cursor: pointer;
         }
 
-        .btn-premium::before {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 0;
-            height: 0;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.3);
-            transform: translate(-50%, -50%);
-            transition: width 0.6s, height 0.6s;
-        }
-
-        .btn-premium:hover::before {
-            width: 300px;
-            height: 300px;
-        }
-
-        .btn-primary-premium {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+        .btn-primary-custom {
+            background: var(--primary);
             color: white;
         }
 
-        .btn-primary-premium:hover {
-            transform: translateY(-3px) scale(1.02);
-            box-shadow: 0 12px 24px rgba(0, 86, 210, 0.3);
-            color: white;
-        }
-
-        .btn-secondary-premium {
-            background: linear-gradient(135deg, #64748b 0%, #475569 100%);
-            color: white;
-        }
-
-        .btn-secondary-premium:hover {
+        .btn-primary-custom:hover {
             transform: translateY(-2px);
-            box-shadow: 0 8px 16px rgba(100, 116, 139, 0.3);
+            box-shadow: var(--shadow-md);
+            background: var(--primary-light);
+        }
+
+        .btn-secondary-custom {
+            background: var(--secondary);
             color: white;
         }
 
-        /* Results Container Premium */
+        .btn-secondary-custom:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+            background: #5a6268;
+        }
+
+        /* Results Container */
         .results-container {
-            background: white;
-            border-radius: 20px;
-            padding: 2.5rem;
-            box-shadow: var(--shadow-lg);
-            min-height: 500px;
-            border: 1px solid rgba(0, 86, 210, 0.05);
+            background: var(--white);
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--border-light);
+            min-height: 400px;
         }
 
         .results-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 2rem;
-            padding-bottom: 1.5rem;
-            border-bottom: 2px solid #f1f5f9;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-light);
         }
 
         .results-title {
-            font-size: 1.5rem;
+            font-size: 1.25rem;
             font-weight: 700;
             color: var(--dark);
             display: flex;
@@ -567,15 +461,16 @@ if (empty($patentesDB)) {
             color: var(--primary);
         }
 
+        /* Export Buttons */
         .export-buttons {
             display: flex;
-            gap: 0.75rem;
+            gap: 0.5rem;
         }
 
         .btn-export {
-            padding: 0.625rem 1.25rem;
-            border-radius: 10px;
-            font-size: 0.9rem;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-size: 0.875rem;
             font-weight: 600;
             border: none;
             transition: all 0.3s ease;
@@ -587,51 +482,116 @@ if (empty($patentesDB)) {
         }
 
         .btn-export-excel {
-            background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+            background: var(--success);
             color: white;
         }
 
         .btn-export-pdf {
-            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            background: var(--danger);
             color: white;
         }
 
         .btn-export-print {
-            background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+            background: var(--info);
             color: white;
         }
 
         .btn-export:hover {
-            transform: translateY(-2px);
+            transform: translateY(-1px);
             box-shadow: var(--shadow-md);
         }
 
-        /* Loading Premium */
+        /* Loading */
         .loading-container {
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            padding: 4rem;
+            padding: 3rem;
         }
 
-        .spinner-premium {
-            width: 80px;
-            height: 80px;
-            border: 4px solid rgba(0, 86, 210, 0.1);
+        .spinner-custom {
+            width: 50px;
+            height: 50px;
+            border: 3px solid var(--gray-200);
             border-top-color: var(--primary);
             border-radius: 50%;
-            animation: spin 1s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite;
+            animation: spin 1s linear infinite;
         }
 
-        .loading-text {
-            margin-top: 1.5rem;
-            font-size: 1.125rem;
-            color: #64748b;
-            font-weight: 500;
+        /* Alert */
+        .alert-custom {
+            padding: 1rem;
+            border-radius: 8px;
+            border: none;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            box-shadow: var(--shadow-sm);
         }
 
-        /* Toast Premium */
+        .alert-info-custom {
+            background: rgba(23, 162, 184, 0.1);
+            color: #0c5460;
+            border-left: 3px solid var(--info);
+        }
+
+        /* Badge */
+        .badge-custom {
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            background: var(--primary);
+            color: white;
+        }
+
+        /* DataTable Custom */
+        .dataTables_wrapper {
+            padding-top: 1rem;
+        }
+
+        table.dataTable {
+            border-collapse: separate !important;
+            border-spacing: 0;
+        }
+
+        table.dataTable thead th {
+            background: var(--gray-100);
+            font-weight: 600;
+            color: var(--dark);
+            border-bottom: 2px solid var(--border-light);
+        }
+
+        table.dataTable tbody tr:hover {
+            background: var(--gray-100);
+        }
+
+        /* Badge Status */
+        .badge-status {
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 0.75rem;
+            display: inline-block;
+        }
+
+        .badge-status.ativo {
+            background: var(--success);
+            color: white;
+        }
+
+        .badge-status.inativo {
+            background: var(--danger);
+            color: white;
+        }
+
+        .badge-status.pre-cadastro {
+            background: var(--warning);
+            color: white;
+        }
+
+        /* Toast */
         .toast-container {
             position: fixed;
             top: 20px;
@@ -639,204 +599,9 @@ if (empty($patentesDB)) {
             z-index: 9999;
         }
 
-        .toast-premium {
-            background: white;
-            border-radius: 12px;
-            padding: 1rem 1.5rem;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            margin-bottom: 1rem;
-            animation: slideIn 0.3s ease;
-            border-left: 4px solid;
-            min-width: 300px;
-        }
-
-        .toast-premium.success {
-            border-left-color: var(--success);
-        }
-
-        .toast-premium.error {
-            border-left-color: var(--danger);
-        }
-
-        .toast-premium.warning {
-            border-left-color: var(--warning);
-        }
-
-        .toast-premium.info {
-            border-left-color: var(--info);
-        }
-
-        /* DataTable Custom Style */
-        .dataTables_wrapper {
-            padding-top: 1rem;
-        }
-
-        .dataTables_wrapper .dataTables_paginate .paginate_button.current {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%) !important;
-            color: white !important;
-            border: none !important;
-            border-radius: 8px !important;
-        }
-
-        .dataTables_wrapper .dataTables_paginate .paginate_button:hover {
-            background: var(--primary-light) !important;
-            color: white !important;
-            border: none !important;
-            border-radius: 8px !important;
-        }
-
-        table.dataTable {
-            border-collapse: separate !important;
-            border-spacing: 0;
-            width: 100% !important;
-        }
-
-        table.dataTable thead th {
-            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-            font-weight: 600;
-            color: var(--dark);
-            border-bottom: 2px solid #e2e8f0;
-            white-space: nowrap;
-        }
-
-        table.dataTable tbody tr:hover {
-            background: rgba(0, 86, 210, 0.03);
-        }
-
-        table.dataTable tbody td {
-            vertical-align: middle;
-        }
-
-        /* Badge Premium */
-        .badge-premium {
-            padding: 0.375rem 0.75rem;
-            border-radius: 8px;
-            font-weight: 600;
-            font-size: 0.875rem;
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
-            color: white;
-            box-shadow: 0 2px 4px rgba(0, 86, 210, 0.2);
-        }
-
-        .badge-status {
-            padding: 0.25rem 0.75rem;
-            border-radius: 6px;
-            font-weight: 600;
-            font-size: 0.825rem;
-            display: inline-block;
-        }
-
-        .badge-status.ativo {
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-            color: white;
-        }
-
-        .badge-status.inativo {
-            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-            color: white;
-        }
-
-        .badge-status.pre-cadastro {
-            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-            color: white;
-        }
-
-        /* Alert Premium */
-        .alert-premium {
-            border-radius: 14px;
-            padding: 1.25rem;
-            border: none;
-            box-shadow: var(--shadow-sm);
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        .alert-premium.info {
-            background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(59, 130, 246, 0.05) 100%);
-            color: var(--info);
-        }
-
-        /* Indicações Card Especial */
-        .indicacao-card {
-            background: white;
-            border-radius: 12px;
-            padding: 1.5rem;
-            border: 1px solid #e2e8f0;
-            margin-bottom: 1rem;
-            transition: all 0.3s ease;
-        }
-
-        .indicacao-card:hover {
-            box-shadow: var(--shadow-md);
-            transform: translateY(-2px);
-        }
-
-        .indicacao-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1rem;
-            padding-bottom: 1rem;
-            border-bottom: 1px solid #f1f5f9;
-        }
-
-        .indicacao-info {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1rem;
-        }
-
-        .info-item {
-            display: flex;
-            flex-direction: column;
-            gap: 0.25rem;
-        }
-
-        .info-label {
-            font-size: 0.825rem;
-            color: #64748b;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .info-value {
-            font-size: 0.95rem;
-            color: var(--dark);
-            font-weight: 500;
-        }
-
-        /* Animações */
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
+        /* Animations */
         @keyframes spin {
-            to {
-                transform: rotate(360deg);
-            }
-        }
-
-        @keyframes slideIn {
-            from {
-                transform: translateX(100%);
-                opacity: 0;
-            }
-            to {
-                transform: translateX(0);
-                opacity: 1;
-            }
+            to { transform: rotate(360deg); }
         }
 
         /* Responsivo */
@@ -844,17 +609,13 @@ if (empty($patentesDB)) {
             .content-area {
                 padding: 1rem;
             }
-
-            .report-type-grid {
+            
+            .actions-grid {
                 grid-template-columns: 1fr;
             }
 
             .filter-row {
-                grid-template-columns: 1fr;
-            }
-
-            .page-title {
-                font-size: 2rem;
+                grid-template-columns: 1fr !important;
             }
 
             .results-header {
@@ -866,10 +627,6 @@ if (empty($patentesDB)) {
             .export-buttons {
                 width: 100%;
                 justify-content: flex-start;
-            }
-
-            table.dataTable {
-                font-size: 0.875rem;
             }
         }
     </style>
@@ -892,62 +649,61 @@ if (empty($patentesDB)) {
                 Voltar aos Serviços Comerciais
             </a>
 
-            <!-- Page Header -->
-            <div class="page-header" data-aos="fade-down" data-aos-duration="600">
+            <!-- Page Header - Fora de cards como no comercial.php -->
+            <div class="page-header">
                 <h1 class="page-title">
-                    <i class="fas fa-chart-line me-3"></i>
-                    Relatórios Comerciais
+                    <i class="fas fa-chart-line me-2"></i>Relatórios Comerciais
                 </h1>
                 <p class="page-subtitle">
                     Sistema avançado de geração de relatórios para análise comercial e estratégica
                 </p>
             </div>
 
-            <!-- Report Type Selector -->
-            <div class="report-selector-container" data-aos="fade-up" data-aos-delay="100">
-                <div class="section-header">
-                    <h3 class="section-title">
+            <!-- Report Type Selector - Cards de Ação -->
+            <div class="actions-container">
+                <div class="actions-header">
+                    <h3 class="actions-title">
                         <i class="fas fa-clipboard-list"></i>
                         Selecione o Tipo de Relatório
                     </h3>
                 </div>
 
-                <div class="report-type-grid">
-                    <div class="report-type-card active" data-type="desfiliacoes" onclick="selecionarRelatorio('desfiliacoes')">
-                        <div class="report-icon">
+                <div class="actions-grid">
+                    <div class="action-card active" data-type="desfiliacoes" onclick="selecionarRelatorio('desfiliacoes')">
+                        <div class="action-icon primary">
                             <i class="fas fa-user-times"></i>
                         </div>
-                        <div class="report-content">
+                        <div class="action-content">
                             <h5>Desfiliações</h5>
                             <p>Análise de associados desfiliados</p>
                         </div>
                     </div>
 
-                    <div class="report-type-card" data-type="indicacoes" onclick="selecionarRelatorio('indicacoes')">
-                        <div class="report-icon">
+                    <div class="action-card" data-type="indicacoes" onclick="selecionarRelatorio('indicacoes')">
+                        <div class="action-icon success">
                             <i class="fas fa-user-plus"></i>
                         </div>
-                        <div class="report-content">
+                        <div class="action-content">
                             <h5>Indicações</h5>
                             <p>Relatório completo de indicações</p>
                         </div>
                     </div>
 
-                    <div class="report-type-card" data-type="aniversariantes" onclick="selecionarRelatorio('aniversariantes')">
-                        <div class="report-icon">
+                    <div class="action-card" data-type="aniversariantes" onclick="selecionarRelatorio('aniversariantes')">
+                        <div class="action-icon warning">
                             <i class="fas fa-birthday-cake"></i>
                         </div>
-                        <div class="report-content">
+                        <div class="action-content">
                             <h5>Aniversariantes</h5>
                             <p>Aniversários por período</p>
                         </div>
                     </div>
 
-                    <div class="report-type-card" data-type="novos_cadastros" onclick="selecionarRelatorio('novos_cadastros')">
-                        <div class="report-icon">
+                    <div class="action-card" data-type="novos_cadastros" onclick="selecionarRelatorio('novos_cadastros')">
+                        <div class="action-icon info">
                             <i class="fas fa-user-check"></i>
                         </div>
-                        <div class="report-content">
+                        <div class="action-content">
                             <h5>Novos Cadastros</h5>
                             <p>Associados recém cadastrados</p>
                         </div>
@@ -956,9 +712,9 @@ if (empty($patentesDB)) {
             </div>
 
             <!-- Filters Section -->
-            <div class="filters-container" data-aos="fade-up" data-aos-delay="200">
-                <div class="section-header">
-                    <h3 class="section-title">
+            <div class="filters-container">
+                <div class="actions-header">
+                    <h3 class="actions-title">
                         <i class="fas fa-filter"></i>
                         Configuração de Filtros
                     </h3>
@@ -967,31 +723,31 @@ if (empty($patentesDB)) {
                 <form id="formFiltros">
                     <input type="hidden" name="tipo" id="tipoRelatorio" value="desfiliacoes">
 
-                    <div class="filter-row">
-                        <div class="form-group-premium">
-                            <label class="form-label-premium">
+                    <div class="row mb-3">
+                        <div class="col-md-3">
+                            <label class="form-label-custom">
                                 <i class="fas fa-calendar-alt"></i>
                                 Data Inicial
                             </label>
-                            <input type="date" name="data_inicio" class="form-control-premium" id="dataInicio"
+                            <input type="date" name="data_inicio" class="form-control form-control-custom" id="dataInicio"
                                 value="<?php echo date('Y-m-01'); ?>">
                         </div>
 
-                        <div class="form-group-premium">
-                            <label class="form-label-premium">
+                        <div class="col-md-3">
+                            <label class="form-label-custom">
                                 <i class="fas fa-calendar-check"></i>
                                 Data Final
                             </label>
-                            <input type="date" name="data_fim" class="form-control-premium" id="dataFim"
+                            <input type="date" name="data_fim" class="form-control form-control-custom" id="dataFim"
                                 value="<?php echo date('Y-m-d'); ?>">
                         </div>
 
-                        <div class="form-group-premium">
-                            <label class="form-label-premium">
+                        <div class="col-md-3">
+                            <label class="form-label-custom">
                                 <i class="fas fa-building"></i>
                                 Corporação
                             </label>
-                            <select name="corporacao" class="form-select-premium select2" id="corporacao">
+                            <select name="corporacao" class="form-select form-select-custom select2" id="corporacao">
                                 <option value="">Todas as corporações</option>
                                 <?php foreach($corporacoesDB as $corporacao): ?>
                                     <?php if(!empty($corporacao)): ?>
@@ -1003,12 +759,12 @@ if (empty($patentesDB)) {
                             </select>
                         </div>
 
-                        <div class="form-group-premium">
-                            <label class="form-label-premium">
+                        <div class="col-md-3">
+                            <label class="form-label-custom">
                                 <i class="fas fa-star"></i>
                                 Patente
                             </label>
-                            <select name="patente" class="form-select-premium select2" id="patente">
+                            <select name="patente" class="form-select form-select-custom select2" id="patente">
                                 <option value="">Todas as patentes</option>
                                 <?php foreach($patentesDB as $patente): ?>
                                     <?php if(!empty($patente)): ?>
@@ -1021,13 +777,13 @@ if (empty($patentesDB)) {
                         </div>
                     </div>
 
-                    <div class="filter-row">
-                        <div class="form-group-premium">
-                            <label class="form-label-premium">
+                    <div class="row mb-3">
+                        <div class="col-md-3">
+                            <label class="form-label-custom">
                                 <i class="fas fa-map-marker-alt"></i>
                                 Lotação
                             </label>
-                            <select name="lotacao" class="form-select-premium select2" id="lotacao">
+                            <select name="lotacao" class="form-select form-select-custom select2" id="lotacao">
                                 <option value="">Todas as lotações</option>
                                 <?php foreach($lotacoesDB as $lotacao): ?>
                                     <?php if(!empty($lotacao)): ?>
@@ -1039,12 +795,12 @@ if (empty($patentesDB)) {
                             </select>
                         </div>
 
-                        <div class="form-group-premium">
-                            <label class="form-label-premium">
+                        <div class="col-md-3">
+                            <label class="form-label-custom">
                                 <i class="fas fa-sort-alpha-down"></i>
                                 Ordenar Por
                             </label>
-                            <select name="ordenacao" class="form-select-premium" id="ordenacao">
+                            <select name="ordenacao" class="form-select form-select-custom" id="ordenacao">
                                 <option value="nome">Nome (A-Z)</option>
                                 <option value="data">Data (Mais recente)</option>
                                 <option value="patente">Patente (Hierarquia)</option>
@@ -1052,27 +808,27 @@ if (empty($patentesDB)) {
                             </select>
                         </div>
 
-                        <div class="form-group-premium">
-                            <label class="form-label-premium">
+                        <div class="col-md-3">
+                            <label class="form-label-custom">
                                 <i class="fas fa-search"></i>
                                 Busca Rápida
                             </label>
-                            <input type="text" name="busca" class="form-control-premium" id="busca"
+                            <input type="text" name="busca" class="form-control form-control-custom" id="busca"
                                 placeholder="Nome, CPF ou RG...">
                         </div>
 
-                        <div class="form-group-premium d-flex align-items-end">
-                            <button type="button" class="btn btn-premium btn-primary-premium w-100"
+                        <div class="col-md-3 d-flex align-items-end">
+                            <button type="button" class="btn btn-custom btn-primary-custom w-100"
                                 onclick="gerarRelatorio()">
                                 <i class="fas fa-chart-bar me-2"></i>
-                                GERAR RELATÓRIO
+                                Gerar Relatório
                             </button>
                         </div>
                     </div>
 
                     <!-- Botões de ação -->
-                    <div class="text-center mt-3">
-                        <button type="button" class="btn btn-premium btn-secondary-premium" onclick="limparFiltros()">
+                    <div class="text-center">
+                        <button type="button" class="btn btn-custom btn-secondary-custom" onclick="limparFiltros()">
                             <i class="fas fa-eraser me-2"></i>
                             Limpar Filtros
                         </button>
@@ -1081,12 +837,12 @@ if (empty($patentesDB)) {
             </div>
 
             <!-- Results Container -->
-            <div class="results-container" data-aos="fade-up" data-aos-delay="300">
+            <div class="results-container">
                 <div class="results-header">
                     <h5 class="results-title">
                         <i class="fas fa-table"></i>
                         <span id="tituloResultado">Aguardando Geração do Relatório</span>
-                        <span class="badge-premium ms-3" id="totalRegistros" style="display: none;">0</span>
+                        <span class="badge-custom ms-3" id="totalRegistros" style="display: none;">0</span>
                     </h5>
                     <div class="export-buttons" id="exportButtons" style="display: none;">
                         <button class="btn-export btn-export-excel" onclick="exportarRelatorio('excel')">
@@ -1106,13 +862,13 @@ if (empty($patentesDB)) {
 
                 <!-- Loading -->
                 <div id="loadingContainer" class="loading-container" style="display: none;">
-                    <div class="spinner-premium"></div>
-                    <p class="loading-text">Processando relatório...</p>
+                    <div class="spinner-custom"></div>
+                    <p class="mt-3 text-muted">Processando relatório...</p>
                 </div>
 
                 <!-- Results -->
                 <div id="resultsContainer">
-                    <div class="alert-premium info">
+                    <div class="alert-custom alert-info-custom">
                         <i class="fas fa-info-circle fa-lg"></i>
                         <div>
                             <strong>Pronto para gerar relatórios!</strong><br>
@@ -1138,7 +894,6 @@ if (empty($patentesDB)) {
     <script src="https://cdn.datatables.net/responsive/2.4.1/js/dataTables.responsive.min.js"></script>
     <script src="https://cdn.datatables.net/responsive/2.4.1/js/responsive.bootstrap5.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
 
     <!-- JavaScript do Header Component -->
     <?php $headerComponent->renderJS(); ?>
@@ -1151,13 +906,6 @@ if (empty($patentesDB)) {
 
         // Inicialização
         $(document).ready(function () {
-            // Inicializar AOS
-            AOS.init({
-                duration: 800,
-                once: true,
-                offset: 50
-            });
-
             // Inicializar Select2
             $('.select2').select2({
                 theme: 'bootstrap-5',
@@ -1180,7 +928,7 @@ if (empty($patentesDB)) {
             document.getElementById('tipoRelatorio').value = tipo;
 
             // Atualizar visual dos cards
-            document.querySelectorAll('.report-type-card').forEach(card => {
+            document.querySelectorAll('.action-card').forEach(card => {
                 card.classList.remove('active');
                 if (card.dataset.type === tipo) {
                     card.classList.add('active');
@@ -1189,7 +937,7 @@ if (empty($patentesDB)) {
 
             // Limpar resultados anteriores
             document.getElementById('resultsContainer').innerHTML = `
-                <div class="alert-premium info">
+                <div class="alert-custom alert-info-custom">
                     <i class="fas fa-info-circle fa-lg"></i>
                     <div>
                         <strong>Tipo de relatório alterado!</strong><br>
@@ -1278,7 +1026,7 @@ if (empty($patentesDB)) {
 
             if (data.length === 0) {
                 container.innerHTML = `
-                    <div class="alert-premium info">
+                    <div class="alert-custom alert-info-custom">
                         <i class="fas fa-exclamation-circle fa-lg"></i>
                         <div>
                             <strong>Nenhum registro encontrado</strong><br>
@@ -1289,7 +1037,7 @@ if (empty($patentesDB)) {
                 return;
             }
 
-            // Renderização especial para INDICAÇÕES com dados do associado indicado
+            // Renderização especial para INDICAÇÕES
             if (currentReportType === 'indicacoes') {
                 renderizarRelatorioIndicacoes(data);
                 return;
@@ -1586,32 +1334,29 @@ if (empty($patentesDB)) {
                 </div>
             `;
             document.getElementById('tituloResultado').textContent = 'Erro ao gerar relatório';
-            showToast(mensagem, 'error');
+            showToast(mensagem, 'danger');
         }
 
         // Sistema de Toast
         function showToast(message, type = 'success') {
-            const toast = document.createElement('div');
-            toast.className = `toast-premium ${type}`;
-            
-            const icon = {
-                'success': 'check-circle',
-                'error': 'times-circle',
-                'warning': 'exclamation-triangle',
-                'info': 'info-circle'
-            }[type] || 'info-circle';
-
-            toast.innerHTML = `
-                <i class="fas fa-${icon} fa-lg"></i>
-                <span>${message}</span>
+            const toastHTML = `
+                <div class="toast align-items-center text-white bg-${type} border-0" role="alert">
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            ${message}
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                    </div>
+                </div>
             `;
 
-            document.querySelector('.toast-container').appendChild(toast);
+            const container = document.querySelector('.toast-container');
+            const toastElement = document.createElement('div');
+            toastElement.innerHTML = toastHTML;
+            container.appendChild(toastElement.firstElementChild);
 
-            setTimeout(() => {
-                toast.style.opacity = '0';
-                setTimeout(() => toast.remove(), 300);
-            }, 3000);
+            const toast = new bootstrap.Toast(container.lastElementChild);
+            toast.show();
         }
     </script>
 </body>

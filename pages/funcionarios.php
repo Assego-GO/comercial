@@ -26,39 +26,6 @@ if (!$auth->isLoggedIn()) {
 // Pega dados do usuário logado
 $usuarioLogado = $auth->getUser();
 
-
-/**
- * CÓDIGO DE DEBUG - Adicione temporariamente no início do funcionarios.php
- * Logo após: $usuarioLogado = $auth->getUser();
- */
-
-// DEBUG: Mostrar estado atual da sessão
-error_log("=== DEBUG SIMULAÇÃO ===");
-error_log("Usuário atual: " . ($usuarioLogado['nome'] ?? 'NULL'));
-error_log("Está simulando: " . ($auth->estaSimulando() ? 'SIM' : 'NÃO'));
-error_log("É admin: " . ($auth->isAdmin() ? 'SIM' : 'NÃO'));
-
-if (isset($_SESSION['admin_original'])) {
-    error_log("Admin original salvo: " . print_r($_SESSION['admin_original'], true));
-} else {
-    error_log("Admin original: NÃO EXISTE");
-}
-
-// DEBUG: Verificar se POST está chegando
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    error_log("POST recebido: " . print_r($_POST, true));
-    
-    if (isset($_POST['action']) && $_POST['action'] === 'simular') {
-        error_log("AÇÃO SIMULAR DETECTADA");
-        $funcionario_id = $_POST['funcionario_id'] ?? 'NULL';
-        error_log("Funcionário ID: " . $funcionario_id);
-    }
-    
-    if (isset($_POST['voltar_simulacao'])) {
-        error_log("VOLTAR SIMULAÇÃO DETECTADO");
-    }
-}
-
 // Processar ação de simular funcionário
 if (isset($_POST['action']) && $_POST['action'] === 'simular' && isset($_POST['funcionario_id'])) {
     error_log("PROCESSANDO SIMULAÇÃO...");
@@ -111,8 +78,6 @@ if (isset($_POST['voltar_simulacao']) || isset($_GET['voltar_simulacao'])) {
     }
 }
 
-
-
 // NOVA LÓGICA: Sistema flexível de permissões
 $temPermissaoFuncionarios = true; // Todos têm acesso à página
 $motivoNegacao = '';
@@ -130,12 +95,6 @@ $departamentosEstrategicos = [
     10, // Comercial (ID: 10) - CORRIGIDO
 ];
 
-// Para debug: log dos departamentos estratégicos
-error_log("Departamentos com acesso total configurados:");
-foreach ($departamentosEstrategicos as $deptId) {
-    error_log("- ID {$deptId}: " . getNomeDepartamento($deptId));
-}
-
 // Função para obter nome do departamento por ID (para logs)
 function getNomeDepartamento($departamentoId) {
     $nomes = [
@@ -150,16 +109,6 @@ function getNomeDepartamento($departamentoId) {
     return $nomes[$departamentoId] ?? "Departamento {$departamentoId}";
 }
 
-// Log detalhado para debug
-error_log("=== DEBUG PERMISSÕES FUNCIONÁRIOS ===");
-error_log("Usuário: " . ($usuarioLogado['nome'] ?? 'NULL'));
-error_log("ID do Usuário: " . ($usuarioLogado['id'] ?? 'NULL'));
-error_log("Cargo: " . ($usuarioLogado['cargo'] ?? 'Sem cargo'));
-error_log("É Diretor: " . ($auth->isDiretor() ? 'SIM' : 'NÃO'));
-error_log("Departamento ID: " . ($usuarioLogado['departamento_id'] ?? 'NULL'));
-error_log("Departamento: " . getNomeDepartamento($usuarioLogado['departamento_id'] ?? 0));
-error_log("Dados completos do usuário: " . print_r($usuarioLogado, true));
-
 // Sistema de permissões baseado em cargo e departamento
 $cargoUsuario = $usuarioLogado['cargo'] ?? '';
 $departamentoUsuario = $usuarioLogado['departamento_id'] ?? null;
@@ -167,59 +116,29 @@ $departamentoUsuario = $usuarioLogado['departamento_id'] ?? null;
 // IMPORTANTE: Garantir que seja inteiro para comparação
 $departamentoUsuario = (int)$departamentoUsuario;
 
-error_log("Processando permissões:");
-error_log("Cargo: '{$cargoUsuario}'");
-error_log("Departamento (convertido para int): {$departamentoUsuario}");
-error_log("Departamentos estratégicos: " . implode(', ', $departamentosEstrategicos));
-
-// CORREÇÃO: Nova lógica de permissões com departamentos estratégicos
-// Define escopo de visualização
-error_log("Verificando permissões...");
-error_log("Departamento do usuário: {$departamentoUsuario} (tipo: " . gettype($departamentoUsuario) . ")");
-error_log("Testando se {$departamentoUsuario} está em [" . implode(', ', $departamentosEstrategicos) . "]");
-
 $estaNoDepartamentoEstrategico = in_array($departamentoUsuario, $departamentosEstrategicos, true);
-error_log("Está em departamento estratégico? " . ($estaNoDepartamentoEstrategico ? 'SIM' : 'NÃO'));
 
 if ($estaNoDepartamentoEstrategico) {
     // DEPARTAMENTOS ESTRATÉGICOS - veem todos os funcionários
     $escopoVisualizacao = 'TODOS';
     $podeEditar = true;
     $podeCriar = true;
-    $nomeDept = getNomeDepartamento($departamentoUsuario);
-    error_log("✅ DEPARTAMENTO ESTRATÉGICO ({$nomeDept}): Acesso total a todos os funcionários");
 } elseif (in_array($cargoUsuario, ['Presidente', 'Vice-Presidente'])) {
     // Presidente e Vice-Presidente sempre veem todos (independente do departamento)
     $escopoVisualizacao = 'TODOS';
     $podeEditar = true;
     $podeCriar = true;
-    error_log("✅ {$cargoUsuario}: Acesso total por cargo");
 } elseif (in_array($cargoUsuario, ['Diretor', 'Gerente', 'Supervisor', 'Coordenador'])) {
     // Cargos de liderança em departamentos não-estratégicos - veem apenas seu departamento
     $escopoVisualizacao = 'DEPARTAMENTO';
     $departamentoPermitido = $departamentoUsuario;
     $podeEditar = true;
     $podeCriar = true;
-    $nomeDept = getNomeDepartamento($departamentoUsuario);
-    error_log("✅ {$cargoUsuario} - {$nomeDept}: Acesso ao departamento {$departamentoPermitido}");
 } else {
     // Funcionários comuns - veem apenas seus dados
     $escopoVisualizacao = 'PROPRIO';
     $podeEditar = false;
     $podeCriar = false;
-    error_log("✅ Funcionário comum: Acesso apenas aos próprios dados");
-}
-
-// Log adicional para debug
-error_log("=== RESULTADO FINAL DAS PERMISSÕES ===");
-error_log("Escopo final: {$escopoVisualizacao}");
-error_log("Pode editar: " . ($podeEditar ? 'SIM' : 'NÃO'));
-error_log("Pode criar: " . ($podeCriar ? 'SIM' : 'NÃO'));
-error_log("Departamento permitido: " . ($departamentoPermitido ?? 'NULL'));
-
-// Verificação final para garantir que o RH vê todos
-if ($departamentoUsuario === 9 && $escopoVisualizacao !== 'TODOS') {
-    error_log("❌ ERRO: Usuário do RH (dept 9) deveria ter escopo TODOS mas tem: {$escopoVisualizacao}");
 }
 
 // Define o título da página
@@ -236,22 +155,12 @@ try {
     $filtroSQL = '';
     $params = [];
     
-    error_log("=== PREPARANDO CONSULTA SQL ===");
-    error_log("Escopo de visualização: {$escopoVisualizacao}");
-    
     if ($escopoVisualizacao === 'DEPARTAMENTO' && $departamentoPermitido) {
         $filtroSQL = ' WHERE departamento_id = ?';
         $params = [$departamentoPermitido];
-        error_log("Aplicando filtro de departamento: {$departamentoPermitido}");
-        error_log("SQL será: SELECT COUNT(*) as total FROM Funcionarios{$filtroSQL}");
     } elseif ($escopoVisualizacao === 'PROPRIO') {
         $filtroSQL = ' WHERE id = ?';
         $params = [$usuarioLogado['id']];
-        error_log("Aplicando filtro próprio: usuário {$usuarioLogado['id']}");
-        error_log("SQL será: SELECT COUNT(*) as total FROM Funcionarios{$filtroSQL}");
-    } else {
-        error_log("Sem filtro - visualizando todos os funcionários");
-        error_log("SQL será: SELECT COUNT(*) as total FROM Funcionarios");
     }
     
     // Total de funcionários (com filtro)
@@ -281,13 +190,6 @@ try {
     $stmt = $db->prepare("SELECT COUNT(*) as total FROM Departamentos WHERE ativo = 1");
     $stmt->execute();
     $totalDepartamentos = $stmt->fetch()['total'] ?? 0;
-    
-    // Log das estatísticas
-    error_log("Estatísticas calculadas:");
-    error_log("- Total: {$totalFuncionarios}");
-    error_log("- Ativos: {$funcionariosAtivos}");
-    error_log("- Inativos: {$funcionariosInativos}");
-    error_log("- Novos (30 dias): {$novosFuncionarios}");
     
 } catch (Exception $e) {
     error_log("Erro ao buscar estatísticas: " . $e->getMessage());
@@ -528,337 +430,329 @@ $headerComponent = HeaderComponent::create([
         .table-info .info-item i {
             color: var(--primary);
         }
-        /* === KPIs MODERNOS - FUNCIONÁRIOS === */
 
-/* Card Principal */
-.dual-stat-card {
-    position: relative;
-    overflow: visible;
-    background: white;
-    border: 1px solid #e9ecef;
-    border-radius: 20px;
-    padding: 0;
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
-    min-width: 320px;
-    width: 100%;
-}
+        /* KPIs MODERNOS - FUNCIONÁRIOS */
+        .dual-stat-card {
+            position: relative;
+            overflow: visible;
+            background: white;
+            border: 1px solid #e9ecef;
+            border-radius: 20px;
+            padding: 0;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+            min-width: 320px;
+            width: 100%;
+        }
 
-.dual-stat-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 4px;
-    background: linear-gradient(135deg, #007bff 0%, #17a2b8 100%);
-    transform: scaleX(0);
-    transform-origin: left;
-    transition: transform 0.4s ease;
-}
+        .dual-stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(135deg, #007bff 0%, #17a2b8 100%);
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform 0.4s ease;
+        }
 
-.dual-stat-card:hover::before {
-    transform: scaleX(1);
-}
+        .dual-stat-card:hover::before {
+            transform: scaleX(1);
+        }
 
-.dual-stat-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.12);
-    border-color: rgba(0, 123, 255, 0.2);
-}
+        .dual-stat-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.12);
+            border-color: rgba(0, 123, 255, 0.2);
+        }
 
-/* Header do Card */
-.dual-stat-header {
-    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-    padding: 1rem 1.25rem;
-    border-bottom: 1px solid #e9ecef;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
+        .dual-stat-header {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
 
-.dual-stat-title {
-    font-size: 0.8125rem;
-    font-weight: 700;
-    color: #343a40;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    letter-spacing: 0.5px;
-    text-transform: uppercase;
-}
+        .dual-stat-title {
+            font-size: 0.8125rem;
+            font-weight: 700;
+            color: #343a40;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
 
-.dual-stat-percentage {
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: #007bff;
-    background: rgba(0, 123, 255, 0.1);
-    padding: 0.25rem 0.75rem;
-    border-radius: 20px;
-    display: flex;
-    align-items: center;
-    gap: 0.375rem;
-}
+        .dual-stat-percentage {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #007bff;
+            background: rgba(0, 123, 255, 0.1);
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            gap: 0.375rem;
+        }
 
-/* Layout Desktop - Vertical */
-.dual-stats-row {
-    display: flex;
-    align-items: stretch;
-    padding: 0;
-    min-height: 120px;
-    width: 100%;
-}
+        .dual-stats-row {
+            display: flex;
+            align-items: stretch;
+            padding: 0;
+            min-height: 120px;
+            width: 100%;
+        }
 
-.dual-stats-row.horizontal-layout {
-    justify-content: center;
-    min-height: 100px;
-}
+        .dual-stats-row.horizontal-layout {
+            justify-content: center;
+            min-height: 100px;
+        }
 
-.dual-stat-item {
-    flex: 1;
-    min-width: 0;
-    padding: 1.5rem 0.75rem;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    gap: 1rem;
-    transition: all 0.3s ease;
-    position: relative;
-    width: 50%;
-}
+        .dual-stat-item {
+            flex: 1;
+            min-width: 0;
+            padding: 1.5rem 0.75rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            gap: 1rem;
+            transition: all 0.3s ease;
+            position: relative;
+            width: 50%;
+        }
 
-.dual-stats-row.horizontal-layout .dual-stat-item {
-    max-width: 300px;
-}
+        .dual-stats-row.horizontal-layout .dual-stat-item {
+            max-width: 300px;
+        }
 
-.dual-stat-item:hover {
-    background: rgba(0, 123, 255, 0.02);
-}
+        .dual-stat-item:hover {
+            background: rgba(0, 123, 255, 0.02);
+        }
 
-.dual-stat-icon {
-    width: 48px;
-    height: 48px;
-    border-radius: 14px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.25rem;
-    flex-shrink: 0;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
+        .dual-stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            flex-shrink: 0;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
 
-.dual-stat-info {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-    text-align: center;
-    align-items: center;
-}
+        .dual-stat-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            text-align: center;
+            align-items: center;
+        }
 
-.dual-stat-value {
-    font-size: 1.75rem;
-    font-weight: 800;
-    color: #343a40;
-    line-height: 1;
-    margin-bottom: 0.25rem;
-    transition: all 0.3s ease;
-}
+        .dual-stat-value {
+            font-size: 1.75rem;
+            font-weight: 800;
+            color: #343a40;
+            line-height: 1;
+            margin-bottom: 0.25rem;
+            transition: all 0.3s ease;
+        }
 
-.dual-stat-label {
-    font-size: 0.875rem;
-    color: #6c757d;
-    font-weight: 600;
-    line-height: 1;
-}
+        .dual-stat-label {
+            font-size: 0.875rem;
+            color: #6c757d;
+            font-weight: 600;
+            line-height: 1;
+        }
 
-/* Separador vertical */
-.dual-stats-separator {
-    width: 1px;
-    background: linear-gradient(to bottom, transparent, #dee2e6, transparent);
-    margin: 1.5rem 0;
-    flex-shrink: 0;
-}
+        .dual-stats-separator {
+            width: 1px;
+            background: linear-gradient(to bottom, transparent, #dee2e6, transparent);
+            margin: 1.5rem 0;
+            flex-shrink: 0;
+        }
 
-/* Cores específicas dos ícones - FUNCIONÁRIOS */
-.total-icon {
-    background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
-    color: white;
-}
+        /* Cores específicas dos ícones */
+        .total-icon {
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+            color: white;
+        }
 
-.ativos-icon {
-    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
-    color: white;
-}
+        .ativos-icon {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+        }
 
-.novos-icon {
-    background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
-    color: white;
-}
+        .novos-icon {
+            background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
+            color: white;
+        }
 
-.departamentos-icon {
-    background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
-    color: white;
-}
+        .departamentos-icon {
+            background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+            color: white;
+        }
 
-.perfil-icon {
-    background: linear-gradient(135deg, #6610f2 0%, #6f42c1 100%);
-    color: white;
-}
+        .perfil-icon {
+            background: linear-gradient(135deg, #6610f2 0%, #6f42c1 100%);
+            color: white;
+        }
 
-/* Card simples para inativos */
-.simple-stat-card {
-    background: white;
-    border: 1px solid #e9ecef;
-    border-left: 4px solid #dc3545;
-    border-radius: 16px;
-    padding: 0;
-    transition: all 0.3s ease;
-    box-shadow: 0 2px 8px rgba(220, 53, 69, 0.1);
-}
+        .simple-stat-card {
+            background: white;
+            border: 1px solid #e9ecef;
+            border-left: 4px solid #dc3545;
+            border-radius: 16px;
+            padding: 0;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(220, 53, 69, 0.1);
+        }
 
-.simple-stat-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 15px rgba(220, 53, 69, 0.15);
-}
+        .simple-stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(220, 53, 69, 0.15);
+        }
 
-.simple-stat-header {
-    padding: 1.5rem;
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-}
+        .simple-stat-header {
+            padding: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
 
-.simple-stat-icon {
-    width: 56px;
-    height: 56px;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.5rem;
-    flex-shrink: 0;
-}
+        .simple-stat-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            flex-shrink: 0;
+        }
 
-.inativos-simple-icon {
-    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
-    color: white;
-}
+        .inativos-simple-icon {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+            color: white;
+        }
 
-.simple-stat-info {
-    flex: 1;
-}
+        .simple-stat-info {
+            flex: 1;
+        }
 
-.simple-stat-value {
-    font-size: 2rem;
-    font-weight: 800;
-    color: #343a40;
-    line-height: 1;
-    margin-bottom: 0.25rem;
-}
+        .simple-stat-value {
+            font-size: 2rem;
+            font-weight: 800;
+            color: #343a40;
+            line-height: 1;
+            margin-bottom: 0.25rem;
+        }
 
-.simple-stat-label {
-    font-size: 0.875rem;
-    color: #6c757d;
-    font-weight: 600;
-    margin-bottom: 0.5rem;
-}
+        .simple-stat-label {
+            font-size: 0.875rem;
+            color: #6c757d;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
 
-.simple-stat-change {
-    font-size: 0.75rem;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    gap: 0.25rem;
-}
+        .simple-stat-change {
+            font-size: 0.75rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
 
-.simple-stat-change.negative {
-    color: #dc3545;
-}
+        .simple-stat-change.negative {
+            color: #dc3545;
+        }
 
-/* Ajuste do grid */
-.stats-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 1.5rem;
-    margin-bottom: 2rem;
-}
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
 
-/* Para visualização própria */
-.stats-grid .funcionario-proprio-pie {
-    grid-column: 1 / -1;
-    max-width: 600px;
-    margin: 0 auto;
-}
+        .stats-grid .funcionario-proprio-pie {
+            grid-column: 1 / -1;
+            max-width: 600px;
+            margin: 0 auto;
+        }
 
-/* Responsividade */
-@media (max-width: 1200px) {
-    .stats-grid {
-        grid-template-columns: 1fr;
-        gap: 1rem;
-    }
-    
-    .stats-grid .funcionario-proprio-pie {
-        grid-column: 1;
-    }
-}
+        @media (max-width: 1200px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+            
+            .stats-grid .funcionario-proprio-pie {
+                grid-column: 1;
+            }
+        }
 
-@media (max-width: 768px) {
-    .dual-stats-row {
-        flex-direction: column;
-        min-height: auto;
-    }
+        @media (max-width: 768px) {
+            .dual-stats-row {
+                flex-direction: column;
+                min-height: auto;
+            }
 
-    .dual-stats-separator {
-        width: 80%;
-        height: 1px;
-        margin: 0.75rem auto;
-        background: linear-gradient(to right, transparent, #dee2e6, transparent);
-    }
+            .dual-stats-separator {
+                width: 80%;
+                height: 1px;
+                margin: 0.75rem auto;
+                background: linear-gradient(to right, transparent, #dee2e6, transparent);
+            }
 
-    .dual-stat-item {
-        padding: 1.25rem;
-        width: 100%;
-        min-width: 0;
-        flex-direction: row !important;
-        align-items: center !important;
-        text-align: left !important;
-        gap: 1rem !important;
-        justify-content: flex-start !important;
-    }
+            .dual-stat-item {
+                padding: 1.25rem;
+                width: 100%;
+                min-width: 0;
+                flex-direction: row !important;
+                align-items: center !important;
+                text-align: left !important;
+                gap: 1rem !important;
+                justify-content: flex-start !important;
+            }
 
-    .dual-stat-info {
-        display: flex !important;
-        flex-direction: column !important;
-        align-items: flex-start !important;
-        text-align: left !important;
-    }
+            .dual-stat-info {
+                display: flex !important;
+                flex-direction: column !important;
+                align-items: flex-start !important;
+                text-align: left !important;
+            }
 
-    .dual-stat-value {
-        font-size: 1.75rem;
-    }
+            .dual-stat-value {
+                font-size: 1.75rem;
+            }
 
-    .dual-stat-icon {
-        width: 48px;
-        height: 48px;
-        font-size: 1.25rem;
-        flex-shrink: 0;
-    }
-    
-    .simple-stat-header {
-        padding: 1.25rem;
-        flex-direction: column;
-        text-align: center;
-    }
-    
-    .simple-stat-icon {
-        width: 48px;
-        height: 48px;
-        font-size: 1.25rem;
-    }
-}
+            .dual-stat-icon {
+                width: 48px;
+                height: 48px;
+                font-size: 1.25rem;
+                flex-shrink: 0;
+            }
+            
+            .simple-stat-header {
+                padding: 1.25rem;
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .simple-stat-icon {
+                width: 48px;
+                height: 48px;
+                font-size: 1.25rem;
+            }
+        }
     </style>
 </head>
 
@@ -910,39 +804,107 @@ $headerComponent = HeaderComponent::create([
             </div>
 
             <!-- Stats Grid - KPIs Modernos Funcionários -->
-<div class="stats-grid" data-aos="fade-up">
-    <?php if ($escopoVisualizacao === 'PROPRIO'): ?>
-        <!-- Visualização própria - Card único -->
-        <div class="stat-card dual-stat-card funcionario-proprio-pie" style="grid-column: span 2;">
-            <div class="dual-stat-header">
-                <div class="dual-stat-title">
-                    <i class="fas fa-user-circle"></i>
-                    Meu Perfil
-                </div>
-                <div class="dual-stat-percentage" id="perfilPercent">
-                    <i class="fas fa-id-badge"></i>
-                    Pessoal
-                </div>
-            </div>
-            <div class="dual-stats-row horizontal-layout">
-                <div class="dual-stat-item perfil-item">
-                    <div class="dual-stat-icon perfil-icon">
-                        <i class="fas fa-user-tie"></i>
+            <div class="stats-grid" data-aos="fade-up">
+                <?php if ($escopoVisualizacao === 'PROPRIO'): ?>
+                    <!-- Visualização própria - Card único -->
+                    <div class="stat-card dual-stat-card funcionario-proprio-pie" style="grid-column: span 2;">
+                        <div class="dual-stat-header">
+                            <div class="dual-stat-title">
+                                <i class="fas fa-user-circle"></i>
+                                Meu Perfil
+                            </div>
+                            <div class="dual-stat-percentage" id="perfilPercent">
+                                <i class="fas fa-id-badge"></i>
+                                Pessoal
+                            </div>
+                        </div>
+                        <div class="dual-stats-row horizontal-layout">
+                            <div class="dual-stat-item perfil-item">
+                                <div class="dual-stat-icon perfil-icon">
+                                    <i class="fas fa-user-tie"></i>
+                                </div>
+                                <div class="dual-stat-info">
+                                    <div class="dual-stat-value">1</div>
+                                    <div class="dual-stat-label">Meus Dados</div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="dual-stat-info">
-                        <div class="dual-stat-value">1</div>
-                        <div class="dual-stat-label">Meus Dados</div>
+                <?php else: ?>
+                    <!-- Card 1: Total + Ativos -->
+                    <div class="stat-card dual-stat-card">
+                        <div class="dual-stat-header">
+                            <div class="dual-stat-title">
+                                <i class="fas fa-users"></i>
+                                Funcionários
+                            </div>
+                            <div class="dual-stat-percentage">
+                                <?php 
+                                $percentualAtivos = $totalFuncionarios > 0 ? round(($funcionariosAtivos / $totalFuncionarios) * 100) : 0;
+                                ?>
+                                <i class="fas fa-percentage"></i>
+                                <?php echo $percentualAtivos; ?>% ativos
+                            </div>
+                        </div>
+                        <div class="dual-stats-row">
+                            <div class="dual-stat-item">
+                                <div class="dual-stat-icon total-icon">
+                                    <i class="fas fa-user-friends"></i>
+                                </div>
+                                <div class="dual-stat-info">
+                                    <div class="dual-stat-value"><?php echo $totalFuncionarios; ?></div>
+                                    <div class="dual-stat-label">Total</div>
+                                </div>
+                            </div>
+                            <div class="dual-stats-separator"></div>
+                            <div class="dual-stat-item">
+                                <div class="dual-stat-icon ativos-icon">
+                                    <i class="fas fa-user-check"></i>
+                                </div>
+                                <div class="dual-stat-info">
+                                    <div class="dual-stat-value"><?php echo $funcionariosAtivos; ?></div>
+                                    <div class="dual-stat-label">Ativos</div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                </div>
-            </div>
-        </div>
-    <?php else: ?>
-        <!-- Card 1: Total + Ativos -->
 
-      
-        
-    <?php endif; ?>
-</div>
+                    <!-- Card 2: Novos + Departamentos -->
+                    <div class="stat-card dual-stat-card">
+                        <div class="dual-stat-header">
+                            <div class="dual-stat-title">
+                                <i class="fas fa-chart-line"></i>
+                                Estatísticas
+                            </div>
+                            <div class="dual-stat-percentage">
+                                <i class="fas fa-calendar"></i>
+                                30 dias
+                            </div>
+                        </div>
+                        <div class="dual-stats-row">
+                            <div class="dual-stat-item">
+                                <div class="dual-stat-icon novos-icon">
+                                    <i class="fas fa-user-plus"></i>
+                                </div>
+                                <div class="dual-stat-info">
+                                    <div class="dual-stat-value"><?php echo $novosFuncionarios; ?></div>
+                                    <div class="dual-stat-label">Novos</div>
+                                </div>
+                            </div>
+                            <div class="dual-stats-separator"></div>
+                            <div class="dual-stat-item">
+                                <div class="dual-stat-icon departamentos-icon">
+                                    <i class="fas fa-building"></i>
+                                </div>
+                                <div class="dual-stat-info">
+                                    <div class="dual-stat-value"><?php echo $totalDepartamentos; ?></div>
+                                    <div class="dual-stat-label">Departamentos</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                <?php endif; ?>
+            </div>
 
             <!-- Actions Bar with Filters -->
             <?php if ($escopoVisualizacao !== 'PROPRIO'): ?>
@@ -1043,7 +1005,6 @@ $headerComponent = HeaderComponent::create([
                                 <th>Departamento</th>
                                 <?php endif; ?>
                                 <th>Cargo</th>
-                                <th>Badges</th>
                                 <th>Status</th>
                                 <th>Data Cadastro</th>
                                 <th style="width: 120px;">Ações</th>
@@ -1051,7 +1012,7 @@ $headerComponent = HeaderComponent::create([
                         </thead>
                         <tbody id="tableBody">
                             <tr>
-                                <td colspan="<?php echo $escopoVisualizacao === 'TODOS' ? '9' : '8'; ?>" class="text-center py-5">
+                                <td colspan="<?php echo $escopoVisualizacao === 'TODOS' ? '8' : '7'; ?>" class="text-center py-5">
                                     <div class="d-flex flex-column align-items-center">
                                         <div class="loading-spinner mb-3"></div>
                                         <p class="text-muted mb-0">Carregando funcionários...</p>
@@ -1176,7 +1137,7 @@ $headerComponent = HeaderComponent::create([
 
     <!-- Modal de Visualização do Funcionário -->
     <div class="modal-custom" id="modalVisualizacao">
-        <div class="modal-content-custom" style="max-width: 700px;">
+        <div class="modal-content-custom" style="max-width: 600px;">
             <div class="modal-header-custom" style="background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: var(--white);">
                 <div class="d-flex align-items-center gap-3">
                     <div class="modal-avatar-view" id="avatarView">
@@ -1196,91 +1157,37 @@ $headerComponent = HeaderComponent::create([
                 </button>
             </div>
             <div class="modal-body-custom p-0">
-                <!-- Tabs de navegação -->
-                <div class="view-tabs">
-                    <button class="view-tab active" onclick="abrirTabView('dados')">
-                        <i class="fas fa-user"></i>
-                        Dados Pessoais
-                    </button>
-                    <button class="view-tab" onclick="abrirTabView('badges')">
-                        <i class="fas fa-medal"></i>
-                        Badges e Conquistas
-                    </button>
-                    <button class="view-tab" onclick="abrirTabView('contribuicoes')">
-                        <i class="fas fa-project-diagram"></i>
-                        Contribuições
-                    </button>
-                </div>
-
-                <!-- Conteúdo das tabs -->
+                <!-- Conteúdo das informações -->
                 <div class="view-content">
-                    <!-- Tab Dados Pessoais -->
-                    <div id="dados-tab" class="view-tab-content active">
-                        <div class="info-section">
-                            <h4 class="info-title">
-                                <i class="fas fa-info-circle"></i>
-                                Informações Gerais
-                            </h4>
-                            <div class="info-grid">
-                                <div class="info-item">
-                                    <span class="info-label">Email</span>
-                                    <span class="info-value" id="emailView">-</span>
-                                </div>
-                                <div class="info-item">
-                                    <span class="info-label">Status</span>
-                                    <span class="info-value" id="statusView">-</span>
-                                </div>
-                                <div class="info-item">
-                                    <span class="info-label">CPF</span>
-                                    <span class="info-value" id="cpfView">-</span>
-                                </div>
-                                <div class="info-item">
-                                    <span class="info-label">RG</span>
-                                    <span class="info-value" id="rgView">-</span>
-                                </div>
-                                <div class="info-item">
-                                    <span class="info-label">Data de Cadastro</span>
-                                    <span class="info-value" id="dataCadastroView">-</span>
-                                </div>
-                                <div class="info-item">
-                                    <span class="info-label">Última Atualização de Senha</span>
-                                    <span class="info-value" id="senhaAlteradaView">-</span>
-                                </div>
+                    <div class="info-section">
+                        <h4 class="info-title">
+                            <i class="fas fa-info-circle"></i>
+                            Informações Gerais
+                        </h4>
+                        <div class="info-grid">
+                            <div class="info-item">
+                                <span class="info-label">Email</span>
+                                <span class="info-value" id="emailView">-</span>
                             </div>
-                        </div>
-
-                        <div class="stats-summary">
-                            <div class="stat-summary-item">
-                                <div class="stat-summary-value" id="totalBadgesView">0</div>
-                                <div class="stat-summary-label">Badges</div>
+                            <div class="info-item">
+                                <span class="info-label">Status</span>
+                                <span class="info-value" id="statusView">-</span>
                             </div>
-                            <div class="stat-summary-item">
-                                <div class="stat-summary-value" id="totalPontosView">0</div>
-                                <div class="stat-summary-label">Pontos</div>
+                            <div class="info-item">
+                                <span class="info-label">CPF</span>
+                                <span class="info-value" id="cpfView">-</span>
                             </div>
-                            <div class="stat-summary-item">
-                                <div class="stat-summary-value" id="totalContribuicoesView">0</div>
-                                <div class="stat-summary-label">Contribuições</div>
+                            <div class="info-item">
+                                <span class="info-label">RG</span>
+                                <span class="info-value" id="rgView">-</span>
                             </div>
-                        </div>
-                    </div>
-
-                    <!-- Tab Badges -->
-                    <div id="badges-tab" class="view-tab-content">
-                        <div class="badges-container" id="badgesContainer">
-                            <div class="empty-state">
-                                <i class="fas fa-medal"></i>
-                                <p>Nenhuma badge conquistada ainda</p>
+                            <div class="info-item">
+                                <span class="info-label">Data de Cadastro</span>
+                                <span class="info-value" id="dataCadastroView">-</span>
                             </div>
-                        </div>
-                    </div>
-
-                    <!-- Tab Contribuições -->
-                    <div id="contribuicoes-tab" class="view-tab-content">
-                        <div class="contribuicoes-container" id="contribuicoesContainer">
-                            <div class="empty-state">
-                                <i class="fas fa-project-diagram"></i>
-                                <p>Nenhuma contribuição registrada</p>
+                            <div class="info-item">
+                                <span class="info-label">Última Atualização de Senha</span>
+                                <span class="info-value" id="senhaAlteradaView">-</span>
                             </div>
                         </div>
                     </div>
@@ -1340,12 +1247,6 @@ $headerComponent = HeaderComponent::create([
         const isAdmin = <?php echo json_encode($auth->isAdmin()); ?>;
         const userDepartamento = <?php echo json_encode($usuarioLogado["departamento_id"]); ?>;
         const estaSimulando = <?php echo json_encode($auth->estaSimulando()); ?>;
-        
-        console.log('=== CONFIG FUNCIONÁRIOS ===');
-        console.log('Escopo:', escopoVisualizacao);
-        console.log('Departamento permitido:', departamentoPermitido);
-        console.log('Pode editar:', podeEditar);
-        console.log('Pode criar:', podeCriar);
 
         // ===== FUNÇÕES CORRIGIDAS PARA O DROPDOWN =====
         
@@ -1366,7 +1267,6 @@ $headerComponent = HeaderComponent::create([
 
             // Verificar estado atual
             const isOpen = userDropdown.classList.contains('show');
-            console.log('Estado atual do dropdown:', isOpen ? 'ABERTO' : 'FECHADO');
             
             if (isOpen) {
                 // Fechar dropdown
@@ -1376,7 +1276,6 @@ $headerComponent = HeaderComponent::create([
                     dropdownOverlay.classList.remove('show');
                 }
                 dropdownOpen = false;
-                console.log('✅ Dropdown fechado');
             } else {
                 // Abrir dropdown
                 userDropdown.classList.add('show');
@@ -1385,7 +1284,6 @@ $headerComponent = HeaderComponent::create([
                     dropdownOverlay.classList.add('show');
                 }
                 dropdownOpen = true;
-                console.log('✅ Dropdown aberto');
             }
         }
 
@@ -1405,13 +1303,10 @@ $headerComponent = HeaderComponent::create([
                 dropdownOverlay.classList.remove('show');
             }
             dropdownOpen = false;
-            console.log('✅ Dropdown fechado via closeUserDropdown');
         }
 
         // Função para lidar com cliques nos itens do menu - SIMPLIFICADA
         function handleMenuClick(action, event) {
-            console.log('Ação:', action);
-            
             if (event) {
                 event.preventDefault();
                 event.stopPropagation();
@@ -1447,7 +1342,6 @@ $headerComponent = HeaderComponent::create([
                 
                 // Clique no userMenu ou seus filhos
                 if (userMenu && (target === userMenu || userMenu.contains(target))) {
-                    console.log('👆 Clique detectado no userMenu');
                     event.stopPropagation();
                     toggleUserDropdown(event);
                     return;
@@ -1457,7 +1351,6 @@ $headerComponent = HeaderComponent::create([
                 if (userDropdown && userDropdown.contains(target)) {
                     const dropdownItem = target.closest('.dropdown-item');
                     if (dropdownItem) {
-                        console.log('👆 Clique em item do dropdown:', dropdownItem.textContent.trim());
                         event.preventDefault();
                         event.stopPropagation();
                         
@@ -1475,7 +1368,6 @@ $headerComponent = HeaderComponent::create([
                 
                 // Clique no overlay
                 if (target.id === 'dropdownOverlay') {
-                    console.log('👆 Clique no overlay');
                     closeUserDropdown();
                     return;
                 }
@@ -1485,7 +1377,6 @@ $headerComponent = HeaderComponent::create([
                     !userMenu.contains(target) && 
                     !userDropdown.contains(target)) {
                     if (dropdownOpen) {
-                        console.log('👆 Clique fora do dropdown');
                         closeUserDropdown();
                     }
                 }
@@ -1494,27 +1385,9 @@ $headerComponent = HeaderComponent::create([
             // Fechar dropdown com tecla ESC
             document.addEventListener('keydown', function(event) {
                 if (event.key === 'Escape' && dropdownOpen) {
-                    console.log('⌨️ ESC pressionado');
                     closeUserDropdown();
                 }
             });
-            
-            // Debug: Verificar se elementos existem após carregamento
-            setTimeout(() => {
-                const userMenu = document.getElementById('userMenu');
-                const userDropdown = document.getElementById('userDropdown');
-                console.log('🔍 Status dos elementos:');
-                console.log('- userMenu:', userMenu ? '✅' : '❌');
-                console.log('- userDropdown:', userDropdown ? '✅' : '❌');
-                
-                if (userDropdown) {
-                    const items = userDropdown.querySelectorAll('.dropdown-item');
-                    console.log('- Itens do dropdown:', items.length);
-                    items.forEach((item, i) => {
-                        console.log(`  ${i+1}. "${item.textContent.trim()}"`);
-                    });
-                }
-            }, 1000);
 
             // Máscaras
             if (typeof $ !== 'undefined' && $('#cpf').length) {
@@ -1622,8 +1495,6 @@ $headerComponent = HeaderComponent::create([
                 params.proprio_id = usuarioLogadoId;
             }
 
-            console.log('📊 Carregando funcionários:', params);
-
             $.ajax({
                 url: '../api/funcionarios_listar.php',
                 method: 'GET',
@@ -1661,7 +1532,7 @@ $headerComponent = HeaderComponent::create([
         // Exibe erro na tabela
         function exibirErroTabela(mensagem) {
             const tbody = document.getElementById('tableBody');
-            const totalColunas = escopoVisualizacao === 'TODOS' ? 9 : 8;
+            const totalColunas = escopoVisualizacao === 'TODOS' ? 8 : 7;
             
             if (tbody) {
                 tbody.innerHTML = `
@@ -1879,10 +1750,10 @@ $headerComponent = HeaderComponent::create([
             }
         }
 
-        // Renderiza tabela - AJUSTADO PARA PAGINAÇÃO
+        // Renderiza tabela - AJUSTADO PARA PAGINAÇÃO E SEM BADGES
         function renderizarTabela() {
             const tbody = document.getElementById('tableBody');
-            const totalColunas = escopoVisualizacao === 'TODOS' ? 9 : 8;
+            const totalColunas = escopoVisualizacao === 'TODOS' ? 8 : 7;
             
             if (!tbody) {
                 console.error('Elemento tableBody não encontrado');
@@ -1920,21 +1791,6 @@ $headerComponent = HeaderComponent::create([
                     cargoBadge = `<span class="cargo-badge gerente"><i class="fas fa-user-tie"></i> Gerente</span>`;
                 }
                 
-                // Badges
-                let badgesHtml = '<div class="badges-list">';
-                const totalBadges = funcionario.total_badges || 0;
-                if (totalBadges > 0) {
-                    badgesHtml += `
-                        <span class="mini-badge gold" title="${totalBadges} badges">
-                            <i class="fas fa-medal"></i>
-                        </span>
-                        <span class="badge-count">${totalBadges}</span>
-                    `;
-                } else {
-                    badgesHtml += '<span class="text-muted small">-</span>';
-                }
-                badgesHtml += '</div>';
-                
                 // Determinar se pode editar este funcionário
                 let podeEditarEste = false;
                 if (escopoVisualizacao === 'PROPRIO') {
@@ -1966,52 +1822,51 @@ $headerComponent = HeaderComponent::create([
                     rowHtml += `<td>${funcionario.departamento_nome || '-'}</td>`;
                 }
                 
-rowHtml += `
-            <td>${cargoBadge}</td>
-            <td>${badgesHtml}</td>
-            <td>${statusBadge}</td>
-            <td>${formatarData(funcionario.criado_em)}</td>
-            <td>
-                <div class="action-buttons-table">
-                    <button class="btn-icon view" onclick="visualizarFuncionario(${funcionario.id})" title="Visualizar">
-                        <i class="fas fa-eye"></i>
-                    </button>
-        `;
-        
-        // Botão de simular (apenas para admins e não para si mesmo)
-        if (isAdmin && funcionario.id != usuarioLogadoId || userDepartamento == 15 || userDepartamento == 1) {
-            rowHtml += `
-                    <button class="btn-icon simulate" onclick="simularFuncionario(${funcionario.id}, '${funcionario.nome.replace(/'/g, "\\'")}', '${funcionario.cargo}', '${funcionario.departamento_nome}')" title="Simular este funcionário">
-                        <i class="fas fa-user-secret"></i>
-                    </button>
-            `;
-        }
-        
-        // Botões de editar e desativar
-        if (podeEditarEste) {
-            rowHtml += `
-                    <button class="btn-icon edit" onclick="editarFuncionario(${funcionario.id})" title="Editar">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                    <button class="btn-icon delete" onclick="desativarFuncionario(${funcionario.id})" title="Desativar">
-                        <i class="fas fa-ban"></i>
-                    </button>
-            `;
-        } else {
-            rowHtml += `
-                    <button class="btn-icon edit action-disabled" disabled title="Sem permissão">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                    <button class="btn-icon delete action-disabled" disabled title="Sem permissão">
-                        <i class="fas fa-ban"></i>
-                    </button>
-            `;
-        }
-        
-        rowHtml += `
-                </div>
-            </td>
-        `;
+                rowHtml += `
+                    <td>${cargoBadge}</td>
+                    <td>${statusBadge}</td>
+                    <td>${formatarData(funcionario.criado_em)}</td>
+                    <td>
+                        <div class="action-buttons-table">
+                            <button class="btn-icon view" onclick="visualizarFuncionario(${funcionario.id})" title="Visualizar">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                `;
+                
+                // Botão de simular (apenas para admins e não para si mesmo)
+                if (isAdmin && funcionario.id != usuarioLogadoId || userDepartamento == 15 || userDepartamento == 1) {
+                    rowHtml += `
+                            <button class="btn-icon simulate" onclick="simularFuncionario(${funcionario.id}, '${funcionario.nome.replace(/'/g, "\\'")}', '${funcionario.cargo}')" title="Simular este funcionário">
+                                <i class="fas fa-user-secret"></i>
+                            </button>
+                    `;
+                }
+                
+                // Botões de editar e desativar
+                if (podeEditarEste) {
+                    rowHtml += `
+                            <button class="btn-icon edit" onclick="editarFuncionario(${funcionario.id})" title="Editar">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn-icon delete" onclick="desativarFuncionario(${funcionario.id})" title="Desativar">
+                                <i class="fas fa-ban"></i>
+                            </button>
+                    `;
+                } else {
+                    rowHtml += `
+                            <button class="btn-icon edit action-disabled" disabled title="Sem permissão">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn-icon delete action-disabled" disabled title="Sem permissão">
+                                <i class="fas fa-ban"></i>
+                            </button>
+                    `;
+                }
+                
+                rowHtml += `
+                        </div>
+                    </td>
+                `;
                 
                 row.innerHTML = rowHtml;
                 tbody.appendChild(row);
@@ -2168,7 +2023,7 @@ rowHtml += `
             });
         }
 
-        // Visualiza funcionário
+        // Visualiza funcionário - SEM BADGES
         function visualizarFuncionario(id) {
             showLoading();
             
@@ -2201,26 +2056,11 @@ rowHtml += `
                         document.getElementById('senhaAlteradaView').textContent = 
                             funcionario.senha_alterada_em ? formatarData(funcionario.senha_alterada_em) : 'Nunca alterada';
                         
-                        // Atualizar estatísticas
-                        const stats = funcionario.estatisticas || {};
-                        document.getElementById('totalBadgesView').textContent = stats.total_badges || 0;
-                        document.getElementById('totalPontosView').textContent = stats.total_pontos || 0;
-                        document.getElementById('totalContribuicoesView').textContent = stats.total_contribuicoes || 0;
-                        
-                        // Atualizar badges
-                        renderizarBadges(funcionario.badges || []);
-                        
-                        // Atualizar contribuições
-                        renderizarContribuicoes(funcionario.contribuicoes || []);
-                        
                         // Guardar ID para poder editar depois
                         document.getElementById('modalVisualizacao').setAttribute('data-funcionario-id', id);
                         
                         // Abrir modal
                         document.getElementById('modalVisualizacao').classList.add('show');
-                        
-                        // Voltar para primeira tab
-                        abrirTabView('dados');
                     } else {
                         alert('Erro ao buscar detalhes do funcionário');
                     }
@@ -2231,104 +2071,6 @@ rowHtml += `
                     alert('Erro ao buscar funcionário');
                 }
             });
-        }
-
-        // Renderiza badges no modal
-        function renderizarBadges(badges) {
-            const container = document.getElementById('badgesContainer');
-            
-            if (badges.length === 0) {
-                container.innerHTML = `
-                    <div class="empty-state">
-                        <i class="fas fa-medal"></i>
-                        <p>Nenhuma badge conquistada ainda</p>
-                    </div>
-                `;
-                return;
-            }
-            
-            let html = '';
-            badges.forEach(badge => {
-                const nivel = badge.badge_nivel || 'BRONZE';
-                const corClass = nivel === 'OURO' ? 'gold' : nivel === 'PRATA' ? 'silver' : 'bronze';
-                
-                html += `
-                    <div class="badge-card">
-                        <div class="badge-icon-wrapper ${corClass}">
-                            <i class="${badge.badge_icone || 'fas fa-award'}"></i>
-                        </div>
-                        <div class="badge-content">
-                            <div class="badge-name">${badge.badge_nome}</div>
-                            <div class="badge-description">${badge.badge_descricao || badge.tipo_descricao || ''}</div>
-                            <div class="badge-meta">
-                                <span><i class="fas fa-layer-group"></i> ${badge.categoria || 'Geral'}</span>
-                                <span><i class="fas fa-star"></i> ${badge.pontos || 0} pontos</span>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            });
-            
-            container.innerHTML = html;
-        }
-
-        // Renderiza contribuições no modal
-        function renderizarContribuicoes(contribuicoes) {
-            const container = document.getElementById('contribuicoesContainer');
-            
-            if (contribuicoes.length === 0) {
-                container.innerHTML = `
-                    <div class="empty-state">
-                        <i class="fas fa-project-diagram"></i>
-                        <p>Nenhuma contribuição registrada</p>
-                    </div>
-                `;
-                return;
-            }
-            
-            let html = '';
-            contribuicoes.forEach(contrib => {
-                html += `
-                    <div class="contribuicao-card">
-                        <div class="contribuicao-header">
-                            <div>
-                                <div class="contribuicao-title">${contrib.titulo}</div>
-                                <span class="contribuicao-tipo">${contrib.tipo || 'PROJETO'}</span>
-                            </div>
-                        </div>
-                        <div class="contribuicao-description">${contrib.descricao || 'Sem descrição'}</div>
-                        <div class="contribuicao-dates">
-                            <i class="fas fa-calendar"></i>
-                            ${formatarData(contrib.data_inicio)} 
-                            ${contrib.data_fim ? ' até ' + formatarData(contrib.data_fim) : ' - Em andamento'}
-                        </div>
-                    </div>
-                `;
-            });
-            
-            container.innerHTML = html;
-        }
-
-        // Alterna entre tabs do modal de visualização
-        function abrirTabView(tab) {
-            // Remove active de todas as tabs
-            document.querySelectorAll('.view-tab').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            document.querySelectorAll('.view-tab-content').forEach(content => {
-                content.classList.remove('active');
-            });
-            
-            // Adiciona active na tab selecionada
-            const activeButton = document.querySelector(`.view-tab[onclick="abrirTabView('${tab}')"]`);
-            if (activeButton) {
-                activeButton.classList.add('active');
-            }
-            
-            const activeContent = document.getElementById(`${tab}-tab`);
-            if (activeContent) {
-                activeContent.classList.add('active');
-            }
         }
 
         // Fecha modal de visualização
@@ -2472,26 +2214,24 @@ rowHtml += `
             if (form) form.reset();
         }
 
-        // ADICIONAR NO FINAL DOS SCRIPTS:
-
-// Simular funcionário
-function simularFuncionario(id, nome, cargo) {
-    const confirmMsg = `🎭 SIMULAR: ${nome} (${cargo})\n\nVocê assumirá as permissões deste funcionário. Continuar?`;
-    
-    if (confirm(confirmMsg)) {
-        showLoading();
-        
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.action = '';
-        form.innerHTML = `
-            <input type="hidden" name="action" value="simular">
-            <input type="hidden" name="funcionario_id" value="${id}">
-        `;
-        document.body.appendChild(form);
-        form.submit();
-    }
-}
+        // Simular funcionário
+        function simularFuncionario(id, nome, cargo) {
+            const confirmMsg = `🎭 SIMULAR: ${nome} (${cargo})\n\nVocê assumirá as permissões deste funcionário. Continuar?`;
+            
+            if (confirm(confirmMsg)) {
+                showLoading();
+                
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '';
+                form.innerHTML = `
+                    <input type="hidden" name="action" value="simular">
+                    <input type="hidden" name="funcionario_id" value="${id}">
+                `;
+                document.body.appendChild(form);
+                form.submit();
+            }
+        }
 
         // Fecha modal ao clicar fora
         window.addEventListener('click', function(event) {
