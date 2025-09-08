@@ -127,43 +127,26 @@ $headerComponent = HeaderComponent::create([
             transition: margin-left 0.3s ease;
         }
 
-        /* Page Header Limpo e Moderno */
-        .page-header {
-            padding: 3rem 2rem;
-            margin-bottom: 2.5rem;
-            position: relative;
-            overflow: hidden;
-        }
+     
 
-        .page-header::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            right: 0;
-            width: 200px;
-            height: 200px;
-            background: radial-gradient(circle, var(--primary-blue-light) 0%, transparent 70%);
-            opacity: 0.4;
-            transform: translate(50px, -50px);
+.page-header {
+            margin-bottom: 2rem;
         }
 
         .page-title {
             font-size: 2rem;
             font-weight: 800;
-            margin-bottom: 0.75rem;
-            position: relative;
-            z-index: 2;
-            color: var(--gray-900);
-            letter-spacing: -0.025em;
+            color: var(--dark);
+            margin: 0 0 0.5rem 0;
         }
 
         .page-subtitle {
-            font-size: 1.125rem;
+            font-size: 1rem;
             color: var(--gray-600);
-            position: relative;
-            z-index: 2;
-            font-weight: 400;
+            margin: 0;
         }
+
+
 
         .page-title i {
             color: var(--primary-blue);
@@ -917,7 +900,7 @@ $headerComponent = HeaderComponent::create([
                         setTimeout(() => {
                             document.getElementById('loadingOverlay').style.display = 'none';
                         }, 300);
-                    }, 1200);
+                    }, 200);
                     
                 } else {
                     console.error('Erro:', result.message);
