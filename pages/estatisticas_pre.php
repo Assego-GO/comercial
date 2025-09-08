@@ -127,9 +127,7 @@ $headerComponent = HeaderComponent::create([
             transition: margin-left 0.3s ease;
         }
 
-     
-
-.page-header {
+        .page-header {
             margin-bottom: 2rem;
         }
 
@@ -145,8 +143,6 @@ $headerComponent = HeaderComponent::create([
             color: var(--gray-600);
             margin: 0;
         }
-
-
 
         .page-title i {
             color: var(--primary-blue);
@@ -178,10 +174,10 @@ $headerComponent = HeaderComponent::create([
             font-size: 1rem;
         }
 
-        /* KPI Cards Modernos - MELHORADOS */
+        /* KPI Cards Modernos - ORGANIZADOS EM 2 CARDS VISUAIS */
         .kpi-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            grid-template-columns: 1fr 1fr;
             gap: 2rem;
             margin-bottom: 3rem;
         }
@@ -193,11 +189,10 @@ $headerComponent = HeaderComponent::create([
             margin-bottom: 2rem;
         }
 
-        .kpi-card {
+        /* Card que agrupa 2 KPIs */
+        .kpi-group-card {
             background: white;
-            border-radius: var(--rounded-xl);
-            padding: 2.5rem;
-            text-align: center;
+            border-radius: 0 0 10px 10px;
             box-shadow: var(--shadow-sm);
             border: 1px solid var(--gray-200);
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -205,11 +200,7 @@ $headerComponent = HeaderComponent::create([
             overflow: hidden;
         }
 
-        .kpi-card.mini {
-            padding: 2rem;
-        }
-
-        .kpi-card::before {
+        .kpi-group-card::before {
             content: '';
             position: absolute;
             top: 0;
@@ -222,12 +213,64 @@ $headerComponent = HeaderComponent::create([
             transition: transform 0.3s ease;
         }
 
-        .kpi-card:hover {
+        .kpi-group-card:hover {
             transform: translateY(-4px);
             box-shadow: var(--shadow-xl);
         }
 
-        .kpi-card:hover::before {
+        .kpi-group-card:hover::before {
+            transform: scaleX(1);
+        }
+
+        .kpi-group-content {
+            display: flex;
+            align-items: stretch;
+        }
+
+        .kpi-card {
+            background: transparent;
+            padding: 2.5rem;
+            text-align: center;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            flex: 1;
+            border: none;
+            border-radius: 0;
+        }
+
+        .kpi-card:not(:last-child) {
+            border-right: 1px solid var(--gray-200);
+        }
+
+        .kpi-card.mini {
+            background: white;
+            border-radius: var(--rounded-xl);
+            padding: 2rem;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--gray-200);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .kpi-card.mini::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary-blue) 0%, var(--accent-gold) 100%);
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform 0.3s ease;
+        }
+
+        .kpi-card.mini:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-xl);
+        }
+
+        .kpi-card.mini:hover::before {
             transform: scaleX(1);
         }
 
@@ -505,6 +548,20 @@ $headerComponent = HeaderComponent::create([
             }
 
             .kpi-grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+
+            .kpi-group-content {
+                flex-direction: column;
+            }
+
+            .kpi-card:not(:last-child) {
+                border-right: none;
+                border-bottom: 1px solid var(--gray-200);
+            }
+
+            .kpi-mini-grid {
                 grid-template-columns: repeat(2, 1fr);
                 gap: 1rem;
             }
@@ -525,6 +582,10 @@ $headerComponent = HeaderComponent::create([
             
             .kpi-value {
                 font-size: 1.875rem;
+            }
+
+            .kpi-mini-grid {
+                grid-template-columns: 1fr;
             }
 
             .charts-grid {
@@ -574,43 +635,48 @@ $headerComponent = HeaderComponent::create([
 
             <!-- ===== SEÇÃO 1: RESUMO GERAL ===== -->
             <div class="stats-section" data-aos="fade-up" data-aos-delay="100">
-                <h2 class="section-title">
-                    <i class="fas fa-tachometer-alt"></i>
-                    Resumo Geral
-                </h2>
-                <p class="section-subtitle">Principais números da associação</p>
 
                 <div class="kpi-grid">
-                    <div class="kpi-card">
-                        <div class="kpi-icon primary">
-                            <i class="fas fa-users"></i>
+                    <!-- Card Grupo 1: Total de Associados + Categoria Ativa -->
+                    <div class="kpi-group-card">
+                        <div class="kpi-group-content">
+                            <div class="kpi-card">
+                                <div class="kpi-icon primary">
+                                    <i class="fas fa-users"></i>
+                                </div>
+                                <div class="kpi-value" id="totalAssociados">-</div>
+                                <div class="kpi-label">Total de Associados</div>
+                            </div>
+                            
+                            <div class="kpi-card">
+                                <div class="kpi-icon success">
+                                    <i class="fas fa-user-check"></i>
+                                </div>
+                                <div class="kpi-value" id="totalAtiva">-</div>
+                                <div class="kpi-label">Categoria Ativa</div>
+                            </div>
                         </div>
-                        <div class="kpi-value" id="totalAssociados">-</div>
-                        <div class="kpi-label">Total de Associados</div>
                     </div>
-                    
-                    <div class="kpi-card">
-                        <div class="kpi-icon success">
-                            <i class="fas fa-user-check"></i>
+
+                    <!-- Card Grupo 2: Categoria Reserva + Pensionistas -->
+                    <div class="kpi-group-card">
+                        <div class="kpi-group-content">
+                            <div class="kpi-card">
+                                <div class="kpi-icon gold">
+                                    <i class="fas fa-user-shield"></i>
+                                </div>
+                                <div class="kpi-value" id="totalReserva">-</div>
+                                <div class="kpi-label">Categoria Reserva</div>
+                            </div>
+                            
+                            <div class="kpi-card">
+                                <div class="kpi-icon info">
+                                    <i class="fas fa-user-friends"></i>
+                                </div>
+                                <div class="kpi-value" id="totalPensionista">-</div>
+                                <div class="kpi-label">Pensionistas</div>
+                            </div>
                         </div>
-                        <div class="kpi-value" id="totalAtiva">-</div>
-                        <div class="kpi-label">Categoria Ativa</div>
-                    </div>
-                    
-                    <div class="kpi-card">
-                        <div class="kpi-icon gold">
-                            <i class="fas fa-user-shield"></i>
-                        </div>
-                        <div class="kpi-value" id="totalReserva">-</div>
-                        <div class="kpi-label">Categoria Reserva</div>
-                    </div>
-                    
-                    <div class="kpi-card">
-                        <div class="kpi-icon info">
-                            <i class="fas fa-user-friends"></i>
-                        </div>
-                        <div class="kpi-value" id="totalPensionista">-</div>
-                        <div class="kpi-label">Pensionistas</div>
                     </div>
                 </div>
             </div>
