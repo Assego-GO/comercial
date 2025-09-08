@@ -1,5 +1,5 @@
 /**
- * Módulo de Gestão de Pecúlio - Versão Melhorada Simples
+ * Módulo de Gestão de Pecúlio - Versão com Seleção de RG Duplicado
  * Arquivo: ./rend/js/gestao_peculio.js
  * 
  * Usa as mesmas APIs da versão standalone com melhorias visuais básicas
@@ -10,6 +10,7 @@ window.Peculio = {
     temPermissao: false,
     isFinanceiro: false,
     isPresidencia: false,
+    dadosMultiplos: null, // Para armazenar múltiplos resultados
 
     // ===== INICIALIZAÇÃO =====
     init(config = {}) {
@@ -142,6 +143,114 @@ window.Peculio = {
                 0% { transform: rotate(0deg); }
                 100% { transform: rotate(360deg); }
             }
+
+            /* Estilos para seleção de múltiplos RGs */
+            .selecao-rg-container {
+                background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+                border: 2px solid #ffc107;
+                border-radius: 12px;
+                padding: 1.5rem;
+                margin: 1rem 0;
+                box-shadow: 0 4px 12px rgba(255, 193, 7, 0.2);
+            }
+
+            .selecao-rg-title {
+                color: #856404;
+                font-weight: 600;
+                font-size: 1.1rem;
+                margin-bottom: 1rem;
+                text-align: center;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .selecao-rg-title i {
+                margin-right: 0.5rem;
+                font-size: 1.2rem;
+            }
+
+            .rg-opcao {
+                background: white;
+                border: 2px solid #e9ecef;
+                border-radius: 8px;
+                padding: 1rem;
+                margin-bottom: 0.75rem;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                position: relative;
+                overflow: hidden;
+            }
+
+            .rg-opcao:hover {
+                border-color: #ffc107;
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(255, 193, 7, 0.25);
+            }
+
+            .rg-opcao:active {
+                transform: translateY(0);
+            }
+
+            .rg-opcao::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: -100%;
+                width: 100%;
+                height: 100%;
+                background: linear-gradient(90deg, transparent, rgba(255, 193, 7, 0.1), transparent);
+                transition: left 0.5s ease;
+            }
+
+            .rg-opcao:hover::before {
+                left: 100%;
+            }
+
+            .rg-opcao-nome {
+                font-weight: 600;
+                color: #2c3e50;
+                font-size: 1rem;
+                margin-bottom: 0.3rem;
+            }
+
+            .rg-opcao-detalhes {
+                color: #6c757d;
+                font-size: 0.9rem;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                flex-wrap: wrap;
+            }
+
+            .rg-opcao-rg {
+                font-weight: 500;
+            }
+
+            .rg-opcao-info {
+                font-style: italic;
+                color: #28a745;
+            }
+
+            .selecao-rg-actions {
+                text-align: center;
+                margin-top: 1rem;
+                padding-top: 1rem;
+                border-top: 1px solid rgba(133, 100, 4, 0.2);
+            }
+
+            /* Responsivo para seleção de RG */
+            @media (max-width: 768px) {
+                .rg-opcao-detalhes {
+                    flex-direction: column;
+                    align-items: flex-start;
+                    gap: 0.2rem;
+                }
+                
+                .selecao-rg-container {
+                    padding: 1rem;
+                }
+            }
         `;
         document.head.appendChild(style);
     },
@@ -185,6 +294,7 @@ window.Peculio = {
         this.mostrarLoading(true);
         this.esconderDados();
         this.esconderAlert();
+        this.esconderSelecaoRG(); // Esconder seleção anterior
 
         try {
             console.log(`🔍 Buscando pecúlio para: ${busca}`);
@@ -193,17 +303,32 @@ window.Peculio = {
             const response = await fetch(`../api/peculio/consultar_peculio.php?${parametro}=${encodeURIComponent(busca)}`);
             const result = await response.json();
 
-            if (result.status === 'success') {
-                this.dados = result.data;
-                this.exibirDados(this.dados);
-                this.mostrarAlert('Dados carregados com sucesso!', 'success');
+            if (result.status === 'multiple_results') {
+                // Padrão do sistema: múltiplos resultados
+                console.log(`🔄 Encontrados ${result.data.length} associados com mesmo RG`);
+                this.dadosMultiplos = result.data;
+                this.mostrarSelecaoRG(result.data);
+                this.mostrarAlert(`Encontrados ${result.data.length} associados com este RG. Selecione o desejado.`, 'info');
+                
+            } else if (result.status === 'success') {
+                // Verificar se há múltiplos resultados mesmo com status 'success'
+                if (Array.isArray(result.data) && result.data.length > 1) {
+                    console.log(`🔄 Encontrados ${result.data.length} associados com mesmo RG`);
+                    this.dadosMultiplos = result.data;
+                    this.mostrarSelecaoRG(result.data);
+                    this.mostrarAlert(`Encontrados ${result.data.length} associados com este RG. Selecione o desejado.`, 'info');
+                } else {
+                    // Resultado único (pode ser array com 1 item ou objeto único)
+                    this.dados = Array.isArray(result.data) ? result.data[0] : result.data;
+                    this.exibirDados(this.dados);
+                    this.mostrarAlert('Dados carregados com sucesso!', 'success');
 
-                // Scroll suave
-                setTimeout(() => {
-                    const container = document.getElementById('associadoInfoContainer');
-                    container?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }, 300);
-
+                    // Scroll suave
+                    setTimeout(() => {
+                        const container = document.getElementById('associadoInfoContainer');
+                        container?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }, 300);
+                }
             } else {
                 this.mostrarAlert(result.message, 'danger');
             }
@@ -213,6 +338,97 @@ window.Peculio = {
             this.mostrarAlert('Erro ao consultar dados. Verifique sua conexão.', 'danger');
         } finally {
             this.mostrarLoading(false);
+        }
+    },
+
+    // ===== MOSTRAR SELEÇÃO DE RG =====
+    mostrarSelecaoRG(associados) {
+        this.esconderDados(); // Garantir que dados anteriores estejam escondidos
+
+        let selecaoHtml = `
+            <div id="selecaoRGContainer" class="selecao-rg-container fade-in-simple">
+                <div class="selecao-rg-title">
+                    <i class="fas fa-users"></i>
+                    Múltiplos associados encontrados - Selecione um:
+                </div>
+        `;
+
+        associados.forEach((associado, index) => {
+            const dataPrevista = this.formatarData(associado.data_prevista);
+            const valor = associado.valor ? this.formatarMoeda(parseFloat(associado.valor)) : 'Não informado';
+            const jaRecebeu = associado.data_recebimento && associado.data_recebimento !== '0000-00-00';
+            
+            selecaoHtml += `
+                <div class="rg-opcao" onclick="Peculio.selecionarAssociado(${index})">
+                    <div class="rg-opcao-nome">${associado.nome}</div>
+                    <div class="rg-opcao-detalhes">
+                        <span class="rg-opcao-rg">RG: ${associado.rg}</span>
+                        <span class="rg-opcao-info">
+                            ${jaRecebeu ? '✅ Já recebido' : '⏳ Pendente'} | ${valor}
+                        </span>
+                    </div>
+                </div>
+            `;
+        });
+
+        selecaoHtml += `
+                <div class="selecao-rg-actions">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="Peculio.cancelarSelecao()">
+                        <i class="fas fa-times me-1"></i>
+                        Cancelar
+                    </button>
+                </div>
+            </div>
+        `;
+
+        // Inserir após a seção de busca
+        const buscaSection = document.querySelector('.busca-section-ultra-compact');
+        if (buscaSection) {
+            buscaSection.insertAdjacentHTML('afterend', selecaoHtml);
+        }
+
+        // Scroll suave para a seleção
+        setTimeout(() => {
+            const container = document.getElementById('selecaoRGContainer');
+            container?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 100);
+    },
+
+    // ===== SELECIONAR ASSOCIADO =====
+    selecionarAssociado(index) {
+        if (!this.dadosMultiplos || !this.dadosMultiplos[index]) {
+            console.error('❌ Associado não encontrado no índice:', index);
+            return;
+        }
+
+        const associadoSelecionado = this.dadosMultiplos[index];
+        console.log(`✅ Associado selecionado:`, associadoSelecionado);
+
+        // Esconder seleção e mostrar dados
+        this.esconderSelecaoRG();
+        this.dados = associadoSelecionado;
+        this.exibirDados(this.dados);
+        this.mostrarAlert(`Associado ${associadoSelecionado.nome} selecionado!`, 'success');
+
+        // Scroll suave para os dados
+        setTimeout(() => {
+            const container = document.getElementById('associadoInfoContainer');
+            container?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 300);
+    },
+
+    // ===== CANCELAR SELEÇÃO =====
+    cancelarSelecao() {
+        this.esconderSelecaoRG();
+        this.dadosMultiplos = null;
+        this.mostrarAlert('Seleção cancelada. Faça uma nova busca.', 'info');
+    },
+
+    // ===== ESCONDER SELEÇÃO DE RG =====
+    esconderSelecaoRG() {
+        const container = document.getElementById('selecaoRGContainer');
+        if (container) {
+            container.remove();
         }
     },
 
@@ -273,7 +489,9 @@ window.Peculio = {
         document.getElementById('rgBuscaPeculio').value = '';
         this.esconderDados();
         this.esconderAlert();
+        this.esconderSelecaoRG();
         this.dados = null;
+        this.dadosMultiplos = null;
         console.log('🧹 Busca limpa');
     },
 
