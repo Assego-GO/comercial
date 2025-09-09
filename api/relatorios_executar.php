@@ -963,542 +963,694 @@ function gerarHTML($resultado) {
     <?php endif; ?>
     
     <style>
-        /* ===================================
-   CSS FINAL PERSONALIZADO - ASSEGO RELATÓRIOS
-   Baseado na estrutura HTML existente
+     /* ===================================
+   CSS ASSEGO RELATÓRIOS
+   Baseado no padrão visual do sistema ASSEGO
+   Versão atualizada para design moderno
    =================================== */
 
 :root {
-    --primary: #0056D2;
-    --primary-dark: #003db3;
-    --primary-light: #3d7dd8;
+    --primary: #f8b500;
+    --primary-dark: #e6a300;
+    --primary-light: #ffcc33;
     --secondary: #6c757d;
     --success: #28a745;
-    --info: #17a2b8;
+    --info: #007bff;
     --warning: #ffc107;
     --danger: #dc3545;
-    --light: #f8fafc;
-    --dark: #2d3748;
-    --gray-50: #f9fafb;
-    --gray-100: #f3f4f6;
-    --gray-200: #e5e7eb;
-    --gray-300: #d1d5db;
-    --gray-600: #4b5563;
+    --light: #f8f9fa;
+    --dark: #343a40;
+    --gray-50: #f8f9fa;
+    --gray-100: #e9ecef;
+    --gray-200: #dee2e6;
+    --gray-300: #ced4da;
+    --gray-600: #6c757d;
+    --gray-700: #495057;
     --white: #ffffff;
-    --border-radius: 16px;
-    --border-radius-sm: 10px;
-    --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.1);
-    --shadow-md: 0 4px 12px -2px rgb(0 0 0 / 0.12);
-    --shadow-lg: 0 10px 25px -3px rgb(0 0 0 / 0.1);
-    --shadow-xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
-    --transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    --border-radius: 12px;
+    --border-radius-sm: 8px;
+    --shadow-sm: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    --shadow-md: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    --transition: all 0.3s ease;
+    --border-light: #e5e7eb;
+    --text-primary: #1f2937;
+    --text-muted: #6b7280;
 }
 
-/* FORÇA novos estilos para CARDS DE ESTATÍSTICAS */
+/* Background neutro como no ASSEGO */
+body {
+    background: var(--light) !important;
+    background-attachment: scroll !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+}
+
+/* Container principal */
+.container-fluid {
+    max-width: 1200px !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+}
+
+/* HEADER DO RELATÓRIO - Design moderno e limpo CORRIGIDO */
+.header-report {
+    background: var(--white) !important;
+    color: var(--text-primary) !important;
+    padding: 1.5rem 2rem !important;
+    margin: 1rem !important;
+    position: relative !important;
+    overflow: hidden !important;
+    border-radius: var(--border-radius) !important;
+    box-shadow: var(--shadow-sm) !important;
+    border: 1px solid var(--border-light) !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+}
+
+.header-report h1 {
+    font-weight: 700 !important;
+    font-size: 1.5rem !important;
+    text-shadow: none !important;
+    margin: 0 !important;
+    position: relative !important;
+    z-index: 2 !important;
+    color: var(--text-primary) !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.5rem !important;
+}
+
+.header-report .report-info {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-end !important;
+    font-size: 0.875rem !important;
+    color: var(--text-muted) !important;
+}
+
+/* Badge simples */
+.badge {
+    background: var(--gray-100) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--border-light) !important;
+    font-size: 0.875rem !important;
+    padding: 0.5rem 1rem !important;
+    border-radius: var(--border-radius-sm) !important;
+    font-weight: 500 !important;
+}
+
+/* BARRA DE AÇÃO */
+.action-bar {
+    background: var(--white) !important;
+    padding: 1.5rem !important;
+    border-radius: var(--border-radius) !important;
+    box-shadow: var(--shadow-sm) !important;
+    margin: -1rem 1rem 2rem !important;
+    position: relative !important;
+    z-index: 10 !important;
+    border: 1px solid var(--border-light) !important;
+}
+
+/* CARDS DE ESTATÍSTICAS - Padrão ASSEGO moderno */
 .stats-grid {
     display: grid !important;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)) !important;
-    gap: 2rem !important;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)) !important;
+    gap: 1.5rem !important;
     margin: 2rem 1rem !important;
     padding: 0 !important;
 }
 
-/* FORÇA estilo moderno nos cards */
 .stats-grid > div,
 .stats-grid .stat-card,
 .stat-card {
-    background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%) !important;
+    background: var(--white) !important;
     border-radius: var(--border-radius) !important;
-    padding: 2.5rem 2rem !important;
-    box-shadow: 0 8px 32px rgba(0, 86, 210, 0.08) !important;
+    padding: 2rem 1.5rem !important;
+    box-shadow: var(--shadow-sm) !important;
     transition: var(--transition) !important;
-    border: 1px solid rgba(0, 86, 210, 0.1) !important;
+    border: 1px solid var(--border-light) !important;
     position: relative !important;
-    overflow: hidden !important;
     text-align: center !important;
     transform: translateY(0) !important;
 }
 
-/* Adiciona linha colorida no topo dos cards */
 .stats-grid > div::before,
 .stat-card::before {
-    content: '' !important;
-    position: absolute !important;
-    top: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
-    height: 5px !important;
-    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%) !important;
-    border-radius: var(--border-radius) var(--border-radius) 0 0 !important;
+    display: none !important;
 }
 
-/* Hover effect nos cards */
 .stats-grid > div:hover,
 .stat-card:hover {
-    transform: translateY(-8px) !important;
-    box-shadow: 0 20px 40px rgba(0, 86, 210, 0.15) !important;
-    border-color: rgba(0, 86, 210, 0.2) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: var(--shadow-md) !important;
+    border-color: var(--gray-300) !important;
 }
 
-/* ÍCONES dos cards - FORÇA nova aparência */
+/* Ícones coloridos como no ASSEGO */
 .stats-grid > div > div:first-child,
 .stat-card .stat-icon {
-    width: 90px !important;
-    height: 90px !important;
+    width: 60px !important;
+    height: 60px !important;
     border-radius: 50% !important;
-    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%) !important;
-    color: white !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    margin: 0 auto 1.5rem !important;
-    font-size: 2.5rem !important;
-    box-shadow: 0 10px 30px rgba(0, 86, 210, 0.3) !important;
+    margin: 0 auto 1rem !important;
+    font-size: 1.5rem !important;
+    box-shadow: none !important;
     position: relative !important;
-    overflow: hidden !important;
+    color: white !important;
 }
 
-/* Efeito de brilho no ícone */
-.stats-grid > div > div:first-child::before,
-.stat-card .stat-icon::before {
-    content: '' !important;
-    position: absolute !important;
-    top: -50% !important;
-    left: -50% !important;
-    width: 200% !important;
-    height: 200% !important;
-    background: linear-gradient(45deg, transparent, rgba(255,255,255,0.3), transparent) !important;
-    animation: shine 3s ease-in-out infinite !important;
+.stat-card:nth-child(1) .stat-icon,
+.stats-grid > div:nth-child(1) > div:first-child {
+    background: var(--success) !important;
 }
 
-@keyframes shine {
-    0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
-    50% { transform: translateX(100%) translateY(100%) rotate(45deg); }
-    100% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+.stat-card:nth-child(2) .stat-icon,
+.stats-grid > div:nth-child(2) > div:first-child {
+    background: var(--info) !important;
 }
 
-/* NÚMEROS grandes nos cards */
+.stat-card:nth-child(3) .stat-icon,
+.stats-grid > div:nth-child(3) > div:first-child {
+    background: var(--danger) !important;
+}
+
+.stat-card:nth-child(4) .stat-icon,
+.stats-grid > div:nth-child(4) > div:first-child {
+    background: var(--warning) !important;
+    color: var(--dark) !important;
+}
+
+/* Números grandes */
 .stats-grid > div:nth-child(2),
 .stats-grid > div > div:nth-child(2),
 .stat-card .stat-number,
 .stat-card .stat-value {
-    font-size: 4rem !important;
-    font-weight: 900 !important;
+    font-size: 2.5rem !important;
+    font-weight: 700 !important;
     line-height: 1 !important;
-    margin: 0 0 0.8rem !important;
-    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%) !important;
-    -webkit-background-clip: text !important;
-    -webkit-text-fill-color: transparent !important;
-    background-clip: text !important;
+    margin: 0 0 0.5rem !important;
+    color: var(--text-primary) !important;
     text-shadow: none !important;
 }
 
-/* LABELS dos cards */
+/* Labels */
 .stats-grid > div:nth-child(3),
 .stats-grid > div > div:nth-child(3),
 .stat-card .stat-label {
-    font-size: 0.95rem !important;
-    font-weight: 700 !important;
-    color: var(--gray-600) !important;
-    text-transform: uppercase !important;
-    letter-spacing: 1px !important;
+    font-size: 0.875rem !important;
+    font-weight: 500 !important;
+    color: var(--text-muted) !important;
+    text-transform: none !important;
+    letter-spacing: normal !important;
     margin: 0 !important;
+    line-height: 1.3 !important;
 }
 
-/* MELHORA A TABELA */
+/* TABELA MODERNA - Inspirada no design do exemplo */
 .table-container,
-div[style*="background: white"]:has(table) {
-    background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%) !important;
+div[style*="background: white"]:has(table),
+.modern-table-container {
+    background: var(--white) !important;
     border-radius: var(--border-radius) !important;
     overflow: hidden !important;
-    box-shadow: 0 8px 32px rgba(0, 86, 210, 0.08) !important;
+    box-shadow: var(--shadow-sm) !important;
     margin: 2rem 1rem !important;
-    border: 1px solid rgba(0, 86, 210, 0.1) !important;
+    border: 1px solid var(--border-light) !important;
     position: relative !important;
 }
 
-/* Header da tabela */
+/* Header da tabela moderno */
 .table-header,
 h5:has(i.fa-table),
+div:has(h5:contains("Lista de Funcionários")),
 div:has(h5:contains("Dados do Relatório")) {
-    background: linear-gradient(135deg, var(--gray-50) 0%, var(--gray-100) 100%) !important;
-    padding: 2rem !important;
-    border-bottom: 3px solid var(--primary) !important;
+    background: var(--white) !important;
+    padding: 1.5rem !important;
+    border-bottom: 1px solid var(--border-light) !important;
 }
 
 .table-header h5,
-h5:has(i.fa-table) {
-    font-weight: 700 !important;
-    color: var(--dark) !important;
+h5:has(i.fa-table),
+h5:contains("Lista de Funcionários"),
+h5:contains("Dados do Relatório") {
+    font-weight: 600 !important;
+    color: var(--text-primary) !important;
     margin: 0 !important;
-    font-size: 1.3rem !important;
+    font-size: 1.1rem !important;
 }
 
-/* FORÇA nova aparência da tabela */
-table.table {
+/* Tabela moderna */
+table.table,
+.modern-table {
     margin: 0 !important;
     background: transparent !important;
-    border-collapse: separate !important;
-    border-spacing: 0 !important;
+    border-collapse: collapse !important;
+    width: 100% !important;
 }
 
-table.table thead {
-    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%) !important;
+table.table thead,
+.modern-table thead {
+    background: var(--gray-50) !important;
+    border-bottom: 1px solid var(--border-light) !important;
 }
 
-table.table thead th {
-    color: white !important;
-    font-weight: 700 !important;
+table.table thead th,
+.modern-table thead th {
+    color: var(--text-primary) !important;
+    font-weight: 600 !important;
     text-transform: uppercase !important;
-    letter-spacing: 1px !important;
-    font-size: 0.8rem !important;
-    padding: 1.5rem 1rem !important;
+    letter-spacing: 0.5px !important;
+    font-size: 0.75rem !important;
+    padding: 1rem 0.75rem !important;
     border: none !important;
     position: relative !important;
     background: none !important;
+    border-bottom: 1px solid var(--border-light) !important;
 }
 
-table.table thead th:first-child {
-    border-top-left-radius: 0 !important;
-}
-
-table.table thead th:last-child {
-    border-top-right-radius: 0 !important;
-}
-
-table.table tbody tr {
+table.table tbody tr,
+.modern-table tbody tr {
     transition: var(--transition) !important;
-    border-bottom: 1px solid var(--gray-200) !important;
+    border-bottom: 1px solid var(--border-light) !important;
     background: white !important;
+    cursor: pointer !important;
 }
 
-table.table tbody tr:hover {
-    background: linear-gradient(135deg, #f0f7ff 0%, #e6f3ff 100%) !important;
-    transform: scale(1.001) !important;
-    box-shadow: 0 2px 8px rgba(0, 86, 210, 0.1) !important;
+table.table tbody tr:hover,
+.modern-table tbody tr:hover {
+    background: rgba(79, 70, 229, 0.02) !important;
+    transform: translateX(2px) !important;
 }
 
-table.table tbody td {
-    padding: 1.2rem 1rem !important;
+table.table tbody td,
+.modern-table tbody td {
+    padding: 1rem 0.75rem !important;
     vertical-align: middle !important;
     border-top: none !important;
-    color: var(--dark) !important;
-    font-weight: 500 !important;
-    font-size: 0.9rem !important;
+    color: var(--text-primary) !important;
+    font-weight: 400 !important;
+    font-size: 0.875rem !important;
 }
 
-/* MELHORA OS BOTÕES */
-.btn {
-    border-radius: var(--border-radius-sm) !important;
+/* Avatar moderno na tabela */
+.table-avatar {
+    width: 45px !important;
+    height: 45px !important;
+    border-radius: 50% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
     font-weight: 600 !important;
-    padding: 0.8rem 2rem !important;
-    font-size: 0.9rem !important;
-    border: none !important;
-    transition: var(--transition) !important;
+    font-size: 1.1rem !important;
+    text-transform: uppercase !important;
+    transition: all 0.3s ease !important;
     position: relative !important;
     overflow: hidden !important;
-    text-transform: none !important;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1) !important;
-}
-
-/* Botão Imprimir */
-.btn-warning,
-.btn[style*="background-color: #f0ad4e"],
-.btn[onclick*="print"] {
-    background: linear-gradient(135deg, #ff8c00 0%, #ff6b00 100%) !important;
     color: white !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+    margin-right: 0.75rem !important;
 }
 
-/* Botão Excel */
-.btn-success,
-.btn[onclick*="Excel"] {
-    background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%) !important;
-    color: white !important;
+.table-avatar:hover {
+    transform: scale(1.05) !important;
 }
 
-/* Botão CSV */
-.btn-info,
-.btn[onclick*="CSV"] {
-    background: linear-gradient(135deg, #17a2b8 0%, #117a8b 100%) !important;
-    color: white !important;
+/* PAGINAÇÃO MODERNA - CORRIGIDA */
+.pagination-container {
+    width: 1280px;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    padding: 1.5rem 2rem !important;
+    background: var(--white) !important;
+    border-top: 1px solid var(--border-light) !important;
+    border-radius: 0 0 var(--border-radius) var(--border-radius) !important;
+    margin-top: auto !important;
+    flex-wrap: wrap !important;
+    gap: 1rem !important;
 }
 
-/* Botões Voltar/Fechar */
-.btn-secondary {
-    background: linear-gradient(135deg, #6c757d 0%, #545b62 100%) !important;
-    color: white !important;
+.pagination-info {
+    color: var(--text-muted) !important;
+    font-size: 0.875rem !important;
+    font-weight: 500 !important;
+    white-space: nowrap !important;
 }
 
-/* Hover dos botões */
-.btn:hover {
-    transform: translateY(-3px) !important;
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15) !important;
-}
-
-/* Efeito de onda nos botões */
-.btn::before {
-    content: '' !important;
-    position: absolute !important;
-    top: 50% !important;
-    left: 50% !important;
-    width: 0 !important;
-    height: 0 !important;
-    background: rgba(255, 255, 255, 0.3) !important;
-    border-radius: 50% !important;
-    transform: translate(-50%, -50%) !important;
-    transition: width 0.6s, height 0.6s !important;
-    z-index: 0 !important;
-}
-
-.btn:hover::before {
-    width: 300px !important;
-    height: 300px !important;
-}
-
-.btn span, .btn i {
-    position: relative !important;
-    z-index: 2 !important;
-}
-
-/* MELHORA A PAGINAÇÃO */
-.pagination {
+.pagination,
+.pagination-nav {
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.375rem !important;
+    list-style: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
     justify-content: center !important;
-    margin: 2rem 0 !important;
-    gap: 0.5rem !important;
+    flex: 1 !important;
 }
 
-.pagination .page-item {
+.pagination .page-item,
+.pagination-nav li {
     margin: 0 !important;
 }
 
-.pagination .page-item .page-link {
-    color: var(--primary) !important;
-    border: 2px solid var(--gray-200) !important;
-    padding: 0.8rem 1.2rem !important;
-    font-weight: 600 !important;
-    border-radius: var(--border-radius-sm) !important;
-    transition: var(--transition) !important;
+.pagination .page-item .page-link,
+.pagination-nav .page-link {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    min-width: 36px !important;
+    height: 36px !important;
+    padding: 0.5rem !important;
     background: var(--white) !important;
-    margin: 0 0.3rem !important;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05) !important;
+    border: 1px solid var(--border-light) !important;
+    color: var(--text-primary) !important;
+    text-decoration: none !important;
+    border-radius: var(--border-radius-sm) !important;
+    font-size: 0.875rem !important;
+    font-weight: 500 !important;
+    transition: all 0.2s ease !important;
+    margin: 0 !important;
+    box-shadow: none !important;
 }
 
-.pagination .page-item .page-link:hover {
+.pagination .page-item .page-link:hover,
+.pagination-nav .page-link:hover {
+    background: var(--gray-50) !important;
+    border-color: var(--gray-300) !important;
+    color: var(--text-primary) !important;
+    transform: none !important;
+}
+
+.pagination .page-item.active .page-link,
+.pagination-nav .page-item.active .page-link {
     background: var(--primary) !important;
-    color: white !important;
     border-color: var(--primary) !important;
-    transform: translateY(-2px) !important;
-    box-shadow: 0 6px 20px rgba(0, 86, 210, 0.3) !important;
-}
-
-.pagination .page-item.active .page-link {
-    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%) !important;
-    border-color: var(--primary) !important;
-    color: white !important;
-    box-shadow: 0 6px 20px rgba(0, 86, 210, 0.4) !important;
-    transform: scale(1.1) !important;
-}
-
-/* Container da paginação */
-div:has(.pagination) {
-    background: var(--white) !important;
-    border-radius: var(--border-radius) !important;
-    padding: 2rem !important;
-    box-shadow: 0 8px 32px rgba(0, 86, 210, 0.08) !important;
-    margin: 2rem 1rem !important;
-    border: 1px solid rgba(0, 86, 210, 0.1) !important;
-}
-
-/* Texto de informação da paginação */
-div:contains("Mostrando"),
-.pagination-info {
-    color: var(--gray-600) !important;
-    font-weight: 600 !important;
-    margin-bottom: 1.5rem !important;
-    text-align: center !important;
-    font-size: 1rem !important;
-}
-
-/* Select da paginação */
-select {
-    border: 2px solid var(--gray-200) !important;
-    border-radius: var(--border-radius-sm) !important;
-    padding: 0.6rem 1rem !important;
-    background: var(--white) !important;
     color: var(--dark) !important;
     font-weight: 600 !important;
+}
+
+.pagination .page-item.disabled .page-link,
+.pagination-nav .page-item.disabled .page-link {
+    background: var(--gray-100) !important;
+    border-color: var(--border-light) !important;
+    color: var(--text-muted) !important;
+    cursor: not-allowed !important;
+    opacity: 0.6 !important;
+}
+
+.page-size-selector {
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.5rem !important;
+    font-size: 0.875rem !important;
+    color: var(--text-muted) !important;
+    white-space: nowrap !important;
+}
+
+.page-size-selector select {
+    padding: 0.375rem 0.75rem !important;
+    border: 1px solid var(--border-light) !important;
+    border-radius: var(--border-radius-sm) !important;
+    background: var(--white) !important;
+    color: var(--text-primary) !important;
+    font-size: 0.875rem !important;
+    cursor: pointer !important;
+    min-width: 60px !important;
+}
+
+/* Container da paginação - CORRIGIDO */
+div:has(.pagination),
+.pagination-wrapper {
+    background: var(--white) !important;
+    border-radius: var(--border-radius) !important;
+    padding: 0 !important;
+    box-shadow: var(--shadow-sm) !important;
+    margin: 2rem 1rem !important;
+    border: 1px solid var(--border-light) !important;
+    overflow: hidden !important;
+}
+
+/* Texto informativo da paginação - CORRIGIDO */
+div:contains("Mostrando"),
+.pagination-info,
+.pagination-text {
+    color: var(--text-muted) !important;
+    font-weight: 500 !important;
+    margin: 0 !important;
+    text-align: left !important;
+    font-size: 0.875rem !important;
+    padding: 1.5rem 2rem 0 2rem !important;
+}
+
+/* BOTÕES - Padrão ASSEGO moderno */
+.btn {
+    border-radius: var(--border-radius-sm) !important;
+    font-weight: 500 !important;
+    padding: 0.75rem 1.5rem !important;
+    font-size: 0.875rem !important;
+    border: 1px solid transparent !important;
+    transition: var(--transition) !important;
+    position: relative !important;
+    text-transform: none !important;
+    box-shadow: var(--shadow-sm) !important;
+}
+
+.btn-warning,
+.btn[onclick*="print"] {
+    background: var(--warning) !important;
+    color: var(--dark) !important;
+    border-color: var(--warning) !important;
+}
+
+.btn-success,
+.btn[onclick*="Excel"] {
+    background: var(--success) !important;
+    color: white !important;
+    border-color: var(--success) !important;
+}
+
+.btn-info,
+.btn[onclick*="CSV"] {
+    background: var(--info) !important;
+    color: white !important;
+    border-color: var(--info) !important;
+}
+
+.btn-secondary {
+    background: var(--gray-600) !important;
+    color: white !important;
+    border-color: var(--gray-600) !important;
+}
+
+.btn:hover {
+    transform: translateY(-1px) !important;
+    box-shadow: var(--shadow-md) !important;
+}
+
+.btn::before {
+    display: none !important;
+}
+
+/* Select moderno */
+select {
+    border: 1px solid var(--border-light) !important;
+    border-radius: var(--border-radius-sm) !important;
+    padding: 0.5rem 0.75rem !important;
+    background: var(--white) !important;
+    color: var(--text-primary) !important;
+    font-weight: 500 !important;
     transition: var(--transition) !important;
     cursor: pointer !important;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05) !important;
 }
 
 select:focus {
     border-color: var(--primary) !important;
-    box-shadow: 0 0 0 4px rgba(0, 86, 210, 0.1) !important;
+    box-shadow: 0 0 0 2px rgba(248, 181, 0, 0.2) !important;
     outline: none !important;
 }
 
-/* MELHORA O HEADER DO RELATÓRIO */
-.header-report {
-    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%) !important;
-    color: white !important;
-    padding: 3rem 2rem 4rem !important;
-    margin-bottom: 0 !important;
-    position: relative !important;
-    overflow: hidden !important;
-    border-radius: 0 0 30px 30px !important;
-    box-shadow: 0 15px 35px rgba(0, 86, 210, 0.2) !important;
-}
-
-/* Padrão de grid no header */
-.header-report::before {
-    content: '' !important;
-    position: absolute !important;
-    top: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
-    bottom: 0 !important;
-    background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="8" height="8" patternUnits="userSpaceOnUse"><path d="M 8 0 L 0 0 0 8" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="1"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>') !important;
-    opacity: 0.4 !important;
-}
-
-.header-report h1 {
-    font-weight: 800 !important;
-    font-size: 3rem !important;
-    text-shadow: 0 4px 8px rgba(0, 0, 0, 0.2) !important;
-    margin-bottom: 1rem !important;
-    position: relative !important;
-    z-index: 2 !important;
-}
-
-.header-report .container,
-.header-report .container-fluid {
-    position: relative !important;
-    z-index: 2 !important;
-}
-
-/* Badge no header */
-.badge {
-    background: rgba(255, 255, 255, 0.2) !important;
-    color: white !important;
-    border: 2px solid rgba(255, 255, 255, 0.3) !important;
-    backdrop-filter: blur(15px) !important;
-    font-size: 1rem !important;
-    padding: 0.8rem 1.5rem !important;
-    border-radius: 25px !important;
-    font-weight: 600 !important;
-}
-
-/* MELHORA A BARRA DE AÇÃO */
-.action-bar {
-    background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%) !important;
-    padding: 2rem !important;
-    border-radius: var(--border-radius) !important;
-    box-shadow: 0 8px 32px rgba(0, 86, 210, 0.08) !important;
-    margin: -3rem 1rem 3rem !important;
-    position: relative !important;
-    z-index: 10 !important;
-    border: 1px solid rgba(0, 86, 210, 0.1) !important;
-}
-
-/* MELHORA SEÇÃO "Dados do Relatório" */
+/* Seções de conteúdo */
 div:has(h5:contains("Dados do Relatório")),
 .dados-relatorio {
-    background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%) !important;
+    background: var(--white) !important;
     border-radius: var(--border-radius) !important;
-    box-shadow: 0 8px 32px rgba(0, 86, 210, 0.08) !important;
+    box-shadow: var(--shadow-sm) !important;
     margin: 2rem 1rem !important;
-    border: 1px solid rgba(0, 86, 210, 0.1) !important;
+    border: 1px solid var(--border-light) !important;
     overflow: hidden !important;
 }
 
-/* Header da seção de dados */
-h5:contains("Dados do Relatório") {
-    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%) !important;
-    color: white !important;
-    padding: 1.5rem 2rem !important;
-    margin: 0 !important;
-    font-weight: 700 !important;
-    font-size: 1.2rem !important;
+/* Filtros aplicados */
+.filters-container {
+    background: var(--white) !important;
+    border-radius: var(--border-radius) !important;
+    box-shadow: var(--shadow-sm) !important;
+    margin: 2rem 1rem !important;
+    border: 1px solid var(--border-light) !important;
+    padding: 1.5rem !important;
 }
 
-/* TEXTO da info de registros */
-div:contains("registros"),
-.pagination-info {
-    background: var(--gray-50) !important;
-    padding: 1rem 2rem !important;
-    margin: 0 !important;
-    color: var(--gray-600) !important;
-    font-weight: 600 !important;
-    border-bottom: 1px solid var(--gray-200) !important;
+.filter-badge {
+    background: var(--gray-100) !important;
+    color: var(--text-primary) !important;
+    padding: 0.25rem 0.75rem !important;
+    border-radius: var(--border-radius-sm) !important;
+    font-size: 0.75rem !important;
+    font-weight: 500 !important;
+    border: 1px solid var(--border-light) !important;
 }
 
-/* ATALHOS de navegação */
-div:contains("Atalhos") {
-    background: var(--gray-50) !important;
-    padding: 1rem 2rem !important;
-    margin: 0 !important;
+/* Status badges */
+.badge-success {
+    background: rgba(34, 197, 94, 0.1) !important;
+    color: rgb(22, 163, 74) !important;
+    border: 1px solid rgba(34, 197, 94, 0.2) !important;
+}
+
+.badge-warning {
+    background: rgba(245, 158, 11, 0.1) !important;
+    color: rgb(217, 119, 6) !important;
+    border: 1px solid rgba(245, 158, 11, 0.2) !important;
+}
+
+.badge-danger {
+    background: rgba(239, 68, 68, 0.1) !important;
+    color: rgb(220, 38, 38) !important;
+    border: 1px solid rgba(239, 68, 68, 0.2) !important;
+}
+
+/* Empty state */
+.empty-state {
+    background: var(--white) !important;
+    border-radius: var(--border-radius) !important;
+    box-shadow: var(--shadow-sm) !important;
+    margin: 2rem 1rem !important;
+    border: 1px solid var(--border-light) !important;
+    padding: 3rem 2rem !important;
     text-align: center !important;
-    color: var(--gray-600) !important;
-    border-top: 1px solid var(--gray-200) !important;
-    font-size: 0.85rem !important;
 }
 
-/* RESPONSIVIDADE melhorada */
+.empty-state-icon {
+    width: 80px !important;
+    height: 80px !important;
+    border-radius: 50% !important;
+    background: var(--gray-100) !important;
+    color: var(--text-muted) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin: 0 auto 1.5rem !important;
+    font-size: 2rem !important;
+}
+
+/* Footer */
+.footer-report {
+    background: var(--white) !important;
+    border-radius: var(--border-radius) !important;
+    box-shadow: var(--shadow-sm) !important;
+    margin: 2rem 1rem !important;
+    border: 1px solid var(--border-light) !important;
+    padding: 2rem !important;
+    text-align: center !important;
+    color: var(--text-muted) !important;
+}
+
+.footer-logo {
+    font-size: 1.5rem !important;
+    font-weight: 700 !important;
+    color: var(--text-primary) !important;
+    margin-bottom: 0.5rem !important;
+}
+
+/* RESPONSIVIDADE - CORRIGIDA */
 @media (max-width: 768px) {
     .stats-grid {
         grid-template-columns: 1fr !important;
-        gap: 1.5rem !important;
+        gap: 1rem !important;
         margin: 1rem !important;
     }
     
     .stats-grid > div {
-        padding: 2rem 1.5rem !important;
+        padding: 1.5rem !important;
     }
     
     .stats-grid > div:nth-child(2),
     .stat-number {
-        font-size: 3rem !important;
+        font-size: 2rem !important;
+    }
+    
+    .header-report {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 0.5rem !important;
+        padding: 1.5rem !important;
     }
     
     .header-report h1 {
-        font-size: 2.2rem !important;
+        font-size: 1.25rem !important;
     }
     
     .action-bar {
-        margin: -2rem 1rem 2rem !important;
-        padding: 1.5rem !important;
+        margin: -1rem 1rem 1rem !important;
+        padding: 1rem !important;
     }
     
     .btn {
         width: 100% !important;
-        margin-bottom: 0.8rem !important;
+        margin-bottom: 0.5rem !important;
         justify-content: center !important;
     }
     
     table.table thead th,
-    table.table tbody td {
-        padding: 0.8rem 0.5rem !important;
+    table.table tbody td,
+    .modern-table thead th,
+    .modern-table tbody td {
+        padding: 0.75rem 0.5rem !important;
+        font-size: 0.75rem !important;
+    }
+
+    .pagination-container {
+        flex-direction: column !important;
+        gap: 1rem !important;
+        text-align: center !important;
+        padding: 1rem !important;
+    }
+
+    .pagination,
+    .pagination-nav {
+        justify-content: center !important;
+        flex-wrap: wrap !important;
+    }
+
+    .pagination .page-item .page-link,
+    .pagination-nav .page-link {
+        min-width: 32px !important;
+        height: 32px !important;
         font-size: 0.8rem !important;
     }
+
+    .pagination-info,
+    .page-size-selector {
+        text-align: center !important;
+        width: 100% !important;
+    }
+
+    .table-avatar {
+        width: 40px !important;
+        height: 40px !important;
+        font-size: 1rem !important;
+    }
 }
 
-/* ANIMAÇÕES SUTIS */
-@keyframes fadeInUp {
-    from {
-        opacity: 0;
-        transform: translate3d(0, 30px, 0);
-    }
-    to {
-        opacity: 1;
-        transform: translate3d(0, 0, 0);
-    }
-}
-
+/* Animações sutis */
 @keyframes slideIn {
     from {
         opacity: 0;
-        transform: translateY(20px);
+        transform: translateY(10px);
     }
     to {
         opacity: 1;
@@ -1506,32 +1658,41 @@ div:contains("Atalhos") {
     }
 }
 
-/* Aplica animações aos elementos principais */
 .stats-grid > div,
 .action-bar,
 .table-container {
-    animation: slideIn 0.6s ease-out !important;
+    animation: slideIn 0.3s ease-out !important;
 }
 
-.stats-grid > div:nth-child(1) { animation-delay: 0.1s !important; }
-.stats-grid > div:nth-child(2) { animation-delay: 0.2s !important; }
-.stats-grid > div:nth-child(3) { animation-delay: 0.3s !important; }
-.stats-grid > div:nth-child(4) { animation-delay: 0.4s !important; }
-
-/* FORÇA background do body */
-body {
-    background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 50%, #90caf9 100%) !important;
-    background-attachment: fixed !important;
+/* Loading */
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
 }
 
-/* Container principal */
-.container-fluid {
-    max-width: 1400px !important;
-    margin: 0 auto !important;
-    padding: 0 !important;
+.loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid var(--gray-300);
+    border-top: 3px solid var(--primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
 }
 
-/* MELHORIAS para impressão */
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* IMPRESSÃO */
 @media print {
     .action-bar,
     .no-print {
@@ -1539,8 +1700,8 @@ body {
     }
     
     .header-report {
-        background: var(--primary) !important;
-        color: white !important;
+        background: var(--white) !important;
+        color: var(--text-primary) !important;
         -webkit-print-color-adjust: exact !important;
         border-radius: 0 !important;
     }
@@ -1548,11 +1709,8 @@ body {
     .stats-grid > div,
     .table-container {
         box-shadow: none !important;
-        border: 2px solid var(--gray-300) !important;
-    }
-    
-    table.table {
-        font-size: 0.8rem !important;
+        border: 1px solid var(--gray-300) !important;
+        background: white !important;
     }
 }
     </style>
@@ -1842,29 +2000,7 @@ body {
         
         <!-- Paginação e Controles (se aplicável) -->
         <?php if (isset($resultado['paginacao']) && $resultado['paginacao']['total_paginas'] > 1): ?>
-        <div class="pagination-container fade-in-up" style="animation-delay: 0.35s;">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <div class="pagination-info">
-                    <span class="text-muted">
-                        Mostrando <strong><?php echo number_format($resultado['paginacao']['inicio'], 0, ',', '.'); ?></strong> 
-                        a <strong><?php echo number_format($resultado['paginacao']['fim'], 0, ',', '.'); ?></strong> 
-                        de <strong><?php echo number_format($resultado['paginacao']['total_registros'], 0, ',', '.'); ?></strong> registros
-                    </span>
-                </div>
-                
-                <div class="pagination-controls">
-                    <div class="d-flex align-items-center gap-3">
-                        <!-- Seletor de registros por página -->
-                        <div class="d-flex align-items-center">
-                            <label class="text-muted me-2">Por página:</label>
-                            <select class="form-select form-select-sm" id="registrosPorPagina" onchange="alterarRegistrosPorPagina(this.value)">
-                                <option value="25" <?php echo $resultado['paginacao']['registros_por_pagina'] == 25 ? 'selected' : ''; ?>>25</option>
-                                <option value="50" <?php echo $resultado['paginacao']['registros_por_pagina'] == 50 ? 'selected' : ''; ?>>50</option>
-                                <option value="100" <?php echo $resultado['paginacao']['registros_por_pagina'] == 100 ? 'selected' : ''; ?>>100</option>
-                                <option value="200" <?php echo $resultado['paginacao']['registros_por_pagina'] == 200 ? 'selected' : ''; ?>>200</option>
-                                <option value="500" <?php echo $resultado['paginacao']['registros_por_pagina'] == 500 ? 'selected' : ''; ?>>500</option>
-                            </select>
-                        </div>
+        
                         
                         <!-- Navegação de páginas -->
                         <nav aria-label="Navegação de páginas">
@@ -2526,7 +2662,6 @@ body {
         if (paginationContainer) {
             const helpText = document.createElement('small');
             helpText.className = 'text-muted d-block mt-2';
-            helpText.innerHTML = '<i class="fas fa-keyboard me-1"></i> <strong>Atalhos:</strong> ← → ou A/D para navegar | Home/End para primeira/última página';
             paginationContainer.appendChild(helpText);
         }
         <?php endif; ?>
