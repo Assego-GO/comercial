@@ -450,20 +450,7 @@ $headerComponent = HeaderComponent::create([
                             <p class="report-description">
                                 Lista completa de todos os associados ativos com informações básicas e contato.
                             </p>
-                            <div class="quick-report-actions">
-                                <a class="quick-report-action" onclick="executarRelatorioRapido('associados', 'hoje'); event.stopPropagation();">
-                                    <i class="fas fa-calendar-day"></i>
-                                    <span>Hoje</span>
-                                </a>
-                                <a class="quick-report-action" onclick="executarRelatorioRapido('associados', 'mes'); event.stopPropagation();">
-                                    <i class="fas fa-calendar-alt"></i>
-                                    <span>Este Mês</span>
-                                </a>
-                                <a class="quick-report-action" onclick="executarRelatorioRapido('associados', 'personalizar'); event.stopPropagation();">
-                                    <i class="fas fa-sliders-h"></i>
-                                    <span>Filtrar</span>
-                                </a>
-                            </div>
+                            
                         </div>
                     <?php endif; ?>
 
@@ -478,10 +465,10 @@ $headerComponent = HeaderComponent::create([
                                 Análise da situação financeira dos associados e status de pagamentos.
                             </p>
                             <div class="quick-report-actions">
-                                <a class="quick-report-action" onclick="executarRelatorioRapido('financeiro', 'adimplentes'); event.stopPropagation();">
+                               <!-- <a class="quick-report-action" onclick="executarRelatorioRapido('financeiro', 'adimplentes'); event.stopPropagation();">
                                     <i class="fas fa-check"></i>
                                     <span>Adimplentes</span>
-                                </a>
+                                </a> -->
                                 <a class="quick-report-action" onclick="executarRelatorioRapido('financeiro', 'inadimplentes'); event.stopPropagation();">
                                     <i class="fas fa-times"></i>
                                     <span>Inadimplentes</span>
