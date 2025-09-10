@@ -2,7 +2,7 @@
 /**
  * API para carregar detalhes completos de UM associado específico
  * api/carregar_detalhes_associado.php
- * 🚀 OTIMIZADO - Carrega apenas quando necessário (modal)
+ * 🚀 CORRIGIDO - Problema com parâmetros múltiplos
  */
 
 error_reporting(0);
@@ -110,17 +110,39 @@ try {
     $stmtDep->execute(['id' => $associadoId]);
     $dependentes = $stmtDep->fetchAll();
 
-    // 🚀 Busca contagens
-    $sqlContagens = "
-        SELECT 
-            (SELECT COUNT(*) FROM Servicos_Associado WHERE associado_id = :id AND ativo = 1) as total_servicos,
-            (SELECT COUNT(*) FROM Documentos_Associado WHERE associado_id = :id) as total_documentos,
-            (SELECT COUNT(*) FROM Observacoes_Associado WHERE associado_id = :id AND ativo = 1) as total_observacoes,
-            (SELECT COUNT(*) FROM Observacoes_Associado WHERE associado_id = :id AND ativo = 1 AND importante = 1) as observacoes_importantes
-    ";
-    $stmtCount = $pdo->prepare($sqlContagens);
-    $stmtCount->execute(['id' => $associadoId]);
-    $contagens = $stmtCount->fetch();
+    // 🔧 CORREÇÃO: Buscar contagens separadamente para evitar erro de parâmetros
+    $totalServicos = 0;
+    $totalDocumentos = 0;
+    $totalObservacoes = 0;
+    $observacoesImportantes = 0;
+
+    // Buscar total de serviços
+    $sqlServicos = "SELECT COUNT(*) as total FROM Servicos_Associado WHERE associado_id = :id AND ativo = 1";
+    $stmtServicos = $pdo->prepare($sqlServicos);
+    $stmtServicos->execute(['id' => $associadoId]);
+    $resultServicos = $stmtServicos->fetch();
+    $totalServicos = $resultServicos['total'] ?? 0;
+
+    // Buscar total de documentos
+    $sqlDocumentos = "SELECT COUNT(*) as total FROM Documentos_Associado WHERE associado_id = :id";
+    $stmtDocumentos = $pdo->prepare($sqlDocumentos);
+    $stmtDocumentos->execute(['id' => $associadoId]);
+    $resultDocumentos = $stmtDocumentos->fetch();
+    $totalDocumentos = $resultDocumentos['total'] ?? 0;
+
+    // Buscar total de observações
+    $sqlObservacoes = "SELECT COUNT(*) as total FROM Observacoes_Associado WHERE associado_id = :id AND ativo = 1";
+    $stmtObservacoes = $pdo->prepare($sqlObservacoes);
+    $stmtObservacoes->execute(['id' => $associadoId]);
+    $resultObservacoes = $stmtObservacoes->fetch();
+    $totalObservacoes = $resultObservacoes['total'] ?? 0;
+
+    // Buscar observações importantes
+    $sqlObsImportantes = "SELECT COUNT(*) as total FROM Observacoes_Associado WHERE associado_id = :id AND ativo = 1 AND importante = 1";
+    $stmtObsImportantes = $pdo->prepare($sqlObsImportantes);
+    $stmtObsImportantes->execute(['id' => $associadoId]);
+    $resultObsImportantes = $stmtObsImportantes->fetch();
+    $observacoesImportantes = $resultObsImportantes['total'] ?? 0;
 
     // 🚀 Monta resposta completa
     $dadosCompletos = [
@@ -156,7 +178,7 @@ try {
         'id_neoconsig' => $associado['id_neoconsig'] ?? '',
         'doador' => intval($associado['doador'] ?? 0),
         
-        // Endereço
+        // Endereço - Usando os dados do JOIN
         'cep' => $associado['cep'] ?? '',
         'endereco' => $associado['endereco'] ?? '',
         'bairro' => $associado['bairro'] ?? '',
@@ -165,8 +187,8 @@ try {
         'complemento' => $associado['complemento'] ?? '',
         
         // Datas
-        'data_filiacao' => $associado['data_filiacao'] ?? '',
-        'data_desfiliacao' => $associado['data_desfiliacao'] ?? '',
+        'data_filiacao' => $associado['data_filiacao'] ?? $associado['dataFiliacao'] ?? '',
+        'data_desfiliacao' => $associado['data_desfiliacao'] ?? $associado['dataDesfiliacao'] ?? '',
         
         // Péculio
         'peculio_valor' => $associado['peculio_valor'] ?? null,
@@ -176,10 +198,10 @@ try {
         // Dependentes e contagens
         'dependentes' => $dependentes,
         'total_dependentes' => count($dependentes),
-        'total_servicos' => intval($contagens['total_servicos'] ?? 0),
-        'total_documentos' => intval($contagens['total_documentos'] ?? 0),
-        'total_observacoes' => intval($contagens['total_observacoes'] ?? 0),
-        'tem_observacoes_importantes' => intval($contagens['observacoes_importantes'] ?? 0) > 0,
+        'total_servicos' => intval($totalServicos),
+        'total_documentos' => intval($totalDocumentos),
+        'total_observacoes' => intval($totalObservacoes),
+        'tem_observacoes_importantes' => intval($observacoesImportantes) > 0,
         
         // Flag de controle
         'detalhes_carregados' => true
