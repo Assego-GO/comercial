@@ -1,8 +1,15 @@
 <?php
 /**
- * API para atualizar associado - VERSÃO COM INDICAÇÕES INTEGRADAS E CORREÇÃO DE DUPLICATAS
+ * API para atualizar associado - VERSÃO COMPLETA CORRIGIDA
  * api/atualizar_associado.php
+ * 
+ * CORREÇÕES APLICADAS:
+ * 1. Removido código de debug que forçava user_id = 1
+ * 2. Implementada verificação adequada de autenticação
+ * 3. Corrigido rastreamento do usuário real na auditoria
+ * 4. Mantidas todas as funcionalidades originais (indicações, serviços, etc)
  */
+
 ob_start();
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
@@ -38,34 +45,66 @@ try {
     require_once '../classes/Auth.php';
     require_once '../classes/Associados.php';
     require_once '../classes/JsonManager.php';
-    require_once '../classes/Indicacoes.php'; // ✅ NOVO
+    require_once '../classes/Indicacoes.php';
 
-    // Inicia sessão
+    // =========================================
+    // CORREÇÃO PRINCIPAL: AUTENTICAÇÃO ADEQUADA
+    // =========================================
+    
+    // Inicia sessão se ainda não iniciada
     if (session_status() === PHP_SESSION_NONE) {
         session_start();
     }
 
-    // Simula login para debug (REMOVER EM PRODUÇÃO)
-    if (!isset($_SESSION['user_id'])) {
-        $_SESSION['user_id'] = 1;
-        $_SESSION['user_name'] = 'Debug User';
-        $_SESSION['user_email'] = 'debug@test.com';
-        $_SESSION['funcionario_id'] = 1;
+    // Inicializa Auth para verificar usuário logado
+    $auth = new Auth();
+    
+    // Verifica se usuário está autenticado
+    if (!$auth->isLoggedIn()) {
+        throw new Exception('Usuário não autenticado. Faça login para continuar.');
     }
-
+    
+    // Obtém dados do usuário logado REAL através da classe Auth
+    $usuarioLogadoReal = $auth->getUser();
+    
+    // Se ainda assim não tiver os dados, tenta pegar da sessão
+    if (!$usuarioLogadoReal || !isset($usuarioLogadoReal['id'])) {
+        // Verifica diretamente na sessão
+        if (!isset($_SESSION['user_id']) || !isset($_SESSION['funcionario_id'])) {
+            throw new Exception('Sessão inválida. Por favor, faça login novamente.');
+        }
+        
+        // Monta dados do usuário a partir da sessão
+        $usuarioLogadoReal = [
+            'id' => $_SESSION['user_id'],
+            'nome' => $_SESSION['user_name'] ?? 'Usuário',
+            'email' => $_SESSION['user_email'] ?? null,
+            'funcionario_id' => $_SESSION['funcionario_id']
+        ];
+    }
+    
+    // Valida que temos um ID de usuário válido
+    if (empty($usuarioLogadoReal['id'])) {
+        throw new Exception('ID do usuário não encontrado na sessão');
+    }
+    
+    // Define as variáveis corretas do usuário logado
     $usuarioLogado = [
-        'id' => $_SESSION['user_id'],
-        'nome' => $_SESSION['user_name'] ?? 'Usuário',
-        'email' => $_SESSION['user_email'] ?? null
+        'id' => $usuarioLogadoReal['funcionario_id'] ?? $usuarioLogadoReal['id'],
+        'nome' => $usuarioLogadoReal['nome'],
+        'email' => $usuarioLogadoReal['email'] ?? null
     ];
     
-    $funcionarioId = $_SESSION['funcionario_id'] ?? null;
-
-    error_log("=== ATUALIZAR ASSOCIADO COM INDICAÇÕES ===");
-    error_log("ID: $associadoId | Usuário: " . $usuarioLogado['nome']);
+    $funcionarioId = $usuarioLogadoReal['funcionario_id'] ?? $usuarioLogadoReal['id'];
+    
+    // Log de debug com usuário REAL
+    error_log("=== ATUALIZAR ASSOCIADO - USUÁRIO REAL ===");
+    error_log("Associado ID: $associadoId");
+    error_log("Usuário Logado ID: " . $usuarioLogado['id']);
+    error_log("Usuário Nome: " . $usuarioLogado['nome']);
     error_log("Funcionário ID: " . $funcionarioId);
 
-    // Validação básica
+    // Validação básica dos campos
     $camposObrigatorios = ['nome', 'cpf', 'rg', 'telefone', 'situacao'];
     foreach ($camposObrigatorios as $campo) {
         if (empty($_POST[$campo])) {
@@ -75,10 +114,10 @@ try {
 
     // Conecta ao banco
     $db = Database::getInstance(DB_NAME_CADASTRO)->getConnection();
-
+    
     // Busca dados atuais do associado
     $associados = new Associados();
-    $indicacoes = new Indicacoes(); // ✅ NOVO
+    $indicacoes = new Indicacoes();
     
     $associadoAtual = $associados->getById($associadoId);
     if (!$associadoAtual) {
@@ -86,9 +125,10 @@ try {
     }
 
     error_log("✓ Associado encontrado: " . $associadoAtual['nome']);
+    error_log("✓ Atualização será registrada pelo usuário: " . $usuarioLogado['nome'] . " (ID: " . $usuarioLogado['id'] . ")");
 
     // =====================================
-    // ✅ CAPTURA E VERIFICA INDICAÇÃO
+    // PROCESSAMENTO DA INDICAÇÃO
     // =====================================
     $indicacaoNome = trim($_POST['indicacao'] ?? '');
     $indicacaoAnterior = trim($associadoAtual['indicacao'] ?? '');
@@ -113,7 +153,7 @@ try {
         }
     }
 
-    // Verifica mudança de situação para atualizar data_desfiliacao
+    // Verifica mudança de situação
     $situacaoAtual = strtoupper(trim($associadoAtual['situacao'] ?? ''));
     $novaSituacao = strtoupper(trim($_POST['situacao'] ?? ''));
     $mudouSituacao = $situacaoAtual !== $novaSituacao;
@@ -137,7 +177,7 @@ try {
     $transacaoAtiva = true;
 
     try {
-        // 1. PRIMEIRO ATUALIZA OS DADOS BÁSICOS DO ASSOCIADO
+        // 1. ATUALIZA OS DADOS BÁSICOS DO ASSOCIADO
         $dados = [
             'nome' => trim($_POST['nome']),
             'nasc' => $_POST['nasc'] ?? null,
@@ -149,7 +189,7 @@ try {
             'escolaridade' => $_POST['escolaridade'] ?? null,
             'estadoCivil' => $_POST['estadoCivil'] ?? null,
             'telefone' => preg_replace('/[^0-9]/', '', $_POST['telefone']),
-            'indicacao' => $indicacaoNome, // Mantém na tabela Associados para compatibilidade
+            'indicacao' => $indicacaoNome,
             'dataFiliacao' => $_POST['dataFiliacao'] ?? $associadoAtual['data_filiacao'],
             'dataDesfiliacao' => $dataDesfiliacao,
             'corporacao' => $_POST['corporacao'] ?? null,
@@ -211,13 +251,18 @@ try {
             }
         }
 
-        // FAZER ROLLBACK DA TRANSAÇÃO AUTOMÁTICA DA CLASSE E USAR A NOSSA
+        // Rollback para usar transação própria da classe
         $db->rollback();
         $transacaoAtiva = false;
 
-        // A classe vai criar sua própria transação
+        // Atualiza através da classe Associados
         $resultado = $associados->atualizar($associadoId, $dados);
 
+        if (!$resultado) {
+            throw new Exception('Erro ao atualizar dados básicos do associado');
+        }
+
+        // Atualiza data_desfiliacao se necessário
         if ($resultado && $mudouSituacao && ($ficouDesfiliado || $saiuDeDesfiliado)) {
             try {
                 $stmt = $db->prepare("UPDATE Associados SET data_desfiliacao = ? WHERE id = ?");
@@ -228,14 +273,10 @@ try {
             }
         }
 
-        if (!$resultado) {
-            throw new Exception('Erro ao atualizar dados básicos do associado');
-        }
-
-        error_log("✓ Dados básicos atualizados");
+        error_log("✓ Dados básicos atualizados pelo usuário: " . $usuarioLogado['nome']);
 
         // =====================================
-        // ✅ 2. PROCESSA INDICAÇÃO SE MUDOU
+        // 2. PROCESSA INDICAÇÃO SE MUDOU
         // =====================================
         $indicacaoProcessada = false;
         $indicadorId = null;
@@ -305,7 +346,7 @@ try {
         $transacaoAtiva = true;
 
         // =====================================
-        // ✅ 3. PROCESSA OS SERVIÇOS - VERSÃO CORRIGIDA
+        // 3. PROCESSA OS SERVIÇOS
         // =====================================
         $servicosAlterados = false;
         $detalhesServicos = [];
@@ -314,7 +355,7 @@ try {
         error_log("=== PROCESSANDO SERVIÇOS ===");
         error_log("Tipo Associado Serviço: '$tipoAssociadoServico'");
 
-        // Busca TODOS os serviços do associado (ativos e inativos)
+        // Busca TODOS os serviços do associado
         $stmt = $db->prepare("
             SELECT sa.*, s.nome as servico_nome 
             FROM Servicos_Associado sa
@@ -331,9 +372,6 @@ try {
         }
 
         error_log("Serviços existentes no banco: " . count($servicosExistentes));
-        foreach ($servicosExistentes as $serv) {
-            error_log("  - Serviço ID {$serv['servico_id']} ({$serv['servico_nome']}): Ativo={$serv['ativo']}, Valor={$serv['valor_aplicado']}");
-        }
 
         // DEFINE OS NOVOS SERVIÇOS
         $novosServicos = [];
@@ -366,32 +404,28 @@ try {
                     'observacao' => "Atualizado - Tipo: $tipoAssociadoServico"
                 ];
                 error_log("✓ Serviço Jurídico definido: R$ $valorJuridico");
-            } else {
-                error_log("⚠ Serviço Jurídico não será adicionado (marcado: " . ($servicoJuridicoMarcado ? 'sim' : 'não') . ", valor: $valorJuridico)");
             }
         }
 
-        // PROCESSA CADA SERVIÇO (1=Social, 2=Jurídico)
+        // PROCESSA CADA SERVIÇO
         foreach ([1, 2] as $servicoId) {
             $servicoNome = ($servicoId == 1) ? 'Social' : 'Jurídico';
             $servicoExistente = isset($servicosExistentesMap[$servicoId]) ? $servicosExistentesMap[$servicoId] : null;
             $novoServico = isset($novosServicos[$servicoId]) ? $novosServicos[$servicoId] : null;
 
             error_log("--- Processando Serviço $servicoNome (ID: $servicoId) ---");
-            error_log("Existe no banco: " . ($servicoExistente ? 'sim (ID: ' . $servicoExistente['id'] . ', Ativo: ' . $servicoExistente['ativo'] . ')' : 'não'));
-            error_log("Novo serviço definido: " . ($novoServico ? 'sim (Valor: ' . $novoServico['valor_aplicado'] . ')' : 'não'));
 
             if ($novoServico) {
                 // QUER ESTE SERVIÇO
                 if ($servicoExistente) {
-                    // JÁ EXISTE NO BANCO - ATUALIZAR OU REATIVAR
+                    // JÁ EXISTE - ATUALIZAR
                     $valorMudou = abs($servicoExistente['valor_aplicado'] - $novoServico['valor_aplicado']) > 0.01;
                     $percentualMudou = abs($servicoExistente['percentual_aplicado'] - $novoServico['percentual_aplicado']) > 0.01;
                     $tipoMudou = ($servicoExistente['tipo_associado'] ?? '') !== ($novoServico['tipo_associado'] ?? '');
                     $precisaReativar = $servicoExistente['ativo'] == 0;
 
                     if ($valorMudou || $percentualMudou || $tipoMudou || $precisaReativar) {
-                        // Registra histórico se não estiver apenas reativando
+                        // Registra histórico
                         if ($valorMudou || $percentualMudou || $tipoMudou) {
                             try {
                                 $stmt = $db->prepare("
@@ -408,17 +442,16 @@ try {
                                     $servicoExistente['percentual_aplicado'],
                                     $novoServico['percentual_aplicado'],
                                     'Alteração via edição do associado',
-                                    $usuarioLogado['id']
+                                    $usuarioLogado['id'] // USANDO O ID CORRETO DO USUÁRIO
                                 ]);
 
                                 error_log("✓ Histórico registrado para serviço $servicoNome");
                             } catch (Exception $e) {
                                 error_log("⚠ Erro ao registrar histórico: " . $e->getMessage());
-                                // Continua mesmo se falhar o histórico
                             }
                         }
 
-                        // Atualiza o serviço existente
+                        // Atualiza o serviço
                         $stmt = $db->prepare("
                             UPDATE Servicos_Associado 
                             SET tipo_associado = ?, valor_aplicado = ?, percentual_aplicado = ?, 
@@ -435,21 +468,13 @@ try {
                         ]);
 
                         $servicosAlterados = true;
-                        
-                        if ($precisaReativar) {
-                            $detalhesServicos[] = "Reativado {$servicoNome}: R$ " . number_format($novoServico['valor_aplicado'], 2, ',', '.');
-                            error_log("✓ Serviço $servicoNome reativado");
-                        } else {
-                            $detalhesServicos[] = "Atualizado {$servicoNome}: R$ " . number_format($novoServico['valor_aplicado'], 2, ',', '.');
-                            error_log("✓ Serviço $servicoNome atualizado");
-                        }
-                    } else {
-                        error_log("- Serviço $servicoNome já está correto, não precisa atualizar");
+                        $detalhesServicos[] = ($precisaReativar ? "Reativado" : "Atualizado") . 
+                                              " {$servicoNome}: R$ " . 
+                                              number_format($novoServico['valor_aplicado'], 2, ',', '.');
+                        error_log("✓ Serviço $servicoNome " . ($precisaReativar ? "reativado" : "atualizado"));
                     }
                 } else {
-                    // NÃO EXISTE NO BANCO - CRIAR NOVO COM INSERT ... ON DUPLICATE KEY UPDATE
-                    error_log("Criando novo serviço $servicoNome...");
-                    
+                    // NÃO EXISTE - CRIAR NOVO
                     try {
                         $stmt = $db->prepare("
                             INSERT INTO Servicos_Associado (
@@ -475,14 +500,13 @@ try {
                         ]);
 
                         $servicosAlterados = true;
-                        $detalhesServicos[] = "Adicionado {$servicoNome}: R$ " . number_format($novoServico['valor_aplicado'], 2, ',', '.');
-                        error_log("✓ Serviço $servicoNome criado com sucesso");
+                        $detalhesServicos[] = "Adicionado {$servicoNome}: R$ " . 
+                                            number_format($novoServico['valor_aplicado'], 2, ',', '.');
+                        error_log("✓ Serviço $servicoNome criado");
                         
                     } catch (PDOException $e) {
                         if ($e->getCode() == 23000) {
-                            // Erro de chave duplicada - tenta atualizar em vez de inserir
-                            error_log("⚠ Chave duplicada detectada, tentando atualizar...");
-                            
+                            // Chave duplicada - atualiza
                             $stmt = $db->prepare("
                                 UPDATE Servicos_Associado 
                                 SET tipo_associado = ?, valor_aplicado = ?, percentual_aplicado = ?, 
@@ -500,10 +524,11 @@ try {
                             ]);
 
                             $servicosAlterados = true;
-                            $detalhesServicos[] = "Atualizado {$servicoNome}: R$ " . number_format($novoServico['valor_aplicado'], 2, ',', '.');
+                            $detalhesServicos[] = "Atualizado {$servicoNome}: R$ " . 
+                                                number_format($novoServico['valor_aplicado'], 2, ',', '.');
                             error_log("✓ Serviço $servicoNome atualizado via fallback");
                         } else {
-                            throw $e; // Re-lança outros erros
+                            throw $e;
                         }
                     }
                 }
@@ -521,29 +546,48 @@ try {
                     $servicosAlterados = true;
                     $detalhesServicos[] = "Removido {$servicoNome}";
                     error_log("✓ Serviço $servicoNome desativado");
-                } else {
-                    error_log("- Serviço $servicoNome já estava inativo ou não existia");
                 }
             }
         }
 
         error_log("=== FIM PROCESSAMENTO SERVIÇOS ===");
-        error_log("Serviços alterados: " . ($servicosAlterados ? 'sim' : 'não'));
-        error_log("Detalhes: " . implode(', ', $detalhesServicos));
 
-        // Salva auditoria incluindo informações de indicação
+        // =====================================
+        // 4. SALVA AUDITORIA COM USUÁRIO CORRETO
+        // =====================================
         if (($mudouSituacao && $ficouDesfiliado) || $servicosAlterados || $indicacaoMudou) {
             $stmt = $db->prepare("
                 INSERT INTO Auditoria (
-                    tabela, acao, registro_id, funcionario_id, 
-                    alteracoes, data_hora, ip_origem
+                    tabela, 
+                    acao, 
+                    registro_id, 
+                    funcionario_id,  -- USUÁRIO CORRETO
+                    associado_id,
+                    alteracoes, 
+                    data_hora, 
+                    ip_origem,
+                    browser_info,
+                    sessao_id
                 ) VALUES (
-                    'Associados', 'UPDATE', ?, ?, 
-                    ?, NOW(), ?
+                    'Associados', 
+                    'UPDATE', 
+                    ?, 
+                    ?,  -- ID DO USUÁRIO REAL
+                    ?,
+                    ?, 
+                    NOW(), 
+                    ?,
+                    ?,
+                    ?
                 )
             ");
 
             $alteracoes = [
+                'usuario_que_alterou' => [
+                    'id' => $usuarioLogado['id'],
+                    'nome' => $usuarioLogado['nome'],
+                    'email' => $usuarioLogado['email']
+                ],
                 'situacao_alterada' => $mudouSituacao,
                 'situacao_anterior' => $situacaoAtual,
                 'situacao_nova' => $novaSituacao,
@@ -562,29 +606,32 @@ try {
             ];
 
             $stmt->execute([
-                $associadoId,
-                $usuarioLogado['id'],
-                json_encode($alteracoes),
-                $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1'
+                $associadoId,                                      // registro_id
+                $usuarioLogado['id'],                              // funcionario_id - USUÁRIO REAL
+                $associadoId,                                      // associado_id
+                json_encode($alteracoes, JSON_UNESCAPED_UNICODE), // alteracoes
+                $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1',           // ip_origem
+                $_SERVER['HTTP_USER_AGENT'] ?? 'Unknown',         // browser_info
+                session_id()                                       // sessao_id
             ]);
 
-            error_log("✓ Auditoria registrada com informações de indicação");
+            error_log("✓ Auditoria registrada para usuário ID: " . $usuarioLogado['id'] . " (" . $usuarioLogado['nome'] . ")");
         }
 
-        // Confirma transação dos serviços
+        // Confirma transação
         $db->commit();
         $transacaoAtiva = false;
         error_log("✓ Transação confirmada");
 
-        // 4. SALVA DADOS EM JSON
+        // 5. SALVA DADOS EM JSON
         $resultadoJson = ['sucesso' => false, 'erro' => 'Não processado'];
 
         try {
-            error_log("=== INICIANDO SALVAMENTO EM JSON (ATUALIZAÇÃO) ===");
+            error_log("=== SALVANDO EM JSON ===");
 
             $jsonManager = new JsonManager();
             
-            // ✅ Adiciona informações de indicação aos dados
+            // Adiciona informações de indicação aos dados
             if ($indicadorInfo) {
                 $dados['indicacao_detalhes'] = [
                     'indicador_id' => $indicadorInfo['id'],
@@ -597,7 +644,7 @@ try {
             $resultadoJson = $jsonManager->salvarAssociadoJson($dados, $associadoId, 'UPDATE');
 
             if ($resultadoJson['sucesso']) {
-                error_log("✓ JSON atualizado com sucesso: " . $resultadoJson['arquivo_individual']);
+                error_log("✓ JSON atualizado: " . $resultadoJson['arquivo_individual']);
             } else {
                 error_log("⚠ Erro ao salvar JSON: " . $resultadoJson['erro']);
             }
@@ -606,17 +653,15 @@ try {
                 'sucesso' => false,
                 'erro' => $e->getMessage()
             ];
-            error_log("✗ ERRO CRÍTICO ao salvar JSON: " . $e->getMessage());
+            error_log("✗ Erro ao salvar JSON: " . $e->getMessage());
         }
 
         // Busca dados atualizados
         $associadoAtualizado = $associados->getById($associadoId);
 
         // Log final
-        error_log("✓ SUCESSO - Associado ID $associadoId atualizado completamente");
-        if ($indicacaoMudou) {
-            error_log("✓ Indicação alterada: '$indicacaoAnterior' → '$indicacaoNome'");
-        }
+        error_log("✓ SUCESSO - Associado ID $associadoId atualizado");
+        error_log("✓ Atualizado por: " . $usuarioLogado['nome'] . " (ID: " . $usuarioLogado['id'] . ")");
 
         // Resposta de sucesso
         $response = [
@@ -627,34 +672,40 @@ try {
                 'nome' => $associadoAtualizado['nome'] ?? $dados['nome'],
                 'cpf' => $associadoAtualizado['cpf'] ?? $dados['cpf'],
                 
-                // ✅ NOVA SEÇÃO - INDICAÇÃO
+                // Informações do usuário que atualizou
+                'atualizado_por' => [
+                    'id' => $usuarioLogado['id'],
+                    'nome' => $usuarioLogado['nome'],
+                    'timestamp' => date('Y-m-d H:i:s')
+                ],
+                
+                // Informações de indicação
                 'indicacao' => [
                     'mudou' => $indicacaoMudou,
                     'anterior' => $indicacaoAnterior,
                     'nova' => $indicacaoNome,
                     'processada' => $indicacaoProcessada,
                     'indicador_id' => $indicadorId,
-                    'indicador_info' => $indicadorInfo,
-                    'mensagem' => $indicacaoMudou 
-                        ? ($indicacaoProcessada ? 'Indicação atualizada com sucesso' : 'Indicação salva mas não processada')
-                        : 'Indicação mantida'
+                    'indicador_info' => $indicadorInfo
                 ],
                 
+                // Informações de situação
                 'situacao_alterada' => $mudouSituacao,
                 'situacao_anterior' => $situacaoAtual,
                 'situacao_nova' => $novaSituacao,
                 'desfiliacao_processada' => $ficouDesfiliado,
                 'reativacao_processada' => $saiuDeDesfiliado,
                 'data_desfiliacao' => $dataDesfiliacao,
+                
+                // Informações de serviços
                 'servicos_alterados' => $servicosAlterados,
                 'detalhes_servicos' => $detalhesServicos,
                 'tipo_associado_servico' => $tipoAssociadoServico,
                 
+                // Informações de JSON
                 'json_export' => [
                     'atualizado' => $resultadoJson['sucesso'],
                     'arquivo' => $resultadoJson['arquivo_individual'] ?? null,
-                    'tamanho_bytes' => $resultadoJson['tamanho_bytes'] ?? 0,
-                    'timestamp' => $resultadoJson['timestamp'] ?? null,
                     'erro' => $resultadoJson['sucesso'] ? null : $resultadoJson['erro']
                 ]
             ]
@@ -665,7 +716,7 @@ try {
         }
         
         if ($resultadoJson['sucesso']) {
-            $response['message'] .= ' Dados atualizados na integração.';
+            $response['message'] .= ' Dados exportados.';
         }
 
         if ($ficouDesfiliado) {
@@ -695,7 +746,10 @@ try {
             'line' => $e->getLine(),
             'associado_id' => $associadoId ?? 'não fornecido',
             'post_count' => count($_POST),
-            'indicacao_recebida' => $_POST['indicacao'] ?? 'não informada'
+            'user_session' => [
+                'user_id' => $_SESSION['user_id'] ?? 'não definido',
+                'funcionario_id' => $_SESSION['funcionario_id'] ?? 'não definido'
+            ]
         ]
     ];
 

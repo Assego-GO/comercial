@@ -1079,7 +1079,6 @@ $headerComponent = HeaderComponent::create([
                 </div>
             </div>
 
-            ''
 
             <!-- ADICIONE ESTE CSS ADICIONAL NO HEAD -->
             <style>
