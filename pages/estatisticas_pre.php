@@ -1,7 +1,7 @@
 <?php
 /**
  * Página de Estatísticas Avançadas - Sistema ASSEGO
- * pages/estatisticas_pre.php - Versão Melhorada
+ * pages/estatisticas_pre.php - Versão com Validação de Departamento
  */
 
 require_once '../config/config.php';
@@ -22,6 +22,25 @@ if (!$auth->isLoggedIn()) {
 
 // Pega dados do usuário logado
 $usuarioLogado = $auth->getUser();
+
+// ==================== VALIDAÇÃO DE DEPARTAMENTO ====================
+// Verifica se o funcionário pertence ao departamento 1
+if (!isset($usuarioLogado['departamento_id']) || $usuarioLogado['departamento_id'] != 1) {
+    // Registra tentativa de acesso não autorizado (opcional)
+    error_log("Tentativa de acesso não autorizado à página de estatísticas avançadas - Funcionário ID: " . 
+              ($usuarioLogado['id'] ?? 'desconhecido') . " - Departamento: " . 
+              ($usuarioLogado['departamento_id'] ?? 'não definido'));
+    
+    // Redireciona para página de acesso negado ou dashboard
+    header('Location: ../pages/acesso_negado.php?motivo=departamento');
+    
+    // Caso não exista página de acesso negado, redireciona para o dashboard
+    if (!file_exists('../pages/acesso_negado.php')) {
+        header('Location: ../pages/dashboard.php');
+    }
+    exit;
+}
+// ==================== FIM DA VALIDAÇÃO ====================
 
 // Define o título da página
 $page_title = 'Estatísticas Avançadas - ASSEGO';

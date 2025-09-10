@@ -671,16 +671,47 @@ function carregarDetalhesAssociado(id) {
             dataType: 'json',
             timeout: 10000,
             success: function(response) {
+                // DEBUG COMPLETO - Ver TUDO que está vindo
+                console.log('📦 Resposta completa da API:', response);
+                console.log('📦 Tipo da resposta:', typeof response);
+                console.log('📦 Status:', response?.status);
+                
                 if (response && response.status === 'success') {
                     console.log('✅ Detalhes carregados para associado', id);
+                    
+                    // DEBUG dos dados
+                    if (response.dados) {
+                        console.log('📋 Dados recebidos:', response.dados);
+                        console.log('🏠 Endereço:', {
+                            cep: response.dados.cep,
+                            endereco: response.dados.endereco,
+                            bairro: response.dados.bairro,
+                            cidade: response.dados.cidade,
+                            numero: response.dados.numero,
+                            complemento: response.dados.complemento
+                        });
+                    }
+                    
                     resolve(response.dados);
                 } else {
                     console.warn('⚠️ Resposta inválida ao carregar detalhes');
+                    console.warn('❌ Resposta recebida:', response);
                     resolve(null);
                 }
             },
             error: function(xhr, status, error) {
                 console.error('❌ Erro ao carregar detalhes:', error);
+                console.error('❌ Status:', xhr.status);
+                console.error('❌ Response Text:', xhr.responseText);
+                
+                // Tentar parsear a resposta mesmo com erro
+                try {
+                    const errorResponse = JSON.parse(xhr.responseText);
+                    console.error('❌ Erro parseado:', errorResponse);
+                } catch(e) {
+                    console.error('❌ Resposta não é JSON:', xhr.responseText);
+                }
+                
                 reject(error);
             }
         });
@@ -2670,7 +2701,22 @@ function mostrarNotificacaoDoc(mensagem, tipo = 'info') {
 }
 
 // Função para abrir modal de edição de contato
-function abrirModalEditarContato(associado) {
+function abrirModalEditarContato(associadoId, associadoNome) {
+    // Se for passado um objeto ao invés de ID (compatibilidade)
+    if (typeof associadoId === 'object') {
+        const associado = associadoId;
+        associadoId = associado.id;
+        associadoNome = associado.nome;
+    }
+    
+    // Buscar o associado completo se precisar
+    const associado = todosAssociados.find(a => a.id == associadoId);
+    
+    if (!associado) {
+        alert('Associado não encontrado!');
+        return;
+    }
+    
     // Preenche os campos
     document.getElementById('editContatoId').value = associado.id;
     document.getElementById('editContatoNome').textContent = associado.nome;

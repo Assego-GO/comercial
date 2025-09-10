@@ -62,6 +62,7 @@ $headerComponent = HeaderComponent::create([
     'usuario' => [
         'nome' => $usuarioLogado['nome'],
         'cargo' => $usuarioLogado['cargo'] ?? 'Funcionário',
+        'email' => $usuarioLogado['email'] ?? 'usuario@assego.com.br', // ← ADICIONE ESTA LINHA
         'avatar' => $usuarioLogado['avatar'] ?? null,
         'departamento_id' => $usuarioLogado['departamento_id'] ?? null
     ],
