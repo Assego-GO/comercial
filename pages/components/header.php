@@ -2,7 +2,7 @@
 /**
  * Componente Header Premium do Sistema ASSEGO
  * components/Header.php
- * VERSÃO SEM SISTEMA DE PERMISSÕES - TODAS AS ABAS LIBERADAS
+ * VERSÃO COM SISTEMA DE SIMULAÇÃO COMPLETO
  * Versão com cores oficiais ASSEGO: Azul Royal (#003C8F) e Dourado (#FFB800)
  */
 
@@ -12,7 +12,6 @@ $basePath = dirname(dirname(__DIR__)); // Volta 2 níveis: components -> pages -
 // Se Auth existir, carrega
 if (!class_exists('Auth') && file_exists($basePath . '/classes/Auth.php')) {
     require_once $basePath . '/classes/Auth.php';
-
 }
 if (!class_exists('Permissoes') && file_exists($basePath . '/classes/Permissoes.php')) {
     require_once $basePath . '/classes/Permissoes.php';
@@ -27,7 +26,10 @@ class HeaderComponent
     private $funcionario_id;
     private $departamento_id;
     private $cargo;
-    private $permissoes; // Adicione esta linha
+    private $permissoes;
+    private $estaSimulando;
+    private $usuarioOriginal;
+    private $usuarioSimulado;
 
     public function __construct($config = [])
     {
@@ -35,6 +37,45 @@ class HeaderComponent
         $this->funcionario_id = $_SESSION['funcionario_id'] ?? null;
         $this->departamento_id = $_SESSION['departamento_id'] ?? null;
         $this->cargo = $_SESSION['funcionario_cargo'] ?? null;
+
+        // Verificar se está simulando
+        $this->estaSimulando = false;
+        $this->usuarioOriginal = null;
+        $this->usuarioSimulado = null;
+
+        if (class_exists('Auth')) {
+            $auth = new Auth();
+            $this->estaSimulando = $auth->estaSimulando();
+
+            if ($this->estaSimulando) {
+                // Pega dados completos da simulação
+                $usuarioAtual = $auth->getUsuarioAtual();
+
+                // Dados do usuário original (admin que está simulando)
+                if (isset($_SESSION['admin_original'])) {
+                    // Sistema de simulação (assumirFuncionario)
+                    $this->usuarioOriginal = [
+                        'nome' => $_SESSION['admin_original']['nome'] ?? 'Admin',
+                        'id' => $_SESSION['admin_original']['id'] ?? null,
+                        'cargo' => $_SESSION['admin_original']['cargo'] ?? 'Admin'
+                    ];
+                } else {
+                    // Sistema de impersonation
+                    $this->usuarioOriginal = [
+                        'nome' => $_SESSION['real_funcionario_nome'] ?? $usuarioAtual['usuario_real']['nome'] ?? 'Admin',
+                        'id' => $_SESSION['real_funcionario_id'] ?? $usuarioAtual['usuario_real']['id'] ?? null,
+                        'cargo' => $_SESSION['real_funcionario_cargo'] ?? 'Admin'
+                    ];
+                }
+
+                // Dados do usuário sendo simulado
+                $this->usuarioSimulado = [
+                    'nome' => $usuarioAtual['nome'] ?? $_SESSION['funcionario_nome'],
+                    'cargo' => $usuarioAtual['cargo'] ?? $_SESSION['funcionario_cargo'],
+                    'id' => $usuarioAtual['id'] ?? $_SESSION['funcionario_id']
+                ];
+            }
+        }
 
         // Configura dados do usuário
         $this->usuario = $config['usuario'] ?? [
@@ -119,12 +160,10 @@ class HeaderComponent
             'estatisticas.php' => 'relatorios',
             'documentos.php' => 'documentos',
             'notificacoes.php' => 'notificacoes'
-
         ];
 
         return $pageMap[$currentFile] ?? 'associados';
     }
-
     /**
      * Renderiza o CSS do componente
      */
@@ -1823,12 +1862,522 @@ class HeaderComponent
                     -webkit-line-clamp: 2;
                 }
             }
+
+            /* ===== SISTEMA DE SIMULAÇÃO - ESTILOS COMPLETOS ===== */
+
+            /* Banner Principal de Simulação */
+            .simulacao-banner {
+                position: fixed;
+                top: var(--header-height);
+                left: 0;
+                right: 0;
+                background: linear-gradient(135deg, #DC2626 0%, #991B1B 100%);
+                color: white;
+                padding: 12px 20px;
+                z-index: 999;
+                box-shadow:
+                    0 4px 12px rgba(220, 38, 38, 0.3),
+                    0 0 40px rgba(220, 38, 38, 0.1),
+                    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+                border-bottom: 2px solid #7F1D1D;
+                animation: slideDown 0.3s ease-out;
+                backdrop-filter: blur(10px);
+                -webkit-backdrop-filter: blur(10px);
+            }
+
+            /* Padrão zebrado de alerta */
+            .simulacao-banner::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background-image: repeating-linear-gradient(45deg,
+                        rgba(0, 0, 0, 0.05),
+                        rgba(0, 0, 0, 0.05) 10px,
+                        transparent 10px,
+                        transparent 20px);
+                pointer-events: none;
+                opacity: 0.3;
+            }
+
+            /* Animação de entrada */
+            @keyframes slideDown {
+                from {
+                    transform: translateY(-100%);
+                    opacity: 0;
+                }
+
+                to {
+                    transform: translateY(0);
+                    opacity: 1;
+                }
+            }
+
+            /* Container do conteúdo */
+            .simulacao-content {
+                max-width: 1400px;
+                margin: 0 auto;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 20px;
+                flex-wrap: wrap;
+                position: relative;
+            }
+
+            /* Ícone animado */
+            .simulacao-icon {
+                width: 40px;
+                height: 40px;
+                background: rgba(255, 255, 255, 0.2);
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 20px;
+                flex-shrink: 0;
+                border: 2px solid rgba(255, 255, 255, 0.3);
+                position: relative;
+                overflow: hidden;
+            }
+
+            /* Efeito de brilho no ícone */
+            .simulacao-icon::after {
+                content: '';
+                position: absolute;
+                top: -50%;
+                left: -50%;
+                width: 200%;
+                height: 200%;
+                background: linear-gradient(45deg,
+                        transparent,
+                        rgba(255, 255, 255, 0.3),
+                        transparent);
+                transform: rotate(45deg);
+                animation: shimmer 3s infinite;
+            }
+
+            @keyframes shimmer {
+                0% {
+                    transform: rotate(45deg) translateX(-100%);
+                }
+
+                100% {
+                    transform: rotate(45deg) translateX(100%);
+                }
+            }
+
+            /* Animação de pulso */
+            .simulacao-icon.pulse {
+                animation: pulseSim 2s infinite;
+            }
+
+            @keyframes pulseSim {
+
+                0%,
+                100% {
+                    box-shadow:
+                        0 0 0 0 rgba(255, 255, 255, 0.7),
+                        0 2px 8px rgba(0, 0, 0, 0.2);
+                }
+
+                50% {
+                    box-shadow:
+                        0 0 0 10px rgba(255, 255, 255, 0),
+                        0 2px 8px rgba(0, 0, 0, 0.2);
+                }
+            }
+
+            /* Informações da simulação */
+            .simulacao-info {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                gap: 4px;
+                min-width: 0;
+            }
+
+            .simulacao-label {
+                font-size: 11px;
+                font-weight: 700;
+                letter-spacing: 0.1em;
+                opacity: 0.9;
+                text-transform: uppercase;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+
+            /* Indicador de gravação */
+            .simulacao-label::before {
+                content: '';
+                width: 8px;
+                height: 8px;
+                background: #FFF;
+                border-radius: 50%;
+                animation: recording 1.5s infinite;
+            }
+
+            @keyframes recording {
+
+                0%,
+                100% {
+                    opacity: 1;
+                }
+
+                50% {
+                    opacity: 0.3;
+                }
+            }
+
+            .simulacao-detalhes {
+                font-size: 14px;
+                font-weight: 500;
+                line-height: 1.4;
+                text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+            }
+
+            .simulacao-detalhes strong {
+                font-weight: 700;
+                color: #FEF2F2;
+                background: rgba(255, 255, 255, 0.1);
+                padding: 2px 6px;
+                border-radius: 4px;
+                margin: 0 2px;
+            }
+
+            /* Botão de sair */
+            .btn-sair-simulacao {
+                background: rgba(255, 255, 255, 0.2);
+                color: white;
+                border: 2px solid rgba(255, 255, 255, 0.3);
+                padding: 8px 16px;
+                border-radius: 8px;
+                font-weight: 600;
+                font-size: 14px;
+                cursor: pointer;
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                white-space: nowrap;
+                position: relative;
+                overflow: hidden;
+                text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+            }
+
+            /* Efeito hover do botão */
+            .btn-sair-simulacao::before {
+                content: '';
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                width: 0;
+                height: 0;
+                background: white;
+                border-radius: 50%;
+                transform: translate(-50%, -50%);
+                transition: width 0.4s, height 0.4s;
+            }
+
+            .btn-sair-simulacao:hover {
+                background: white;
+                color: #DC2626;
+                transform: translateY(-2px);
+                box-shadow:
+                    0 6px 20px rgba(0, 0, 0, 0.2),
+                    0 0 0 2px rgba(255, 255, 255, 0.2);
+                border-color: white;
+                text-shadow: none;
+            }
+
+            .btn-sair-simulacao:hover::before {
+                width: 300%;
+                height: 300%;
+            }
+
+            .btn-sair-simulacao:active {
+                transform: translateY(0);
+            }
+
+            /* Ajuste do body com simulação ativa */
+            body.simulacao-ativa {
+                padding-top: calc(var(--header-height) + 64px) !important;
+            }
+
+            /* Indicadores no menu do usuário */
+            .user-menu-trigger.simulando {
+                border: 2px solid #DC2626;
+                background: linear-gradient(135deg, #FEE2E2 0%, #FECACA 100%);
+                box-shadow:
+                    0 0 20px rgba(220, 38, 38, 0.3),
+                    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+                animation: attentionGlow 3s infinite;
+            }
+
+            @keyframes attentionGlow {
+
+                0%,
+                100% {
+                    box-shadow:
+                        0 0 20px rgba(220, 38, 38, 0.3),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.5);
+                }
+
+                50% {
+                    box-shadow:
+                        0 0 30px rgba(220, 38, 38, 0.5),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.5);
+                }
+            }
+
+            .user-menu-trigger.simulando .user-avatar {
+                border: 2px solid #DC2626;
+                position: relative;
+            }
+
+            /* Badge de simulação */
+            .simulacao-badge {
+                position: absolute;
+                top: -5px;
+                right: -5px;
+                background: linear-gradient(135deg, #DC2626 0%, #EF4444 100%);
+                color: white;
+                font-size: 10px;
+                padding: 2px 6px;
+                border-radius: 10px;
+                font-weight: 700;
+                animation: pulse 2s infinite;
+                border: 2px solid white;
+                z-index: 10;
+                box-shadow:
+                    0 2px 4px rgba(0, 0, 0, 0.2),
+                    0 0 0 1px rgba(220, 38, 38, 0.3);
+            }
+
+            @keyframes pulse {
+
+                0%,
+                100% {
+                    transform: scale(1);
+                }
+
+                50% {
+                    transform: scale(1.1);
+                }
+            }
+
+            /* Dropdown com indicador de simulação */
+            .user-dropdown .simulacao-aviso {
+                margin: 8px;
+                padding: 10px 12px;
+                background: linear-gradient(135deg, #FEE2E2 0%, #FECACA 100%);
+                border-radius: 8px;
+                border: 1px solid #FCA5A5;
+                font-size: 12px;
+                color: #DC2626;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                box-shadow: 0 2px 4px rgba(220, 38, 38, 0.1);
+            }
+
+            .user-dropdown .simulacao-aviso i {
+                font-size: 14px;
+                animation: bounce 2s infinite;
+            }
+
+            @keyframes bounce {
+
+                0%,
+                100% {
+                    transform: translateY(0);
+                }
+
+                25% {
+                    transform: translateY(-2px);
+                }
+
+                75% {
+                    transform: translateY(2px);
+                }
+            }
+
+            /* Item do dropdown para sair da simulação */
+            .dropdown-item.sair-simulacao {
+                background: linear-gradient(135deg, #FEE2E2 0%, #FECACA 100%);
+                color: #DC2626;
+                font-weight: 600;
+                border: 1px solid #FCA5A5;
+                margin: 4px;
+                transition: all 0.3s ease;
+            }
+
+            .dropdown-item.sair-simulacao:hover {
+                background: linear-gradient(135deg, #DC2626 0%, #EF4444 100%);
+                color: white;
+                transform: translateX(4px);
+                box-shadow: 0 2px 8px rgba(220, 38, 38, 0.3);
+            }
+
+            /* Mobile - Menu lateral */
+            .mobile-nav .simulacao-info-mobile {
+                margin: 12px;
+                padding: 12px;
+                background: linear-gradient(135deg, #FEE2E2 0%, #FECACA 100%);
+                border-radius: 8px;
+                border: 1px solid #FCA5A5;
+                font-size: 12px;
+                color: #DC2626;
+                text-align: center;
+                font-weight: 600;
+            }
+
+            .mobile-nav-item.sair-simulacao {
+                background: linear-gradient(135deg, #FEE2E2 0%, #FECACA 100%);
+                color: #DC2626;
+                font-weight: 600;
+                border: 1px solid #FCA5A5;
+                margin: 8px 12px;
+            }
+
+            .mobile-nav-item.sair-simulacao:hover {
+                background: linear-gradient(135deg, #DC2626 0%, #EF4444 100%);
+                color: white;
+            }
+
+            /* Responsivo - Tablet */
+            @media (max-width: 992px) {
+                .simulacao-banner {
+                    padding: 10px 16px;
+                }
+
+                .simulacao-content {
+                    gap: 16px;
+                }
+
+                .simulacao-detalhes strong {
+                    display: inline-block;
+                    margin: 2px 0;
+                }
+            }
+
+            /* Responsivo - Mobile */
+            @media (max-width: 768px) {
+                .simulacao-banner {
+                    padding: 10px 15px;
+                }
+
+                .simulacao-content {
+                    gap: 12px;
+                    text-align: center;
+                    justify-content: center;
+                }
+
+                .simulacao-icon {
+                    width: 32px;
+                    height: 32px;
+                    font-size: 16px;
+                }
+
+                .simulacao-label {
+                    font-size: 10px;
+                    justify-content: center;
+                }
+
+                .simulacao-detalhes {
+                    font-size: 12px;
+                }
+
+                .btn-sair-simulacao {
+                    padding: 6px 12px;
+                    font-size: 12px;
+                    width: 100%;
+                    justify-content: center;
+                }
+
+                body.simulacao-ativa {
+                    padding-top: calc(var(--header-height) + 120px) !important;
+                }
+            }
+
+            /* Responsivo - Mobile Pequeno */
+            @media (max-width: 480px) {
+                .simulacao-banner {
+                    padding: 8px 10px;
+                }
+
+                .simulacao-detalhes {
+                    font-size: 11px;
+                }
+
+                .simulacao-detalhes strong {
+                    padding: 1px 4px;
+                    font-size: 11px;
+                }
+
+                .btn-sair-simulacao {
+                    padding: 5px 10px;
+                    font-size: 11px;
+                }
+            }
+
+            /* Tema escuro (opcional) */
+            @media (prefers-color-scheme: dark) {
+                .simulacao-banner {
+                    background: linear-gradient(135deg, #B91C1C 0%, #7F1D1D 100%);
+                    border-bottom-color: #450A0A;
+                }
+
+                .simulacao-detalhes strong {
+                    background: rgba(0, 0, 0, 0.3);
+                }
+
+                .btn-sair-simulacao {
+                    background: rgba(0, 0, 0, 0.3);
+                    border-color: rgba(255, 255, 255, 0.2);
+                }
+            }
+
+            /* Acessibilidade - Alto Contraste */
+            @media (prefers-contrast: high) {
+                .simulacao-banner {
+                    background: #DC2626;
+                    border: 2px solid white;
+                }
+
+                .simulacao-detalhes strong {
+                    text-decoration: underline;
+                    background: black;
+                }
+
+                .btn-sair-simulacao {
+                    border-width: 3px;
+                    font-weight: 800;
+                }
+            }
+
+            /* Print - Ocultar banner ao imprimir */
+            @media print {
+
+                .simulacao-banner,
+                .simulacao-badge,
+                .simulacao-aviso {
+                    display: none !important;
+                }
+
+                body.simulacao-ativa {
+                    padding-top: var(--header-height) !important;
+                }
+            }
         </style>
         <?php
     }
 
     /**
-     * Gera os itens de navegação - TODOS LIBERADOS SEM VERIFICAÇÃO DE PERMISSÃO
+     * Gera os itens de navegação
      */
     private function getNavigationItems()
     {
@@ -1931,6 +2480,7 @@ class HeaderComponent
                 'badge' => null
             ];
         }
+
         // PRESIDÊNCIA - Verifica permissão
         if ($this->permissoes->hasPermission('PRESIDENCIA_DASHBOARD', 'VIEW')) {
             $items[] = [
@@ -1941,6 +2491,7 @@ class HeaderComponent
                 'badge' => null
             ];
         }
+
         return $items;
     }
 
@@ -1998,6 +2549,39 @@ class HeaderComponent
             document.addEventListener('DOMContentLoaded', function () {
                 // Adiciona classe ao body para garantir padding
                 document.body.classList.add('has-header');
+
+                // Verificar se está em modo simulação
+                const simulacaoBanner = document.querySelector('.simulacao-banner');
+                if (simulacaoBanner) {
+                    // Adiciona classe ao body para ajustar padding
+                    document.body.classList.add('simulacao-ativa');
+
+                    // Adiciona indicador visual no menu do usuário
+                    const userMenuTrigger = document.getElementById('userMenuTrigger');
+                    if (userMenuTrigger) {
+                        userMenuTrigger.classList.add('simulando');
+                    }
+
+                    // Auto-hide do banner após 10 segundos (opcional)
+                    setTimeout(() => {
+                        simulacaoBanner.style.opacity = '0.8';
+                    }, 10000);
+
+                    // Mostrar banner completo ao passar o mouse
+                    simulacaoBanner.addEventListener('mouseenter', () => {
+                        simulacaoBanner.style.opacity = '1';
+                    });
+                }
+
+                // Confirmação ao sair da simulação
+                const btnSairSimulacao = document.querySelector('.btn-sair-simulacao');
+                if (btnSairSimulacao) {
+                    btnSairSimulacao.addEventListener('click', function (e) {
+                        if (!confirm('Deseja realmente sair do modo de simulação?')) {
+                            e.preventDefault();
+                        }
+                    });
+                }
 
                 // User Dropdown
                 const userMenuTrigger = document.getElementById('userMenuTrigger');
@@ -2092,7 +2676,38 @@ class HeaderComponent
                         window.notificacaoSystem = new NotificacaoSystem();
                     }
                 }, 500);
+
+                // Adicionar efeito visual ao indicador de simulação
+                const simulacaoIndicator = document.getElementById('simulacaoIndicator');
+                if (simulacaoIndicator) {
+                    // Piscar o indicador a cada 10 segundos para lembrar que está simulando
+                    setInterval(() => {
+                        simulacaoIndicator.style.animation = 'none';
+                        setTimeout(() => {
+                            simulacaoIndicator.style.animation = 'pulse 2s infinite';
+                        }, 10);
+                    }, 10000);
+                }
             });
+
+            // Função para sair da simulação
+            function sairSimulacao() {
+                if (confirm('Deseja sair do modo simulação e voltar para sua conta?')) {
+                    // Criar formulário para POST
+                    const form = document.createElement('form');
+                    form.method = 'POST';
+                    form.action = window.location.pathname;
+
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'voltar_simulacao';
+                    input.value = '1';
+
+                    form.appendChild(input);
+                    document.body.appendChild(form);
+                    form.submit();
+                }
+            }
 
             // Ajusta padding do body baseado na altura do header
             window.addEventListener('load', function () {
@@ -2118,7 +2733,7 @@ class HeaderComponent
                 window.location.href = 'perfil.php';
             }
 
-            // Sistema de Notificações
+            // Sistema de Notificações (classe completa)
             class NotificacaoSystem {
                 constructor() {
                     this.isInitialized = false;
@@ -2640,6 +3255,40 @@ class HeaderComponent
         <?php endif; ?>
 
         <header class="header-container">
+            <!-- INDICADOR DE SIMULAÇÃO - NOVO CÓDIGO -->
+            <?php if (class_exists('Auth')): ?>
+                <?php
+                $auth = new Auth();
+                if ($auth->estaSimulando()):
+                    $usuarioSimulado = $auth->getUsuarioAtual();
+                    $usuarioReal = $usuarioSimulado['usuario_real'] ?? [];
+                    ?>
+                    <div class="simulacao-banner">
+                        <div class="simulacao-content">
+                            <div class="simulacao-icon pulse">
+                                <i class="fas fa-user-secret"></i>
+                            </div>
+                            <div class="simulacao-info">
+                                <span class="simulacao-label">MODO SIMULAÇÃO ATIVO</span>
+                                <span class="simulacao-detalhes">
+                                    Você (<strong><?php echo htmlspecialchars($usuarioReal['nome'] ?? 'Admin'); ?></strong>)
+                                    está simulando:
+                                    <strong><?php echo htmlspecialchars($usuarioSimulado['nome']); ?></strong>
+                                    (<?php echo htmlspecialchars($usuarioSimulado['cargo']); ?>)
+                                </span>
+                            </div>
+                            <form method="POST" action="" style="margin: 0;">
+                                <input type="hidden" name="voltar_simulacao" value="1">
+                                <button type="submit" class="btn-sair-simulacao">
+                                    <i class="fas fa-sign-out-alt"></i>
+                                    Sair da Simulação
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                <?php endif; ?>
+            <?php endif; ?>
+
             <div class="header-content">
                 <!-- Left Section -->
                 <div class="header-left">
@@ -2697,7 +3346,15 @@ class HeaderComponent
 
                     <!-- User Menu -->
                     <div class="user-menu-container">
-                        <button class="user-menu-trigger" id="userMenuTrigger">
+                        <button class="user-menu-trigger <?php echo $this->estaSimulando ? 'simulando' : ''; ?>"
+                            id="userMenuTrigger">
+                            <?php if ($this->estaSimulando): ?>
+                                <div
+                                    style="margin-top: 8px; padding: 6px 10px; background: #FEE2E2; border-radius: 6px; font-size: 12px; color: #DC2626;">
+                                    <i class="fas fa-info-circle"></i> Simulando como
+                                    <?php echo htmlspecialchars($this->usuarioSimulado['nome'] ?? 'Usuário'); ?>
+                                </div>
+                            <?php endif; ?>
                             <div class="user-info">
                                 <div class="user-name"><?php echo htmlspecialchars($this->usuario['nome']); ?></div>
                                 <div class="user-role"><?php echo htmlspecialchars($this->usuario['cargo']); ?></div>
@@ -2718,7 +3375,21 @@ class HeaderComponent
                             <div class="user-dropdown-header">
                                 <div class="user-dropdown-name"><?php echo htmlspecialchars($this->usuario['nome']); ?></div>
                                 <div class="user-dropdown-email"><?php echo htmlspecialchars($this->usuario['email']); ?></div>
+                                <?php if ($this->estaSimulando): ?>
+                                    <div
+                                        style="margin-top: 8px; padding: 6px 10px; background: #FEE2E2; border-radius: 6px; font-size: 12px; color: #DC2626;">
+                                        <i class="fas fa-info-circle"></i> Modo Simulação Ativo
+                                    </div>
+                                <?php endif; ?>
                             </div>
+                            <?php if ($this->estaSimulando): ?>
+                                <a href="#" onclick="sairSimulacao(); return false;" class="dropdown-item"
+                                    style="background: #FEE2E2; color: #DC2626;">
+                                    <i class="fas fa-user-secret"></i>
+                                    <span>Sair da Simulação (<?php echo htmlspecialchars($this->usuarioOriginal['nome']); ?>)</span>
+                                </a>
+                                <div class="dropdown-divider"></div>
+                            <?php endif; ?>
 
                             <a href="perfil.php" class="dropdown-item">
                                 <i class="fas fa-user-circle"></i>
@@ -2744,11 +3415,18 @@ class HeaderComponent
             </div>
         </header>
 
-        <!-- Mobile Navigation kkkkkkkkkkkkkkkkkkkkkk-->
+        <!-- Mobile Navigation -->
         <nav class="mobile-nav" id="mobileNav">
             <div class="mobile-nav-header">
                 <div class="user-dropdown-name"><?php echo htmlspecialchars($this->usuario['nome']); ?></div>
                 <div class="user-dropdown-email"><?php echo htmlspecialchars($this->usuario['cargo']); ?></div>
+                <?php if ($this->estaSimulando): ?>
+                    <div
+                        style="margin-top: 8px; padding: 6px 10px; background: #FEE2E2; border-radius: 6px; font-size: 12px; color: #DC2626;">
+                        <i class="fas fa-info-circle"></i> Simulando como
+                        <?php echo htmlspecialchars($this->usuarioSimulado['nome']); ?>
+                    </div>
+                <?php endif; ?>
             </div>
 
             <?php foreach ($navigationItems as $item): ?>
@@ -2777,6 +3455,15 @@ class HeaderComponent
                 </a>
             <?php endif; ?>
 
+            <?php if ($this->estaSimulando): ?>
+                <div class="mobile-nav-divider"></div>
+                <a href="#" onclick="sairSimulacao(); return false;" class="mobile-nav-item"
+                    style="background: #FEE2E2; color: #DC2626;">
+                    <i class="fas fa-user-secret"></i>
+                    <span>Sair da Simulação</span>
+                </a>
+            <?php endif; ?>
+
             <div class="mobile-nav-divider"></div>
 
             <a href="logout.php" class="mobile-nav-item">
@@ -2799,7 +3486,6 @@ class HeaderComponent
         return $header;
     }
 }
-
 
 /**
  * Função helper para renderização rápida
