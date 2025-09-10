@@ -114,8 +114,9 @@ class HeaderComponent
             'presidencia.php' => 'presidencia',
             'permissoes.php' => 'permissoes',
             'relatorios.php' => 'relatorios',
+            'relatorios_executar.php' => 'relatorios',
             'relatorio_financeiro.php' => 'relatorios',
-            'estatisticas.php' => 'rel  atorios',
+            'estatisticas.php' => 'relatorios',
             'documentos.php' => 'documentos',
             'notificacoes.php' => 'notificacoes'
 
