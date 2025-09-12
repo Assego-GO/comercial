@@ -4190,26 +4190,7 @@ $headerComponent = HeaderComponent::create([
 
             // Adicionar botão de refresh manual nas estatísticas se não existir
             const statsGrid = document.querySelector('.stats-grid');
-            if (statsGrid && temPermissao) {
-                const refreshBtn = document.createElement('button');
-                refreshBtn.className = 'btn btn-sm btn-outline-secondary position-absolute';
-                refreshBtn.style.cssText = 'top: 10px; right: 10px; z-index: 10; border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;';
-                refreshBtn.innerHTML = '<i class="fas fa-sync-alt"></i>';
-                refreshBtn.title = 'Atualizar documentos';
-                refreshBtn.onclick = () => {
-                    refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-                    refreshBtn.disabled = true;
-
-                    carregarDocumentosFluxo(true).finally(() => {
-                        refreshBtn.innerHTML = '<i class="fas fa-sync-alt"></i>';
-                        refreshBtn.disabled = false;
-                        notifications.show('Dados atualizados! 🔄', 'success', 2000);
-                    });
-                };
-
-                statsGrid.style.position = 'relative';
-                statsGrid.appendChild(refreshBtn);
-            }
+            
 
             // Auto-refresh dos documentos a cada 30 segundos (apenas quando em foco)
             setInterval(function () {
