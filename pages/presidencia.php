@@ -1770,22 +1770,21 @@ $headerComponent = HeaderComponent::create([
 
                                         <div class="bg-light p-3 rounded">
                                             <h6 class="text-warning mb-2">
-                                                <i class="fas fa-chart-pie"></i>
-                                                Impacto Estimado:
+                                                <i class="fas fa-balance-scale"></i>
+                                                Impacto do Serviço:
                                             </h6>
                                             <div id="impactoJuridico">
-                                                <div class="d-flex justify-content-between">
-                                                    <span>Contribuintes (100%):</span>
+                                                <div class="d-flex justify-content-between mb-2">
+                                                    <span>Valor para quem aderir:</span>
                                                     <span id="impactoJuridicoContribuinte" class="fw-bold">R$
                                                         0,00</span>
                                                 </div>
-                                                <div class="d-flex justify-content-between">
-                                                    <span>Alunos (50%):</span>
-                                                    <span id="impactoJuridicoAluno" class="fw-bold">R$ 0,00</span>
-                                                </div>
-                                                <div class="d-flex justify-content-between">
-                                                    <span>Remidos (0%):</span>
-                                                    <span id="impactoJuridicoRemido" class="fw-bold">R$ 0,00</span>
+                                                <div class="alert alert-warning mb-0 py-2">
+                                                    <small>
+                                                        <i class="fas fa-info-circle"></i>
+                                                        <strong>Serviço opcional:</strong> Associado paga o valor
+                                                        integral ou não adere ao serviço
+                                                    </small>
                                                 </div>
                                             </div>
                                         </div>
@@ -3148,13 +3147,9 @@ $headerComponent = HeaderComponent::create([
                 'R$ ' + ((valorSocial * percentuais.Aluno) / 100).toFixed(2).replace('.', ',');
             document.getElementById('impactoSocialRemido').textContent =
                 'R$ ' + ((valorSocial * percentuais.Remido) / 100).toFixed(2).replace('.', ',');
-
+            // Para serviço jurídico - ou paga integral ou não paga
             document.getElementById('impactoJuridicoContribuinte').textContent =
-                'R$ ' + ((valorJuridico * percentuais.Contribuinte) / 100).toFixed(2).replace('.', ',');
-            document.getElementById('impactoJuridicoAluno').textContent =
-                'R$ ' + ((valorJuridico * percentuais.Aluno) / 100).toFixed(2).replace('.', ',');
-            document.getElementById('impactoJuridicoRemido').textContent =
-                'R$ ' + ((valorJuridico * percentuais.Remido) / 100).toFixed(2).replace('.', ',');
+                'R$ ' + valorJuridico.toFixed(2).replace('.', ',');
         }
 
         function simularImpactoAssociados(valorSocial, valorJuridico) {
