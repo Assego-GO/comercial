@@ -115,7 +115,7 @@ try {
     // 🚀 QUERY OTIMIZADA: Remove dados desnecessários para listagem
     if ($loadType === 'all') {
         // Carrega todos (para compatibilidade com código existente)
-        $sqlLimit = "LIMIT 10000";
+        $sqlLimit = "LIMIT 15000";
     } else {
         // Carrega apenas a página solicitada
         $sqlLimit = "LIMIT $limit OFFSET $offset";
