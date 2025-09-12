@@ -764,10 +764,12 @@ $headerComponent = HeaderComponent::create([
                         <select class="filter-select" id="filterCargo">
                             <option value="">Todos</option>
                             <option value="Diretor">Diretor</option>
-                            <option value="Gerente">Gerente</option>
-                            <option value="Supervisor">Supervisor</option>
-                            <option value="Analista">Analista</option>
+                            <option value="Celetista">Celetista</option>
+                            <option value="Estagiário">Estagiário</option>
                             <option value="Assistente">Assistente</option>
+                            <option value="Contrato">Contrato</option>
+                            <option value="Advogado capital">Advogado capital</option>
+                            <option value="Advogado interior">Advogado interior</option>
                         </select>
                     </div>
                 </div>
