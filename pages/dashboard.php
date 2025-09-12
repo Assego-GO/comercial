@@ -44,6 +44,8 @@ $headerComponent = HeaderComponent::create([
     'showSearch' => true
 ]);
 ?>
+
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 
@@ -99,7 +101,6 @@ $headerComponent = HeaderComponent::create([
                 <h1 class="page-title">Gestão de Associados</h1>
                 <p class="page-subtitle">Gerencie os associados da ASSEGO</p>
             </div>
-            <?php include 'components/simulation-banner.php'; ?>
 
             <?php
             // Configuração de permissões para KPIs
