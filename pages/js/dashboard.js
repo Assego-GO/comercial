@@ -2790,6 +2790,163 @@ function salvarContatoEditado() {
     });
 }
 
+async function buscarNoServidor(termo) {
+    try {
+        const response = await fetch(`../api/buscar_associados.php?termo=${encodeURIComponent(termo)}`);
+        const resultado = await response.json();
+        
+        if (resultado.status === 'success') {
+            associadosFiltrados = resultado.dados;
+            paginaAtual = 1;
+            calcularPaginacao();
+            renderizarPagina();
+        }
+    } catch (error) {
+        console.error('Search error:', error);
+        // Fallback to local search
+        aplicarFiltros();
+    }
+}
+
+// ========================================
+// ADD THESE FUNCTIONS TO YOUR dashboard.js
+// ========================================
+
+let searchTimeout;
+
+// New search input handler
+function handleSearchInput(e) {
+    const termo = e.target.value.trim();
+    
+    // Clear previous timeout
+    clearTimeout(searchTimeout);
+    
+    // If empty, show local data
+    if (!termo) {
+        console.log('Search cleared, showing local data');
+        associadosFiltrados = [...todosAssociados];
+        aplicarFiltrosLocais(); // Apply other filters
+        return;
+    }
+    
+    // If too short, wait
+    if (termo.length < 2) {
+        return;
+    }
+    
+    // Debounce search
+    searchTimeout = setTimeout(() => {
+        buscarNoServidor(termo);
+    }, 300);
+}
+
+// Server search function (searches ALL 6000+ records)
+async function buscarNoServidor(termo) {
+    console.log('Searching server for:', termo);
+    
+    // Show search indicator
+    mostrarIndicadorBusca(true);
+    
+    try {
+        const response = await fetch(`../api/buscar_associados.php?termo=${encodeURIComponent(termo)}&limit=200`);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        
+        const resultado = await response.json();
+        
+        if (resultado.status === 'success') {
+            console.log(`Found ${resultado.dados.length} results on server`);
+            
+            // Use server results
+            associadosFiltrados = resultado.dados;
+            
+            // Update pagination
+            paginaAtual = 1;
+            calcularPaginacao();
+            renderizarPagina();
+            
+            // Show results info
+            if (resultado.total_aproximado && resultado.total_aproximado > resultado.dados.length) {
+                console.log(`Showing ${resultado.dados.length} of ~${resultado.total_aproximado} total matches`);
+            }
+            
+        } else {
+            console.warn('Server search error:', resultado.message);
+            buscarLocal(termo); // Fallback
+        }
+        
+    } catch (error) {
+        console.error('Search error:', error);
+        buscarLocal(termo); // Fallback to local search
+        
+    } finally {
+        mostrarIndicadorBusca(false);
+    }
+}
+
+// Apply filters without search
+function aplicarFiltrosLocais() {
+    console.log('Applying local filters only...');
+    
+    const filterSituacao = document.getElementById('filterSituacao')?.value || '';
+    const filterCorporacao = document.getElementById('filterCorporacao')?.value || '';
+    const filterPatente = document.getElementById('filterPatente')?.value || '';
+    
+    // Start with current data (could be search results or all data)
+    let dadosParaFiltrar = associadosFiltrados.length > 0 ? associadosFiltrados : todosAssociados;
+    
+    associadosFiltrados = dadosParaFiltrar.filter(associado => {
+        const matchSituacao = !filterSituacao || associado.situacao === filterSituacao;
+        const matchCorporacao = !filterCorporacao || associado.corporacao === filterCorporacao;
+        const matchPatente = !filterPatente || associado.patente === filterPatente;
+        
+        return matchSituacao && matchCorporacao && matchPatente;
+    });
+    
+    paginaAtual = 1;
+    calcularPaginacao();
+    renderizarPagina();
+}
+
+// Enhanced local search (fallback)
+function buscarLocal(termo) {
+    console.log('Local search (fallback):', termo);
+    
+    const termoLower = termo.toLowerCase();
+    
+    associadosFiltrados = todosAssociados.filter(associado => {
+        return (associado.nome && associado.nome.toLowerCase().includes(termoLower)) ||
+               (associado.cpf && associado.cpf.includes(termo)) ||
+               (associado.rg && associado.rg.includes(termo)) ||
+               (associado.telefone && associado.telefone.includes(termo));
+    });
+    
+    paginaAtual = 1;
+    calcularPaginacao();
+    renderizarPagina();
+    
+    // Warning if few results
+    if (associadosFiltrados.length < 3 && termo.length >= 3) {
+        console.warn('Few local results. Person might not be in loaded data.');
+    }
+}
+
+// Visual search indicator
+function mostrarIndicadorBusca(mostrar) {
+    const searchIcon = document.querySelector('.search-box .search-icon');
+    if (!searchIcon) return;
+    
+    if (mostrar) {
+        searchIcon.className = 'fas fa-spinner fa-spin search-icon';
+        searchIcon.style.color = 'var(--primary)';
+    } else {
+        searchIcon.className = 'fas fa-search search-icon';
+        searchIcon.style.color = '';
+    }
+}
+
 // Event listeners - só adiciona UMA VEZ
 document.addEventListener('DOMContentLoaded', function () {
     // Adiciona listeners aos filtros
@@ -2798,7 +2955,12 @@ document.addEventListener('DOMContentLoaded', function () {
     const filterCorporacao = document.getElementById('filterCorporacao');
     const filterPatente = document.getElementById('filterPatente');
 
-    if (searchInput) searchInput.addEventListener('input', aplicarFiltros);
+    if (searchInput) {
+        // Remove old listener first
+        searchInput.removeEventListener('input', aplicarFiltros);
+        // Add new server search listener
+        searchInput.addEventListener('input', handleSearchInput);
+    }
     if (filterSituacao) filterSituacao.addEventListener('change', aplicarFiltros);
     if (filterCorporacao) filterCorporacao.addEventListener('change', aplicarFiltros);
     if (filterPatente) filterPatente.addEventListener('change', aplicarFiltros);
