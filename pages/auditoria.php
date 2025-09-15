@@ -814,6 +814,254 @@ $headerComponent = HeaderComponent::create([
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
+        /* ===== CONFIGURAÇÕES MINIMALISTAS ===== */
+.config-section {
+    background: #ffffff;  /* Fundo branco simples */
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    border: 1px solid #e5e7eb;  /* Borda cinza suave */
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);  /* Sombra muito sutil */
+}
+
+.config-section h6 {
+    color: #374151;  /* Cinza escuro para títulos */
+    font-weight: 600;
+    margin-bottom: 15px;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.config-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 15px;
+}
+
+.config-item {
+    background: #fafafa;  /* Cinza muito claro */
+    padding: 15px;
+    border-radius: 6px;
+    border: 1px solid #e5e7eb;
+}
+
+.config-item label {
+    color: #6b7280;  /* Cinza médio */
+    font-size: 0.875rem;
+    margin-bottom: 8px;
+    display: block;
+    font-weight: 500;
+}
+
+.config-item input,
+.config-item select {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #d1d5db;  /* Borda cinza clara */
+    background: #ffffff;
+    color: #374151;
+    border-radius: 4px;
+    font-size: 0.875rem;
+    transition: border-color 0.2s ease;
+}
+
+.config-item input:focus,
+.config-item select:focus {
+    border-color: #9ca3af;  /* Cinza um pouco mais escuro no foco */
+    background: #ffffff;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(156, 163, 175, 0.1);  /* Sombra muito sutil */
+}
+
+/* Toggles minimalistas */
+.config-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: #fafafa;
+    border-radius: 6px;
+    margin-bottom: 8px;
+    transition: background 0.2s ease;
+    border: 1px solid #e5e7eb;
+}
+
+.config-toggle:hover {
+    background: #f3f4f6;
+}
+
+.config-toggle label {
+    color: #374151;
+    margin: 0;
+    cursor: pointer;
+    font-weight: 500;
+    font-size: 0.875rem;
+}
+
+/* Switch minimalista */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 44px;
+    height: 24px;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #d1d5db;  /* Cinza claro desativado */
+    transition: .3s;
+    border-radius: 24px;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: .3s;
+    border-radius: 50%;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+input:checked + .slider {
+    background-color: #374151;  /* Cinza escuro quando ativo */
+}
+
+input:checked + .slider:before {
+    transform: translateX(20px);
+}
+
+/* Filtros avançados minimalistas */
+.advanced-filters {
+    background: #ffffff;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    border: 1px solid #e5e7eb;
+    display: none;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.advanced-filters.show {
+    display: block;
+    animation: fadeIn 0.2s ease;
+}
+
+.advanced-filters input,
+.advanced-filters select {
+    background: #ffffff !important;
+    color: #374151 !important;
+    border: 1px solid #d1d5db;
+}
+
+.advanced-filters input:focus,
+.advanced-filters select:focus {
+    background: #ffffff !important;
+    border-color: #9ca3af;
+    box-shadow: 0 0 0 2px rgba(156, 163, 175, 0.1);
+}
+
+.advanced-filters label {
+    color: #6b7280 !important;
+    font-weight: 500;
+    font-size: 0.875rem;
+}
+
+/* Modal minimalista */
+#configuracoesModal .modal-content {
+    border: none;
+    border-radius: 8px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+
+#configuracoesModal .modal-header {
+    background: #ffffff;
+    border-bottom: 1px solid #e5e7eb;
+    padding: 20px 24px;
+}
+
+#configuracoesModal .modal-title {
+    color: #111827;
+    font-size: 1.125rem;
+    font-weight: 600;
+}
+
+#configuracoesModal .modal-body {
+    background: #fafafa;
+    padding: 24px;
+}
+
+#configuracoesModal .modal-footer {
+    background: #ffffff;
+    border-top: 1px solid #e5e7eb;
+    padding: 16px 24px;
+}
+
+/* Botões minimalistas no modal */
+#configuracoesModal .btn {
+    border-radius: 4px;
+    font-weight: 500;
+    font-size: 0.875rem;
+    padding: 8px 16px;
+    transition: all 0.2s ease;
+}
+
+#configuracoesModal .btn-secondary {
+    background: #ffffff;
+    color: #6b7280;
+    border: 1px solid #d1d5db;
+}
+
+#configuracoesModal .btn-secondary:hover {
+    background: #f9fafb;
+    border-color: #9ca3af;
+}
+
+#configuracoesModal .btn-success {
+    background: #374151;
+    border: 1px solid #374151;
+    color: white;
+}
+
+#configuracoesModal .btn-success:hover {
+    background: #1f2937;
+    border-color: #1f2937;
+}
+
+#configuracoesModal .btn-warning {
+    background: #ffffff;
+    color: #92400e;
+    border: 1px solid #fbbf24;
+}
+
+#configuracoesModal .btn-danger {
+    background: #ffffff;
+    color: #991b1b;
+    border: 1px solid #f87171;
+}
+
+/* Info box minimalista */
+.alert-info {
+    background: #f0f9ff;
+    border: 1px solid #bfdbfe;
+    color: #1e40af;
+    border-radius: 6px;
+}
+
+/* Remover animações desnecessárias */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
     </style>
 </head>
 
