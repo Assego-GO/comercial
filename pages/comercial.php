@@ -977,7 +977,7 @@ $headerComponent = HeaderComponent::create([
                 </div>
                 <div class="dual-stat-info">
                     <div class="dual-stat-value"><?php echo $preCadastrosPendentes; ?></div>
-                    <div class="dual-stat-label">Pré-Filiados</div>
+                    <div class="dual-stat-label">Filiados Online</div>
                 </div>
             </div>
             <div class="dual-stats-separator"></div>

@@ -2408,7 +2408,7 @@ class HeaderComponent
         if ($this->permissoes->hasPermission('FUNCIONARIOS_DASHBOARD', 'VIEW')) {
             $items[] = [
                 'id' => 'funcionarios',
-                'label' => 'Funcionários',
+                'label' => 'Colaboradores',
                 'icon' => 'fas fa-user-tie',
                 'href' => 'funcionarios.php',
                 'badge' => null
