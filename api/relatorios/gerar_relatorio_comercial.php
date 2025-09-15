@@ -1,10 +1,10 @@
 <?php
 /**
- * API para gerar relatórios comerciais - VERSÃO COMPLETA
+ * API para gerar relatórios comerciais - VERSÃO CORRIGIDA (SEM DUPLICAÇÕES)
  * api/relatorios/gerar_relatorio_comercial.php
  * 
  * @author Sistema ASSEGO
- * @version 13.0 - Com dados completos de indicações
+ * @version 14.0 - Correção de duplicação de dados
  */
 
 // Desabilitar saída de erro para o browser
@@ -154,217 +154,28 @@ try {
 }
 
 /**
- * FUNÇÃO PRINCIPAL: RELATÓRIO DE INDICAÇÕES COM DADOS DO ASSOCIADO INDICADO
- */
-function gerarRelatorioIndicacoes($db, $dataInicio, $dataFim, $corporacao, $patente, $busca, $debug = false) {
-    $debugInfo = [];
-    
-    try {
-        // Verificar se tabela Historico_Indicacoes existe
-        $stmt = $db->query("SHOW TABLES LIKE 'Historico_Indicacoes'");
-        if ($stmt->rowCount() == 0) {
-            if ($debug) {
-                $debugInfo['erro'] = 'Tabela Historico_Indicacoes não existe';
-                return ['data' => [], 'debug' => $debugInfo];
-            }
-            return [];
-        }
-        
-        // QUERY COMPLETA COM DADOS DO ASSOCIADO INDICADO
-        $sql = "
-            SELECT 
-                hi.id as registro_id,
-                DATE(hi.data_indicacao) as data_indicacao,
-                
-                -- DADOS DO INDICADOR (QUEM INDICOU)
-                COALESCE(i.id, 0) as indicador_id,
-                COALESCE(i.nome_completo, hi.indicador_nome, 'Não identificado') as indicador_nome,
-                COALESCE(i.patente, '') as indicador_patente,
-                COALESCE(i.corporacao, '') as indicador_corporacao,
-                
-                -- DADOS DO ASSOCIADO INDICADO (QUEM FOI INDICADO)
-                a.id as associado_indicado_id,
-                a.nome as associado_indicado_nome,
-                COALESCE(a.cpf, '') as associado_indicado_cpf,
-                COALESCE(a.rg, '') as associado_indicado_rg,
-                COALESCE(a.telefone, '') as associado_indicado_telefone,
-                COALESCE(a.email, '') as associado_indicado_email,
-                COALESCE(m.patente, '') as associado_indicado_patente,
-                COALESCE(m.corporacao, '') as associado_indicado_corporacao,
-                COALESCE(m.lotacao, '') as associado_indicado_lotacao,
-                
-                -- STATUS E INFORMAÇÕES ADICIONAIS
-                a.situacao as situacao_associado,
-                CASE 
-                    WHEN UPPER(a.situacao) IN ('FILIADO', 'ATIVO', 'ATIVA', 'ASSOCIADO') THEN 'Ativo'
-                    WHEN UPPER(a.situacao) LIKE '%DESFIL%' THEN 'Desfiliado'
-                    WHEN UPPER(a.situacao) LIKE '%INATIV%' THEN 'Inativo'
-                    ELSE a.situacao
-                END as status_simplificado,
-                CASE 
-                    WHEN a.pre_cadastro = 1 THEN 'Pré-cadastro'
-                    ELSE 'Cadastro Definitivo'
-                END as tipo_cadastro,
-                DATE(a.data_aprovacao) as data_aprovacao_cadastro,
-                
-                -- OBSERVAÇÕES
-                COALESCE(hi.observacao, '') as observacao_indicacao,
-                
-                -- TOTALIZADORES DO INDICADOR
-                (SELECT COUNT(*) 
-                 FROM Historico_Indicacoes hi2 
-                 WHERE hi2.indicador_id = i.id OR hi2.indicador_nome = hi.indicador_nome
-                ) as total_indicacoes_do_indicador,
-                
-                (SELECT COUNT(*) 
-                 FROM Historico_Indicacoes hi3 
-                 INNER JOIN Associados a3 ON hi3.associado_id = a3.id
-                 WHERE (hi3.indicador_id = i.id OR hi3.indicador_nome = hi.indicador_nome)
-                 AND UPPER(a3.situacao) IN ('FILIADO', 'ATIVO', 'ATIVA', 'ASSOCIADO')
-                ) as total_indicados_ativos
-                
-            FROM Historico_Indicacoes hi
-            INNER JOIN Associados a ON hi.associado_id = a.id
-            LEFT JOIN Indicadores i ON hi.indicador_id = i.id
-            LEFT JOIN Militar m ON a.id = m.associado_id
-            WHERE 1=1
-        ";
-        
-        $params = [];
-        
-        // Filtro de data
-        if ($dataInicio && $dataFim) {
-            $sql .= " AND DATE(hi.data_indicacao) BETWEEN :data_inicio AND :data_fim";
-            $params[':data_inicio'] = $dataInicio;
-            $params[':data_fim'] = $dataFim;
-        }
-        
-        // Filtro de corporação (pode ser do indicador ou do indicado)
-        if (!empty($corporacao)) {
-            $sql .= " AND (i.corporacao = :corporacao1 OR m.corporacao = :corporacao2)";
-            $params[':corporacao1'] = $corporacao;
-            $params[':corporacao2'] = $corporacao;
-        }
-        
-        // Filtro de patente (pode ser do indicador ou do indicado)
-        if (!empty($patente)) {
-            $sql .= " AND (i.patente = :patente1 OR m.patente = :patente2)";
-            $params[':patente1'] = $patente;
-            $params[':patente2'] = $patente;
-        }
-        
-        // Filtro de busca
-        if (!empty($busca)) {
-            $buscaLimpa = preg_replace('/\D/', '', $busca);
-            $sql .= " AND (
-                -- Busca no indicador
-                i.nome_completo LIKE :busca1 
-                OR hi.indicador_nome LIKE :busca2
-                
-                -- Busca no associado indicado
-                OR a.nome LIKE :busca3
-                OR REPLACE(REPLACE(a.cpf, '.', ''), '-', '') LIKE :busca_cpf
-                OR a.rg LIKE :busca_rg
-                OR a.email LIKE :busca_email
-            )";
-            $params[':busca1'] = '%' . $busca . '%';
-            $params[':busca2'] = '%' . $busca . '%';
-            $params[':busca3'] = '%' . $busca . '%';
-            $params[':busca_cpf'] = '%' . $buscaLimpa . '%';
-            $params[':busca_rg'] = '%' . $busca . '%';
-            $params[':busca_email'] = '%' . $busca . '%';
-        }
-        
-        // Ordenação
-        $sql .= " ORDER BY hi.data_indicacao DESC, hi.indicador_nome ASC, a.nome ASC
-                  LIMIT 5000";
-        
-        if ($debug) {
-            $debugInfo['query'] = $sql;
-            $debugInfo['params'] = $params;
-        }
-        
-        $stmt = $db->prepare($sql);
-        $stmt->execute($params);
-        $data = $stmt->fetchAll();
-        
-        // Formatar e limpar dados
-        foreach ($data as &$row) {
-            // Limpar datas inválidas
-            if (isset($row['data_indicacao']) && ($row['data_indicacao'] == '0000-00-00' || empty($row['data_indicacao']))) {
-                $row['data_indicacao'] = '';
-            }
-            if (isset($row['data_aprovacao_cadastro']) && ($row['data_aprovacao_cadastro'] == '0000-00-00' || empty($row['data_aprovacao_cadastro']))) {
-                $row['data_aprovacao_cadastro'] = '';
-            }
-            
-            // Formatar CPF se existir
-            if (!empty($row['associado_indicado_cpf'])) {
-                $cpf = preg_replace('/\D/', '', $row['associado_indicado_cpf']);
-                if (strlen($cpf) == 11) {
-                    $row['associado_indicado_cpf_formatado'] = substr($cpf, 0, 3) . '.' . 
-                                                                substr($cpf, 3, 3) . '.' . 
-                                                                substr($cpf, 6, 3) . '-' . 
-                                                                substr($cpf, 9, 2);
-                } else {
-                    $row['associado_indicado_cpf_formatado'] = $row['associado_indicado_cpf'];
-                }
-            }
-            
-            // Formatar telefone se existir
-            if (!empty($row['associado_indicado_telefone'])) {
-                $tel = preg_replace('/\D/', '', $row['associado_indicado_telefone']);
-                if (strlen($tel) == 11) {
-                    $row['associado_indicado_telefone_formatado'] = '(' . substr($tel, 0, 2) . ') ' . 
-                                                                     substr($tel, 2, 5) . '-' . 
-                                                                     substr($tel, 7, 4);
-                } elseif (strlen($tel) == 10) {
-                    $row['associado_indicado_telefone_formatado'] = '(' . substr($tel, 0, 2) . ') ' . 
-                                                                     substr($tel, 2, 4) . '-' . 
-                                                                     substr($tel, 6, 4);
-                } else {
-                    $row['associado_indicado_telefone_formatado'] = $row['associado_indicado_telefone'];
-                }
-            }
-        }
-        
-        if ($debug) {
-            $debugInfo['total_registros'] = count($data);
-            return ['data' => $data, 'debug' => $debugInfo];
-        }
-        
-        return $data;
-        
-    } catch (Exception $e) {
-        if ($debug) {
-            return ['data' => [], 'debug' => ['erro' => $e->getMessage()]];
-        }
-        return [];
-    }
-}
-
-/**
- * RELATÓRIO DE DESFILIAÇÕES
+ * RELATÓRIO DE DESFILIAÇÕES - CORRIGIDO COM DISTINCT
  */
 function gerarRelatorioDesfiliacoes($db, $dataInicio, $dataFim, $corporacao, $patente, $lotacao, $busca, $ordenacao, $debug = false) {
     $debugInfo = [];
     
     try {
+        // QUERY CORRIGIDA COM DISTINCT E GROUP BY
         $sql = "
-            SELECT 
+            SELECT DISTINCT
                 a.id,
                 a.nome,
                 COALESCE(a.rg, '') as rg,
                 COALESCE(a.cpf, '') as cpf,
                 COALESCE(a.telefone, '') as telefone,
                 COALESCE(a.email, '') as email,
-                COALESCE(m.patente, '') as patente,
-                COALESCE(m.corporacao, '') as corporacao,
-                COALESCE(m.lotacao, '') as lotacao,
+                MAX(COALESCE(m.patente, '')) as patente,
+                MAX(COALESCE(m.corporacao, '')) as corporacao,
+                MAX(COALESCE(m.lotacao, '')) as lotacao,
                 a.situacao as situacao_atual,
                 COALESCE(
                     DATE(a.data_desfiliacao),
-                    DATE(c.dataDesfiliacao),
+                    MAX(DATE(c.dataDesfiliacao)),
                     NULL
                 ) as data_desfiliacao
             FROM Associados a
@@ -397,25 +208,31 @@ function gerarRelatorioDesfiliacoes($db, $dataInicio, $dataFim, $corporacao, $pa
             $params[':data_fim2'] = $dataFim;
         }
         
-        // Outros filtros
+        // GROUP BY para evitar duplicação
+        $sql .= " GROUP BY a.id, a.nome, a.rg, a.cpf, a.telefone, a.email, a.situacao, a.data_desfiliacao";
+        
+        // Aplicar filtros HAVING após GROUP BY
         if (!empty($corporacao)) {
-            $sql .= " AND m.corporacao = :corporacao";
+            $sql .= " HAVING MAX(m.corporacao) = :corporacao";
             $params[':corporacao'] = $corporacao;
         }
         
         if (!empty($patente)) {
-            $sql .= " AND m.patente = :patente";
+            $sql .= (!empty($corporacao) ? " AND " : " HAVING ") . "MAX(m.patente) = :patente";
             $params[':patente'] = $patente;
         }
         
         if (!empty($lotacao)) {
-            $sql .= " AND m.lotacao LIKE :lotacao";
+            $havingClause = (!empty($corporacao) || !empty($patente)) ? " AND " : " HAVING ";
+            $sql .= $havingClause . "MAX(m.lotacao) LIKE :lotacao";
             $params[':lotacao'] = '%' . $lotacao . '%';
         }
         
+        // Filtro de busca
         if (!empty($busca)) {
             $buscaLimpa = preg_replace('/\D/', '', $busca);
-            $sql .= " AND (
+            $havingClause = (!empty($corporacao) || !empty($patente) || !empty($lotacao)) ? " AND " : " HAVING ";
+            $sql .= $havingClause . "(
                 a.nome LIKE :busca 
                 OR REPLACE(REPLACE(a.cpf, '.', ''), '-', '') LIKE :busca_cpf 
                 OR a.rg LIKE :busca_rg
@@ -437,19 +254,27 @@ function gerarRelatorioDesfiliacoes($db, $dataInicio, $dataFim, $corporacao, $pa
         $stmt->execute($params);
         $data = $stmt->fetchAll();
         
-        // Limpar dados
-        foreach ($data as &$row) {
-            if ($row['data_desfiliacao'] == '0000-00-00' || empty($row['data_desfiliacao'])) {
-                $row['data_desfiliacao'] = '';
+        // Limpar dados e garantir unicidade
+        $resultadosUnicos = [];
+        $idsProcessados = [];
+        
+        foreach ($data as $row) {
+            if (!in_array($row['id'], $idsProcessados)) {
+                if ($row['data_desfiliacao'] == '0000-00-00' || empty($row['data_desfiliacao'])) {
+                    $row['data_desfiliacao'] = '';
+                }
+                $resultadosUnicos[] = $row;
+                $idsProcessados[] = $row['id'];
             }
         }
         
         if ($debug) {
-            $debugInfo['total_encontrado'] = count($data);
-            return ['data' => $data, 'debug' => $debugInfo];
+            $debugInfo['total_encontrado'] = count($resultadosUnicos);
+            $debugInfo['ids_unicos'] = count($idsProcessados);
+            return ['data' => $resultadosUnicos, 'debug' => $debugInfo];
         }
         
-        return $data;
+        return $resultadosUnicos;
         
     } catch (Exception $e) {
         if ($debug) {
@@ -461,23 +286,24 @@ function gerarRelatorioDesfiliacoes($db, $dataInicio, $dataFim, $corporacao, $pa
 }
 
 /**
- * RELATÓRIO DE ANIVERSARIANTES
+ * RELATÓRIO DE ANIVERSARIANTES - CORRIGIDO COM DISTINCT
  */
 function gerarRelatorioAniversariantes($db, $dataInicio, $dataFim, $corporacao, $patente, $lotacao, $busca, $debug = false) {
     try {
         $mesInicio = (int)date('m', strtotime($dataInicio));
         $mesFim = (int)date('m', strtotime($dataFim));
         
+        // QUERY CORRIGIDA COM DISTINCT E GROUP BY
         $sql = "
-            SELECT 
+            SELECT DISTINCT
                 a.id,
                 a.nome,
                 DATE(a.nasc) as data_nascimento,
                 COALESCE(a.telefone, '') as telefone,
                 COALESCE(a.email, '') as email,
-                COALESCE(m.patente, '') as patente,
-                COALESCE(m.corporacao, '') as corporacao,
-                COALESCE(m.lotacao, '') as lotacao,
+                MAX(COALESCE(m.patente, '')) as patente,
+                MAX(COALESCE(m.corporacao, '')) as corporacao,
+                MAX(COALESCE(m.lotacao, '')) as lotacao,
                 CASE 
                     WHEN a.nasc IS NOT NULL AND YEAR(a.nasc) > 1900
                     THEN YEAR(CURDATE()) - YEAR(a.nasc)
@@ -516,24 +342,30 @@ function gerarRelatorioAniversariantes($db, $dataInicio, $dataFim, $corporacao, 
             $params[':mes_fim'] = $mesFim;
         }
         
-        // Outros filtros
+        // GROUP BY para evitar duplicação
+        $sql .= " GROUP BY a.id, a.nome, a.nasc, a.telefone, a.email";
+        
+        // Aplicar filtros HAVING após GROUP BY
         if (!empty($corporacao)) {
-            $sql .= " AND m.corporacao = :corporacao";
+            $sql .= " HAVING MAX(m.corporacao) = :corporacao";
             $params[':corporacao'] = $corporacao;
         }
         
         if (!empty($patente)) {
-            $sql .= " AND m.patente = :patente";
+            $havingClause = !empty($corporacao) ? " AND " : " HAVING ";
+            $sql .= $havingClause . "MAX(m.patente) = :patente";
             $params[':patente'] = $patente;
         }
         
         if (!empty($lotacao)) {
-            $sql .= " AND m.lotacao LIKE :lotacao";
+            $havingClause = (!empty($corporacao) || !empty($patente)) ? " AND " : " HAVING ";
+            $sql .= $havingClause . "MAX(m.lotacao) LIKE :lotacao";
             $params[':lotacao'] = '%' . $lotacao . '%';
         }
         
         if (!empty($busca)) {
-            $sql .= " AND a.nome LIKE :busca";
+            $havingClause = (!empty($corporacao) || !empty($patente) || !empty($lotacao)) ? " AND " : " HAVING ";
+            $sql .= $havingClause . "a.nome LIKE :busca";
             $params[':busca'] = '%' . $busca . '%';
         }
         
@@ -544,14 +376,21 @@ function gerarRelatorioAniversariantes($db, $dataInicio, $dataFim, $corporacao, 
         
         $data = $stmt->fetchAll();
         
-        // Limpar datas
-        foreach ($data as &$row) {
-            if ($row['data_nascimento'] == '0000-00-00' || empty($row['data_nascimento'])) {
-                $row['data_nascimento'] = '';
+        // Garantir unicidade e limpar dados
+        $resultadosUnicos = [];
+        $idsProcessados = [];
+        
+        foreach ($data as $row) {
+            if (!in_array($row['id'], $idsProcessados)) {
+                if ($row['data_nascimento'] == '0000-00-00' || empty($row['data_nascimento'])) {
+                    $row['data_nascimento'] = '';
+                }
+                $resultadosUnicos[] = $row;
+                $idsProcessados[] = $row['id'];
             }
         }
         
-        return $data;
+        return $resultadosUnicos;
         
     } catch (Exception $e) {
         if ($debug) {
@@ -562,26 +401,27 @@ function gerarRelatorioAniversariantes($db, $dataInicio, $dataFim, $corporacao, 
 }
 
 /**
- * RELATÓRIO DE NOVOS CADASTROS
+ * RELATÓRIO DE NOVOS CADASTROS - CORRIGIDO COM DISTINCT
  */
 function gerarRelatorioNovosCadastros($db, $dataInicio, $dataFim, $corporacao, $patente, $lotacao, $busca, $ordenacao, $debug = false) {
     try {
+        // QUERY CORRIGIDA COM DISTINCT E GROUP BY
         $sql = "
-            SELECT 
+            SELECT DISTINCT
                 a.id,
                 a.nome,
                 COALESCE(a.rg, '') as rg,
                 COALESCE(a.cpf, '') as cpf,
                 COALESCE(a.telefone, '') as telefone,
                 COALESCE(a.email, '') as email,
-                COALESCE(m.patente, '') as patente,
-                COALESCE(m.corporacao, '') as corporacao,
-                COALESCE(m.lotacao, '') as lotacao,
+                MAX(COALESCE(m.patente, '')) as patente,
+                MAX(COALESCE(m.corporacao, '')) as corporacao,
+                MAX(COALESCE(m.lotacao, '')) as lotacao,
                 COALESCE(a.indicacao, '') as indicado_por,
                 COALESCE(
                     DATE(a.data_aprovacao),
                     DATE(a.data_pre_cadastro),
-                    DATE(c.dataFiliacao),
+                    MAX(DATE(c.dataFiliacao)),
                     NULL
                 ) as data_aprovacao,
                 CASE 
@@ -619,24 +459,31 @@ function gerarRelatorioNovosCadastros($db, $dataInicio, $dataFim, $corporacao, $
             $params[':data_fim3'] = $dataFim;
         }
         
-        // Outros filtros
+        // GROUP BY para evitar duplicação
+        $sql .= " GROUP BY a.id, a.nome, a.rg, a.cpf, a.telefone, a.email, 
+                  a.indicacao, a.data_aprovacao, a.data_pre_cadastro, a.pre_cadastro";
+        
+        // Aplicar filtros HAVING após GROUP BY
         if (!empty($corporacao)) {
-            $sql .= " AND m.corporacao = :corporacao";
+            $sql .= " HAVING MAX(m.corporacao) = :corporacao";
             $params[':corporacao'] = $corporacao;
         }
         
         if (!empty($patente)) {
-            $sql .= " AND m.patente = :patente";
+            $havingClause = !empty($corporacao) ? " AND " : " HAVING ";
+            $sql .= $havingClause . "MAX(m.patente) = :patente";
             $params[':patente'] = $patente;
         }
         
         if (!empty($lotacao)) {
-            $sql .= " AND m.lotacao LIKE :lotacao";
+            $havingClause = (!empty($corporacao) || !empty($patente)) ? " AND " : " HAVING ";
+            $sql .= $havingClause . "MAX(m.lotacao) LIKE :lotacao";
             $params[':lotacao'] = '%' . $lotacao . '%';
         }
         
         if (!empty($busca)) {
-            $sql .= " AND (a.nome LIKE :busca OR a.indicacao LIKE :busca2)";
+            $havingClause = (!empty($corporacao) || !empty($patente) || !empty($lotacao)) ? " AND " : " HAVING ";
+            $sql .= $havingClause . "(a.nome LIKE :busca OR a.indicacao LIKE :busca2)";
             $params[':busca'] = '%' . $busca . '%';
             $params[':busca2'] = '%' . $busca . '%';
         }
@@ -648,20 +495,262 @@ function gerarRelatorioNovosCadastros($db, $dataInicio, $dataFim, $corporacao, $
         
         $data = $stmt->fetchAll();
         
-        // Limpar datas
-        foreach ($data as &$row) {
-            if ($row['data_aprovacao'] == '0000-00-00' || empty($row['data_aprovacao'])) {
-                $row['data_aprovacao'] = '';
+        // Garantir unicidade e limpar dados
+        $resultadosUnicos = [];
+        $idsProcessados = [];
+        
+        foreach ($data as $row) {
+            if (!in_array($row['id'], $idsProcessados)) {
+                if ($row['data_aprovacao'] == '0000-00-00' || empty($row['data_aprovacao'])) {
+                    $row['data_aprovacao'] = '';
+                }
+                $resultadosUnicos[] = $row;
+                $idsProcessados[] = $row['id'];
             }
         }
         
-        return $data;
+        return $resultadosUnicos;
         
     } catch (Exception $e) {
         if ($debug) {
             return ['data' => [], 'debug' => ['erro' => $e->getMessage()]];
         }
         return [];
+    }
+}
+
+/**
+ * FUNÇÃO CORRIGIDA: RELATÓRIO DE INDICAÇÕES COM DISTINCT
+ */
+function gerarRelatorioIndicacoes($db, $dataInicio, $dataFim, $corporacao, $patente, $busca, $debug = false) {
+    $debugInfo = [];
+    
+    try {
+        // Verificar se tabela Historico_Indicacoes existe
+        $stmt = $db->query("SHOW TABLES LIKE 'Historico_Indicacoes'");
+        if ($stmt->rowCount() == 0) {
+            if ($debug) {
+                $debugInfo['erro'] = 'Tabela Historico_Indicacoes não existe';
+                return ['data' => [], 'debug' => $debugInfo];
+            }
+            return [];
+        }
+        
+        // QUERY CORRIGIDA COM DISTINCT
+        $sql = "
+            SELECT DISTINCT
+                hi.id as registro_id,
+                DATE(hi.data_indicacao) as data_indicacao,
+                
+                -- DADOS DO INDICADOR (QUEM INDICOU)
+                COALESCE(i.id, 0) as indicador_id,
+                COALESCE(i.nome_completo, hi.indicador_nome, 'Não identificado') as indicador_nome,
+                MAX(COALESCE(i.patente, '')) as indicador_patente,
+                MAX(COALESCE(i.corporacao, '')) as indicador_corporacao,
+                
+                -- DADOS DO ASSOCIADO INDICADO (QUEM FOI INDICADO)
+                a.id as associado_indicado_id,
+                a.nome as associado_indicado_nome,
+                COALESCE(a.cpf, '') as associado_indicado_cpf,
+                COALESCE(a.rg, '') as associado_indicado_rg,
+                COALESCE(a.telefone, '') as associado_indicado_telefone,
+                COALESCE(a.email, '') as associado_indicado_email,
+                MAX(COALESCE(m.patente, '')) as associado_indicado_patente,
+                MAX(COALESCE(m.corporacao, '')) as associado_indicado_corporacao,
+                MAX(COALESCE(m.lotacao, '')) as associado_indicado_lotacao,
+                
+                -- STATUS E INFORMAÇÕES ADICIONAIS
+                a.situacao as situacao_associado,
+                CASE 
+                    WHEN UPPER(a.situacao) IN ('FILIADO', 'ATIVO', 'ATIVA', 'ASSOCIADO') THEN 'Ativo'
+                    WHEN UPPER(a.situacao) LIKE '%DESFIL%' THEN 'Desfiliado'
+                    WHEN UPPER(a.situacao) LIKE '%INATIV%' THEN 'Inativo'
+                    ELSE a.situacao
+                END as status_simplificado,
+                CASE 
+                    WHEN a.pre_cadastro = 1 THEN 'Pré-cadastro'
+                    ELSE 'Cadastro Definitivo'
+                END as tipo_cadastro,
+                DATE(a.data_aprovacao) as data_aprovacao_cadastro,
+                
+                -- OBSERVAÇÕES
+                COALESCE(hi.observacao, '') as observacao_indicacao
+                
+            FROM Historico_Indicacoes hi
+            INNER JOIN Associados a ON hi.associado_id = a.id
+            LEFT JOIN Indicadores i ON hi.indicador_id = i.id
+            LEFT JOIN Militar m ON a.id = m.associado_id
+            WHERE 1=1
+        ";
+        
+        $params = [];
+        
+        // Filtro de data
+        if ($dataInicio && $dataFim) {
+            $sql .= " AND DATE(hi.data_indicacao) BETWEEN :data_inicio AND :data_fim";
+            $params[':data_inicio'] = $dataInicio;
+            $params[':data_fim'] = $dataFim;
+        }
+        
+        // GROUP BY para evitar duplicação
+        $sql .= " GROUP BY hi.id, hi.data_indicacao, hi.indicador_nome, hi.observacao,
+                  a.id, a.nome, a.cpf, a.rg, a.telefone, a.email, a.situacao, 
+                  a.pre_cadastro, a.data_aprovacao, i.id, i.nome_completo";
+        
+        // Filtros HAVING após GROUP BY
+        if (!empty($corporacao)) {
+            $sql .= " HAVING (MAX(i.corporacao) = :corporacao1 OR MAX(m.corporacao) = :corporacao2)";
+            $params[':corporacao1'] = $corporacao;
+            $params[':corporacao2'] = $corporacao;
+        }
+        
+        if (!empty($patente)) {
+            $havingClause = !empty($corporacao) ? " AND " : " HAVING ";
+            $sql .= $havingClause . "(MAX(i.patente) = :patente1 OR MAX(m.patente) = :patente2)";
+            $params[':patente1'] = $patente;
+            $params[':patente2'] = $patente;
+        }
+        
+        // Filtro de busca
+        if (!empty($busca)) {
+            $buscaLimpa = preg_replace('/\D/', '', $busca);
+            $havingClause = (!empty($corporacao) || !empty($patente)) ? " AND " : " HAVING ";
+            $sql .= $havingClause . "(
+                i.nome_completo LIKE :busca1 
+                OR hi.indicador_nome LIKE :busca2
+                OR a.nome LIKE :busca3
+                OR REPLACE(REPLACE(a.cpf, '.', ''), '-', '') LIKE :busca_cpf
+                OR a.rg LIKE :busca_rg
+                OR a.email LIKE :busca_email
+            )";
+            $params[':busca1'] = '%' . $busca . '%';
+            $params[':busca2'] = '%' . $busca . '%';
+            $params[':busca3'] = '%' . $busca . '%';
+            $params[':busca_cpf'] = '%' . $buscaLimpa . '%';
+            $params[':busca_rg'] = '%' . $busca . '%';
+            $params[':busca_email'] = '%' . $busca . '%';
+        }
+        
+        // Ordenação
+        $sql .= " ORDER BY hi.data_indicacao DESC, hi.indicador_nome ASC, a.nome ASC
+                  LIMIT 5000";
+        
+        if ($debug) {
+            $debugInfo['query'] = $sql;
+            $debugInfo['params'] = $params;
+        }
+        
+        $stmt = $db->prepare($sql);
+        $stmt->execute($params);
+        $data = $stmt->fetchAll();
+        
+        // Processar e garantir unicidade
+        $resultadosUnicos = [];
+        $registrosProcessados = [];
+        
+        foreach ($data as &$row) {
+            $chaveUnica = $row['registro_id'] . '-' . $row['associado_indicado_id'];
+            
+            if (!in_array($chaveUnica, $registrosProcessados)) {
+                // Limpar datas inválidas
+                if (isset($row['data_indicacao']) && ($row['data_indicacao'] == '0000-00-00' || empty($row['data_indicacao']))) {
+                    $row['data_indicacao'] = '';
+                }
+                if (isset($row['data_aprovacao_cadastro']) && ($row['data_aprovacao_cadastro'] == '0000-00-00' || empty($row['data_aprovacao_cadastro']))) {
+                    $row['data_aprovacao_cadastro'] = '';
+                }
+                
+                // Formatar CPF se existir
+                if (!empty($row['associado_indicado_cpf'])) {
+                    $cpf = preg_replace('/\D/', '', $row['associado_indicado_cpf']);
+                    if (strlen($cpf) == 11) {
+                        $row['associado_indicado_cpf_formatado'] = substr($cpf, 0, 3) . '.' . 
+                                                                    substr($cpf, 3, 3) . '.' . 
+                                                                    substr($cpf, 6, 3) . '-' . 
+                                                                    substr($cpf, 9, 2);
+                    } else {
+                        $row['associado_indicado_cpf_formatado'] = $row['associado_indicado_cpf'];
+                    }
+                }
+                
+                // Formatar telefone se existir
+                if (!empty($row['associado_indicado_telefone'])) {
+                    $tel = preg_replace('/\D/', '', $row['associado_indicado_telefone']);
+                    if (strlen($tel) == 11) {
+                        $row['associado_indicado_telefone_formatado'] = '(' . substr($tel, 0, 2) . ') ' . 
+                                                                         substr($tel, 2, 5) . '-' . 
+                                                                         substr($tel, 7, 4);
+                    } elseif (strlen($tel) == 10) {
+                        $row['associado_indicado_telefone_formatado'] = '(' . substr($tel, 0, 2) . ') ' . 
+                                                                         substr($tel, 2, 4) . '-' . 
+                                                                         substr($tel, 6, 4);
+                    } else {
+                        $row['associado_indicado_telefone_formatado'] = $row['associado_indicado_telefone'];
+                    }
+                }
+                
+                // Calcular totalizadores
+                $row['total_indicacoes_do_indicador'] = calcularTotalIndicacoes($db, $row['indicador_id'], $row['indicador_nome']);
+                $row['total_indicados_ativos'] = calcularIndicadosAtivos($db, $row['indicador_id'], $row['indicador_nome']);
+                
+                $resultadosUnicos[] = $row;
+                $registrosProcessados[] = $chaveUnica;
+            }
+        }
+        
+        if ($debug) {
+            $debugInfo['total_registros'] = count($resultadosUnicos);
+            $debugInfo['registros_unicos'] = count($registrosProcessados);
+            return ['data' => $resultadosUnicos, 'debug' => $debugInfo];
+        }
+        
+        return $resultadosUnicos;
+        
+    } catch (Exception $e) {
+        if ($debug) {
+            return ['data' => [], 'debug' => ['erro' => $e->getMessage()]];
+        }
+        return [];
+    }
+}
+
+/**
+ * Função auxiliar para calcular total de indicações
+ */
+function calcularTotalIndicacoes($db, $indicadorId, $indicadorNome) {
+    try {
+        $sql = "SELECT COUNT(DISTINCT associado_id) as total 
+                FROM Historico_Indicacoes 
+                WHERE indicador_id = :id OR indicador_nome = :nome";
+        
+        $stmt = $db->prepare($sql);
+        $stmt->execute([':id' => $indicadorId, ':nome' => $indicadorNome]);
+        $result = $stmt->fetch();
+        
+        return $result['total'] ?? 0;
+    } catch (Exception $e) {
+        return 0;
+    }
+}
+
+/**
+ * Função auxiliar para calcular indicados ativos
+ */
+function calcularIndicadosAtivos($db, $indicadorId, $indicadorNome) {
+    try {
+        $sql = "SELECT COUNT(DISTINCT hi.associado_id) as total 
+                FROM Historico_Indicacoes hi
+                INNER JOIN Associados a ON hi.associado_id = a.id
+                WHERE (hi.indicador_id = :id OR hi.indicador_nome = :nome)
+                AND UPPER(a.situacao) IN ('FILIADO', 'ATIVO', 'ATIVA', 'ASSOCIADO')";
+        
+        $stmt = $db->prepare($sql);
+        $stmt->execute([':id' => $indicadorId, ':nome' => $indicadorNome]);
+        $result = $stmt->fetch();
+        
+        return $result['total'] ?? 0;
+    } catch (Exception $e) {
+        return 0;
     }
 }
 ?>
