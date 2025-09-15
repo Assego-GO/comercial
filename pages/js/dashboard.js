@@ -291,14 +291,14 @@ function carregarProximoLoteBackground(responseAnterior) {
         success: function (response) {
             if (response && response.status === 'success' && response.dados) {
                 console.log(`📦 +${response.dados.length} registros carregados em background`);
-                
+
                 // Adiciona novos dados
-                const novosRegistros = response.dados.filter(novo => 
+                const novosRegistros = response.dados.filter(novo =>
                     !todosAssociados.some(existente => existente.id === novo.id)
                 );
-                
+
                 todosAssociados = [...todosAssociados, ...novosRegistros];
-                
+
                 // Reaplica filtros se necessário
                 if (temFiltrosAtivos()) {
                     aplicarFiltros();
@@ -306,9 +306,9 @@ function carregarProximoLoteBackground(responseAnterior) {
                     associadosFiltrados = [...todosAssociados];
                     calcularPaginacao();
                 }
-                
+
                 console.log(`✅ Total em cache: ${todosAssociados.length} registros`);
-                
+
                 // Continua carregando se ainda houver dados
                 if (response.has_next && todosAssociados.length < 1000) {
                     setTimeout(() => {
@@ -332,14 +332,14 @@ function temFiltrosAtivos() {
     const situacao = document.getElementById('filterSituacao')?.value || '';
     const corporacao = document.getElementById('filterCorporacao')?.value || '';
     const patente = document.getElementById('filterPatente')?.value || '';
-    
+
     return search || situacao || corporacao || patente;
 }
 
 // Fallback para carregamento completo (compatibilidade)
 function carregarTodosAssociadosFallback() {
     console.log('🔄 Fallback: carregando da forma tradicional...');
-    
+
     $.ajax({
         url: '../api/carregar_associados.php',
         method: 'GET',
@@ -351,11 +351,11 @@ function carregarTodosAssociadosFallback() {
             if (response && response.status === 'success') {
                 todosAssociados = response.dados || [];
                 associadosFiltrados = [...todosAssociados];
-                
+
                 preencherFiltros(); // Usa a função original
                 calcularPaginacao();
                 renderizarPagina();
-                
+
                 console.log(`✅ Fallback completo: ${todosAssociados.length} registros`);
                 carregamentoCompleto = true;
             }
@@ -611,23 +611,66 @@ function limparFiltros() {
 // Função para visualizar associado
 function visualizarAssociado(id) {
     console.log('👁️ Visualizando associado:', id);
-    let associado = todosAssociados.find(a => a.id == id);
+
+    // CORREÇÃO: Procurar primeiro em associadosFiltrados (resultados da busca)
+    // depois em todosAssociados (cache local)
+    let associado = associadosFiltrados.find(a => a.id == id) ||
+        todosAssociados.find(a => a.id == id);
 
     if (!associado) {
-        console.error('Associado não encontrado:', id);
-        alert('Associado não encontrado!');
+        console.log('📋 Associado não encontrado localmente, buscando direto da API...');
+
+        // Se não encontrou localmente, busca direto da API
+        const modal = document.getElementById('modalAssociado');
+        modal.classList.add('show');
+        document.body.style.overflow = 'hidden';
+
+        document.getElementById('overview-tab').innerHTML = `
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 3rem;">
+                <div class="loading-spinner" style="margin-bottom: 1rem;"></div>
+                <p style="color: var(--gray-500);">Carregando detalhes...</p>
+            </div>
+        `;
+
+        // Buscar direto da API sem precisar do cache local
+        carregarDetalhesAssociado(id).then(detalhes => {
+            if (detalhes) {
+                // Criar objeto associado completo com os dados da API
+                associado = detalhes;
+                associado.detalhes_carregados = true;
+
+                // Adicionar ao cache local para futuras consultas
+                const existeNoCache = todosAssociados.find(a => a.id == id);
+                if (!existeNoCache) {
+                    todosAssociados.push(associado);
+                }
+
+                console.log('✅ Associado carregado da API:', associado);
+                abrirModalAssociadoCompleto(associado);
+            } else {
+                alert('Associado não encontrado no servidor!');
+                modal.classList.remove('show');
+                document.body.style.overflow = 'auto';
+            }
+        }).catch(error => {
+            console.error('❌ Erro ao carregar detalhes:', error);
+            alert('Erro ao carregar dados do associado');
+            modal.classList.remove('show');
+            document.body.style.overflow = 'auto';
+        });
+
         return;
     }
 
     // Se não tem detalhes carregados, carrega via API
     if (!associado.detalhes_carregados) {
         console.log('📋 Carregando detalhes completos...');
-        
+
         // Mostra loading no modal
         const modal = document.getElementById('modalAssociado');
         modal.classList.add('show');
         document.body.style.overflow = 'hidden';
-        
+
         // Mostra loading
         document.getElementById('overview-tab').innerHTML = `
             <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 3rem;">
@@ -635,21 +678,27 @@ function visualizarAssociado(id) {
                 <p style="color: var(--gray-500);">Carregando detalhes completos...</p>
             </div>
         `;
-        
+
         carregarDetalhesAssociado(id).then(detalhes => {
             if (detalhes) {
                 // Merge dos detalhes no associado
                 associado = { ...associado, ...detalhes, detalhes_carregados: true };
-                
+
                 // Atualiza no array principal
                 const index = todosAssociados.findIndex(a => a.id == id);
                 if (index !== -1) {
                     todosAssociados[index] = associado;
                 }
-                
+
+                // Atualiza também em associadosFiltrados se estiver lá
+                const indexFiltrados = associadosFiltrados.findIndex(a => a.id == id);
+                if (indexFiltrados !== -1) {
+                    associadosFiltrados[indexFiltrados] = associado;
+                }
+
                 console.log('✅ Detalhes carregados e merged');
             }
-            
+
             abrirModalAssociadoCompleto(associado);
         }).catch(error => {
             console.error('❌ Erro ao carregar detalhes:', error);
@@ -670,15 +719,15 @@ function carregarDetalhesAssociado(id) {
             data: { id: id },
             dataType: 'json',
             timeout: 10000,
-            success: function(response) {
+            success: function (response) {
                 // DEBUG COMPLETO - Ver TUDO que está vindo
                 console.log('📦 Resposta completa da API:', response);
                 console.log('📦 Tipo da resposta:', typeof response);
                 console.log('📦 Status:', response?.status);
-                
+
                 if (response && response.status === 'success') {
                     console.log('✅ Detalhes carregados para associado', id);
-                    
+
                     // DEBUG dos dados
                     if (response.dados) {
                         console.log('📋 Dados recebidos:', response.dados);
@@ -691,7 +740,7 @@ function carregarDetalhesAssociado(id) {
                             complemento: response.dados.complemento
                         });
                     }
-                    
+
                     resolve(response.dados);
                 } else {
                     console.warn('⚠️ Resposta inválida ao carregar detalhes');
@@ -699,19 +748,19 @@ function carregarDetalhesAssociado(id) {
                     resolve(null);
                 }
             },
-            error: function(xhr, status, error) {
+            error: function (xhr, status, error) {
                 console.error('❌ Erro ao carregar detalhes:', error);
                 console.error('❌ Status:', xhr.status);
                 console.error('❌ Response Text:', xhr.responseText);
-                
+
                 // Tentar parsear a resposta mesmo com erro
                 try {
                     const errorResponse = JSON.parse(xhr.responseText);
                     console.error('❌ Erro parseado:', errorResponse);
-                } catch(e) {
+                } catch (e) {
                     console.error('❌ Resposta não é JSON:', xhr.responseText);
                 }
-                
+
                 reject(error);
             }
         });
@@ -2315,15 +2364,15 @@ function enviarDocumento() {
 
 function fecharModal() {
     const modal = document.getElementById('modalAssociado');
-    
+
     // Remover IMEDIATAMENTE sem delays
     modal.classList.remove('show');
     document.body.style.overflow = 'auto';
-    
+
     // Limpar dados DEPOIS da animação de fechamento
     setTimeout(() => {
         associadoAtual = null;
-        
+
         // Reset de observações mais tarde
         setTimeout(() => {
             resetarObservacoes();
@@ -2452,9 +2501,9 @@ function carregarObservacoesVisaoGeral(associadoId) {
         console.warn('Container overviewObservacoes não encontrado');
         return;
     }
-    
+
     console.log('🔄 Carregando observações para visão geral, associado:', associadoId);
-    
+
     // Mostrar loading
     container.innerHTML = `
         <div style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 2rem; color: #6b7280;">
@@ -2470,7 +2519,7 @@ function carregarObservacoesVisaoGeral(associadoId) {
             console.log('📋 Dados de observações recebidos:', data);
             if (data.status === 'success') {
                 const observacoes = data.data || [];
-                
+
                 // Atualizar contador na aba de observações
                 const countBadge = document.getElementById('observacoesCountBadge');
                 if (countBadge) {
@@ -2485,7 +2534,7 @@ function carregarObservacoesVisaoGeral(associadoId) {
 
                 // Renderizar observações na visão geral (apenas as 3 mais recentes)
                 renderizarObservacoesSimples(observacoes.slice(0, 3), observacoes.length);
-                
+
             } else {
                 console.error('Erro na resposta:', data.message);
                 container.innerHTML = `
@@ -2510,7 +2559,7 @@ function carregarObservacoesVisaoGeral(associadoId) {
 // Função para renderizar observações simples
 function renderizarObservacoesSimples(observacoes, totalObservacoes) {
     const container = document.getElementById('overviewObservacoes');
-    
+
     if (!observacoes || observacoes.length === 0) {
         container.innerHTML = `
             <div style="text-align: center; padding: 2rem; color: #9ca3af;">
@@ -2522,10 +2571,10 @@ function renderizarObservacoesSimples(observacoes, totalObservacoes) {
     }
 
     let html = '';
-    
+
     observacoes.forEach(obs => {
         const dataFormatada = formatarDataSimples(obs.data_criacao);
-        
+
         html += `
             <div class="observacao-item-overview">
                 <div class="observacao-header-overview">
@@ -2563,7 +2612,7 @@ function renderizarObservacoesSimples(observacoes, totalObservacoes) {
 // Funções auxiliares simples
 function formatarDataSimples(dataStr) {
     if (!dataStr) return 'Data não informada';
-    
+
     try {
         const data = new Date(dataStr);
         const agora = new Date();
@@ -2576,7 +2625,7 @@ function formatarDataSimples(dataStr) {
         if (diffMins < 60) return `${diffMins}min atrás`;
         if (diffHoras < 24) return `${diffHoras}h atrás`;
         if (diffDias < 7) return `${diffDias}d atrás`;
-        
+
         return data.toLocaleDateString('pt-BR');
     } catch (e) {
         return 'Data inválida';
@@ -2708,15 +2757,15 @@ function abrirModalEditarContato(associadoId, associadoNome) {
         associadoId = associado.id;
         associadoNome = associado.nome;
     }
-    
+
     // Buscar o associado completo se precisar
     const associado = todosAssociados.find(a => a.id == associadoId);
-    
+
     if (!associado) {
         alert('Associado não encontrado!');
         return;
     }
-    
+
     // Preenche os campos
     document.getElementById('editContatoId').value = associado.id;
     document.getElementById('editContatoNome').textContent = associado.nome;
@@ -2794,7 +2843,7 @@ async function buscarNoServidor(termo) {
     try {
         const response = await fetch(`../api/buscar_associados.php?termo=${encodeURIComponent(termo)}`);
         const resultado = await response.json();
-        
+
         if (resultado.status === 'success') {
             associadosFiltrados = resultado.dados;
             paginaAtual = 1;
@@ -2817,10 +2866,10 @@ let searchTimeout;
 // New search input handler
 function handleSearchInput(e) {
     const termo = e.target.value.trim();
-    
+
     // Clear previous timeout
     clearTimeout(searchTimeout);
-    
+
     // If empty, show local data
     if (!termo) {
         console.log('Search cleared, showing local data');
@@ -2828,12 +2877,12 @@ function handleSearchInput(e) {
         aplicarFiltrosLocais(); // Apply other filters
         return;
     }
-    
+
     // If too short, wait
     if (termo.length < 2) {
         return;
     }
-    
+
     // Debounce search
     searchTimeout = setTimeout(() => {
         buscarNoServidor(termo);
@@ -2843,44 +2892,44 @@ function handleSearchInput(e) {
 // Server search function (searches ALL 6000+ records)
 async function buscarNoServidor(termo) {
     console.log('Searching server for:', termo);
-    
+
     // Show search indicator
     mostrarIndicadorBusca(true);
-    
+
     try {
         const response = await fetch(`../api/buscar_associados.php?termo=${encodeURIComponent(termo)}&limit=200`);
-        
+
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}`);
         }
-        
+
         const resultado = await response.json();
-        
+
         if (resultado.status === 'success') {
             console.log(`Found ${resultado.dados.length} results on server`);
-            
+
             // Use server results
             associadosFiltrados = resultado.dados;
-            
+
             // Update pagination
             paginaAtual = 1;
             calcularPaginacao();
             renderizarPagina();
-            
+
             // Show results info
             if (resultado.total_aproximado && resultado.total_aproximado > resultado.dados.length) {
                 console.log(`Showing ${resultado.dados.length} of ~${resultado.total_aproximado} total matches`);
             }
-            
+
         } else {
             console.warn('Server search error:', resultado.message);
             buscarLocal(termo); // Fallback
         }
-        
+
     } catch (error) {
         console.error('Search error:', error);
         buscarLocal(termo); // Fallback to local search
-        
+
     } finally {
         mostrarIndicadorBusca(false);
     }
@@ -2889,22 +2938,22 @@ async function buscarNoServidor(termo) {
 // Apply filters without search
 function aplicarFiltrosLocais() {
     console.log('Applying local filters only...');
-    
+
     const filterSituacao = document.getElementById('filterSituacao')?.value || '';
     const filterCorporacao = document.getElementById('filterCorporacao')?.value || '';
     const filterPatente = document.getElementById('filterPatente')?.value || '';
-    
+
     // Start with current data (could be search results or all data)
     let dadosParaFiltrar = associadosFiltrados.length > 0 ? associadosFiltrados : todosAssociados;
-    
+
     associadosFiltrados = dadosParaFiltrar.filter(associado => {
         const matchSituacao = !filterSituacao || associado.situacao === filterSituacao;
         const matchCorporacao = !filterCorporacao || associado.corporacao === filterCorporacao;
         const matchPatente = !filterPatente || associado.patente === filterPatente;
-        
+
         return matchSituacao && matchCorporacao && matchPatente;
     });
-    
+
     paginaAtual = 1;
     calcularPaginacao();
     renderizarPagina();
@@ -2913,20 +2962,20 @@ function aplicarFiltrosLocais() {
 // Enhanced local search (fallback)
 function buscarLocal(termo) {
     console.log('Local search (fallback):', termo);
-    
+
     const termoLower = termo.toLowerCase();
-    
+
     associadosFiltrados = todosAssociados.filter(associado => {
         return (associado.nome && associado.nome.toLowerCase().includes(termoLower)) ||
-               (associado.cpf && associado.cpf.includes(termo)) ||
-               (associado.rg && associado.rg.includes(termo)) ||
-               (associado.telefone && associado.telefone.includes(termo));
+            (associado.cpf && associado.cpf.includes(termo)) ||
+            (associado.rg && associado.rg.includes(termo)) ||
+            (associado.telefone && associado.telefone.includes(termo));
     });
-    
+
     paginaAtual = 1;
     calcularPaginacao();
     renderizarPagina();
-    
+
     // Warning if few results
     if (associadosFiltrados.length < 3 && termo.length >= 3) {
         console.warn('Few local results. Person might not be in loaded data.');
@@ -2937,7 +2986,7 @@ function buscarLocal(termo) {
 function mostrarIndicadorBusca(mostrar) {
     const searchIcon = document.querySelector('.search-box .search-icon');
     if (!searchIcon) return;
-    
+
     if (mostrar) {
         searchIcon.className = 'fas fa-spinner fa-spin search-icon';
         searchIcon.style.color = 'var(--primary)';
@@ -3521,14 +3570,14 @@ function criarModalConfirmacaoExclusao() {
             success: function (response) {
                 if (response.status === 'success') {
                     carregarObservacoes(currentAssociadoIdObs);
-                    
+
                     // ATUALIZAR TAMBÉM AS OBSERVAÇÕES DA VISÃO GERAL
                     if (associadoAtual && associadoAtual.id) {
                         setTimeout(() => {
                             carregarObservacoesVisaoGeral(associadoAtual.id);
                         }, 500);
                     }
-                    
+
                     mostrarNotificacaoObs('📋 Observação excluída com sucesso!', 'success');
                 } else {
                     alert('❌ Erro ao excluir observação: ' + (response.message || 'Erro desconhecido'));
@@ -3577,14 +3626,14 @@ function toggleImportanteObs(id) {
             if (response.status === 'success') {
                 // CORREÇÃO: Forçar recarregamento após toggle
                 carregarObservacoes(currentAssociadoIdObs, true); // true = forçar reload
-                
+
                 // ATUALIZAR TAMBÉM AS OBSERVAÇÕES DA VISÃO GERAL
                 if (associadoAtual && associadoAtual.id) {
                     setTimeout(() => {
                         carregarObservacoesVisaoGeral(associadoAtual.id);
                     }, 500);
                 }
-                
+
                 const novoStatus = response.data.importante;
                 mostrarNotificacaoObs(
                     novoStatus ? 'Marcada como importante!' : 'Removida das importantes',
