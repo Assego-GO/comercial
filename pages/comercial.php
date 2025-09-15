@@ -1030,7 +1030,7 @@ $headerComponent = HeaderComponent::create([
                         </div>
                     </div>
 
-                    <!-- Solicitação de Desfiliação -->
+                    <!-- Solicitação de Desfiliação 
                     <div class="action-card <?php echo !$temPermissaoDesfiliacao ? 'disabled' : ''; ?>"
                         onclick="<?php echo $temPermissaoDesfiliacao ? 'abrirModalDesfiliacao()' : 'semPermissao()'; ?>">
                         <?php if (!$temPermissaoDesfiliacao): ?>
@@ -1043,7 +1043,7 @@ $headerComponent = HeaderComponent::create([
                             <h5>Solicitação de Desfiliação</h5>
                             <p>Gerar ficha oficial de desfiliação</p>
                         </div>
-                    </div>
+                    </div>-->
 
                     <!-- Dependentes 18+ -->
                     <div class="action-card <?php echo !$temPermissaoDependentes ? 'disabled' : ''; ?>"
