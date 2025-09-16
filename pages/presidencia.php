@@ -16,6 +16,7 @@ require_once '../classes/Database.php';
 require_once '../classes/Auth.php';
 require_once '../classes/Funcionarios.php';
 require_once '../classes/Documentos.php';
+require_once '../classes/Permissoes.php'; // Adicionar a classe de Permissões
 require_once './components/header.php';
 
 // Inicia autenticação
@@ -33,46 +34,45 @@ $usuarioLogado = $auth->getUser();
 // Define o título da página
 $page_title = 'Presidência - ASSEGO';
 
-// Verificar se o usuário tem permissão para acessar a presidência
+// NOVA VERIFICAÇÃO DE PERMISSÃO USANDO O BANCO DE DADOS
 $temPermissaoPresidencia = false;
 $motivoNegacao = '';
 
-// Debug completo ANTES das verificações
-error_log("=== DEBUG DETALHADO PERMISSÕES PRESIDÊNCIA ===");
+// Debug das permissões
+error_log("=== VERIFICAÇÃO DE PERMISSÃO PRESIDÊNCIA ===");
 error_log("Usuário: " . $usuarioLogado['nome']);
-error_log("Array completo do usuário: " . print_r($usuarioLogado, true));
-error_log("Departamento ID (valor): " . ($usuarioLogado['departamento_id'] ?? 'NULL'));
-error_log("Departamento ID (tipo): " . gettype($usuarioLogado['departamento_id'] ?? null));
-error_log("É Diretor (método): " . ($auth->isDiretor() ? 'SIM' : 'NÃO'));
+error_log("ID do usuário: " . ($_SESSION['funcionario_id'] ?? 'N/A'));
 
-// NOVA VALIDAÇÃO: APENAS usuários do departamento da presidência (ID: 1) OU diretores
-if (isset($usuarioLogado['departamento_id'])) {
-    $deptId = $usuarioLogado['departamento_id'];
-
-    // Debug dos testes de comparação
-    error_log("Testes de comparação:");
-    error_log("  deptId === '1': " . ($deptId === '1' ? 'true' : 'false'));
-    error_log("  deptId === 1: " . ($deptId === 1 ? 'true' : 'false'));
-    error_log("  deptId == 1: " . ($deptId == 1 ? 'true' : 'false'));
-    error_log("  isDiretor: " . ($auth->isDiretor() ? 'true' : 'false'));
-
-    if ($deptId == 1 || $auth->isDiretor()) { // Presidência (ID=1) OU Diretor
+// Verificar se o usuário tem a permissão PRESIDENCIA_DASHBOARD
+try {
+    // Usar o sistema de permissões para verificar acesso
+    if (Permissoes::tem('PRESIDENCIA_DASHBOARD', 'VIEW')) {
         $temPermissaoPresidencia = true;
-        error_log("✅ Permissão concedida: Usuário da Presidência ou Diretor");
+        error_log("✅ PERMISSÃO CONCEDIDA: Usuário tem acesso ao PRESIDENCIA_DASHBOARD");
     } else {
-        $motivoNegacao = 'Acesso restrito ao departamento da Presidência ou Diretores.';
-        error_log("❌ Acesso negado. Departamento: '$deptId' (tipo: " . gettype($deptId) . "). Necessário: Presidência (ID = 1) ou ser Diretor");
+        $temPermissaoPresidencia = false;
+        $motivoNegacao = 'Você não possui permissão para acessar a área da Presidência.';
+        error_log("❌ PERMISSÃO NEGADA: Usuário não tem acesso ao PRESIDENCIA_DASHBOARD");
     }
-} else {
-    $motivoNegacao = 'Departamento não identificado. Acesso restrito ao departamento da Presidência.';
-    error_log("❌ departamento_id não existe no array do usuário");
+    
+    // Verificação adicional: Super Admin sempre tem acesso
+    $permissoesInstance = Permissoes::getInstance();
+    if ($permissoesInstance->isSuperAdmin()) {
+        $temPermissaoPresidencia = true;
+        error_log("✅ PERMISSÃO CONCEDIDA: Usuário é Super Admin");
+    }
+    
+} catch (Exception $e) {
+    error_log("❌ ERRO ao verificar permissão: " . $e->getMessage());
+    $temPermissaoPresidencia = false;
+    $motivoNegacao = 'Erro ao verificar permissões. Entre em contato com o administrador.';
 }
 
 // Log final do resultado
 if (!$temPermissaoPresidencia) {
-    error_log("❌ ACESSO NEGADO: " . $motivoNegacao);
+    error_log("❌ ACESSO FINAL NEGADO: " . $motivoNegacao);
 } else {
-    error_log("✅ ACESSO PERMITIDO - Usuário da Presidência ou Diretor");
+    error_log("✅ ACESSO FINAL PERMITIDO - Usuário autorizado para Presidência");
 }
 
 // Busca estatísticas de documentos (apenas se tem permissão)
@@ -116,9 +116,9 @@ if ($temPermissaoPresidencia) {
     $aguardandoAssinatura = $assinadosHoje = $assinadosMes = $tempoMedio = 0;
 }
 
-// Cria instância do Header Component - CORRIGIDO: passa TODO o array do usuário
+// Cria instância do Header Component - passa TODO o array do usuário
 $headerComponent = HeaderComponent::create([
-    'usuario' => $usuarioLogado, // ← CORRIGIDO: Agora passa TODO o array (incluindo departamento_id)
+    'usuario' => $usuarioLogado,
     'isDiretor' => $auth->isDiretor(),
     'activeTab' => 'presidencia',
     'notificationCount' => $aguardandoAssinatura,
