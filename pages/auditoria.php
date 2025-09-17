@@ -1659,13 +1659,7 @@ input:checked + .slider:before {
                                     <span class="slider"></span>
                                 </label>
                             </div>
-                            <div class="config-toggle">
-                                <label for="darkMode">Modo escuro</label>
-                                <label class="switch">
-                                    <input type="checkbox" id="darkMode">
-                                    <span class="slider"></span>
-                                </label>
-                            </div>
+                           
                             <div class="config-toggle">
                                 <label for="debugMode">Modo debug</label>
                                 <label class="switch">
@@ -3081,9 +3075,7 @@ ${JSON.stringify(JSON.parse(registro.alteracoes), null, 2)}</pre>
             if (configs.compactView !== undefined) {
                 document.getElementById('compactView').checked = configs.compactView;
             }
-            if (configs.darkMode !== undefined) {
-                document.getElementById('darkMode').checked = configs.darkMode;
-            }
+            
             if (configs.debugMode !== undefined) {
                 document.getElementById('debugMode').checked = configs.debugMode;
             }
