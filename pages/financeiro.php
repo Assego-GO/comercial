@@ -4,6 +4,7 @@
  * pages/financeiro.php
  * VERSÃO COM SISTEMA DE PERMISSÕES RBAC/ACL INTEGRADO
  * Sistema de navegação interno com componentes dinâmicos
+ * ATUALIZADO COM VERIFICADOR DE ASSOCIADOS VIA CSV
  */
 
 // Tratamento de erros para debug
@@ -63,6 +64,10 @@ $permissoesDetalhadas = [
         'editar' => $permissoes->hasPermission('FINANCEIRO_PECULIO_EDITAR', 'EDIT'),
         'aprovar' => $permissoes->hasPermission('FINANCEIRO_PECULIO_APROVAR', 'APPROVE')
     ],
+    'verificador' => [
+        'visualizar' => $permissoes->hasPermission('FINANCEIRO_VERIFICADOR', 'VIEW') || $temPermissaoFinanceiro,
+        'importar' => $permissoes->hasPermission('FINANCEIRO_VERIFICADOR_IMPORTAR', 'CREATE') || $temPermissaoFinanceiro
+    ],
     'relatorios' => [
         'visualizar' => $permissoes->hasPermission('FINANCEIRO_RELATORIOS', 'VIEW'),
         'gerar' => $permissoes->hasPermission('FINANCEIRO_RELATORIOS_GERAR', 'CREATE')
@@ -73,6 +78,7 @@ $permissoesDetalhadas = [
         'estornar' => $permissoes->hasPermission('FINANCEIRO_PAGAMENTOS_ESTORNAR', 'DELETE')
     ]
 ];
+
 // Verificar se é do departamento financeiro (ID 2) com qualquer role
 $departamentoFinanceiro = 2;
 $isFinanceiro = ($usuarioLogado['departamento_id'] == $departamentoFinanceiro);
@@ -222,7 +228,7 @@ $headerComponent = HeaderComponent::create([
     <?php $headerComponent->renderCSS(); ?>
 
     <style>
-        /* Variáveis CSS */
+        /* Existing styles from original file... */
         :root {
             --primary: #0056d2;
             --primary-light: #4A90E2;
@@ -248,6 +254,7 @@ $headerComponent = HeaderComponent::create([
             color: var(--dark);
         }
 
+        /* All existing styles from original file... */
         .main-wrapper {
             min-height: 100vh;
             display: flex;
@@ -608,6 +615,17 @@ $headerComponent = HeaderComponent::create([
             font-weight: 900;
         }
 
+        /* NEW: Verificador de Associados Icon */
+        .financial-nav-tabs .nav-tab .nav-tab-btn[data-target="verificar-associados"] .nav-tab-icon {
+            background: #059669 !important;
+        }
+
+        .financial-nav-tabs .nav-tab .nav-tab-btn[data-target="verificar-associados"] .nav-tab-icon::before {
+            content: "\f002";
+            font-family: "Font Awesome 6 Pro", "Font Awesome 6 Free";
+            font-weight: 900;
+        }
+
         /* Content Area */
         .financial-content {
             padding: 0 !important;
@@ -649,7 +667,8 @@ $headerComponent = HeaderComponent::create([
         #gestao-peculio,
         #lista-inadimplentes,
         #neoconsig,
-        #importar-asaas {
+        #importar-asaas,
+        #verificar-associados {
             padding: 0 !important;
             margin: 0 !important;
             min-height: auto !important;
@@ -662,7 +681,8 @@ $headerComponent = HeaderComponent::create([
         #gestao-peculio>*,
         #lista-inadimplentes>*,
         #neoconsig>*,
-        #importar-asaas>* {
+        #importar-asaas>*,
+        #verificar-associados>* {
             margin-top: 0 !important;
             padding-top: 0 !important;
         }
@@ -1013,6 +1033,16 @@ $headerComponent = HeaderComponent::create([
                                 </button>
                             </li>
                         <?php endif; ?>
+
+                        <!-- NEW: Verificador de Associados Tab -->
+                        <?php if ($permissoesDetalhadas['verificador']['visualizar']): ?>
+                            <li class="nav-tab">
+                                <button class="nav-tab-btn" data-target="verificar-associados">
+                                    <div class="nav-tab-icon"></div>
+                                    <span class="nav-tab-label">Verificar Associados</span>
+                                </button>
+                            </li>
+                        <?php endif; ?>
                     </ul>
                 </div>
 
@@ -1054,6 +1084,16 @@ $headerComponent = HeaderComponent::create([
                             <div class="loading-spinner">
                                 <div class="spinner"></div>
                                 <p class="text-muted">Carregando gestão de pecúlio...</p>
+                            </div>
+                        </div>
+                    <?php endif; ?>
+
+                    <!-- NEW: Verificador de Associados -->
+                    <?php if ($permissoesDetalhadas['verificador']['visualizar']): ?>
+                        <div id="verificar-associados" class="content-panel">
+                            <div class="loading-spinner">
+                                <div class="spinner"></div>
+                                <p class="text-muted">Carregando verificador de associados...</p>
                             </div>
                         </div>
                     <?php endif; ?>
@@ -1128,7 +1168,8 @@ $headerComponent = HeaderComponent::create([
             'gestao-peculio': './rend/js/gestao_peculio.js',
             'lista-inadimplentes': './rend/js/lista_inadimplentes.js',
             'neoconsig': './rend/js/neoconsig.js',
-            'importar-asaas': './rend/js/importar_asaas.js'
+            'importar-asaas': './rend/js/importar_asaas.js',
+            'verificar-associados': './rend/js/verificar_associados.js' // NEW
         };
 
         // ===== HELPER PARA CARREGAR SCRIPTS =====
@@ -1172,6 +1213,7 @@ $headerComponent = HeaderComponent::create([
                 if (permissoesUsuario.neoconsig?.visualizar) return 'neoconsig';
                 if (permissoesUsuario.asaas?.visualizar) return 'importar-asaas';
                 if (permissoesUsuario.peculio?.visualizar) return 'gestao-peculio';
+                if (permissoesUsuario.verificador?.visualizar) return 'verificar-associados'; // NEW
                 return null;
             }
 
@@ -1212,7 +1254,8 @@ $headerComponent = HeaderComponent::create([
                     'lista-inadimplentes': permissoesUsuario.inadimplentes?.visualizar,
                     'neoconsig': permissoesUsuario.neoconsig?.visualizar,
                     'importar-asaas': permissoesUsuario.asaas?.visualizar,
-                    'gestao-peculio': permissoesUsuario.peculio?.visualizar
+                    'gestao-peculio': permissoesUsuario.peculio?.visualizar,
+                    'verificar-associados': permissoesUsuario.verificador?.visualizar // NEW
                 };
 
                 if (!tabPermissions[tabId]) {
@@ -1262,7 +1305,8 @@ $headerComponent = HeaderComponent::create([
                     'lista-inadimplentes': 'Lista de Inadimplentes',
                     'neoconsig': 'NeoConsig',
                     'importar-asaas': 'Importar ASAAS',
-                    'gestao-peculio': 'Gestão de Pecúlio'
+                    'gestao-peculio': 'Gestão de Pecúlio',
+                    'verificar-associados': 'Verificador de Associados' // NEW
                 };
                 return names[tabId] || tabId;
             }
@@ -1395,6 +1439,17 @@ $headerComponent = HeaderComponent::create([
                                 window.ImportarAsaas.init({
                                     temPermissao: temPermissaoFinanceiro,
                                     permissoes: permissoesUsuario.asaas
+                                });
+                            }
+                            break;
+
+                        // NEW: Verificador de Associados
+                        case 'verificar-associados':
+                            if (window.VerificarAssociados) {
+                                console.log('Inicializando módulo Verificador de Associados com permissões...');
+                                window.VerificarAssociados.init({
+                                    temPermissao: temPermissaoFinanceiro,
+                                    permissoes: permissoesUsuario.verificador
                                 });
                             }
                             break;
