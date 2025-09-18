@@ -124,7 +124,7 @@ if (!$temPermissaoFinanceiro) {
                        placeholder="Digite o RG...">
             </div>
 
-            <div>
+            <!-- <div>
                 <label class="form-label-inadim" for="filtroVinculoInadim">Vínculo Servidor</label>
                 <select class="form-select form-control-inadim" id="filtroVinculoInadim">
                     <option value="">Todos os vínculos</option>
@@ -132,7 +132,7 @@ if (!$temPermissaoFinanceiro) {
                     <option value="APOSENTADO">Aposentado</option>
                     <option value="PENSIONISTA">Pensionista</option>
                 </select>
-            </div>
+            </div> -->
 
             <div>
                 <label class="form-label-inadim">&nbsp;</label>

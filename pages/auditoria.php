@@ -2,7 +2,7 @@
 /**
  * Página de Auditoria - Sistema ASSEGO
  * pages/auditoria.php
- * Versão 2.0 - Implementação Completa
+ * Versão 2.1 - Usando Sistema de Permissões RBAC
  */
 
 // Tratamento de erros para debug
@@ -14,6 +14,7 @@ require_once '../config/database.php';
 require_once '../classes/Database.php';
 require_once '../classes/Auth.php';
 require_once '../classes/Funcionarios.php';
+require_once '../classes/Permissoes.php'; // Adicionar classe de Permissões
 require_once '../classes/Auditoria.php';
 require_once './components/header.php';
 
@@ -32,71 +33,50 @@ $usuarioLogado = $auth->getUser();
 // Define o título da página
 $page_title = 'Auditoria - ASSEGO';
 
-// Verificar se o usuário tem permissão para acessar a auditoria
+// USAR SISTEMA DE PERMISSÕES RBAC
 $temPermissaoAuditoria = false;
 $motivoNegacao = '';
 $isPresidencia = false;
 $isDiretor = false;
 $departamentoUsuario = null;
 
-// Debug completo ANTES das verificações
-error_log("=== DEBUG DETALHADO PERMISSÕES AUDITORIA ===");
-error_log("Usuário: " . $usuarioLogado['nome']);
-error_log("Array completo do usuário: " . print_r($usuarioLogado, true));
-error_log("Departamento ID (valor): " . ($usuarioLogado['departamento_id'] ?? 'NULL'));
-error_log("Departamento ID (tipo): " . gettype($usuarioLogado['departamento_id'] ?? null));
-error_log("É Diretor (método): " . ($auth->isDiretor() ? 'SIM' : 'NÃO'));
-
-// NOVA LÓGICA DE PERMISSÕES
-if (isset($usuarioLogado['departamento_id'])) {
-    $deptId = $usuarioLogado['departamento_id'];
-    $cargoUsuario = $usuarioLogado['cargo'] ?? '';
-    $departamentoUsuario = $deptId;
+// Verificar permissão usando o sistema RBAC
+if (Permissoes::tem('AUDITORIA_DASHBOARD', 'VIEW')) {
+    $temPermissaoAuditoria = true;
     
-    // Debug dos testes de comparação
-    error_log("Testes de comparação:");
-    error_log("  deptId === '1': " . ($deptId === '1' ? 'true' : 'false'));
-    error_log("  deptId === 1: " . ($deptId === 1 ? 'true' : 'false'));
-    error_log("  deptId == 1: " . ($deptId == 1 ? 'true' : 'false'));
-    error_log("  Cargo: " . $cargoUsuario);
+    // Obter instância de permissões para verificações adicionais
+    $permissoes = Permissoes::getInstance();
     
-    // Sistema flexível de permissões
-    if ($deptId == 1) {
-        // PRESIDÊNCIA - vê tudo
-        $temPermissaoAuditoria = true;
+    // Verificar se é Presidência (vê tudo)
+    if ($permissoes->isPresidente() || $permissoes->isSuperAdmin() || 
+        (isset($usuarioLogado['departamento_id']) && $usuarioLogado['departamento_id'] == 1)) {
         $isPresidencia = true;
-        error_log("✅ Permissão concedida: Usuário pertence ao Departamento da Presidência (ID = 1) - VÊ TUDO");
-    } elseif (in_array($cargoUsuario, ['Presidente', 'Vice-Presidente'])) {
-        // Apenas Presidente e Vice-Presidente veem todos (mesmo fora da presidência)
-        $temPermissaoAuditoria = true;
-        $isPresidencia = true;
-        error_log("✅ Permissão concedida: {$cargoUsuario} - VÊ TUDO");
-    } elseif (in_array($cargoUsuario, ['Diretor', 'Gerente', 'Supervisor', 'Coordenador'])) {
-        // Diretores veem apenas seu departamento
-        $temPermissaoAuditoria = true;
+        error_log("✅ Usuário com acesso total à auditoria - Presidência/SuperAdmin");
+    } 
+    // Verificar se é Diretor (vê apenas seu departamento)
+    elseif ($permissoes->isDiretor()) {
         $isDiretor = true;
-        error_log("✅ Permissão concedida: {$cargoUsuario} - VÊ APENAS DEPARTAMENTO " . $deptId);
-    } else {
-        $motivoNegacao = 'Acesso restrito ao departamento da Presidência, Presidente/Vice-Presidente ou cargos de gestão.';
-        error_log("❌ Acesso negado. Departamento: '$deptId', Cargo: '$cargoUsuario'. Necessário: Presidência (ID = 1) OU Presidente/Vice-Presidente OU Diretor/Gerente/Supervisor/Coordenador");
+        $departamentoUsuario = $usuarioLogado['departamento_id'] ?? null;
+        error_log("✅ Usuário é Diretor - Acesso à auditoria do departamento " . $departamentoUsuario);
+    }
+    // Outros com permissão (veem apenas seu departamento)
+    else {
+        $isDiretor = true; // Trata como diretor para aplicar filtro departamental
+        $departamentoUsuario = $usuarioLogado['departamento_id'] ?? null;
+        error_log("✅ Usuário tem permissão AUDITORIA_DASHBOARD - Acesso departamental");
     }
 } else {
-    $motivoNegacao = 'Departamento não identificado. Acesso restrito ao departamento da Presidência ou cargos de gestão.';
-    error_log("❌ departamento_id não existe no array do usuário");
+    $motivoNegacao = 'Você não possui permissão para acessar a área de auditoria (AUDITORIA_DASHBOARD).';
+    error_log("❌ Acesso negado à auditoria - Sem permissão AUDITORIA_DASHBOARD");
 }
 
-// Log final do resultado
-if (!$temPermissaoAuditoria) {
-    error_log("❌ ACESSO NEGADO: " . $motivoNegacao);
-} else {
-    if ($isPresidencia) {
-        $motivo = "Usuário com Acesso Total - " . ($usuarioLogado['departamento_id'] == 1 ? 'Presidência' : $usuarioLogado['cargo']);
-        error_log("✅ ACESSO PERMITIDO - " . $motivo);
-    } else {
-        $motivo = "Usuário é {$cargoUsuario} - Acesso Departamental (Dept: " . $departamentoUsuario . ")";
-        error_log("✅ ACESSO PERMITIDO - " . $motivo);
-    }
-}
+// Log de debug
+error_log("=== DEBUG PERMISSÕES AUDITORIA V2.1 ===");
+error_log("Usuário: " . $usuarioLogado['nome']);
+error_log("Tem Permissão AUDITORIA_DASHBOARD: " . ($temPermissaoAuditoria ? 'SIM' : 'NÃO'));
+error_log("É Presidência: " . ($isPresidencia ? 'SIM' : 'NÃO'));
+error_log("É Diretor: " . ($isDiretor ? 'SIM' : 'NÃO'));
+error_log("Departamento: " . ($departamentoUsuario ?? 'NULL'));
 
 // Busca estatísticas de auditoria (apenas se tem permissão)
 if ($temPermissaoAuditoria) {
