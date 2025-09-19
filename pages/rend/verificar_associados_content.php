@@ -73,50 +73,6 @@
                 </button>
             </div>
 
-            <!-- Painel de Debug (apenas para desenvolvimento) -->
-            <div class="alert alert-info" id="debugPanel">
-                <div class="d-flex justify-content-between align-items-center">
-                    <span><i class="fas fa-bug me-2"></i><strong>Debug Panel</strong></span>
-                    <div>
-                        <button type="button" class="btn btn-sm btn-outline-dark" id="btnTestarBotoes">
-                            Testar Botões
-                        </button>
-                        <button type="button" class="btn btn-sm btn-outline-primary" id="btnTesteManual">
-                            Teste Manual
-                        </button>
-                        <button type="button" class="btn btn-sm btn-outline-dark" id="btnDebugConsole">
-                            Debug Console
-                        </button>
-                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="document.getElementById('debugPanel').style.display='none'">
-                            ✕
-                        </button>
-                    </div>
-                </div>
-                <small class="text-muted">
-                    <strong>Status:</strong> <span id="debugStatus">Aguardando carregamento...</span> | 
-                    <strong>Módulo:</strong> <span id="debugModulo">-</span> |
-                    <strong>Bootstrap:</strong> <span id="debugBootstrap">-</span>
-                    <br>Este painel ajuda a diagnosticar problemas. Clique nos botões acima e veja os logs no Console (F12).
-                </small>
-                
-                <script>
-                // Atualizar status do debug em tempo real
-                function updateDebugStatus() {
-                    const statusEl = document.getElementById('debugStatus');
-                    const moduloEl = document.getElementById('debugModulo');
-                    const bootstrapEl = document.getElementById('debugBootstrap');
-                    
-                    if (statusEl) statusEl.textContent = document.readyState;
-                    if (moduloEl) moduloEl.textContent = window.VerificarAssociados ? '✅ Carregado' : '❌ Não encontrado';
-                    if (bootstrapEl) bootstrapEl.textContent = typeof bootstrap !== 'undefined' ? '✅ Disponível' : '❌ Não encontrado';
-                }
-                
-                // Atualizar a cada segundo
-                setInterval(updateDebugStatus, 1000);
-                updateDebugStatus(); // Primeira execução
-                </script>
-            </div>
-
             <!-- Estatísticas de Processamento -->
             <div id="estatisticasProcessamento" class="stats-container d-none">
                 <div class="row g-3 mb-4">
