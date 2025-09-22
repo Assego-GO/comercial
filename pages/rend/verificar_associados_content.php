@@ -107,46 +107,7 @@
 
     <!-- Área de Resultados -->
     <div id="resultadosContainer" class="d-none">
-        <!-- Filtros -->
-        <div class="card shadow-sm border-0 mt-4">
-            <div class="card-header bg-light py-3">
-                <div class="d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">
-                        <i class="fas fa-filter text-primary me-2"></i>
-                        Filtros
-                    </h5>
-                    <button type="button" class="btn btn-sm btn-outline-secondary" id="btnLimparFiltros">
-                        <i class="fas fa-times"></i>
-                        Limpar Filtros
-                    </button>
-                </div>
-            </div>
-            <div class="card-body py-3">
-                <div class="row g-3">
-                    <div class="col-md-3">
-                        <select class="form-select" id="filtroStatus">
-                            <option value="">Todos os Status</option>
-                            <option value="filiado">Filiados</option>
-                            <option value="nao_filiado">Não Filiados</option>
-                            <option value="nao_encontrado">Não Encontrados</option>
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <select class="form-select" id="filtroCorporacao">
-                            <option value="">Todas as Corporações</option>
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <select class="form-select" id="filtroPatente">
-                            <option value="">Todas as Patentes</option>
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <input type="text" class="form-control" id="filtroNome" placeholder="Buscar por nome...">
-                    </div>
-                </div>
-            </div>
-        </div>
+      
 
         <!-- Tabela de Resultados -->
         <div class="card shadow-sm border-0 mt-3">
@@ -168,7 +129,7 @@
                                 <th width="15%">Status</th>
                                 <th width="12%">Corporação</th>
                                 <th width="12%">Patente</th>
-                                <th width="7%">Ações</th>
+                                
                             </tr>
                         </thead>
                         <tbody id="tabelaResultadosBody">
