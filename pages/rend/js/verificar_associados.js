@@ -531,13 +531,6 @@ window.VerificarAssociados = (function() {
                     <td><span class="status-badge ${statusClass}">${statusText}</span></td>
                     <td>${item.corporacao || '-'}</td>
                     <td>${item.patente || '-'}</td>
-                    <td>
-                        ${item.statusverificacao === 'filiado' ? 
-                            `<button class="btn btn-sm btn-outline-primary" onclick="verDetalhesAssociado(${item.associadoid || 0})">
-                                <i class="fas fa-eye"></i>
-                            </button>` : 
-                            '<span class="text-muted">-</span>'}
-                    </td>
                 </tr>
             `;
         }).join('');
