@@ -275,6 +275,63 @@ try {
 
         error_log("✓ Dados básicos atualizados pelo usuário: " . $usuarioLogado['nome']);
 
+
+        // =====================================
+// NOVO: PROCESSAR DOCUMENTO NO MODO EDIÇÃO
+// =====================================
+$documentoId = null;
+$statusFluxo = 'DIGITALIZADO';
+$enviarAutomaticamente = isset($_POST['enviar_presidencia']) && $_POST['enviar_presidencia'] == '1';
+$documentoProcessado = false;
+
+if (isset($_FILES['ficha_assinada']) && $_FILES['ficha_assinada']['error'] === UPLOAD_ERR_OK) {
+    try {
+        error_log("=== PROCESSANDO NOVA FICHA ASSINADA ===");
+        
+        // Incluir classe de documentos se não estiver incluída
+        if (!class_exists('Documentos')) {
+            require_once '../classes/Documentos.php';
+        }
+        
+        $documentos = new Documentos();
+        
+        $documentoId = $documentos->uploadDocumentoAssociacao(
+            $associadoId,
+            $_FILES['ficha_assinada'],
+            'FISICO',
+            'Ficha de filiação assinada - Anexada durante edição do cadastro pelo usuário: ' . $usuarioLogado['nome']
+        );
+        
+        error_log("✓ Nova ficha assinada anexada com ID: $documentoId");
+        $documentoProcessado = true;
+        
+        if ($enviarAutomaticamente) {
+            try {
+                $documentos->enviarParaAssinatura(
+                    $documentoId,
+                    "Cadastro atualizado - Enviado automaticamente para assinatura pelo usuário: " . $usuarioLogado['nome']
+                );
+                
+                $associados->enviarParaPresidencia(
+                    $associadoId, 
+                    "Nova documentação enviada automaticamente para aprovação - Cadastro atualizado pelo usuário: " . $usuarioLogado['nome']
+                );
+                
+                $statusFluxo = 'AGUARDANDO_ASSINATURA';
+                error_log("✓ Novo documento enviado para presidência assinar");
+                
+            } catch (Exception $e) {
+                error_log("⚠ Aviso ao enviar nova ficha para presidência: " . $e->getMessage());
+            }
+        }
+        
+    } catch (Exception $e) {
+        error_log("⚠ Erro ao processar nova ficha assinada: " . $e->getMessage());
+    }
+}
+
+error_log("=== FIM PROCESSAMENTO DOCUMENTO ===");
+
         // =====================================
         // 2. PROCESSA INDICAÇÃO SE MUDOU
         // =====================================
@@ -665,65 +722,82 @@ try {
 
         // Resposta de sucesso
         $response = [
-            'status' => 'success',
-            'message' => 'Associado atualizado com sucesso!',
-            'data' => [
-                'id' => $associadoId,
-                'nome' => $associadoAtualizado['nome'] ?? $dados['nome'],
-                'cpf' => $associadoAtualizado['cpf'] ?? $dados['cpf'],
-                
-                // Informações do usuário que atualizou
-                'atualizado_por' => [
-                    'id' => $usuarioLogado['id'],
-                    'nome' => $usuarioLogado['nome'],
-                    'timestamp' => date('Y-m-d H:i:s')
-                ],
-                
-                // Informações de indicação
-                'indicacao' => [
-                    'mudou' => $indicacaoMudou,
-                    'anterior' => $indicacaoAnterior,
-                    'nova' => $indicacaoNome,
-                    'processada' => $indicacaoProcessada,
-                    'indicador_id' => $indicadorId,
-                    'indicador_info' => $indicadorInfo
-                ],
-                
-                // Informações de situação
-                'situacao_alterada' => $mudouSituacao,
-                'situacao_anterior' => $situacaoAtual,
-                'situacao_nova' => $novaSituacao,
-                'desfiliacao_processada' => $ficouDesfiliado,
-                'reativacao_processada' => $saiuDeDesfiliado,
-                'data_desfiliacao' => $dataDesfiliacao,
-                
-                // Informações de serviços
-                'servicos_alterados' => $servicosAlterados,
-                'detalhes_servicos' => $detalhesServicos,
-                'tipo_associado_servico' => $tipoAssociadoServico,
-                
-                // Informações de JSON
-                'json_export' => [
-                    'atualizado' => $resultadoJson['sucesso'],
-                    'arquivo' => $resultadoJson['arquivo_individual'] ?? null,
-                    'erro' => $resultadoJson['sucesso'] ? null : $resultadoJson['erro']
-                ]
-            ]
-        ];
-
-        if ($indicacaoMudou && $indicacaoProcessada) {
-            $response['message'] .= ' Indicação atualizada.';
-        }
+    'status' => 'success',
+    'message' => 'Associado atualizado com sucesso!' . ($documentoProcessado ? ' Nova ficha enviada para presidência.' : ''),
+    'data' => [
+        'id' => $associadoId,
+        'nome' => $associadoAtualizado['nome'] ?? $dados['nome'],
+        'cpf' => $associadoAtualizado['cpf'] ?? $dados['cpf'],
         
-        if ($resultadoJson['sucesso']) {
-            $response['message'] .= ' Dados exportados.';
-        }
+        // Informações do usuário que atualizou
+        'atualizado_por' => [
+            'id' => $usuarioLogado['id'],
+            'nome' => $usuarioLogado['nome'],
+            'timestamp' => date('Y-m-d H:i:s')
+        ],
+        
+        // NOVO: Informações do documento
+        'documento_processado' => $documentoProcessado,
+        'fluxo_documento' => [
+            'documento_id' => $documentoId,
+            'status' => $statusFluxo,
+            'enviado_presidencia' => $enviarAutomaticamente && $documentoId,
+            'mensagem' => $documentoId 
+                ? ($enviarAutomaticamente 
+                    ? 'Nova ficha enviada para assinatura na presidência' 
+                    : 'Nova ficha aguardando envio manual para presidência')
+                : 'Nenhuma nova ficha foi anexada'
+        ],
+        
+        // Informações de indicação
+        'indicacao' => [
+            'mudou' => $indicacaoMudou,
+            'anterior' => $indicacaoAnterior,
+            'nova' => $indicacaoNome,
+            'processada' => $indicacaoProcessada,
+            'indicador_id' => $indicadorId,
+            'indicador_info' => $indicadorInfo
+        ],
+        
+        // Informações de situação
+        'situacao_alterada' => $mudouSituacao,
+        'situacao_anterior' => $situacaoAtual,
+        'situacao_nova' => $novaSituacao,
+        'desfiliacao_processada' => $ficouDesfiliado,
+        'reativacao_processada' => $saiuDeDesfiliado,
+        'data_desfiliacao' => $dataDesfiliacao,
+        
+        // Informações de serviços
+        'servicos_alterados' => $servicosAlterados,
+        'detalhes_servicos' => $detalhesServicos,
+        'tipo_associado_servico' => $tipoAssociadoServico,
+        
+        // Informações de JSON
+        'json_export' => [
+            'atualizado' => $resultadoJson['sucesso'],
+            'arquivo' => $resultadoJson['arquivo_individual'] ?? null,
+            'erro' => $resultadoJson['sucesso'] ? null : $resultadoJson['erro']
+        ]
+    ]
+];
 
-        if ($ficouDesfiliado) {
-            $response['message'] .= ' Desfiliação registrada.';
-        } elseif ($saiuDeDesfiliado) {
-            $response['message'] .= ' Associado reativado.';
-        }
+       if ($indicacaoMudou && $indicacaoProcessada) {
+    $response['message'] .= ' Indicação atualizada.';
+}
+
+if ($documentoProcessado) {
+    $response['message'] .= ' Nova ficha anexada e enviada para presidência.';
+}
+
+if ($resultadoJson['sucesso']) {
+    $response['message'] .= ' Dados exportados.';
+}
+
+if ($ficouDesfiliado) {
+    $response['message'] .= ' Desfiliação registrada.';
+} elseif ($saiuDeDesfiliado) {
+    $response['message'] .= ' Associado reativado.';
+}
 
     } catch (Exception $e) {
         if ($transacaoAtiva) {

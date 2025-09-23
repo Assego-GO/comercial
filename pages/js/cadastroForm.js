@@ -154,7 +154,7 @@ function inicializarUploadPreviews() {
     }
 
     // Preview da ficha assinada (apenas novos cadastros)
-    if (!isEdit) {
+    
         const fichaInput = document.getElementById('ficha_assinada');
         if (fichaInput) {
             fichaInput.addEventListener('change', function (e) {
@@ -189,7 +189,7 @@ function inicializarUploadPreviews() {
                 }
             });
         }
-    }
+    
     
     console.log('✓ Uploads configurados');
 }
@@ -896,17 +896,19 @@ function criarFormDataStep(step) {
                 }
             });
 
-            // Arquivos (foto e ficha assinada)
-            const fotoFile = document.getElementById('foto').files[0];
-            if (fotoFile) {
-                formData.append('foto', fotoFile);
-            }
+          // Arquivos (foto e ficha assinada)
+const fotoFile = document.getElementById('foto').files[0];
+if (fotoFile) {
+    formData.append('foto', fotoFile);
+}
 
-            const fichaFile = document.getElementById('ficha_assinada')?.files[0];
-            if (fichaFile) {
-                formData.append('ficha_assinada', fichaFile);
-                formData.append('enviar_presidencia', '1');
-            }
+// Ficha assinada (disponível tanto para novos cadastros quanto para edição)
+const fichaFile = document.getElementById('ficha_assinada')?.files[0];
+if (fichaFile) {
+    formData.append('ficha_assinada', fichaFile);
+    formData.append('enviar_presidencia', '1');
+    console.log('✓ Ficha assinada anexada:', fichaFile.name);
+}
             break;
 
         case 2: // Dados Militares
@@ -1240,12 +1242,23 @@ function validarStepAtual() {
             }
         }
 
-        // Valida ficha assinada (apenas para novos cadastros)
+      // Valida ficha assinada (apenas para novos cadastros - no modo edição é opcional)
         if (!isEdit) {
             const fichaField = document.getElementById('ficha_assinada');
             if (!fichaField.files || fichaField.files.length === 0) {
                 showAlert('Por favor, anexe a ficha de filiação assinada!', 'error');
                 isValid = false;
+            }
+        }
+        // No modo edição, se uma ficha foi selecionada, validamos se está ok
+        else {
+            const fichaField = document.getElementById('ficha_assinada');
+            if (fichaField && fichaField.files && fichaField.files.length > 0) {
+                const file = fichaField.files[0];
+                if (file.size > 10 * 1024 * 1024) { // 10MB
+                    showAlert('O arquivo da ficha é muito grande! Máximo: 10MB', 'error');
+                    isValid = false;
+                }
             }
         }
 

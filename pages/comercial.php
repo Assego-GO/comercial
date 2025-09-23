@@ -1075,6 +1075,16 @@ $headerComponent = HeaderComponent::create([
                         </div>
                     </div>
 
+                    <div class="action-card" onclick="cadastrosOnline()">
+                        <div class="action-icon warning">
+                            <i class="fas fa-laptop"></i>
+                        </div>
+                        <div class="action-content">
+                            <h5>Cadastros Online</h5>
+                            <p>Gerenciar cadastros realizados online</p>
+                        </div>
+                    </div>
+
 
                 </div>
             </div>
@@ -2452,6 +2462,14 @@ $headerComponent = HeaderComponent::create([
                         return cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
                     }
                     return cpf;
+                }
+
+
+                function cadastrosOnline() {
+                    showToast('Carregando cadastros online...', 'info');
+                    setTimeout(() => {
+                        window.location.href = '../pages/cadastros_online.php';
+                    }, 500);
                 }
 
                 function formatarTelefone(telefone) {
