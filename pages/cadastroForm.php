@@ -1180,71 +1180,84 @@ $headerComponent = HeaderComponent::create([
                             </div>
                         </div>
 
-                        <!-- Campo para upload da ficha assinada - APENAS PARA NOVOS CADASTROS - MODIFICADO -->
-                        <?php if (!$isEdit): ?>
-                            <div class="form-group full-width">
-                                <label class="form-label">
-                                    Ficha de Filiação Assinada <span class="required">*</span>
-                                    <i class="fas fa-info-circle info-tooltip"
-                                        title="Anexe a foto ou PDF da ficha preenchida e assinada pelo associado"></i>
-                                </label>
-                                <div class="ficha-upload-container"
-                                    style="background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); padding: 2rem; border-radius: 16px; border: 2px dashed #4caf50;">
-                                    <div style="display: flex; align-items: center; gap: 2rem;">
-                                        <div class="ficha-preview" id="fichaPreview"
-                                            style="width: 200px; height: 250px; background: var(--white); border-radius: 12px; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; border: 2px solid #4caf50;">
-                                            <div class="ficha-preview-placeholder"
-                                                style="text-align: center; color: #4caf50;">
-                                                <i class="fas fa-file-contract"
-                                                    style="font-size: 4rem; margin-bottom: 1rem;"></i>
-                                                <p style="font-weight: 600;">Ficha de Filiação</p>
-                                                <p style="font-size: 0.875rem;">Nenhum arquivo anexado</p>
-                                            </div>
-                                        </div>
-
-                                        <div style="flex: 1;">
-                                            <h4 style="color: #2e7d32; margin-bottom: 1rem;">
-                                                <i class="fas fa-check-circle"></i> Documento Obrigatório
-                                            </h4>
-                                            <p style="color: #1b5e20; margin-bottom: 1rem;">
-                                                É obrigatório anexar a ficha de filiação preenchida e assinada pelo
-                                                associado.
-                                                Este documento será enviado automaticamente para aprovação da presidência.
-                                            </p>
-
-                                            <input type="file" name="ficha_assinada" id="ficha_assinada"
-                                                accept=".pdf,.jpg,.jpeg,.png" style="display: none;" required>
-
-                                            <button type="button" class="btn"
-                                                onclick="document.getElementById('ficha_assinada').click();"
-                                                style="background: #4caf50; color: white; border: none; padding: 0.875rem 1.5rem; border-radius: 12px; font-weight: 600; cursor: pointer;">
-                                                <i class="fas fa-upload"></i> Anexar Ficha Assinada
-                                            </button>
-
-                                            <p style="font-size: 0.75rem; color: #2e7d32; margin-top: 0.5rem;">
-                                                Formatos aceitos: PDF, JPG, PNG | Tamanho máximo: 10MB
+                        <!-- Campo para upload da ficha assinada - DISPONÍVEL SEMPRE -->
+                        <div class="form-group full-width">
+                            <label class="form-label">
+                                Ficha de Filiação Assinada 
+                                <?php if (!$isEdit): ?>
+                                    <span class="required">*</span>
+                                <?php endif; ?>
+                                <i class="fas fa-info-circle info-tooltip"
+                                    title="Anexe a foto ou PDF da ficha preenchida e assinada pelo associado"></i>
+                            </label>
+                            <div class="ficha-upload-container"
+                                style="background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); padding: 2rem; border-radius: 16px; border: 2px dashed #4caf50;">
+                                <div style="display: flex; align-items: center; gap: 2rem;">
+                                    <div class="ficha-preview" id="fichaPreview"
+                                        style="width: 200px; height: 250px; background: var(--white); border-radius: 12px; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; border: 2px solid #4caf50;">
+                                        <div class="ficha-preview-placeholder"
+                                            style="text-align: center; color: #4caf50;">
+                                            <i class="fas fa-file-contract"
+                                                style="font-size: 4rem; margin-bottom: 1rem;"></i>
+                                            <p style="font-weight: 600;">Ficha de Filiação</p>
+                                            <p style="font-size: 0.875rem;">
+                                                <?php echo $isEdit ? 'Anexar nova ficha (opcional)' : 'Nenhum arquivo anexado'; ?>
                                             </p>
                                         </div>
                                     </div>
 
-                                    <!-- Campo hidden para sempre enviar automaticamente -->
-                                    <input type="hidden" name="enviar_presidencia" id="enviar_presidencia" value="1">
+                                    <div style="flex: 1;">
+                                        <h4 style="color: #2e7d32; margin-bottom: 1rem;">
+                                            <i class="fas fa-<?php echo $isEdit ? 'plus-circle' : 'check-circle'; ?>"></i> 
+                                            <?php echo $isEdit ? 'Documento Opcional' : 'Documento Obrigatório'; ?>
+                                        </h4>
+                                        <p style="color: #1b5e20; margin-bottom: 1rem;">
+                                            <?php if ($isEdit): ?>
+                                                Você pode anexar uma nova ficha de filiação que será enviada automaticamente para aprovação da presidência.
+                                                Este processo é opcional para associados em edição.
+                                            <?php else: ?>
+                                                É obrigatório anexar a ficha de filiação preenchida e assinada pelo associado.
+                                                Este documento será enviado automaticamente para aprovação da presidência.
+                                            <?php endif; ?>
+                                        </p>
 
-                                    <!-- Informação visual de que será enviado automaticamente -->
-                                    <div
-                                        style="margin-top: 1.5rem; padding: 1rem; background: rgba(76, 175, 80, 0.1); border-radius: 8px; border-left: 4px solid #4caf50;">
-                                        <div style="display: flex; align-items: center; gap: 0.5rem; color: #2e7d32;">
-                                            <i class="fas fa-info-circle"></i>
-                                            <strong>Envio Automático Ativado</strong>
-                                        </div>
-                                        <p style="font-size: 0.875rem; color: #2e7d32; margin-top: 0.5rem; margin-left: 1.5rem;">
-                                            A ficha de filiação será enviada automaticamente para aprovação da presidência após a conclusão do cadastro.
-                                            Este processo é obrigatório para validar a filiação do novo associado.
+                                        <input type="file" name="ficha_assinada" id="ficha_assinada"
+                                            accept=".pdf,.jpg,.jpeg,.png" style="display: none;" 
+                                            <?php echo $isEdit ? '' : 'required'; ?>>
+
+                                        <button type="button" class="btn"
+                                            onclick="document.getElementById('ficha_assinada').click();"
+                                            style="background: #4caf50; color: white; border: none; padding: 0.875rem 1.5rem; border-radius: 12px; font-weight: 600; cursor: pointer;">
+                                            <i class="fas fa-upload"></i> 
+                                            <?php echo $isEdit ? 'Anexar Nova Ficha' : 'Anexar Ficha Assinada'; ?>
+                                        </button>
+
+                                        <p style="font-size: 0.75rem; color: #2e7d32; margin-top: 0.5rem;">
+                                            Formatos aceitos: PDF, JPG, PNG | Tamanho máximo: 10MB
                                         </p>
                                     </div>
                                 </div>
+
+                                <!-- Campo hidden para sempre enviar automaticamente -->
+                                <input type="hidden" name="enviar_presidencia" id="enviar_presidencia" value="1">
+
+                                <!-- Informação visual de que será enviado automaticamente -->
+                                <div style="margin-top: 1.5rem; padding: 1rem; background: rgba(76, 175, 80, 0.1); border-radius: 8px; border-left: 4px solid #4caf50;">
+                                    <div style="display: flex; align-items: center; gap: 0.5rem; color: #2e7d32;">
+                                        <i class="fas fa-info-circle"></i>
+                                        <strong>Envio Automático Ativado</strong>
+                                    </div>
+                                    <p style="font-size: 0.875rem; color: #2e7d32; margin-top: 0.5rem; margin-left: 1.5rem;">
+                                        <?php if ($isEdit): ?>
+                                            Se uma ficha for anexada, ela será enviada automaticamente para aprovação da presidência após a atualização do cadastro.
+                                        <?php else: ?>
+                                            A ficha de filiação será enviada automaticamente para aprovação da presidência após a conclusão do cadastro.
+                                            Este processo é obrigatório para validar a filiação do novo associado.
+                                        <?php endif; ?>
+                                    </p>
+                                </div>
                             </div>
-                        <?php endif; ?>
+                        </div>
                     </div>
                 </div>
 
