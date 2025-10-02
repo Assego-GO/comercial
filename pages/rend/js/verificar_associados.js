@@ -191,19 +191,119 @@ window.VerificarAssociados = (function() {
         return matches.map(match => match[1]);
     }
 
-    function extrairNome(linha) {
+function extrairNome(linha) {
         console.log('🔍 Extraindo nome de:', linha);
         
         let nome = linha;
         
-        nome = nome.replace(/^\d+[\s\-\.]+/g, '');
-        nome = nome.replace(/RG[:\s]*\d{2,6}\.?\d{0,3}/gi, '');
-        nome = nome.replace(/\b(CAP|1°?\s*SGT|2°?\s*SGT|3°?\s*SGT|CB|TEN|MAJ|TC|CEL)\b/gi, '');
-        nome = nome.replace(/\b\d{3,6}\b/g, '');
-        nome = nome.replace(/[\-\.\:]/g, ' ');
-        nome = nome.replace(/\s+/g, ' ').trim();
+        // NOVO: Detectar formato com vírgulas (PATENTE,CORPORAÇÃO,NOME)
+        // Exemplo: "CAP,PM-GO,Tiago Nogueira Chaves"
+        if (linha.includes(',')) {
+            const partes = linha.split(',').map(p => p.trim());
+            
+            console.log('📋 Partes separadas por vírgula:', partes);
+            
+            // Padrões de patentes comuns (incluindo com graus)
+            const padraoPatente = /^(CAP|1[ºo°]?\s*TEN|2[ºo°]?\s*TEN|3[ºo°]?\s*TEN|TEN|1[ºo°]?\s*SGT|2[ºo°]?\s*SGT|3[ºo°]?\s*SGT|SGT|CB|SD|MAJ|TC|CEL|ASP)$/i;
+            
+            // Padrões de corporação e estados
+            const padraoCorporacao = /^(PM[\s\-]?GO|PM[\s\-]?SP|PM[\s\-]?RJ|PMGO|PM|CBM|PC|PP|PI|GO|SP|RJ|MG|BA|PE|CE|PR|SC|RS|DF)$/i;
+            
+            // Se tem 3 ou mais partes
+            if (partes.length >= 3) {
+                const parte1 = partes[0].trim();
+                const parte2 = partes[1].trim();
+                
+                // Verificar se primeira parte é patente e segunda é corporação
+                if (padraoPatente.test(parte1) && padraoCorporacao.test(parte2)) {
+                    // Nome é tudo a partir da terceira parte
+                    nome = partes.slice(2).join(' ').trim();
+                    console.log('✅ Nome extraído do formato CSV (3+ partes):', nome);
+                    return nome.length >= 3 ? nome : null;
+                }
+                
+                // Se primeira parte é patente, pegar a partir da segunda parte
+                if (padraoPatente.test(parte1)) {
+                    // Remover corporação da segunda parte se existir
+                    let restoNome = partes.slice(1).join(' ').trim();
+                    restoNome = restoNome.replace(/^(PM[\s\-]?GO|PM[\s\-]?SP|PMGO|PM|CBM|PC|PP|PI|GO|SP|RJ|MG)[\s,]*/i, '');
+                    nome = restoNome.trim();
+                    console.log('✅ Nome extraído (patente + resto):', nome);
+                    return nome.length >= 3 ? nome : null;
+                }
+            }
+            
+            // Se tem 2 partes
+            if (partes.length === 2) {
+                const parte1 = partes[0].trim();
+                const parte2 = partes[1].trim();
+                
+                // Se primeira parte é patente ou corporação, segunda é nome
+                if (padraoPatente.test(parte1) || padraoCorporacao.test(parte1)) {
+                    // Limpar segunda parte de corporação se tiver
+                    nome = parte2.replace(/^(PM[\s\-]?GO|PM[\s\-]?SP|PMGO|PM|CBM|PC|PP|PI|GO|SP|RJ|MG)[\s]*/i, '').trim();
+                    console.log('✅ Nome extraído (2 partes):', nome);
+                    return nome.length >= 3 ? nome : null;
+                }
+                
+                // Se segunda parte não é só números/corporação, é o nome
+                if (!/^[\dº\s\-]+$/.test(parte2) && !padraoCorporacao.test(parte2)) {
+                    nome = parte2.trim();
+                    console.log('✅ Nome extraído (segunda parte):', nome);
+                    return nome.length >= 3 ? nome : null;
+                }
+            }
+        }
         
-        console.log('✅ Nome final extraído:', nome);
+        // ========== FORMATO TRADICIONAL - LIMPEZA SEQUENCIAL E ROBUSTA ==========
+        console.log('🧹 Iniciando limpeza tradicional:', nome);
+        
+        // 1. Remover numeração inicial
+        nome = nome.replace(/^\d+[\s\-\.]+/g, '');
+        console.log('  Após remover numeração:', nome);
+        
+        // 2. Remover RG explícito
+        nome = nome.replace(/RG[:\s]*\d{2,6}\.?\d{0,3}/gi, '');
+        console.log('  Após remover RG:', nome);
+        
+        // 3. Remover patentes MUITO ESPECÍFICAS primeiro (Agente de Xª classe, etc.)
+        // Usar regex mais abrangente para capturar variações de caracteres especiais
+        nome = nome.replace(/\b(Agente\s+de\s+\d+[ªºa°]\s+classe)\b/gi, '');
+        nome = nome.replace(/\bAgente\b/gi, ''); // Remover "Agente" sozinho também
+        console.log('  Após remover "Agente de X classe":', nome);
+        
+        // 4. Remover códigos GCM com espaços variáveis
+        nome = nome.replace(/\bGCM\s*(NV\s*I{1,3}|NV\s*\d+|RV|AUX|INSP)?\b/gi, '');
+        nome = nome.replace(/\bGCM\b/gi, ''); // Remover GCM sozinho
+        console.log('  Após remover GCM:', nome);
+        
+        // 5. Remover corporações (PP, PM, etc.)
+        nome = nome.replace(/\b(PM\s*GO|PM\s*SP|PM\s*RJ|PM|CBM|PC|PP)\b/gi, '');
+        console.log('  Após remover corporações:', nome);
+        
+        // 6. Remover estados isolados (siglas UF)
+        nome = nome.replace(/\b(AC|AL|AP|AM|BA|CE|DF|ES|GO|MA|MT|MS|MG|PA|PB|PR|PE|PI|RJ|RN|RS|RO|RR|SC|SP|SE|TO)\b/g, '');
+        console.log('  Após remover estados:', nome);
+        
+        // 7. Remover patentes comuns
+        nome = nome.replace(/\b(CAP|CAPITAO|CAPITÃO)\b/gi, '');
+        nome = nome.replace(/\b\d*[ºo°]?\s*(TEN|TENENTE)\b/gi, '');
+        nome = nome.replace(/\b\d*[ºo°]?\s*(SGT|SARGENTO)\b/gi, '');
+        nome = nome.replace(/\b(CB|CABO|SD|SOLDADO|MAJ|MAJOR|TC|CEL|CORONEL|ASP|ASPIRANTE)\b/gi, '');
+        console.log('  Após remover patentes:', nome);
+        
+        // 8. Remover números de RG (3-6 dígitos) que sobraram
+        nome = nome.replace(/\b\d{3,6}\b/g, '');
+        console.log('  Após remover números RG:', nome);
+        
+        // 9. Remover pontuações e caracteres especiais
+        nome = nome.replace(/[,\-\.\:;]/g, ' ');
+        console.log('  Após remover pontuações:', nome);
+        
+        // 10. Limpar espaços múltiplos e trim
+        nome = nome.replace(/\s+/g, ' ').trim();
+        console.log('  Nome FINAL após limpeza:', nome);
+        
         return nome.length >= 3 ? nome : null;
     }
 
