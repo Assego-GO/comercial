@@ -610,6 +610,124 @@ $headerComponent = HeaderComponent::create([
             padding: 0.5rem 0.75rem;
             font-weight: 600;
         }
+
+        /* ===== CSS ADICIONAL PARA BOTÕES BLOQUEADOS ===== */
+/* Adicione este CSS ao arquivo gerar_recorrencia.php e neoconsig_content.php */
+
+/* Estilo para botão bloqueado/desabilitado */
+.btn-generate:disabled,
+.btn-neo-generate:disabled {
+    opacity: 0.6;
+    cursor: not-allowed !important;
+    transform: none !important;
+    box-shadow: none !important;
+    pointer-events: none;
+}
+
+/* Estilo para botão de erro/bloqueado */
+.btn-generate.btn-danger,
+.btn-neo-generate.btn-danger {
+    background: linear-gradient(135deg, #dc3545, #a71e2a);
+    border: none;
+    color: white;
+    cursor: not-allowed;
+    transform: none !important;
+    box-shadow: 0 2px 8px rgba(220, 53, 69, 0.3);
+}
+
+.btn-generate.btn-danger:hover,
+.btn-neo-generate.btn-danger:hover {
+    background: linear-gradient(135deg, #dc3545, #a71e2a);
+    transform: none !important;
+    box-shadow: 0 2px 8px rgba(220, 53, 69, 0.3);
+}
+
+/* Estilo para botão secundário (estado inicial) */
+.btn-generate.btn-secondary,
+.btn-neo-generate.btn-secondary {
+    background: linear-gradient(135deg, #6c757d, #495057);
+    border: none;
+    color: white;
+    cursor: not-allowed;
+    transform: none !important;
+    box-shadow: 0 2px 8px rgba(108, 117, 125, 0.3);
+}
+
+.btn-generate.btn-secondary:hover,
+.btn-neo-generate.btn-secondary:hover {
+    background: linear-gradient(135deg, #6c757d, #495057);
+    transform: none !important;
+    box-shadow: 0 2px 8px rgba(108, 117, 125, 0.3);
+}
+
+/* Animação de pulse para chamar atenção quando bloqueado */
+.btn-blocked-pulse {
+    animation: blockedPulse 2s infinite;
+}
+
+@keyframes blockedPulse {
+    0% { 
+        box-shadow: 0 2px 8px rgba(220, 53, 69, 0.3);
+    }
+    50% { 
+        box-shadow: 0 4px 15px rgba(220, 53, 69, 0.6);
+    }
+    100% { 
+        box-shadow: 0 2px 8px rgba(220, 53, 69, 0.3);
+    }
+}
+
+/* Estilo para alertas informativos sobre botão bloqueado */
+.alert-blocked-info {
+    background: linear-gradient(135deg, #fff3cd, #ffeaa7);
+    border: 2px solid #ffc107;
+    border-radius: 8px;
+    color: #856404;
+    padding: 1rem;
+    margin: 1rem 0;
+    font-weight: 500;
+}
+
+/* Estilo para indicador visual de status do botão */
+.button-status-indicator {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    margin-left: 0.5rem;
+}
+
+.button-status-indicator.blocked {
+    background: #dc3545;
+    color: white;
+}
+
+.button-status-indicator.ready {
+    background: #28a745;
+    color: white;
+}
+
+.button-status-indicator.searching {
+    background: #17a2b8;
+    color: white;
+}
+
+/* Responsivo para dispositivos móveis */
+@media (max-width: 768px) {
+    .btn-generate,
+    .btn-neo-generate {
+        font-size: 0.9rem;
+        padding: 0.75rem 1rem;
+    }
+    
+    .button-status-indicator {
+        display: block;
+        margin: 0.5rem 0 0 0;
+        text-align: center;
+    }
+}
     </style>
 </head>
 
@@ -811,28 +929,56 @@ $headerComponent = HeaderComponent::create([
         const notifications = new NotificationSystem();
 
         document.addEventListener('DOMContentLoaded', function() {
-            // Inicializar AOS
-            AOS.init({ 
-                duration: 800, 
-                once: true,
-                offset: 50
-            });
+    // Inicializar AOS
+    AOS.init({ 
+        duration: 800, 
+        once: true,
+        offset: 50
+    });
 
-            // Inicializar funções
-            toggleCampos();
-            validarMatriculas();
-            
-            // Monitorar mudanças para atualizar preview
-            ['tipo_processamento', 'matriculas', 'rubrica'].forEach(id => {
-                const element = document.getElementById(id);
-                if (element) {
-                    element.addEventListener('change', atualizarPreviewLink);
-                    element.addEventListener('input', atualizarPreviewLink);
-                }
+    // ✅ INICIALIZAR BOTÃO COMO DESABILITADO
+    const btnGerar = document.querySelector('.btn-generate');
+    if (btnGerar) {
+        btnGerar.disabled = true;
+        btnGerar.innerHTML = '<i class="fas fa-search me-2"></i>Busque os Associados Primeiro';
+        btnGerar.classList.add('btn-secondary');
+        btnGerar.classList.remove('btn-success');
+    }
+
+    // ✅ ADICIONAR VALIDAÇÃO NO FORMULÁRIO
+    const form = document.getElementById('formRecorrencia');
+    if (form) {
+        form.addEventListener('submit', validarAntesDeGerar);
+    }
+
+    // Inicializar funções
+    toggleCampos();
+    validarMatriculas();
+    
+    // ✅ RESETAR BOTÃO QUANDO CAMPOS IMPORTANTES MUDAREM
+    ['tipo_processamento', 'matriculas'].forEach(id => {
+        const element = document.getElementById(id);
+        if (element) {
+            element.addEventListener('change', function() {
+                resetarBotaoQuandoCamposMudarem();
+                atualizarPreviewLink();
             });
-            
-            notifications.show('Sistema de Geração de Recorrência carregado com sucesso!', 'info', 3000);
-        });
+            element.addEventListener('input', function() {
+                resetarBotaoQuandoCamposMudarem();
+                atualizarPreviewLink();
+            });
+        }
+    });
+    
+    // Monitorar mudanças para atualizar preview
+    const rubrica = document.getElementById('rubrica');
+    if (rubrica) {
+        rubrica.addEventListener('change', atualizarPreviewLink);
+        rubrica.addEventListener('input', atualizarPreviewLink);
+    }
+    
+    notifications.show('Sistema carregado! Busque os associados antes de gerar o arquivo.', 'info', 3000);
+});
 
         // ===== FUNÇÕES PRINCIPAIS =====
 
@@ -880,127 +1026,217 @@ $headerComponent = HeaderComponent::create([
 
         // Buscar associados via AJAX
         async function buscarAssociados() {
-            const matriculas = document.getElementById('matriculas').value.trim();
-            const previewAssociados = document.getElementById('preview_associados');
-            const loading = document.getElementById('loading_associados');
-            const listaAssociados = document.getElementById('lista_associados');
-            const resumoAssociados = document.getElementById('resumo_associados');
-            
-            if (!matriculas) {
-                notifications.show('Digite as matrículas primeiro', 'warning');
-                return;
-            }
-            
-            // Mostrar loading
-            previewAssociados.style.display = 'block';
-            loading.style.display = 'block';
-            listaAssociados.innerHTML = '';
-            resumoAssociados.innerHTML = '';
-            
-            try {
-                const response = await fetch(`?preview_associados=1&matriculas=${encodeURIComponent(matriculas)}`);
-                const data = await response.json();
+    const matriculas = document.getElementById('matriculas').value.trim();
+    const previewAssociados = document.getElementById('preview_associados');
+    const loading = document.getElementById('loading_associados');
+    const listaAssociados = document.getElementById('lista_associados');
+    const resumoAssociados = document.getElementById('resumo_associados');
+    
+    // ✅ NOVO: Referência ao botão de gerar
+    const btnGerar = document.querySelector('.btn-generate');
+    const formGerar = document.getElementById('formRecorrencia');
+    
+    if (!matriculas) {
+        notifications.show('Digite as matrículas primeiro', 'warning');
+        return;
+    }
+    
+    // Mostrar loading
+    previewAssociados.style.display = 'block';
+    loading.style.display = 'block';
+    listaAssociados.innerHTML = '';
+    resumoAssociados.innerHTML = '';
+    
+    // ✅ NOVO: Desabilitar botão durante a busca
+    if (btnGerar) {
+        btnGerar.disabled = true;
+        btnGerar.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Buscando associados...';
+    }
+    
+    try {
+        const response = await fetch(`?preview_associados=1&matriculas=${encodeURIComponent(matriculas)}`);
+        const data = await response.json();
+        
+        loading.style.display = 'none';
+        
+        if (data.success) {
+            if (data.encontrados.length > 0) {
+                // ✅ ASSOCIADOS ENCONTRADOS - HABILITAR BOTÃO
+                let html = '';
                 
-                loading.style.display = 'none';
-                
-                if (data.success) {
-                    if (data.encontrados.length > 0) {
-                        let html = '';
-                        
-                        data.encontrados.forEach(assoc => {
-                            const cpfFormatado = assoc.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
-                            const tipo = document.getElementById('tipo_processamento').value;
-                            
-                            // Mostrar ID de operação para cancelamentos e alterações
-                            let idOperacaoInfo = '';
-                            if (tipo === '0' || tipo === '2') {
-                                const idOperacao = assoc.id_neoconsig || 'Não encontrado';
-                                idOperacaoInfo = `<br><small><i class="fas fa-key me-1"></i>ID Operação: <span class="badge bg-secondary">${idOperacao}</span></small>`;
-                            }
-                            
-                            // Mostrar vínculo servidor
-                            let vinculoInfo = '';
-                            if (assoc.vinculoServidor) {
-                                vinculoInfo = `<br><small><i class="fas fa-id-badge me-1"></i>Vínculo: <span class="badge bg-info">${assoc.vinculoServidor}</span></small>`;
-                            }
-                            
-                            html += `
-                                <div class="associado-card">
-                                    <div class="associado-info">
-                                        <strong><i class="fas fa-user me-2"></i>${assoc.nome}</strong><br>
-                                        <small class="text-muted">
-                                            <i class="fas fa-id-badge me-1"></i>Matrícula: <span class="badge bg-primary">${assoc.id}</span> 
-                                            | <i class="fas fa-id-card me-1"></i>CPF: <code>${cpfFormatado}</code>${vinculoInfo}${idOperacaoInfo}
-                                        </small>
-                                    </div>
-                                    <div class="associado-valor">
-                                        <i class="fas fa-dollar-sign me-1"></i>R$ ${parseFloat(assoc.valor_total).toLocaleString('pt-BR', {minimumFractionDigits: 2})}
-                                    </div>
-                                </div>
-                            `;
-                        });
-                        
-                        listaAssociados.innerHTML = html;
-                        
-                        // Mostrar resumo
-                        let resumoHtml = `
-                            <div class="alert alert-success mt-3">
-                                <div class="row text-center">
-                                    <div class="col-md-4">
-                                        <strong><i class="fas fa-users me-2"></i>Encontrados:</strong> ${data.total_encontrados}
-                                    </div>
-                                    <div class="col-md-4">
-                                        <strong><i class="fas fa-money-bill-wave me-2"></i>Total Mensal:</strong> R$ ${parseFloat(data.valor_total).toLocaleString('pt-BR', {minimumFractionDigits: 2})}
-                                    </div>
-                                    <div class="col-md-4">
-                                        <strong><i class="fas fa-calculator me-2"></i>Média:</strong> R$ ${(parseFloat(data.valor_total) / data.total_encontrados).toLocaleString('pt-BR', {minimumFractionDigits: 2})}
-                                    </div>
-                                </div>
-                            </div>
-                        `;
-                        
-                        if (data.nao_encontrados.length > 0) {
-                            resumoHtml += `
-                                <div class="alert alert-warning mt-2">
-                                    <strong><i class="fas fa-exclamation-triangle me-2"></i>Não encontrados:</strong> ${data.nao_encontrados.join(', ')}
-                                </div>
-                            `;
-                        }
-                        
-                        resumoAssociados.innerHTML = resumoHtml;
-                        
-                        notifications.show(`${data.total_encontrados} associados encontrados!`, 'success');
-                        
-                    } else {
-                        listaAssociados.innerHTML = `
-                            <div class="alert alert-warning">
-                                <i class="fas fa-exclamation-triangle me-2"></i>
-                                Nenhum associado encontrado com as matrículas informadas.
-                            </div>
-                        `;
-                        notifications.show('Nenhum associado encontrado', 'warning');
+                data.encontrados.forEach(assoc => {
+                    const cpfFormatado = assoc.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+                    const tipo = document.getElementById('tipo_processamento').value;
+                    
+                    // Mostrar ID de operação para cancelamentos e alterações
+                    let idOperacaoInfo = '';
+                    if (tipo === '0' || tipo === '2') {
+                        const idOperacao = assoc.id_neoconsig || 'Não encontrado';
+                        idOperacaoInfo = `<br><small><i class="fas fa-key me-1"></i>ID Operação: <span class="badge bg-secondary">${idOperacao}</span></small>`;
                     }
-                } else {
-                    listaAssociados.innerHTML = `
-                        <div class="alert alert-danger">
-                            <i class="fas fa-exclamation-circle me-2"></i>
-                            Erro: ${data.error}
+                    
+                    // Mostrar vínculo servidor
+                    let vinculoInfo = '';
+                    if (assoc.vinculoServidor) {
+                        vinculoInfo = `<br><small><i class="fas fa-id-badge me-1"></i>Vínculo: <span class="badge bg-info">${assoc.vinculoServidor}</span></small>`;
+                    }
+                    
+                    html += `
+                        <div class="associado-card">
+                            <div class="associado-info">
+                                <strong><i class="fas fa-user me-2"></i>${assoc.nome}</strong><br>
+                                <small class="text-muted">
+                                    <i class="fas fa-id-badge me-1"></i>Matrícula: <span class="badge bg-primary">${assoc.id}</span> 
+                                    | <i class="fas fa-id-card me-1"></i>CPF: <code>${cpfFormatado}</code>${vinculoInfo}${idOperacaoInfo}
+                                </small>
+                            </div>
+                            <div class="associado-valor">
+                                <i class="fas fa-dollar-sign me-1"></i>R$ ${parseFloat(assoc.valor_total).toLocaleString('pt-BR', {minimumFractionDigits: 2})}
+                            </div>
                         </div>
                     `;
-                    notifications.show('Erro na busca: ' + data.error, 'error');
-                }
+                });
                 
-            } catch (error) {
-                loading.style.display = 'none';
-                listaAssociados.innerHTML = `
-                    <div class="alert alert-danger">
-                        <i class="fas fa-exclamation-circle me-2"></i>
-                        Erro na comunicação: ${error.message}
+                listaAssociados.innerHTML = html;
+                
+                // Mostrar resumo
+                let resumoHtml = `
+                    <div class="alert alert-success mt-3">
+                        <div class="row text-center">
+                            <div class="col-md-4">
+                                <strong><i class="fas fa-users me-2"></i>Encontrados:</strong> ${data.total_encontrados}
+                            </div>
+                            <div class="col-md-4">
+                                <strong><i class="fas fa-money-bill-wave me-2"></i>Total Mensal:</strong> R$ ${parseFloat(data.valor_total).toLocaleString('pt-BR', {minimumFractionDigits: 2})}
+                            </div>
+                            <div class="col-md-4">
+                                <strong><i class="fas fa-calculator me-2"></i>Média:</strong> R$ ${(parseFloat(data.valor_total) / data.total_encontrados).toLocaleString('pt-BR', {minimumFractionDigits: 2})}
+                            </div>
+                        </div>
                     </div>
                 `;
-                notifications.show('Erro na comunicação com o servidor', 'error');
+                
+                if (data.nao_encontrados.length > 0) {
+                    resumoHtml += `
+                        <div class="alert alert-warning mt-2">
+                            <strong><i class="fas fa-exclamation-triangle me-2"></i>Não encontrados:</strong> ${data.nao_encontrados.join(', ')}
+                        </div>
+                    `;
+                }
+                
+                resumoAssociados.innerHTML = resumoHtml;
+                
+                // ✅ HABILITAR BOTÃO - ASSOCIADOS ENCONTRADOS
+                if (btnGerar) {
+                    btnGerar.disabled = false;
+                    btnGerar.innerHTML = '<i class="fas fa-file-download me-2"></i>Gerar e Baixar Arquivo TXT';
+                    btnGerar.classList.remove('btn-danger');
+                    btnGerar.classList.add('btn-success');
+                }
+                
+                notifications.show(`${data.total_encontrados} associados encontrados! Botão liberado.`, 'success');
+                
+            } else {
+                // ✅ NENHUM ASSOCIADO ENCONTRADO - BLOQUEAR BOTÃO
+                listaAssociados.innerHTML = `
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Nenhum associado encontrado com as matrículas informadas.
+                        <br><strong>O arquivo não pode ser gerado sem associados válidos.</strong>
+                    </div>
+                `;
+                
+                // ✅ BLOQUEAR BOTÃO
+                if (btnGerar) {
+                    btnGerar.disabled = true;
+                    btnGerar.innerHTML = '<i class="fas fa-ban me-2"></i>Nenhum Associado - Arquivo Bloqueado';
+                    btnGerar.classList.remove('btn-success');
+                    btnGerar.classList.add('btn-danger');
+                }
+                
+                notifications.show('Nenhum associado encontrado. Geração de arquivo bloqueada.', 'error');
             }
+        } else {
+            // ✅ ERRO NA BUSCA - BLOQUEAR BOTÃO
+            listaAssociados.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-circle me-2"></i>
+                    Erro: ${data.error}
+                </div>
+            `;
+            
+            // ✅ BLOQUEAR BOTÃO
+            if (btnGerar) {
+                btnGerar.disabled = true;
+                btnGerar.innerHTML = '<i class="fas fa-exclamation-triangle me-2"></i>Erro na Busca - Arquivo Bloqueado';
+                btnGerar.classList.remove('btn-success');
+                btnGerar.classList.add('btn-danger');
+            }
+            
+            notifications.show('Erro na busca: ' + data.error, 'error');
         }
+        
+    } catch (error) {
+        loading.style.display = 'none';
+        listaAssociados.innerHTML = `
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-circle me-2"></i>
+                Erro na comunicação: ${error.message}
+            </div>
+        `;
+        
+        // ✅ ERRO DE COMUNICAÇÃO - BLOQUEAR BOTÃO
+        if (btnGerar) {
+            btnGerar.disabled = true;
+            btnGerar.innerHTML = '<i class="fas fa-wifi me-2"></i>Erro de Comunicação - Arquivo Bloqueado';
+            btnGerar.classList.remove('btn-success');
+            btnGerar.classList.add('btn-danger');
+        }
+        
+        notifications.show('Erro na comunicação com o servidor', 'error');
+    }
+}
+
+// ===== NOVA FUNÇÃO PARA VALIDAR ANTES DO ENVIO =====
+function validarAntesDeGerar(event) {
+    const btnGerar = document.querySelector('.btn-generate');
+    
+    // Se o botão estiver desabilitado, impedir o envio
+    if (btnGerar && btnGerar.disabled) {
+        event.preventDefault();
+        notifications.show('Você precisa buscar associados válidos antes de gerar o arquivo!', 'error');
+        return false;
+    }
+    
+    // Verificar se foi feita uma busca
+    const previewAssociados = document.getElementById('preview_associados');
+    const listaAssociados = document.getElementById('lista_associados');
+    
+    if (!previewAssociados || previewAssociados.style.display === 'none' || !listaAssociados.innerHTML.includes('associado-card')) {
+        event.preventDefault();
+        notifications.show('Você deve buscar os associados primeiro clicando em "Buscar Associado(s)"!', 'warning');
+        return false;
+    }
+    
+    return true;
+}
+
+// ===== FUNÇÃO PARA RESETAR BOTÃO QUANDO CAMPOS MUDAREM =====
+function resetarBotaoQuandoCamposMudarem() {
+    const btnGerar = document.querySelector('.btn-generate');
+    const previewAssociados = document.getElementById('preview_associados');
+    
+    if (btnGerar) {
+        btnGerar.disabled = true;
+        btnGerar.innerHTML = '<i class="fas fa-search me-2"></i>Busque os Associados Primeiro';
+        btnGerar.classList.remove('btn-success', 'btn-danger');
+        btnGerar.classList.add('btn-secondary');
+    }
+    
+    if (previewAssociados) {
+        previewAssociados.style.display = 'none';
+    }
+}
 
         function atualizarPreviewLink() {
             const form = document.getElementById('formRecorrencia');
