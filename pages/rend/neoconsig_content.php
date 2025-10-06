@@ -415,6 +415,125 @@ if (!$temPermissaoFinanceiro) {
     font-size: 0.9rem;
 }
 
+
+/* ===== CSS ADICIONAL PARA BOTÕES BLOQUEADOS ===== */
+/* Adicione este CSS ao arquivo gerar_recorrencia.php e neoconsig_content.php */
+
+/* Estilo para botão bloqueado/desabilitado */
+.btn-generate:disabled,
+.btn-neo-generate:disabled {
+    opacity: 0.6;
+    cursor: not-allowed !important;
+    transform: none !important;
+    box-shadow: none !important;
+    pointer-events: none;
+}
+
+/* Estilo para botão de erro/bloqueado */
+.btn-generate.btn-danger,
+.btn-neo-generate.btn-danger {
+    background: linear-gradient(135deg, #dc3545, #a71e2a);
+    border: none;
+    color: white;
+    cursor: not-allowed;
+    transform: none !important;
+    box-shadow: 0 2px 8px rgba(220, 53, 69, 0.3);
+}
+
+.btn-generate.btn-danger:hover,
+.btn-neo-generate.btn-danger:hover {
+    background: linear-gradient(135deg, #dc3545, #a71e2a);
+    transform: none !important;
+    box-shadow: 0 2px 8px rgba(220, 53, 69, 0.3);
+}
+
+/* Estilo para botão secundário (estado inicial) */
+.btn-generate.btn-secondary,
+.btn-neo-generate.btn-secondary {
+    background: linear-gradient(135deg, #6c757d, #495057);
+    border: none;
+    color: white;
+    cursor: not-allowed;
+    transform: none !important;
+    box-shadow: 0 2px 8px rgba(108, 117, 125, 0.3);
+}
+
+.btn-generate.btn-secondary:hover,
+.btn-neo-generate.btn-secondary:hover {
+    background: linear-gradient(135deg, #6c757d, #495057);
+    transform: none !important;
+    box-shadow: 0 2px 8px rgba(108, 117, 125, 0.3);
+}
+
+/* Animação de pulse para chamar atenção quando bloqueado */
+.btn-blocked-pulse {
+    animation: blockedPulse 2s infinite;
+}
+
+@keyframes blockedPulse {
+    0% { 
+        box-shadow: 0 2px 8px rgba(220, 53, 69, 0.3);
+    }
+    50% { 
+        box-shadow: 0 4px 15px rgba(220, 53, 69, 0.6);
+    }
+    100% { 
+        box-shadow: 0 2px 8px rgba(220, 53, 69, 0.3);
+    }
+}
+
+/* Estilo para alertas informativos sobre botão bloqueado */
+.alert-blocked-info {
+    background: linear-gradient(135deg, #fff3cd, #ffeaa7);
+    border: 2px solid #ffc107;
+    border-radius: 8px;
+    color: #856404;
+    padding: 1rem;
+    margin: 1rem 0;
+    font-weight: 500;
+}
+
+/* Estilo para indicador visual de status do botão */
+.button-status-indicator {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    margin-left: 0.5rem;
+}
+
+.button-status-indicator.blocked {
+    background: #dc3545;
+    color: white;
+}
+
+.button-status-indicator.ready {
+    background: #28a745;
+    color: white;
+}
+
+.button-status-indicator.searching {
+    background: #17a2b8;
+    color: white;
+}
+
+/* Responsivo para dispositivos móveis */
+@media (max-width: 768px) {
+    .btn-generate,
+    .btn-neo-generate {
+        font-size: 0.9rem;
+        padding: 0.75rem 1rem;
+    }
+    
+    .button-status-indicator {
+        display: block;
+        margin: 0.5rem 0 0 0;
+        text-align: center;
+    }
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     .neoconsig-container {
