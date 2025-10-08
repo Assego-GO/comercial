@@ -273,6 +273,14 @@ try {
             }
         }
 
+        if ($ficouDesfiliado && $mudouSituacao){
+            $cpfTitular = $dados['cpf'];
+            $associados->desfiliarDependentes($cpfTitular, $funcionarioId, "Desfiliação automática via edição do titular");
+            $stmt = $db->prepare("UPDATE Associados SET situacao = 'DESFILIADO', data_desfiliacao = NOW() WHERE cpf = ? AND id != ?");
+            $stmt->execute([$cpfTitular, $associadoId]);
+            error_log("✓ Dependentes também desfilidados automaticamente");
+        }
+
         error_log("✓ Dados básicos atualizados pelo usuário: " . $usuarioLogado['nome']);
 
 

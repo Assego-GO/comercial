@@ -112,10 +112,12 @@ function aplicarMascaras() {
 }
 
 // Inicializar Select2
+// Inicializar Select2
 function inicializarSelect2() {
     console.log('Inicializando Select2...');
     
-    $('.form-select').select2({
+    // Select2 PADRÃO (sem digitação livre) - para campos que devem ter apenas opções fixas
+    $('.form-select').not('#corporacao, #patente, #categoria, #lotacao').select2({
         language: 'pt-BR',
         theme: 'default',
         width: '100%',
@@ -124,7 +126,85 @@ function inicializarSelect2() {
         }
     });
     
-    console.log('✓ Select2 inicializado');
+    // ========================================
+    // 🆕 SELECT2 COM DIGITAÇÃO LIVRE (TAGS)
+    // ========================================
+    
+    // Corporação - pode selecionar ou digitar
+    $('#corporacao').select2({
+        language: 'pt-BR',
+        theme: 'default',
+        width: '100%',
+        placeholder: 'Selecione ou digite a corporação...',
+        allowClear: true,
+        tags: true, // 👈 PERMITE DIGITAÇÃO LIVRE
+        createTag: function (params) {
+            var term = $.trim(params.term);
+            if (term === '') {
+                return null;
+            }
+            return {
+                id: term,
+                text: term,
+                newTag: true
+            }
+        }
+    });
+    
+    // Patente - pode selecionar ou digitar
+    $('#patente').select2({
+        language: 'pt-BR',
+        theme: 'default',
+        width: '100%',
+        placeholder: 'Selecione ou digite a patente...',
+        allowClear: true,
+        tags: true, // 👈 PERMITE DIGITAÇÃO LIVRE
+        dropdownParent: $('#patente').parent(),
+        createTag: function (params) {
+            var term = $.trim(params.term);
+            if (term === '') {
+                return null;
+            }
+            return {
+                id: term,
+                text: term,
+                newTag: true
+            }
+        }
+    });
+    
+    // Situação Funcional (categoria) - pode selecionar ou digitar
+    $('#categoria').select2({
+        language: 'pt-BR',
+        theme: 'default',
+        width: '100%',
+        placeholder: 'Selecione ou digite a situação...',
+        allowClear: true,
+        tags: true, // 👈 PERMITE DIGITAÇÃO LIVRE
+        createTag: function (params) {
+            var term = $.trim(params.term);
+            if (term === '') {
+                return null;
+            }
+            return {
+                id: term,
+                text: term,
+                newTag: true
+            }
+        }
+    });
+    
+    // Lotação - pode selecionar ou digitar (já tinha Select2, agora com tags)
+    $('#lotacao').select2({
+        language: 'pt-BR',
+        theme: 'default',
+        width: '100%',
+        placeholder: 'Selecione ou digite a lotação...',
+        allowClear: true,
+        tags: true // 👈 PERMITE DIGITAÇÃO LIVRE
+    });
+    
+    console.log('✓ Select2 inicializado (com digitação livre nos campos militares)');
 }
 
 // Inicializar uploads e previews
