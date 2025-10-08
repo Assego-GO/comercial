@@ -697,7 +697,7 @@ $patentes = [
         'Cabo',
         'Terceiro Sargento',
         'Terceiro-Sargento',
-        'Segundo Sargento',
+    
         'Segundo-Sargento',
         'Primeiro Sargento',
         'Primeiro-Sargento',
@@ -1127,8 +1127,7 @@ $headerComponent = HeaderComponent::create([
                             <select class="form-input form-select" name="situacao" id="situacao" required>
                                 <option value="Filiado" <?php echo (!isset($associadoData['situacao']) || $associadoData['situacao'] == 'Filiado') ? 'selected' : ''; ?>>Filiado</option>
                                 <option value="Desfiliado" <?php echo (isset($associadoData['situacao']) && $associadoData['situacao'] == 'Desfiliado') ? 'selected' : ''; ?>>Desfiliado</option>
-                                <option value="Remido" <?php echo (isset($associadoData['situacao']) && $associadoData['situacao'] == 'Remido') ? 'selected' : ''; ?>>Remido</option>
-                                <option value="Agregado" <?php echo (isset($associadoData['situacao']) && $associadoData['situacao'] == 'Agregado') ? 'selected' : ''; ?>>Agregado</option>
+                               
                             </select>
                         </div>
 
@@ -1144,8 +1143,8 @@ $headerComponent = HeaderComponent::create([
 
                         <div class="form-group full-width">
                             <label class="form-label">
-                                Foto do Associado <span class="required">*</span>
-                            </label>
+    Foto do Associado <span style="color: #6c757d; font-weight: normal;">(opcional)</span>
+</label>
                             <div class="photo-upload-container">
                                 <div class="photo-preview" id="photoPreview">
                                     <?php if (isset($associadoData['foto']) && $associadoData['foto']): ?>
@@ -1165,8 +1164,7 @@ $headerComponent = HeaderComponent::create([
                                     <?php endif; ?>
                                 </div>
                                 <div>
-                                    <input type="file" name="foto" id="foto" accept="image/*" style="display: none;"
-                                        <?php echo $isEdit ? '' : 'required'; ?>>
+                                    <input type="file" name="foto" id="foto" accept="image/*" style="display: none;">
                                     <button type="button" class="photo-upload-btn"
                                         onclick="document.getElementById('foto').click();">
                                         <i class="fas fa-upload"></i>
@@ -1286,27 +1284,33 @@ $headerComponent = HeaderComponent::create([
                         </div>
 
                         <div class="form-group">
-                            <label class="form-label">Patente</label>
-                            <select class="form-input form-select" name="patente" id="patente" data-current-value="<?php echo isset($associadoData['patente']) ? htmlspecialchars($associadoData['patente'], ENT_QUOTES, 'UTF-8') : ''; ?>">
-                                <option value="">Selecione...</option>
-                                <?php
-                                // Lista todas as patentes sem grupos
-                                $todasPatentes = array();
-                                foreach ($patentes as $grupo => $listPatentes) {
-                                    foreach ($listPatentes as $patente) {
-                                        $todasPatentes[] = $patente;
-                                    }
-                                }
-                                sort($todasPatentes);
+    <label class="form-label">Patente</label>
+    <select class="form-input form-select" name="patente" id="patente" data-current-value="<?php echo isset($associadoData['patente']) ? htmlspecialchars($associadoData['patente'], ENT_QUOTES, 'UTF-8') : ''; ?>">
+        <option value="">Selecione...</option>
+        
+        <!-- 🆕 OPÇÃO "NENHUMA" ADICIONADA -->
+        <option value="Nenhuma" <?php echo (isset($associadoData['patente']) && $associadoData['patente'] == 'Nenhuma') ? 'selected' : ''; ?>>
+            Nenhuma
+        </option>
+        
+        <?php
+        // Lista todas as patentes sem grupos
+        $todasPatentes = array();
+        foreach ($patentes as $grupo => $listPatentes) {
+            foreach ($listPatentes as $patente) {
+                $todasPatentes[] = $patente;
+            }
+        }
+        sort($todasPatentes);
 
-                                foreach ($todasPatentes as $patente): ?>
-                                    <option value="<?php echo htmlspecialchars($patente, ENT_QUOTES, 'UTF-8'); ?>"
-                                        <?php echo (isset($associadoData['patente']) && $associadoData['patente'] == $patente) ? 'selected' : ''; ?>>
-                                        <?php echo htmlspecialchars($patente, ENT_QUOTES, 'UTF-8'); ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
+        foreach ($todasPatentes as $patente): ?>
+            <option value="<?php echo htmlspecialchars($patente, ENT_QUOTES, 'UTF-8'); ?>"
+                <?php echo (isset($associadoData['patente']) && $associadoData['patente'] == $patente) ? 'selected' : ''; ?>>
+                <?php echo htmlspecialchars($patente, ENT_QUOTES, 'UTF-8'); ?>
+            </option>
+        <?php endforeach; ?>
+    </select>
+</div>
 
                         <div class="form-group">
                             <label class="form-label">
