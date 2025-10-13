@@ -57,7 +57,7 @@ if (!$temPermissaoFinanceiro && isset($usuarioLogado['departamento_id'])) {
     if ($deptId == 10) { // Comercial
         $temPermissaoFinanceiro = true;
         $isFinanceiro = true;
-        error_log("✅ Permissão concedida: Usuário pertence ao Setor Financeiro (ID: 10)");
+        error_log("✅ Permissão concedida: Usuário pertence ao Setor Financeiro (ID: 2)");
     } elseif ($deptId == 1) { // Presidência
         $temPermissaoFinanceiro = true;
         $isPresidencia = true;
@@ -80,6 +80,11 @@ if (!$temPermissaoFinanceiro) {
         ($isFinanceiro ? "Financeiro" : "Presidência")));
 }
 
+// Log final do resultado
+if (!$temPermissaoFinanceiro) {
+    error_log("❌ ACESSO NEGADO AOS SERVIÇOS FINANCEIROS: " . $motivoNegacao);
+}
+
 // Se não tem permissão, só renderiza a tela de acesso negado
 if (!$temPermissaoFinanceiro) {
     $headerComponent = HeaderComponent::create([
@@ -89,78 +94,78 @@ if (!$temPermissaoFinanceiro) {
         'notificationCount' => 0,
         'showSearch' => true
     ]);
-?>
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Acesso Negado - ASSEGO</title>
-    <link rel="stylesheet" href="../assets/css/style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-</head>
+    ?>
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title><?php echo $page_title; ?></title>
+        <link rel="icon" href="../assets/img/favicon.ico" type="image/x-icon">
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+        <?php $headerComponent->renderCSS(); ?>
+        <style>
+            body { font-family: 'Plus Jakarta Sans', sans-serif; background: #f8f9fa; }
+            .main-wrapper { min-height: 100vh; display: flex; flex-direction: column; }
+            .content-area { flex: 1; padding: 2rem; }
+        </style>
+    </head>
     <body>
-        <?php echo $headerComponent; ?>
-        
-        <div class="container" style="margin-top: 2rem;">
-            <div class="card" style="max-width: 600px; margin: 2rem auto; text-align: center; padding: 3rem;">
-                <div style="font-size: 4rem; color: #dc3545; margin-bottom: 1rem;">
-                    <i class="fas fa-lock"></i>
+        <div class="main-wrapper">
+            <?php $headerComponent->render(); ?>
+            <div class="content-area">
+                <div class="alert alert-danger">
+                    <h4><i class="fas fa-ban me-2"></i>Acesso Negado aos Serviços Financeiros</h4>
+                    <p class="mb-3"><?php echo htmlspecialchars($motivoNegacao); ?></p>
+                    <a href="dashboard.php" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left me-1"></i>
+                        Voltar ao Dashboard
+                    </a>
                 </div>
-                <h2 style="color: #dc3545; margin-bottom: 1rem;">Acesso Negado</h2>
-                <p style="color: #666; font-size: 1.1rem; margin-bottom: 2rem;">
-                    <?php echo htmlspecialchars($motivoNegacao); ?>
-                </p>
-                <a href="dashboard.php" class="btn btn-primary">
-                    <i class="fas fa-arrow-left"></i> Voltar ao Dashboard
-                </a>
             </div>
         </div>
+        <?php $headerComponent->renderJS(); ?>
     </body>
     </html>
     <?php
     exit;
 }
 
-// ============================================
-// VERIFICAÇÃO SE É MODO EDIÇÃO
-// ============================================
-$isEdit = isset($_GET['id']) && !empty($_GET['id']);
+// CONTINUA COM O FORMULÁRIO COMPLETO ORIGINAL SE TEM PERMISSÃO...
+
+// Verifica se é edição
+$isEdit = isset($_GET['id']) && is_numeric($_GET['id']);
 $associadoId = $isEdit ? intval($_GET['id']) : null;
-$associadoData = [];
+$associadoData = null;
 
 if ($isEdit) {
     try {
         $db = Database::getInstance(DB_NAME_CADASTRO)->getConnection();
 
-        // ==================================================
-        // 1. BUSCA DADOS BÁSICOS DO ASSOCIADO
-        // ==================================================
-    $stmt = $db->prepare('SELECT * FROM Associados WHERE id = ? LIMIT 1');
+        error_log("=== INÍCIO BUSCA DADOS ASSOCIADO ===");
+        error_log("Associado ID: $associadoId");
+
+        // 1. BUSCA DADOS PRINCIPAIS DO ASSOCIADO
+        $stmt = $db->prepare("SELECT * FROM Associados WHERE id = ?");
         $stmt->execute([$associadoId]);
         $associadoData = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if (!$associadoData) {
-            error_log("❌ Associado não encontrado - ID: " . $associadoId);
-            echo '<div style="max-width:600px;margin:3rem auto;padding:2rem;border:1px solid #dc3545;background:#fff3f3;color:#dc3545;text-align:center;font-size:1.2rem;">';
-            echo '<h2>Erro ao carregar dados</h2>';
-            echo '<p>O associado de ID <b>' . htmlspecialchars($associadoId) . '</b> não foi encontrado no sistema.</p>';
-            echo '<a href="dashboard.php" style="display:inline-block;margin-top:1.5rem;padding:0.7rem 2rem;background:#dc3545;color:#fff;text-decoration:none;border-radius:5px;">Voltar ao Dashboard</a>';
-            echo '</div>';
+            error_log("ERRO: Associado não encontrado com ID: $associadoId");
+            header('Location: dashboard.php');
             exit;
         }
 
-        error_log("✅ Modo edição - Associado ID: " . $associadoId . " - Nome: " . $associadoData['nome']);
         error_log("✓ Dados básicos do associado carregados");
 
-        // ==================================================
-        // 2. BUSCA DADOS MILITARES
-        // ==================================================
+        // 2. BUSCA DADOS MILITARES - MÉTODO DIRETO
         $stmtMilitar = $db->prepare("SELECT * FROM Militar WHERE associado_id = ?");
         $stmtMilitar->execute([$associadoId]);
         $dadosMilitar = $stmtMilitar->fetch(PDO::FETCH_ASSOC);
 
         if ($dadosMilitar) {
+            // Se encontrou dados militares, adiciona ao array principal
             $associadoData['corporacao'] = $dadosMilitar['corporacao'];
             $associadoData['patente'] = $dadosMilitar['patente'];
             $associadoData['categoria'] = $dadosMilitar['categoria'];
@@ -170,7 +175,9 @@ if ($isEdit) {
             error_log("✓ Dados militares encontrados:");
             error_log("  - Patente: '" . ($dadosMilitar['patente'] ?? 'VAZIO') . "'");
             error_log("  - Corporação: '" . ($dadosMilitar['corporacao'] ?? 'VAZIO') . "'");
+            error_log("  - Categoria: '" . ($dadosMilitar['categoria'] ?? 'VAZIO') . "'");
         } else {
+            // Se não encontrou, cria registro vazio e define valores padrão
             error_log("⚠ Nenhum dado militar encontrado. Criando registro...");
 
             $stmtInsert = $db->prepare("
@@ -179,6 +186,7 @@ if ($isEdit) {
             ");
             $stmtInsert->execute([$associadoId]);
 
+            // Define valores vazios no array
             $associadoData['corporacao'] = '';
             $associadoData['patente'] = '';
             $associadoData['categoria'] = '';
@@ -188,9 +196,7 @@ if ($isEdit) {
             error_log("✓ Registro militar criado com valores vazios");
         }
 
-        // ==================================================
         // 3. BUSCA DADOS DE ENDEREÇO
-        // ==================================================
         $stmtEndereco = $db->prepare("SELECT * FROM Endereco WHERE associado_id = ?");
         $stmtEndereco->execute([$associadoId]);
         $dadosEndereco = $stmtEndereco->fetch(PDO::FETCH_ASSOC);
@@ -205,9 +211,7 @@ if ($isEdit) {
             error_log("✓ Dados de endereço carregados");
         }
 
-        // ==================================================
         // 4. BUSCA DADOS FINANCEIROS
-        // ==================================================
         $stmtFinanceiro = $db->prepare("SELECT * FROM Financeiro WHERE associado_id = ?");
         $stmtFinanceiro->execute([$associadoId]);
         $dadosFinanceiro = $stmtFinanceiro->fetch(PDO::FETCH_ASSOC);
@@ -224,9 +228,7 @@ if ($isEdit) {
             error_log("✓ Dados financeiros carregados");
         }
 
-        // ==================================================
         // 5. BUSCA DADOS DE CONTRATO/FILIAÇÃO
-        // ==================================================
         $stmtContrato = $db->prepare("SELECT * FROM Contrato WHERE associado_id = ?");
         $stmtContrato->execute([$associadoId]);
         $dadosContrato = $stmtContrato->fetch(PDO::FETCH_ASSOC);
@@ -237,125 +239,29 @@ if ($isEdit) {
             error_log("✓ Dados de contrato carregados");
         }
 
-        // ==================================================
         // 6. BUSCA DEPENDENTES
-        // ==================================================
         $stmtDep = $db->prepare("SELECT * FROM Dependentes WHERE associado_id = ? ORDER BY nome ASC");
         $stmtDep->execute([$associadoId]);
         $dependentes = $stmtDep->fetchAll(PDO::FETCH_ASSOC);
         $associadoData['dependentes'] = $dependentes;
         error_log("✓ Dependentes carregados: " . count($dependentes));
 
-        // ==================================================
         // DEBUG FINAL
-        // ==================================================
         error_log("=== RESULTADO FINAL ===");
         error_log("Patente final: '" . ($associadoData['patente'] ?? 'NULL') . "'");
         error_log("Corporação final: '" . ($associadoData['corporacao'] ?? 'NULL') . "'");
         error_log("Total de campos carregados: " . count($associadoData));
         error_log("=== FIM BUSCA DADOS ===");
-        
     } catch (Exception $e) {
-    error_log("ERRO na busca de dados: " . $e->getMessage());
-    error_log("Stack trace: " . $e->getTraceAsString());
-    echo '<div style="max-width:600px;margin:3rem auto;padding:2rem;border:1px solid #dc3545;background:#fff3f3;color:#dc3545;text-align:center;font-size:1.2rem;">';
-    echo '<h2>Erro ao carregar dados do associado</h2>';
-    echo '<p><b>Mensagem:</b> ' . htmlspecialchars($e->getMessage()) . '</p>';
-    echo '<pre style="text-align:left;font-size:0.95rem;color:#333;background:#f8d7da;padding:1rem;border-radius:5px;overflow-x:auto;">' . htmlspecialchars($e->getTraceAsString()) . '</pre>';
-    echo '<a href="dashboard.php" style="display:inline-block;margin-top:1.5rem;padding:0.7rem 2rem;background:#dc3545;color:#fff;text-decoration:none;border-radius:5px;">Voltar ao Dashboard</a>';
-    echo '</div>';
-    exit;
+        error_log("ERRO na busca de dados: " . $e->getMessage());
+        error_log("Stack trace: " . $e->getTraceAsString());
+        header('Location: dashboard.php');
+        exit;
     }
 
     $page_title = 'Editar Associado - ASSEGO (Setor Financeiro)';
 }
 
-// ============================================
-// VERIFICAÇÃO SÓCIO AGREGADO - VERSÃO COMPLETA
-// ============================================
-$isSocioAgregado = false;
-$nomeResponsavelAgregado = '';
-$dadosTitular = null;
-$relacionamentoAgregado = null;
-
-if ($isEdit && !empty($associadoData['cpf'])) {
-    $cpfAgregado = preg_replace('/\D/', '', $associadoData['cpf']);
-    $db = Database::getInstance(DB_NAME_CADASTRO)->getConnection();
-    
-    error_log("🔍 Verificando se é agregado - CPF: " . $cpfAgregado);
-    
-    try {
-        // Busca dados completos do agregado e do titular
-        $stmt = $db->prepare('
-            SELECT 
-                sa.*,
-                sa.socio_titular_nome as titular_nome_original,
-                sa.socio_titular_cpf as cpf_titular_vinculo,
-                t.nome as titular_nome,
-                t.cpf as titular_cpf,
-                t.situacao as titular_situacao,
-                t.telefone as titular_telefone
-            FROM Socios_Agregados sa
-            LEFT JOIN associados t ON REPLACE(REPLACE(REPLACE(t.cpf, ".", ""), "-", ""), " ", "") = REPLACE(REPLACE(REPLACE(sa.socio_titular_cpf, ".", ""), "-", ""), " ", "")
-            WHERE REPLACE(REPLACE(REPLACE(sa.cpf, ".", ""), "-", ""), " ", "") = ?
-            LIMIT 1
-        ');
-        
-        $stmt->execute([$cpfAgregado]);
-        $row = $stmt->fetch(PDO::FETCH_ASSOC);
-        
-        if ($row) {
-            $isSocioAgregado = true;
-            $relacionamentoAgregado = $row;
-            
-            // Nome do responsável
-            $nomeResponsavelAgregado = !empty($row['titular_nome']) ? 
-                $row['titular_nome'] : 
-                (!empty($row['titular_nome_original']) ? $row['titular_nome_original'] : 'Não identificado');
-            
-            // CPF do titular
-            $cpfTitular = !empty($row['titular_cpf']) ? 
-                preg_replace('/\D/', '', $row['titular_cpf']) : 
-                (!empty($row['cpf_titular_vinculo']) ? preg_replace('/\D/', '', $row['cpf_titular_vinculo']) : '');
-            
-            // Formata CPF do titular
-            if ($cpfTitular && strlen($cpfTitular) === 11) {
-                $cpfTitularFormatado = substr($cpfTitular, 0, 3) . '.' . 
-                                       substr($cpfTitular, 3, 3) . '.' . 
-                                       substr($cpfTitular, 6, 3) . '-' . 
-                                       substr($cpfTitular, 9, 2);
-            } else {
-                $cpfTitularFormatado = 'CPF não disponível';
-            }
-            
-            // Monta array com dados do titular
-            $dadosTitular = [
-                'nome' => $nomeResponsavelAgregado,
-                'cpf' => $cpfTitular,
-                'cpf_formatado' => $cpfTitularFormatado,
-                'situacao' => !empty($row['titular_situacao']) ? $row['titular_situacao'] : 'Não identificada',
-                'telefone' => !empty($row['titular_telefone']) ? $row['titular_telefone'] : ''
-            ];
-            
-            error_log("✅ AGREGADO DETECTADO!");
-            error_log("   - Agregado: " . $associadoData['nome'] . " (CPF: " . $cpfAgregado . ")");
-            error_log("   - Titular: " . $nomeResponsavelAgregado . " (CPF: " . $cpfTitularFormatado . ")");
-            error_log("   - Situação do Titular: " . $dadosTitular['situacao']);
-            
-        } else {
-            error_log("ℹ️ Associado NÃO é agregado - CPF verificado: " . $cpfAgregado);
-        }
-        
-    } catch (Exception $e) {
-        error_log("❌ Erro ao verificar agregado: " . $e->getMessage());
-    }
-} else {
-    if (!$isEdit) {
-        error_log("ℹ️ Modo CRIAÇÃO - verificação de agregado não aplicável");
-    } else {
-        error_log("⚠️ CPF não disponível para verificar se é agregado");
-    }
-}
 try {
     $db = Database::getInstance(DB_NAME_CADASTRO)->getConnection();
 
@@ -439,18 +345,18 @@ try {
 // Array com as lotações
 $lotacoes = [
     "1. BATALHAO BOMBEIRO MILITAR",
-    "1. BATALHAO DE POLICIA MILITAR AMBIENTAL DO ESTADO (BPMAmb)",
+    "1. BATALHAO DE POLICIA MILITAR AMBIENTAL DO ESTADO",
     "1. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "1. BATALHAO DE POLICIA MILITAR RODOVIARIO DO ESTADO DE GOIAS (BPMRv)",
+    "1. BATALHAO DE POLICIA MILITAR RODOVIARIO DO ESTAD",
     "1. CIA INDEPENDENTE DE BOMBEIROS MILITAR",
-    "1. COMANDO REGIONAL DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "1. COMPANHIA INDEPENDENTE DE POLICIA MILITAR AMBIENTAL",
-    "1. COMPANHIA INDEPENDENTE DE POLICIA MILITAR RODOVIARIO",
-    "1. COMPANHIA INDEPENDENTE POLICIA MILITAR DO ESTADO DE GOIAS",
+    "1. COMANDO REGIONAL DE POLICIA MILITAR DO ESTADO D",
+    "1. COMPANHIA INDEPENDENTE DE POLICIA MILITAR AMBIE",
+    "1. COMPANHIA INDEPENDENTE DE POLICIA MILITAR RODOV",
+    "1. COMPANHIA INDEPENDENTE POLICIA MILITAR DO ESTAD",
     "1. DIRETORIA REGIONAL PRISIONAL - METROPOLITANA",
-    "1. PELOTAO / 15. COMPANHIA DO CORPO DE BOMBEIROS MILITAR DO ESTADO DE GOIAS",
+    "1. PELOTAO / 15. COMPANHIA DO CORPO DE BOMBEIROS M",
     "1. PELOTAO BOMBEIRO MILITAR",
-    "1. REGIONAL DO CORPO DE BOMBEIROS MILITAR DE GOIANIA",
+    "1. REGIONAL DO CORPO DE BOMBEIROS MILITAR DE GOIAN",
     "1. SECAO DO ESTADO MAIOR",
     "10. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
     "10. CIA INDEPENDENTE DE BOMBEIROS MILITAR",
@@ -461,112 +367,112 @@ $lotacoes = [
     "11. BATALHAO BOMBEIRO MILITAR",
     "11. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
     "11. CIA INDEPENDENTE DE BOMBEIROS MILITAR",
-    "11. COMANDO REGIONAL DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "11. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO ESTADO DE GOIAS",
+    "11. COMANDO REGIONAL DE POLICIA MILITAR DO ESTADO",
+    "11. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO E",
     "12. BATALHAO BOMBEIRO MILITAR",
     "12. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
     "12. CIA INDEPENDENTE DE BOMBEIROS MILITAR",
     "12. COMANDO REGIONAL DE POLICIA MILITAR DO ESTADO",
-    "12. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO ESTADO DE GOIAS",
+    "12. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO E",
     "13. BATALHAO BOMBEIRO MILITAR",
     "13. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
     "13. CIA INDEPENDENTE DE BOMBEIROS MILITAR",
     "13. COMANDO REGIONAL DE POLICIA MILITAR DO ESTADO",
-    "13. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DE GOIAS",
+    "13. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DE G",
     "14. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
     "14. CIA INDEPENDENTE DE BOMBEIROS MILITAR",
     "14. COMANDO REGIONAL DE POLICIA MILITAR DO ESTADO",
-    "14. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO ESTADO DE GOIAS",
+    "14. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO E",
     "15. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
     "15. CIA INDEPENDENTE DE BOMBEIROS",
     "15. COMANDO REGIONAL DE POLICIA MILITAR DO ESTADO",
-    "15. COMPANHIA INDEPENDENTE POLICIA MILITAR DO ESTADO DE GOIAS",
+    "15. COMPANHIA INDEPENDENTE POLICIA MILITAR DO ESTA",
     "16. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
     "16. COMANDO REGIONAL DE PM DO ESTADO DE GOIAS",
-    "16. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO ESTADO DE GOIAS",
+    "16. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO E",
     "16a COMPANHIA INDEPENDENTE DE POLICIA MILITAR/COMPANHIA DE POLICIAMENTO ESPECIALIZADO",
     "17. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
     "17. CIA INDEPENDENTE DE BOMBEIROS",
     "17. COMANDO REGIONAL DE POLICIA MILITAR DO ESTADO",
-    "17. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "18. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
+    "17. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO E",
+    "18. BATALHAO DE POLICIA MILTIAR DO ESTADO DE GOIAS",
     "18. CIPM - COMPANHIA DE POLICIAMENTO ESPECIALIZADO",
     "18. COMANDO REGIONAL DE POLICIA MILITAR DO ESTADO",
     "19. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "19. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO ESTADO DE GOIAS",
+    "19.. COMPANHIA INDEPENDENTE DEPOLICIA MILITAR DO E",
     "19o COMANDO REGIONAL DE POLICIA MILITAR",
     "2. BATALHAO BOMBEIRO MILITAR",
     "2. BATALHAO DE POLICIA MILITAR DE GOIAS",
-    "2. BATALHAO DE POLICIA MILITAR RODOVIARIO DO ESTADO DE GOIAS",
+    "2. BATALHAO DE POLICIA MILITAR RODOVIARIO DO ESTAD",
     "2. CIA INDEPENDENTE DE BOMBEIROS MILITAR",
-    "2. COMANDO REGIONAL DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "2. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO ESTADO DE GOIAS",
+    "2. COMANDO REGIONAL DE POLICIA MILITAR DO ESTADO D",
+    "2. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO ES",
     "2. PELOTAO DE BOMBEIROS MILITAR",
     "20. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "20. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO ESTADO DE GOIAS",
+    "20. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO E",
     "21. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "21. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO ESTADO DE GOIAS",
+    "21. COMPANHIA INDENDENTE DE POLICIA MILITAR DO EST",
     "22. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "22. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO ESTADO DE GOIAS",
+    "22. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO E",
     "23. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "23. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO ESTADO DE GOIAS",
+    "23. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO E",
     "24. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "24. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO ESTADO DE GOIAS",
+    "24. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO E",
     "25. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
     "25a COMPANHIA INDEPENDENTE BOMBEIRO MILITAR",
     "25a COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO ESTADO DE GOIAS",
     "26. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
     "26a COMPANHIA INDEPENDENTE BOMBEIRO MILITAR",
     "27. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "27. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO ESTADO DE GOIAS",
+    "27. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO E",
     "28. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "28. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO ESTADO DE GOIAS",
+    "28. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO E",
     "29. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "29. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO ESTADO DE GOIAS",
+    "29. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO E",
     "2a COMPANHIA DE POLICIA MILITAR RURAL",
     "3. BATALHAO DE BOMBEIROS MILITAR",
-    "3. BATALHAO DE POLICIA MILITAR RODOVIARIO DO ESTADO DE GOIAS",
-    "3. BATALHAO DE POLICIA MILITAR DE GOIAS",
+    "3. BATALHAO DE POLICIA MILITAR RODOVIARIO DO ESTAD",
+    "3. BATANHAO DE POLICIA MILITAR DE GOIAS",
     "3. CIA INDEPENDENTE DE BOMBEIROS MILITAR",
-    "3. COMANDO REGIONAL DE POLICIA MILITAR DO ESTADO DE GOIAS",
+    "3. COMANDO REGIONAL DE POLICIA MILITAR DO ESTADO D",
     "3. PELOTAO DE BOMBEIROS MILITAR",
-    "3. REGIONAL DO CORPO DE BOMBEIROS MILITAR DE ANAPOLIS",
+    "3. REGIONAL DO CORPO DE BOMBEIROS MILITAR DE ANAPO",
     "30. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
     "31. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "31. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "32. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "32. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO ESTADO DE GOIAS",
+    "31. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO E",
+    "32. BATALHAO DE POLICIA MILTIAR DO ESTADO DE GOIAS",
+    "32. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO E",
     "33. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "33. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO ESTADO DE GOIAS",
+    "33. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO E",
     "34. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "34. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "35. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO ESTADO DE GOIAS",
+    "34. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO E",
+    "35. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO E",
     "36. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "36. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO ESTADO DE GOIAS",
+    "36. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO E",
     "37. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
     "38. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
     "39. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "39. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "3ª COMPANHIA INDEPENDENTE DE POLICIA MILITAR DE GOIAS",
+    "39. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO E",
+    "3ª COMPANHIA INDEPENDENTE DE POLICIA MILITAR DE GO",
     "3ª SEÇÃO DE RECRUTAMENTO E SELEÇÃO DE PESSOAL",
     "3o PELOTAO BOMBEIRO MILITAR",
     "4. BATALHAO DE BOMBEIROS MILITAR",
     "4. BATALHAO DE POLICIA MILITAR DE GOIAS",
-    "4. COMANDO REGIONAL DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "4. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO ESTADO DE GOIAS",
+    "4. COMANDO REGIONAL DE POLICIA MILITAR DO ESTADO D",
+    "4. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO ES",
     "4. PELOTAO BOMBEIRO MILITAR",
     "4. SECAO DO ESTADO MAIOR",
     "40. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "41. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "41.  COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "42.  COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO ESTADO DE GOIAS",
+    "41 BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
+    "41.  COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO",
+    "42.  COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO",
     "42o BATALHAO DE POLICIA MILITAR/01o CRPM",
-    "43.  COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "44. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "45. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "46. COMPANHIA INDEPENDENTE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "47. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "48. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO ESTADO DE GOIAS",
+    "43.  COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO",
+    "44. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO E",
+    "45. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO E",
+    "46. COMPANHIA INDEPENDENTE POLICIA MILITAR DO ESTA",
+    "47. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO E",
+    "48. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO E",
     "4a COMPANHIA DE POLICIA MILITAR RURAL",
     "4a COMPANHIA DE POLICIAMENTO RURAL",
     "4a COMPANHIA DO COMANDO DE DIVISAS - BASE CABECEIRAS",
@@ -575,9 +481,9 @@ $lotacoes = [
     "4o PELOTAO BOMBEIRO MILITAR",
     "5. BATALHAO DE BOMBEIROS MILITAR",
     "5. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "5. COMANDO REGIONAL DE POLICIA MILITAR DO ESTADO DE GOIAS",
+    "5. COMANDO REGIONAL DE POLICIA MILITAR DO ESTADO D",
     "5. COMPANHIA BOMBEIRO MILITAR",
-    "5. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO ESTADO DE GOIAS",
+    "5. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO ES",
     "5. PELOTAO BOMBEIRO MILITAR",
     "5. SECAO DO ESTADO MAIOR",
     "5a COMPANHIA DE POLICIAMENTO RURAL",
@@ -585,7 +491,7 @@ $lotacoes = [
     "6. BATALHAO DE BOMBEIROS MILITAR",
     "6. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
     "6. CIA INDEPENDENTE DE BOMBEIROS MILITAR",
-    "6. COMANDO REGIONAL DE POLICIA MILITAR DO ESTADO DE GOIAS",
+    "6. COMANDO REGIONAL DE POLICIA MILITAR DO ESTADO D",
     "6. PELOTAO BOMBEIRO MILITAR",
     "6. SECAO DO ESTADO MAIOR",
     "6a COMPANHIA DO COMANDO DE DIVISAS - CIDADE OCIDENTAL",
@@ -594,22 +500,22 @@ $lotacoes = [
     "7. BATALHAO DE BOMBEIROS MILITAR",
     "7. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
     "7. CIA INDEPENDENTE DE BOMBEIROS MILITAR",
-    "7. COMANDO REGIONAL DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "7. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO ESTADO DE GOIAS",
+    "7. COMANDO REGIONAL DE POLICIA MILITAR DO ESTADO D",
+    "7. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO ES",
     "7. PELOTAO BOMBEIRO MILITAR",
     "7. SECAO DO ESTADO MAIOR",
-    "7a COMPANHIA INDEPENDENTE DE POLICIA MILITAR - (CPE)",
+    "7a COMPANHIA INDEPENDENTE DE POLICIA MILITAR - CPE",
     "7o COMANDO REGIONAL BOMBEIRO MILITAR",
     "8. BATALHAO DE BOMBEIROS MILITAR",
     "8. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
     "8. CIA INDEPENDENTE DE BOMBEIROS MILITAR",
-    "8. COMANDO REGIONAL DE POLICIA MILITAR DO ESTADO DE GOIAS",
+    "8. COMANDO REGIONAL DE POLICIA MILITAR DO ESTADO D",
     "8a SECAO DO ESTADO-MAIOR GERAL",
     "9. BATALHAO BOMBEIRO MILITAR",
     "9. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "9. COMANDO REGIONAL DE POLICIA MILITAR DO ESTADO DE GOIAS",
+    "9. COMANDO REGIONAL DE POLICIA MILITAR DO ESTADO D",
     "9. COMPANHIA BOMBEIRO MILITAR",
-    "9. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO ESTADO DE GOIAS",
+    "9. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO ES",
     "9. PELOTAO BOMBEIRO MILITAR",
     "AGENFA LUZIANIA",
     "ASSESSORIA FUNDACIONAL - DOM PEDRO II",
@@ -621,23 +527,22 @@ $lotacoes = [
     "ASSISTENCIA POLICIAL MILITAR DA GOIAS PREVIDENCIA",
     "ASSISTENCIA POLICIAL MILITAR NO MPGO - GOI",
     "BASE ADMINISTRATIVA DA POLICIA MILITAR",
-    "BATALHAO DE OPERACOES ESPECIAIS (BOPE)",
-    "BATALHAO DE GIRO (GIRO)",
-    "BATALHAO DE POLICIA MILITAR DE CHOQUE DO ESTADO DE GOIAS (CHOQUE)",
-    "BATALHAO DE POLICIA MILITAR DE EVENTOS (BEPE)",
-    "BATALHAO DE POLICIA MILITAR DE TERMINAL (TERMINAL)",
-    "BATALHAO DE POLICIA MILITAR DE TRANSITO DO ESTADO DE GOIAS (BPTRAN)",
-    "BATALHAO DE POLICIA MILITAR ESCOLAR DO ESTADO DE GOIAS (ESCOLAR)",
+    "BATALHAO DE GIRO (GRUPAMENTO DE INTERVENCAO DE RON",
+    "BATALHAO DE POLICIA MILITAR DE CHOQUE DO ESTADO DE",
+    "BATALHAO DE POLICIA MILITAR DE EVENTOS",
+    "BATALHAO DE POLICIA MILITAR DE TERMINAL",
+    "BATALHAO DE POLICIA MILITAR DE TRANSITO DO ESTADO",
+    "BATALHAO DE POLICIA MILITAR ESCOLAR DO ESTADO DE G",
     "BATALHAO DE POLICIA MILITAR FAZENDARIA",
     "BATALHAO DE POLICIA MILITAR MARIA DA PENHA - CPC",
     "BATALHAO DE POLICIA MILITAR RURAL/COC",
     "BATALHAO DE PROTECAO SOCIOAMBIENTA",
-    "BATALHAO DE ROTAM (ROTAM)",
+    "BATALHAO DE ROTAM",
     "BATALHAO DE SALVAMENTO EM EMERGENCIA",
     "CENTRO  DE MANUTENCAO",
     "CENTRO DE INSTRUCAO DA POLICIA MILITAR DE GOIAS",
     "CENTRO DE OPERACOES AEREAS",
-    "CENTRO DE OPERACOES DA POLICIA MILITAR DO ESTADO DO ESTADO DE GOIAS",
+    "CENTRO DE OPERACOES DA POLICIA MILITAR DO ESTADO D",
     "CENTRO DE POLICIA COMUNITARIA",
     "CENTRO EST. DE ATEND. OP. DE BOMBEIROS",
     "CENTRO INTEGRADO DE OPERACOES ESTRATEGICAS POLICIA",
@@ -705,7 +610,7 @@ $lotacoes = [
     "COMANDO DE ENSINO POLICIAL MILITAR",
     "COMANDO DE GESTAO E FINANCAS",
     "COMANDO DE OPERACOES DE DEFESA CIVIL",
-    "COMANDO DE OPERACOES DE DIVISA (COD)",
+    "COMANDO DE OPERACOES DE DIVISA",
     "COMANDO DE OPERACOES DE RECOBRIMENTO",
     "COMANDO DE POLICIAMENTO AMBIENTAL",
     "COMANDO DE POLICIAMENTO ESPECIALIZADO",
@@ -749,7 +654,7 @@ $lotacoes = [
     "GERENCIA DE SEGURANCA PESSOAL, FISICA E DE INSTALA",
     "GERENCIA DE TRANSPORTE , OPERACIONAL E ADMINISTRAT",
     "GERENCIA DO OBSERVATORIO DE SEGURANCA PUBLICA",
-    "GRUPAMENTO DE POLICIA MILITAR AEREO ESTADO DE GOIAS",
+    "GRUPAMENTO DE POLICIA MILITAR AEREO ESTADO DE GOIA",
     "GRUPAMENTO DE RADIO PATRULHA AEREA",
     "NAO IDENTIFICADO",
     "OITAVA SECAO DO ESTADO MAIOR",
@@ -762,7 +667,7 @@ $lotacoes = [
     "PRIMEIRA SECAO DO ESTADO MAIOR",
     "PRIMEIRO BATALHAO DE POLICIA MILITAR DE OPERACOES",
     "QUARTA SECAO DO ESTADO MAIOR",
-    "QUARTEL DA AJUDANCIA GERAL POLICIA MILITAR ESTADO DE GOIAS",
+    "QUARTEL DA AJUDANCIA GERAL POLICIA MILITAR ESTADO",
     "QUARTEL DO COMANDO GERAL",
     "QUINTA SECAO DO ESTADO MAIOR",
     "REGIMENTO DE POLICIA MONTADA DO ESTADO DE GOIAS",
@@ -1028,14 +933,7 @@ $headerComponent = HeaderComponent::create([
         </div>
 
         <!-- Alert Messages -->
-        <div id="alertContainer">
-        <?php if ($isSocioAgregado): ?>
-            <div class="alert alert-warning" style="font-size:1.1rem;">
-                <b>Atenção:</b> Este associado é um <b>Sócio Agregado</b>.<br>
-                Responsável: <b><?php echo htmlspecialchars($nomeResponsavelAgregado); ?></b>
-            </div>
-        <?php endif; ?>
-        </div>
+        <div id="alertContainer"></div>
 
         <!-- Form Container -->
         <div class="form-container">
@@ -1095,40 +993,6 @@ $headerComponent = HeaderComponent::create([
                     </div>
 
                     <div class="form-grid">
-                <!-- Agregado: Checkbox e CPF do Titular -->
-            <?php if (!$isSocioAgregado): ?>
-                <div class="form-group agregado-toggle-row" style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem;">
-                    <input type="checkbox" id="isAgregado" name="isAgregado" onchange="toggleAgregadoCampos()" style="width: 22px; height: 22px; accent-color: #1976d2;">
-                    <label for="isAgregado" style="margin: 0; font-size: 1.15rem; font-weight: 500; color: #222;"> Cadastrar como Agregado <br> <p style="margin: 0; font-size: 12px; color: #e80c0cff;"><strong> * Caso o Associado ja for Agregado ignore esse checkbox </strong></p></br></label>
-                   
-                </div>
-
-                <div class="form-group full-width agregado-campos" id="campoCpfTitular" style="display: none; margin-bottom: 1.5rem;">
-                    <div style="display: flex; flex-wrap: wrap; gap: 1.5rem; align-items: flex-end;">
-                        <div style="flex: 1 1 220px; min-width: 220px;">
-                            <label class="form-label">CPF do Titular <span class="required">*</span></label>
-                            <input type="text" 
-                                class="form-input" 
-                                name="cpfTitular" 
-                                id="cpfTitular" 
-                                placeholder="000.000.000-00" 
-                                maxlength="14" 
-                                autocomplete="off">
-                        </div>
-                        <div style="flex: 2 1 320px; min-width: 220px;">
-                            <label class="form-label">Nome do Sócio Titular</label>
-                            <input type="text" 
-                                class="form-input" 
-                                id="nomeTitularInfo" 
-                                name="nomeTitularInfo" 
-                                placeholder="Nome do titular será preenchido automaticamente" 
-                                readonly 
-                                style="background: #f5f5f5; color: #666; font-weight: 600;">
-                        </div>
-                    </div>
-                    <span class="form-error" id="erroCpfTitular" style="display:none; margin-top: 0.5rem; color: #dc3545; font-size: 0.875rem;"></span>
-                </div>
-            <?php endif; ?>
                         <div class="form-group full-width">
                             <label class="form-label">
                                 Nome Completo <span class="required">*</span>
@@ -2157,75 +2021,6 @@ $headerComponent = HeaderComponent::create([
             window.location.href = 'dashboard.php';
         }
     }
-    // Agregado: lógica JS
-    function toggleAgregadoCampos() {
-        const isAgregado = document.getElementById('isAgregado').checked;
-        document.getElementById('campoCpfTitular').style.display = isAgregado ? 'block' : 'none';
-        document.getElementById('cpfTitular').required = isAgregado;
-        if (!isAgregado) {
-            document.getElementById('cpfTitular').value = '';
-            document.getElementById('nomeTitularInfo').value = '';
-            document.getElementById('erroCpfTitular').style.display = 'none';
-        }
-    }
-
-    $(document).ready(function() {
-        function buscarNomeTitularPorCpf() {
-            const cpf = $('#cpfTitular').val().replace(/\D/g, '');
-            if (cpf.length === 11) {
-                $.get('../api/buscar_associado_por_cpf.php', { cpf: cpf }, function(resp) {
-                    if (resp.status === 'success' && resp.data) {
-                        let nome = resp.data.titular_nome || resp.data.nome || '';
-                        let cpfFormatado = resp.data.titular_cpf || resp.data.cpf || '';
-                        if (cpfFormatado.length === 11) {
-                            cpfFormatado = cpfFormatado.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
-                        }
-                        if (nome && cpfFormatado) {
-                            $('#nomeTitularInfo').val(nome + ' - ' + cpfFormatado);
-                        } else if (nome) {
-                            $('#nomeTitularInfo').val(nome);
-                        } else {
-                            $('#nomeTitularInfo').val('');
-                        }
-                        let situacao = resp.data.titular_situacao || resp.data.situacao || '';
-                        if (situacao && situacao !== 'Filiado') {
-                            $('#erroCpfTitular').show();
-                        } else {
-                            $('#erroCpfTitular').hide();
-                        }
-                    } else {
-                        $('#nomeTitularInfo').val('');
-                        $('#erroCpfTitular').show();
-                    }
-                }, 'json');
-            } else {
-                $('#nomeTitularInfo').val('');
-                $('#erroCpfTitular').show();
-            }
-        }
-
-        $('#cpfTitular').on('blur', buscarNomeTitularPorCpf);
-        $('#cpfTitular').on('keyup', function() {
-            if ($(this).val().replace(/\D/g, '').length === 11) {
-                buscarNomeTitularPorCpf();
-            } else {
-                $('#nomeTitularInfo').val('');
-                $('#erroCpfTitular').show();
-            }
-        });
-
-        $('#formAssociado').on('submit', function(e) {
-            if ($('#isAgregado').is(':checked')) {
-                if (!$('#cpfTitular').val() || $('#erroCpfTitular').is(':visible')) {
-                    alert('Preencha corretamente o CPF do titular e verifique se está filiado.');
-                    $('#cpfTitular').focus();
-                    e.preventDefault();
-                    return false;
-                }
-            }
-        });
-    });
-    // Fim agregado
     </script>
 </body>
 
