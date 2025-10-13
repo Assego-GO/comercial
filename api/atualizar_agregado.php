@@ -1,6 +1,6 @@
 <?php
 /**
- * API para Atualizar Sócio Agregado
+ * API para Atualizar Sócio Agregado - VERSÃO CORRIGIDA
  * api/atualizar_agregado.php
  */
 
@@ -80,7 +80,6 @@ try {
     // CAPTURA E VALIDAÇÃO DO ID
     // =====================================================
     
-    // ID pode vir via GET (?id=123) ou POST
     $agregadoId = null;
     
     if (isset($_GET['id']) && is_numeric($_GET['id'])) {
@@ -107,7 +106,6 @@ try {
     
     $db = Database::getInstance(DB_NAME_CADASTRO)->getConnection();
     
-    // Verifica se o registro existe e está ativo
     $stmtVerifica = $db->prepare("
         SELECT id, nome, cpf, situacao, data_criacao 
         FROM Socios_Agregados 
@@ -115,17 +113,22 @@ try {
     ");
     $stmtVerifica->execute([$agregadoId]);
     
+    // ✅ CORREÇÃO: SE NÃO EXISTE, RETORNA ERRO E PARA A EXECUÇÃO
     if ($stmtVerifica->rowCount() === 0) {
         http_response_code(404);
         echo json_encode([
             'status' => 'error',
             'message' => 'Sócio agregado não encontrado',
-            'debug' => "ID {$agregadoId} não existe ou foi excluído"
+            'debug' => [
+                'id_buscado' => $agregadoId,
+                'sugestao' => 'Verifique se o ID está correto ou se o registro foi excluído'
+            ]
         ]);
-        logError("Registro não encontrado", ['id' => $agregadoId]);
-        exit;
+        logError("Agregado não encontrado para atualização", ['id' => $agregadoId]);
+        exit; // ⚠️ CRÍTICO: Para a execução aqui
     }
     
+    // ✅ SÓ CHEGA AQUI SE O REGISTRO FOI ENCONTRADO
     $registroAtual = $stmtVerifica->fetch(PDO::FETCH_ASSOC);
     logError("Registro encontrado", $registroAtual);
     
@@ -136,13 +139,75 @@ try {
     $dadosRecebidos = $_POST;
     logError("Dados recebidos para atualização", $dadosRecebidos);
     
-    // Remove o ID dos dados (não deve ser alterado)
+    // Remove o ID dos dados
     unset($dadosRecebidos['id']);
     
     // Limpa dados
     $dados = limparDados($dadosRecebidos);
     
-    // Campos obrigatórios (mesmos do criar)
+    // =============================
+    // ✅ VALIDAÇÃO E BUSCA COMPLETA DO TITULAR
+    // =============================
+    
+    $cpfTitularRecebido = null;
+    
+    // ✅ ACEITA TANTO cpfTitular QUANTO socioTitularCpf
+    if (!empty($dados['socioTitularCpf'])) {
+        $cpfTitularRecebido = preg_replace('/\D/', '', $dados['socioTitularCpf']);
+    } elseif (!empty($dados['cpfTitular'])) {
+        $cpfTitularRecebido = preg_replace('/\D/', '', $dados['cpfTitular']);
+    }
+    
+    if ($cpfTitularRecebido) {
+        // ✅ BUSCA DADOS COMPLETOS DO TITULAR NO BANCO
+        $stmtTitular = $db->prepare("
+            SELECT a.id, a.nome, a.cpf, a.rg, a.email, a.telefone, a.situacao
+            FROM Associados a
+            WHERE REPLACE(REPLACE(REPLACE(a.cpf, '.', ''), '-', ''), ' ', '') = ?
+            LIMIT 1
+        ");
+        $stmtTitular->execute([$cpfTitularRecebido]);
+        $titular = $stmtTitular->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$titular) {
+            http_response_code(400);
+            echo json_encode([
+                'status' => 'error',
+                'message' => 'Sócio titular não encontrado na base de associados',
+                'debug' => 'CPF informado: ' . $cpfTitularRecebido
+            ]);
+            logError('Sócio titular não encontrado', ['cpf' => $cpfTitularRecebido]);
+            exit;
+        }
+        
+        if (strtolower($titular['situacao']) !== 'filiado') {
+            http_response_code(400);
+            echo json_encode([
+                'status' => 'error',
+                'message' => 'Só é permitido vincular agregados a titulares filiados',
+                'debug' => 'Situação do titular: ' . $titular['situacao']
+            ]);
+            logError('Titular não está filiado', ['cpf' => $cpfTitularRecebido, 'situacao' => $titular['situacao']]);
+            exit;
+        }
+        
+        // ✅ SOBRESCREVE DADOS DO TITULAR COM OS DADOS DO BANCO
+        $dados['socioTitularNome'] = $titular['nome'];
+        $dados['socioTitularCpf'] = $titular['cpf'];
+        $dados['socioTitularFone'] = $titular['telefone'] ?? '';
+        $dados['socioTitularEmail'] = $titular['email'] ?? '';
+        
+        logError("✓ Titular validado e dados carregados", [
+            'titular_id' => $titular['id'],
+            'titular_nome' => $titular['nome'],
+            'titular_cpf' => $titular['cpf']
+        ]);
+    }
+    
+    // =====================================================
+    // VALIDAÇÕES OBRIGATÓRIAS
+    // =====================================================
+    
     $camposObrigatorios = [
         'nome' => 'Nome completo',
         'dataNascimento' => 'Data de nascimento',
@@ -166,31 +231,20 @@ try {
     
     $errosValidacao = [];
     
-    // Valida campos obrigatórios
     foreach ($camposObrigatorios as $campo => $nomeCampo) {
         if (empty($dados[$campo])) {
             $errosValidacao[] = "Campo obrigatório: {$nomeCampo}";
         }
     }
     
-    // Validações específicas
     if (!empty($dados['cpf']) && !validarCPF($dados['cpf'])) {
         $errosValidacao[] = "CPF inválido";
-    }
-    
-    if (!empty($dados['socioTitularCpf']) && !validarCPF($dados['socioTitularCpf'])) {
-        $errosValidacao[] = "CPF do sócio titular inválido";
     }
     
     if (!validarEmail($dados['email'] ?? '')) {
         $errosValidacao[] = "E-mail inválido";
     }
     
-    if (!validarEmail($dados['socioTitularEmail'] ?? '')) {
-        $errosValidacao[] = "E-mail do sócio titular inválido";
-    }
-    
-    // Banco outro
     if (($dados['banco'] ?? '') === 'outro' && empty($dados['bancoOutroNome'])) {
         $errosValidacao[] = "Nome do banco é obrigatório quando selecionado 'Outro'";
     }
@@ -208,7 +262,7 @@ try {
     }
     
     // =====================================================
-    // VERIFICAÇÃO DE CPF DUPLICADO (exceto o próprio)
+    // VERIFICAÇÃO DE CPF DUPLICADO
     // =====================================================
     
     if (!empty($dados['cpf'])) {
@@ -230,10 +284,7 @@ try {
                     'id_existente' => $duplicado['id']
                 ]
             ]);
-            logError("CPF duplicado", [
-                'cpf' => $dados['cpf'],
-                'conflito_com' => $duplicado['nome']
-            ]);
+            logError("CPF duplicado", ['cpf' => $dados['cpf'], 'conflito_com' => $duplicado['nome']]);
             exit;
         }
     }
@@ -242,7 +293,7 @@ try {
     // PROCESSAMENTO DOS DEPENDENTES
     // =====================================================
     
-    $dependentesJson = '[]'; // Array vazio por padrão
+    $dependentesJson = '[]';
     
     if (isset($dados['dependentes']) && is_array($dados['dependentes'])) {
         $dependentesProcessados = [];
@@ -254,7 +305,6 @@ try {
                     'data_nascimento' => trim($dependente['data_nascimento'])
                 ];
                 
-                // CPF do dependente (se fornecido)
                 if (!empty($dependente['cpf'])) {
                     $cpfDep = trim($dependente['cpf']);
                     if (validarCPF($cpfDep)) {
@@ -262,7 +312,6 @@ try {
                     }
                 }
                 
-                // Telefone do dependente
                 if (!empty($dependente['telefone'])) {
                     $depProcessado['telefone'] = trim($dependente['telefone']);
                 }
@@ -311,7 +360,6 @@ try {
     
     $stmt = $db->prepare($sql);
     
-    // Parâmetros para atualização
     $parametros = [
         ':id' => $agregadoId,
         ':nome' => $dados['nome'],
@@ -323,10 +371,10 @@ try {
         ':documento' => $dados['documento'] ?? null,
         ':estado_civil' => $dados['estadoCivil'],
         ':data_filiacao' => $dados['dataFiliacao'],
-        ':socio_titular_nome' => $dados['socioTitularNome'],
-        ':socio_titular_fone' => $dados['socioTitularFone'],
-        ':socio_titular_cpf' => $dados['socioTitularCpf'],
-        ':socio_titular_email' => $dados['socioTitularEmail'] ?? null,
+        ':socio_titular_nome' => $dados['socioTitularNome'], // ✅ Dados do banco
+        ':socio_titular_fone' => $dados['socioTitularFone'], // ✅ Dados do banco
+        ':socio_titular_cpf' => preg_replace('/\D/', '', $dados['socioTitularCpf']), // ✅ Dados do banco
+        ':socio_titular_email' => $dados['socioTitularEmail'] ?? null, // ✅ Dados do banco
         ':cep' => $dados['cep'] ?? null,
         ':endereco' => $dados['endereco'],
         ':numero' => $dados['numero'],
@@ -340,41 +388,26 @@ try {
         ':dependentes' => $dependentesJson
     ];
     
-    logError("Parâmetros para atualização", $parametros);
+    logError("Parâmetros para atualização (COM DADOS DO TITULAR)", [
+        'id' => $agregadoId,
+        'nome_agregado' => $parametros[':nome'],
+        'titular_nome' => $parametros[':socio_titular_nome'],
+        'titular_cpf' => $parametros[':socio_titular_cpf']
+    ]);
     
-    // Executa a atualização
     if ($stmt->execute($parametros)) {
         $linhasAfetadas = $stmt->rowCount();
         
-        if ($linhasAfetadas === 0) {
-            logError("Nenhuma linha foi atualizada", ['id' => $agregadoId]);
-            
-            // Verifica se foi porque não houve mudanças ou se houve erro
-            http_response_code(200);
-            echo json_encode([
-                'status' => 'success',
-                'message' => 'Nenhuma alteração foi necessária (dados idênticos)',
-                'data' => [
-                    'id' => $agregadoId,
-                    'linhas_afetadas' => 0
-                ]
-            ]);
-            exit;
-        }
-        
-        logError("Sócio agregado atualizado", [
+        logError("✓ Sócio agregado atualizado", [
             'id' => $agregadoId,
             'linhas_afetadas' => $linhasAfetadas,
             'nome' => $dados['nome']
         ]);
         
-        // =====================================================
-        // BUSCA DADOS ATUALIZADOS PARA RESPOSTA
-        // =====================================================
-        
+        // Busca dados atualizados
         $stmtConsulta = $db->prepare("
             SELECT id, nome, cpf, telefone, celular, email,
-                   socio_titular_nome, valor_contribuicao, 
+                   socio_titular_nome, socio_titular_cpf, valor_contribuicao, 
                    data_filiacao, situacao, data_atualizacao,
                    JSON_LENGTH(COALESCE(dependentes, '[]')) as total_dependentes,
                    banco, agencia, conta_corrente
@@ -384,10 +417,7 @@ try {
         $stmtConsulta->execute([$agregadoId]);
         $dadosAtualizados = $stmtConsulta->fetch(PDO::FETCH_ASSOC);
         
-        // =====================================================
-        // RESPOSTA DE SUCESSO
-        // =====================================================
-        
+        // Resposta de sucesso
         http_response_code(200);
         echo json_encode([
             'status' => 'success',
@@ -400,6 +430,7 @@ try {
                 'celular' => $dadosAtualizados['celular'],
                 'email' => $dadosAtualizados['email'],
                 'socio_titular' => $dadosAtualizados['socio_titular_nome'],
+                'socio_titular_cpf' => $dadosAtualizados['socio_titular_cpf'],
                 'valor_contribuicao' => $dadosAtualizados['valor_contribuicao'],
                 'data_filiacao' => $dadosAtualizados['data_filiacao'],
                 'situacao' => $dadosAtualizados['situacao'],
@@ -411,14 +442,15 @@ try {
                 'linhas_afetadas' => $linhasAfetadas
             ],
             'debug' => [
-                'dependentes_json' => $dependentesJson,
-                'registro_original' => $registroAtual,
+                'titular_validado' => [
+                    'nome' => $dados['socioTitularNome'],
+                    'cpf' => $dados['socioTitularCpf']
+                ],
                 'timestamp' => date('Y-m-d H:i:s')
             ]
         ], JSON_UNESCAPED_UNICODE);
         
     } else {
-        // Erro na atualização
         $errorInfo = $stmt->errorInfo();
         logError("Erro na atualização SQL", $errorInfo);
         
@@ -436,7 +468,6 @@ try {
     
 } catch (PDOException $e) {
     logError("Erro PDO", ['message' => $e->getMessage(), 'code' => $e->getCode()]);
-    
     http_response_code(500);
     echo json_encode([
         'status' => 'error',
@@ -450,7 +481,6 @@ try {
     
 } catch (Exception $e) {
     logError("Erro geral", ['message' => $e->getMessage(), 'code' => $e->getCode()]);
-    
     http_response_code(500);
     echo json_encode([
         'status' => 'error',
@@ -464,78 +494,4 @@ try {
 } finally {
     logError("=== FIM ATUALIZAÇÃO SÓCIO AGREGADO ===");
 }
-
-/**
- * ==============================================
- * DOCUMENTAÇÃO DA API
- * ==============================================
- * 
- * ENDPOINT: POST/PUT /api/atualizar_agregado.php?id=123
- * 
- * PARÂMETROS:
- * - id (via GET ou POST): ID do sócio agregado a ser atualizado
- * 
- * CAMPOS (todos iguais ao criar_agregado.php):
- * - Todos os campos do formulário podem ser atualizados
- * - Mesmas validações do criar
- * - Dependentes são substituídos completamente
- * 
- * DIFERENÇAS DO CRIAR:
- * - Requer ID existente
- * - Verifica duplicação de CPF (exceto o próprio registro)
- * - Permite atualização parcial de campos
- * - Retorna dados atualizados na resposta
- * 
- * RESPONSES:
- * 
- * SUCESSO (200):
- * {
- *   "status": "success",
- *   "message": "Sócio agregado atualizado com sucesso!",
- *   "data": {
- *     "id": 123,
- *     "nome": "Nome Atualizado",
- *     "cpf": "123.456.789-01",
- *     "total_dependentes": 1,
- *     "data_atualizacao": "2025-01-15 14:30:00",
- *     "linhas_afetadas": 1
- *   }
- * }
- * 
- * ID INVÁLIDO/INEXISTENTE (404):
- * {
- *   "status": "error",
- *   "message": "Sócio agregado não encontrado"
- * }
- * 
- * CPF DUPLICADO (409):
- * {
- *   "status": "error", 
- *   "message": "CPF já cadastrado em outro sócio agregado",
- *   "conflito": {
- *     "nome_existente": "João Silva",
- *     "id_existente": 45
- *   }
- * }
- * 
- * NENHUMA ALTERAÇÃO (200):
- * {
- *   "status": "success",
- *   "message": "Nenhuma alteração foi necessária (dados idênticos)",
- *   "data": {
- *     "id": 123,
- *     "linhas_afetadas": 0
- *   }
- * }
- * 
- * EXEMPLOS DE USO:
- * 
- * 1. Via GET: /api/atualizar_agregado.php?id=123
- * 2. Via POST: Form data com campo 'id' = 123
- * 
- * LOGS:
- * - Todas as operações são logadas
- * - Inclui dados antes/depois da atualização
- * - Erros detalhados para debugging
- */
 ?>
