@@ -73,6 +73,12 @@ $nomeUsuario = $_SESSION['funcionario_nome'] ?? $_SESSION['nome'] ?? 'Usuário';
                 <i class="fas fa-search"></i>
                 Consultar Pecúlio do Associado
             </h5>
+            <!-- NOVO: Botão para listar todos -->
+            <button type="button" class="btn btn-info btn-sm btn-listar-todos mt-2" onclick="Peculio.listarTodos()">
+                <i class="fas fa-list-ul me-1"></i>
+                Ver Todos os Pecúlios
+                <i class="fas fa-arrow-right ms-1"></i>
+            </button>
         </div>
 
         <form class="busca-form-ultra-compact" onsubmit="Peculio.buscar(event)">
@@ -179,7 +185,7 @@ $nomeUsuario = $_SESSION['funcionario_nome'] ?? $_SESSION['nome'] ?? 'Usuário';
     border-radius: 8px;
     padding: 0.75rem;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-    margin: 0.25rem 0 0 0; /* Margem superior mínima */
+    margin: 0.25rem 0 0 0;
 }
 
 /* Seção de busca ultra compacta */
@@ -212,6 +218,29 @@ $nomeUsuario = $_SESSION['funcionario_nome'] ?? $_SESSION['nome'] ?? 'Usuário';
     margin-right: 0.5rem;
     color: var(--warning);
     font-size: 1.2rem;
+}
+
+/* NOVO: Estilo para botão Listar Todos */
+.btn-listar-todos {
+    background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+    border: none;
+    color: white;
+    font-weight: 600;
+    padding: 0.5rem 1.2rem;
+    border-radius: 8px;
+    box-shadow: 0 3px 10px rgba(23, 162, 184, 0.3);
+    transition: all 0.3s ease;
+}
+
+.btn-listar-todos:hover {
+    background: linear-gradient(135deg, #138496 0%, #117a8b 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(23, 162, 184, 0.4);
+    color: white;
+}
+
+.btn-listar-todos:active {
+    transform: translateY(0);
 }
 
 /* Formulário ultra compacto */
@@ -476,6 +505,11 @@ $nomeUsuario = $_SESSION['funcionario_nome'] ?? $_SESSION['nome'] ?? 'Usuário';
         width: 100%;
         margin-bottom: 0.4rem;
     }
+
+    .btn-listar-todos {
+        width: 100%;
+        margin-top: 0.5rem;
+    }
 }
 
 /* Alerts ultra compactos */
@@ -485,6 +519,113 @@ $nomeUsuario = $_SESSION['funcionario_nome'] ?? $_SESSION['nome'] ?? 'Usuário';
     padding: 0.5rem 0.75rem;
     font-weight: 500;
     font-size: 0.85rem;
+}
+
+/* Estilos para seleção de múltiplos RGs */
+.selecao-rg-container {
+    background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+    border: 2px solid #ffc107;
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin: 1rem 0;
+    box-shadow: 0 4px 12px rgba(255, 193, 7, 0.2);
+}
+
+.selecao-rg-title {
+    color: #856404;
+    font-weight: 600;
+    font-size: 1.1rem;
+    margin-bottom: 1rem;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.selecao-rg-title i {
+    margin-right: 0.5rem;
+    font-size: 1.2rem;
+}
+
+.rg-opcao {
+    background: white;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.rg-opcao:hover {
+    border-color: #ffc107;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(255, 193, 7, 0.25);
+}
+
+.rg-opcao:active {
+    transform: translateY(0);
+}
+
+.rg-opcao::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 193, 7, 0.1), transparent);
+    transition: left 0.5s ease;
+}
+
+.rg-opcao:hover::before {
+    left: 100%;
+}
+
+.rg-opcao-nome {
+    font-weight: 600;
+    color: #2c3e50;
+    font-size: 1rem;
+    margin-bottom: 0.3rem;
+}
+
+.rg-opcao-detalhes {
+    color: #6c757d;
+    font-size: 0.9rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.rg-opcao-rg {
+    font-weight: 500;
+}
+
+.rg-opcao-info {
+    font-style: italic;
+    color: #28a745;
+}
+
+.selecao-rg-actions {
+    text-align: center;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(133, 100, 4, 0.2);
+}
+
+@media (max-width: 768px) {
+    .rg-opcao-detalhes {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.2rem;
+    }
+    
+    .selecao-rg-container {
+        padding: 1rem;
+    }
 }
 </style>
 
@@ -505,5 +646,5 @@ window.mostrarAcoesPeculio = function() {
     }
 }
 
-console.log('✅ Gestão de Pecúlio carregada com layout ultra compacto');
-</script>
+console.log('✅ Gestão de Pecúlio carregada com layout ultra compacto e lista completa');
+</script>v
