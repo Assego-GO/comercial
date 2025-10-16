@@ -1,6 +1,6 @@
 <?php
 header('Content-Type: application/json; charset=utf-8');
-
+//consultar_peculio.php
 // Função para resposta JSON
 function jsonResponse($status, $message, $data = null) {
     echo json_encode([
