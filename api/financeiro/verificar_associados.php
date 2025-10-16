@@ -1,5 +1,21 @@
 <?php
-// API Verificar Associados - BUSCA FONÉTICA AVANÇADA PORTUGUÊS BRASILEIRO
+// API Verificar Associados - BUSCA SUPER RESTRITIVA
+// 
+// CONFIGURAÇÃO ATUAL (v2.0 - ULTRA RESTRITIVA):
+// ================================================
+// Threshold match confirmado: 90% (apenas variações mínimas)
+// Threshold avisos: 85-89% (sugestões de escrita diferente)
+// Abaixo de 85%: Não encontrado (sem avisos)
+//
+// VALIDAÇÕES:
+// - 40% peso texto normal (quase idêntico)
+// - 35% peso fonético (S/Z, C/Ç, SS/Ç, acentos)
+// - Match individual de palavra: 80% mínimo
+// - Validação obrigatória: 50%+ palavras devem ter correspondência
+//
+// ACEITA: José/Jose, Carlos/Karlos, Souza/Sousa, César/Cesar
+// REJEITA: Luiz/Vamir, João/José, nomes completamente diferentes
+
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: POST, OPTIONS');
@@ -23,7 +39,8 @@ require_once('../../classes/Auth.php');
 
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
-error_log("=== INÍCIO API VERIFICAR ASSOCIADOS - BUSCA FONÉTICA PT-BR ===");
+error_log("=== INÍCIO API VERIFICAR ASSOCIADOS - BUSCA SUPER RESTRITIVA ===");
+error_log("CONFIGURAÇÃO: Threshold 90% | Avisos 85-89% | Match palavra: 80% | Validação 50% palavras");
 
 try {
     // AUTENTICAÇÃO
@@ -46,7 +63,7 @@ try {
     
     error_log("📥 RECEBIDOS " . count($data['dados']) . " registros para processar");
     
-    // ========== FUNÇÕES DE VALIDAÇÃO RG E CPF ==========
+    // ========== FUNÇÕES DE VALIDAÇÃO ==========
     function validarRG($rg) {
         if (empty($rg)) return false;
         $rgLimpo = preg_replace('/[^0-9]/', '', $rg);
@@ -94,11 +111,8 @@ try {
         return $resultado;
     }
     
-    // ========== ALGORITMO DE NORMALIZAÇÃO FONÉTICA PORTUGUÊS BRASILEIRO ==========
+    // ========== ALGORITMOS FONÉTICOS ==========
     
-    /**
-     * Normalização básica: remove acentos e caracteres especiais
-     */
     function normalizarNome($nome) {
         $nome = mb_strtolower($nome, 'UTF-8');
         
@@ -118,71 +132,34 @@ try {
         return $nome;
     }
     
-    /**
-     * ALGORITMO FONÉTICO AVANÇADO PARA PORTUGUÊS BRASILEIRO
-     * Converte nomes para representação fonética, considerando:
-     * - Sons equivalentes (K=C=QU, PH=F, W=V, Y=I)
-     * - Variações de escrita (S/SS/Ç, Z/S, X/CH)
-     * - Dígrafos (LH, NH, RR, SS)
-     * - H mudo
-     * - Terminações nasais
-     */
     function normalizarFoneticoPTBR($nome) {
         $nome = normalizarNome($nome);
         
-        // Aplicar regras fonéticas do português brasileiro em ordem específica
         $regras = [
-            // 1. H inicial ou após espaço (mudo)
             '/^h/' => '',
             '/\sh/' => ' ',
-            
-            // 2. Dígrafos (processar antes de letras individuais)
             '/lh/' => 'l',
             '/nh/' => 'n',
             '/rr/' => 'r',
             '/ss/' => 's',
             '/ch/' => 'x',
-            
-            // 3. QU antes de E ou I vira K
             '/qu([ei])/' => 'k$1',
             '/qu/' => 'k',
-            
-            // 4. C antes de E ou I vira S
             '/c([ei])/' => 's$1',
-            
-            // 5. Ç sempre vira S
             '/ç/' => 's',
-            
-            // 6. K sempre vira C
             '/k/' => 'c',
-            
-            // 7. PH vira F
             '/ph/' => 'f',
-            
-            // 8. W vira V
             '/w/' => 'v',
-            
-            // 9. Y vira I
             '/y/' => 'i',
-            
-            // 10. X tem vários sons, padronizar para X
             '/x/' => 'x',
-            
-            // 11. Z no final ou antes de consoante vira S
             '/z$/' => 's',
             '/z([bcdfghjklmnpqrstvwxz])/' => 's$1',
-            
-            // 12. G antes de E ou I vira J
             '/g([ei])/' => 'j$1',
-            
-            // 13. Remover vogais duplicadas
             '/aa/' => 'a',
             '/ee/' => 'e',
             '/ii/' => 'i',
             '/oo/' => 'o',
             '/uu/' => 'u',
-            
-            // 14. Simplificar consoantes duplicadas (exceto RR e SS já tratados)
             '/([bcdfghjklmnpqrstvwxz])\1/' => '$1',
         ];
         
@@ -193,14 +170,8 @@ try {
         return $nome;
     }
     
-    /**
-     * METAPHONE ADAPTADO PARA PORTUGUÊS
-     * Gera código fonético mais agressivo para matching
-     */
     function metaphonePTBR($nome) {
         $nome = normalizarFoneticoPTBR($nome);
-        
-        // Remover vogais não acentuadas (exceto no início)
         $partes = explode(' ', $nome);
         $resultado = [];
         
@@ -210,13 +181,9 @@ try {
                 continue;
             }
             
-            // Manter primeira letra
             $codigo = substr($parte, 0, 1);
-            
-            // Processar resto removendo vogais
             $resto = substr($parte, 1);
             $resto = preg_replace('/[aeiou]/', '', $resto);
-            
             $codigo .= $resto;
             $resultado[] = $codigo;
         }
@@ -224,10 +191,6 @@ try {
         return implode(' ', $resultado);
     }
     
-    /**
-     * SOUNDEX ADAPTADO PARA PORTUGUÊS
-     * Algoritmo clássico adaptado para fonética PT-BR
-     */
     function soundexPTBR($nome) {
         $nome = normalizarFoneticoPTBR($nome);
         $partes = explode(' ', $nome);
@@ -239,10 +202,8 @@ try {
                 continue;
             }
             
-            // Manter primeira letra
             $codigo = strtoupper(substr($parte, 0, 1));
             
-            // Mapear consoantes para números
             $mapeamento = [
                 'b' => '1', 'p' => '1', 'f' => '1', 'v' => '1',
                 'c' => '2', 'g' => '2', 'j' => '2', 'k' => '2', 'q' => '2', 's' => '2', 'x' => '2', 'z' => '2',
@@ -261,7 +222,6 @@ try {
                 }
             }
             
-            // Completar com zeros até 4 caracteres
             $codigo = str_pad(substr($codigo, 0, 4), 4, '0');
             $resultado[] = $codigo;
         }
@@ -270,15 +230,33 @@ try {
     }
     
     /**
-     * CÁLCULO DE SIMILARIDADE COMBINADA - VERSÃO OTIMIZADA
-     * Usa múltiplos algoritmos para calcular score de similaridade
+     * CÁLCULO DE SIMILARIDADE SUPER RESTRITIVO
+     * 
+     * CONFIGURAÇÃO ATUAL:
+     * - Threshold para match confirmado: 90%
+     * - Threshold para aviso de escrita diferente: 85-89%
+     * - Abaixo de 85%: NÃO encontrado (sem avisos)
+     * 
+     * VALIDAÇÕES RIGOROSAS:
+     * - 40% de peso para texto normal (idêntico ou quase)
+     * - 35% para diferenças fonéticas (S/Z, C/Ç, SS/Ç, acentos)
+     * - Se menos de 50% das palavras têm correspondência, score de palavras = 0
+     * - Match de palavra individual requer 80% de similaridade
+     * 
+     * EXEMPLOS DE MATCHES VÁLIDOS:
+     * - José Silva ↔ Jose Silva (acentos)
+     * - Carlos Souza ↔ Carlos Sousa (Z/S)
+     * - César Assis ↔ Cesar Açis (acentos + SS/Ç)
+     * 
+     * EXEMPLOS DE NÃO-MATCHES:
+     * - Luiz Alexandre Dias ↔ Vamir Alexandre Dias (nomes diferentes!)
+     * - João Silva ↔ José Silva (nomes diferentes, não apenas variação)
      */
     function calcularSimilaridadeFonetica($nome1, $nome2) {
-        // 1. Normalização simples (Levenshtein)
+        // 1. Normalização simples
         $norm1 = normalizarNome($nome1);
         $norm2 = normalizarNome($nome2);
         
-        // Truncar strings muito longas para Levenshtein (limite de 255 caracteres)
         $norm1_trunc = substr($norm1, 0, 255);
         $norm2_trunc = substr($norm2, 0, 255);
         
@@ -286,7 +264,7 @@ try {
         $maxLenNorm = max(strlen($norm1), strlen($norm2));
         $simNorm = $maxLenNorm > 0 ? (1 - $distNorm / $maxLenNorm) * 100 : 0;
         
-        // 2. Normalização fonética (Levenshtein)
+        // 2. Normalização fonética
         $fon1 = normalizarFoneticoPTBR($nome1);
         $fon2 = normalizarFoneticoPTBR($nome2);
         
@@ -297,7 +275,7 @@ try {
         $maxLenFon = max(strlen($fon1), strlen($fon2));
         $simFon = $maxLenFon > 0 ? (1 - $distFon / $maxLenFon) * 100 : 0;
         
-        // 3. Metaphone PT-BR
+        // 3. Metaphone
         $meta1 = metaphonePTBR($nome1);
         $meta2 = metaphonePTBR($nome2);
         
@@ -308,29 +286,26 @@ try {
         $maxLenMeta = max(strlen($meta1), strlen($meta2));
         $simMeta = $maxLenMeta > 0 ? (1 - $distMeta / $maxLenMeta) * 100 : 0;
         
-        // 4. Soundex PT-BR
+        // 4. Soundex
         $sound1 = soundexPTBR($nome1);
         $sound2 = soundexPTBR($nome2);
         $simSound = ($sound1 === $sound2) ? 100 : 0;
         
-        // 5. Similaridade de palavras individuais (OTIMIZADO)
+        // 5. Similaridade de palavras
         $palavras1 = explode(' ', $norm1);
         $palavras2 = explode(' ', $norm2);
         $matchesPalavras = 0;
         $totalPalavras = max(count($palavras1), count($palavras2));
         
-        // Filtrar palavras muito curtas
         $palavras1 = array_filter($palavras1, fn($p) => strlen($p) >= 2);
         $palavras2 = array_filter($palavras2, fn($p) => strlen($p) >= 2);
         
         foreach ($palavras1 as $p1) {
-            $melhorMatchPalavra = 0;
             foreach ($palavras2 as $p2) {
                 $maxLen = max(strlen($p1), strlen($p2));
                 if ($maxLen === 0) continue;
                 
                 $simPalavra = (similar_text($p1, $p2) / $maxLen) * 100;
-                $melhorMatchPalavra = max($melhorMatchPalavra, $simPalavra);
                 
                 if ($simPalavra > 70) {
                     $matchesPalavras++;
@@ -341,27 +316,29 @@ try {
         
         $simPalavras = $totalPalavras > 0 ? ($matchesPalavras / $totalPalavras) * 100 : 0;
         
-        // 6. NOVO: Similaridade por iniciais de palavras
+        // 6. Iniciais
         $iniciais1 = implode('', array_map(fn($p) => substr($p, 0, 1), $palavras1));
         $iniciais2 = implode('', array_map(fn($p) => substr($p, 0, 1), $palavras2));
         $simIniciais = ($iniciais1 === $iniciais2) ? 100 : 0;
         
-        // 7. NOVO: Similar_text global (complementar ao Levenshtein)
+        // 7. Similar text
         $similarTextScore = 0;
         if ($maxLenNorm > 0) {
             similar_text($norm1, $norm2, $percentSimilar);
             $similarTextScore = $percentSimilar;
         }
         
-        // Combinar scores com pesos AJUSTADOS
+        // Combinar scores com pesos SUPER RESTRITIVOS
+        // Foco em texto exato e diferenças fonéticas mínimas (S/Z, C/Ç, SS/Ç)
+        // NOVO: Se menos de 50% das palavras têm match, score de palavras = 0
         $scoreTotal = (
-            $simNorm * 0.15 +           // 15% - similaridade texto normal
-            $simFon * 0.30 +            // 30% - similaridade fonética
+            $simNorm * 0.40 +           // 40% - similaridade texto normal (MUITO AUMENTADO!)
+            $simFon * 0.35 +            // 35% - similaridade fonética (apenas diferenças reais)
             $simMeta * 0.15 +           // 15% - metaphone
             $simSound * 0.05 +          // 5% - soundex
-            $simPalavras * 0.20 +       // 20% - match de palavras (aumentado!)
-            $simIniciais * 0.05 +       // 5% - iniciais
-            $similarTextScore * 0.10    // 10% - similar_text global
+            $simPalavras * 0.02 +       // 2% - match de palavras (DRASTICAMENTE REDUZIDO!)
+            $simIniciais * 0.02 +       // 2% - iniciais (REDUZIDO)
+            $similarTextScore * 0.01    // 1% - similar_text (MÍNIMO)
         );
         
         return [
@@ -381,14 +358,14 @@ try {
         ];
     }
     
-    // ========== COLETAR RGs, CPFs E NOMES ==========
+    // ========== COLETAR DADOS ==========
     $rgsParaBuscar = [];
     $cpfsParaBuscar = [];
     $nomesParaBuscar = [];
     $dadosIndexados = [];
     
     foreach ($data['dados'] as $index => $item) {
-        // Processar RGs
+        // RGs
         $rgsDoItem = [];
         if (!empty($item['rgs']) && is_array($item['rgs'])) {
             $rgsDoItem = $item['rgs'];
@@ -410,7 +387,7 @@ try {
             }
         }
         
-        // Processar CPFs
+        // CPFs
         $cpfsDoItem = [];
         if (!empty($item['cpfs']) && is_array($item['cpfs'])) {
             $cpfsDoItem = $item['cpfs'];
@@ -432,7 +409,7 @@ try {
             }
         }
         
-        // Processar Nomes
+        // Nomes
         if (!empty($item['nome']) && strlen(trim($item['nome'])) >= 3) {
             $nome = trim($item['nome']);
             $nomesParaBuscar[] = $nome;
@@ -510,16 +487,16 @@ try {
         }
     }
     
-    // ========== BUSCA FONÉTICA AVANÇADA POR NOME - VERSÃO ROBUSTA ==========
+    // ========== BUSCA FONÉTICA COM AVISOS ==========
     if (!empty($nomesParaBuscar)) {
-        error_log("🔍 BUSCA FONÉTICA AVANÇADA - " . count($nomesParaBuscar) . " nomes");
+        error_log("🔍 BUSCA FONÉTICA RESTRITIVA - " . count($nomesParaBuscar) . " nomes");
         
         foreach ($nomesParaBuscar as $nomeBusca) {
             error_log("🔍 Buscando: '$nomeBusca'");
             
             $candidatos = [];
             
-            // ===== ETAPA 1: BUSCA EXATA (MAIS RÁPIDA) =====
+            // ETAPA 1: Busca exata
             $sql = "SELECT a.id, a.nome, a.rg, a.cpf, a.situacao, a.email, a.telefone,
                            REGEXP_REPLACE(a.rg, '[^0-9]', '') as rg_limpo,
                            REGEXP_REPLACE(a.cpf, '[^0-9]', '') as cpf_limpo,
@@ -545,10 +522,10 @@ try {
                 $associadosEncontrados['nome_' . md5($nomeKey)] = $matchExato;
                 $associadosEncontrados['nome_original_' . $nomeKey] = $matchExato;
                 $estatisticasBusca['encontrados_por_nome']++;
-                continue; // Próximo nome
+                continue;
             }
             
-            // ===== ETAPA 2: BUSCA POR PARTES DO NOME =====
+            // ETAPA 2: Busca por palavras
             $partesNome = explode(' ', normalizarNome($nomeBusca));
             $partesNome = array_filter($partesNome, fn($p) => strlen($p) >= 3);
             
@@ -556,7 +533,6 @@ try {
                 $conditions = [];
                 $params = [];
                 
-                // Buscar por CADA palavra individualmente
                 foreach ($partesNome as $parte) {
                     $conditions[] = "a.nome LIKE ?";
                     $params[] = '%' . $parte . '%';
@@ -582,48 +558,12 @@ try {
                 error_log("   📋 Candidatos por palavras: " . count($candidatos));
             }
             
-            // ===== ETAPA 3: SE AINDA NÃO ACHOU, BUSCA FONÉTICA AMPLA =====
+            // ETAPA 3: Busca por estrutura
             if (empty($candidatos)) {
-                error_log("   ⚠️ Nenhum candidato por palavras, buscando foneticamente...");
+                error_log("   ⚠️ Buscando por estrutura...");
                 
-                // Extrair primeira letra de cada palavra significativa
-                $iniciais = '';
-                foreach ($partesNome as $parte) {
-                    $iniciais .= substr($parte, 0, 1);
-                }
-                
-                // Buscar nomes que comecem com as mesmas iniciais OU tenham tamanho similar
                 $numPalavras = count($partesNome);
                 $tamNome = strlen(str_replace(' ', '', normalizarNome($nomeBusca)));
-                
-                $sql = "SELECT a.id, a.nome, a.rg, a.cpf, a.situacao, a.email, a.telefone,
-                               REGEXP_REPLACE(a.rg, '[^0-9]', '') as rg_limpo,
-                               REGEXP_REPLACE(a.cpf, '[^0-9]', '') as cpf_limpo,
-                               m.corporacao, m.patente, m.categoria, m.lotacao,
-                               f.situacaoFinanceira,
-                               LENGTH(REGEXP_REPLACE(a.nome, '[^a-zA-Z]', '')) as tam_nome
-                        FROM Associados a
-                        LEFT JOIN Militar m ON a.id = m.associado_id
-                        LEFT JOIN Financeiro f ON a.id = f.associado_id
-                        WHERE LENGTH(a.nome) - LENGTH(REPLACE(a.nome, ' ', '')) + 1 BETWEEN ? AND ?
-                          AND LENGTH(REGEXP_REPLACE(a.nome, '[^a-zA-Z]', '')) BETWEEN ? AND ?
-                        LIMIT 300";
-                
-                $stmt = $db->prepare($sql);
-                $stmt->execute([
-                    max(1, $numPalavras - 1),  // Mínimo de palavras
-                    $numPalavras + 2,           // Máximo de palavras
-                    max(1, $tamNome - 8),       // Mínimo tamanho
-                    $tamNome + 8                // Máximo tamanho
-                ]);
-                $candidatos = $stmt->fetchAll(PDO::FETCH_ASSOC);
-                
-                error_log("   📋 Candidatos por estrutura: " . count($candidatos));
-            }
-            
-            // ===== ETAPA 4: FALLBACK FINAL - BUSCAR TODOS SE NECESSÁRIO =====
-            if (empty($candidatos)) {
-                error_log("   ⚠️ FALLBACK: Buscando em toda a base...");
                 
                 $sql = "SELECT a.id, a.nome, a.rg, a.cpf, a.situacao, a.email, a.telefone,
                                REGEXP_REPLACE(a.rg, '[^0-9]', '') as rg_limpo,
@@ -633,16 +573,23 @@ try {
                         FROM Associados a
                         LEFT JOIN Militar m ON a.id = m.associado_id
                         LEFT JOIN Financeiro f ON a.id = f.associado_id
-                        LIMIT 500";
+                        WHERE LENGTH(a.nome) - LENGTH(REPLACE(a.nome, ' ', '')) + 1 BETWEEN ? AND ?
+                          AND LENGTH(REGEXP_REPLACE(a.nome, '[^a-zA-Z]', '')) BETWEEN ? AND ?
+                        LIMIT 300";
                 
                 $stmt = $db->prepare($sql);
-                $stmt->execute();
+                $stmt->execute([
+                    max(1, $numPalavras - 1),
+                    $numPalavras + 2,
+                    max(1, $tamNome - 8),
+                    $tamNome + 8
+                ]);
                 $candidatos = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 
-                error_log("   📋 Candidatos fallback (toda base): " . count($candidatos));
+                error_log("   📋 Candidatos por estrutura: " . count($candidatos));
             }
             
-            // ===== CALCULAR SIMILARIDADE FONÉTICA PARA TODOS OS CANDIDATOS =====
+            // CALCULAR SIMILARIDADE
             if (!empty($candidatos)) {
                 $melhorMatch = null;
                 $melhorScore = 0;
@@ -650,7 +597,6 @@ try {
                 
                 error_log("   🔍 Analisando " . count($candidatos) . " candidatos...");
                 
-                // Limitar logs para não sobrecarregar (mostrar apenas top 10 melhores)
                 $todosScores = [];
                 
                 foreach ($candidatos as $candidato) {
@@ -670,7 +616,6 @@ try {
                     }
                 }
                 
-                // Ordenar e mostrar top 10
                 usort($todosScores, fn($a, $b) => $b['score'] <=> $a['score']);
                 $top10 = array_slice($todosScores, 0, 10);
                 
@@ -678,13 +623,13 @@ try {
                 foreach ($top10 as $idx => $item) {
                     $pos = $idx + 1;
                     error_log("      #{$pos} '{$item['nome']}' = {$item['score']}% " . 
-                             "(normal:{$item['detalhes']['score_normal']}%, " .
-                             "fon:{$item['detalhes']['score_fonetico']}%, " .
-                             "palavras:{$item['detalhes']['score_palavras']}%)");
+                             "(fon:{$item['detalhes']['score_fonetico']}%, " .
+                             "meta:{$item['detalhes']['score_metaphone']}%)");
                 }
                 
-                // THRESHOLD REDUZIDO: Aceitar match se score >= 55%
-                if ($melhorMatch && $melhorScore >= 55) {
+                // THRESHOLD MUITO RESTRITIVO: 90% para match confirmado
+                // Apenas variações fonéticas mínimas: José/Jose, Silva/Sylva, Souza/Sousa, etc.
+                if ($melhorMatch && $melhorScore >= 90) {
                     $nomeKey = strtolower(trim($nomeBusca));
                     $melhorMatch['found_by'] = 'NOME';
                     $melhorMatch['tipo_match'] = 'fonetico_avancado';
@@ -696,22 +641,32 @@ try {
                     error_log("✅ MATCH FONÉTICO: '$nomeBusca' -> '{$melhorMatch['nome']}' (score: {$melhorScore}%)");
                     error_log("   📈 Breakdown: normal={$melhorSimilaridade['score_normal']}%, " .
                              "fon={$melhorSimilaridade['score_fonetico']}%, " .
-                             "meta={$melhorSimilaridade['score_metaphone']}%, " .
-                             "palavras={$melhorSimilaridade['score_palavras']}%, " .
-                             "iniciais={$melhorSimilaridade['score_iniciais']}%");
-                } else {
+                             "meta={$melhorSimilaridade['score_metaphone']}%");
+                } 
+                // Aviso para escrita diferente: 85-89% (faixa muito estreita!)
+                else if ($melhorMatch && $melhorScore >= 85) {
+                    $nomeKey = strtolower(trim($nomeBusca));
+                    
+                    if (!isset($associadosEncontrados['avisos_escrita_diferente'])) {
+                        $associadosEncontrados['avisos_escrita_diferente'] = [];
+                    }
+                    
+                    $associadosEncontrados['avisos_escrita_diferente'][$nomeKey] = [
+                        'nome_buscado' => $nomeBusca,
+                        'nome_encontrado' => $melhorMatch['nome'],
+                        'score' => $melhorScore,
+                        'detalhes' => $melhorSimilaridade,
+                        'associado' => $melhorMatch
+                    ];
+                    
+                    error_log("⚠️ ESCRITA DIFERENTE: '$nomeBusca' -> '{$melhorMatch['nome']}' (score: {$melhorScore}%)");
+                    error_log("   📝 Muito similar, mas abaixo do threshold de confirmação (90%)");
+                } 
+                else {
                     if ($melhorMatch) {
                         error_log("⚠️ MELHOR CANDIDATO ABAIXO DO THRESHOLD:");
                         error_log("   Nome: '{$melhorMatch['nome']}'");
-                        error_log("   Score: {$melhorScore}% (threshold: 55%)");
-                        error_log("   Breakdown: normal={$melhorSimilaridade['score_normal']}%, " .
-                                 "fon={$melhorSimilaridade['score_fonetico']}%, " .
-                                 "meta={$melhorSimilaridade['score_metaphone']}%, " .
-                                 "palavras={$melhorSimilaridade['score_palavras']}%");
-                        error_log("   Nome buscado normalizado: '{$melhorSimilaridade['nome1_normalizado']}'");
-                        error_log("   Nome candidato normalizado: '{$melhorSimilaridade['nome2_normalizado']}'");
-                        error_log("   Nome buscado fonético: '{$melhorSimilaridade['nome1_fonetico']}'");
-                        error_log("   Nome candidato fonético: '{$melhorSimilaridade['nome2_fonetico']}'");
+                        error_log("   Score: {$melhorScore}% (threshold: 90%)");
                     }
                     error_log("❌ Sem match aceitável para: '$nomeBusca'");
                 }
@@ -746,7 +701,8 @@ try {
             'situacaoassociado' => null,
             'corporacao' => null,
             'patente' => null,
-            'situacaofinanceira' => null
+            'situacaofinanceira' => null,
+            'aviso_escrita_diferente' => null  // NOVO
         ];
         
         $encontrou = false;
@@ -793,7 +749,7 @@ try {
             }
         }
         
-        // Tentar Nome (busca fonética)
+        // Tentar Nome
         if (!$encontrou && !empty($item['nome'])) {
             $nomeBusca = trim($item['nome']);
             $nomeKey = strtolower($nomeBusca);
@@ -807,6 +763,19 @@ try {
                 $resultado = preencherDadosAssociado($resultado, $associado, 'NOME');
                 $encontrou = true;
             }
+            // NOVO: Verificar aviso de escrita diferente
+            else if (isset($associadosEncontrados['avisos_escrita_diferente'][$nomeKey])) {
+                $aviso = $associadosEncontrados['avisos_escrita_diferente'][$nomeKey];
+                $resultado['aviso_escrita_diferente'] = [
+                    'mensagem' => 'Nome com escrita diferente encontrado',
+                    'nome_lista' => $aviso['nome_buscado'],
+                    'nome_banco' => $aviso['nome_encontrado'],
+                    'similaridade' => round($aviso['score'], 1) . '%',
+                    'associado_id' => $aviso['associado']['id'],
+                    'rg_associado' => $aviso['associado']['rg'],
+                    'cpf_associado' => $aviso['associado']['cpf']
+                ];
+            }
         }
         
         $resultados[] = $resultado;
@@ -818,17 +787,15 @@ try {
         'filiados' => count(array_filter($resultados, fn($r) => $r['statusverificacao'] === 'filiado')),
         'naofiliados' => count(array_filter($resultados, fn($r) => $r['statusverificacao'] === 'naofiliado')),
         'naoencontrados' => count(array_filter($resultados, fn($r) => $r['statusverificacao'] === 'naoencontrado')),
+        'com_avisos' => count(array_filter($resultados, fn($r) => $r['aviso_escrita_diferente'] !== null)),
         'encontrados_por_rg' => count(array_filter($resultados, fn($r) => $r['encontrado_por'] === 'RG')),
         'encontrados_por_cpf' => count(array_filter($resultados, fn($r) => $r['encontrado_por'] === 'CPF')),
-        'encontrados_por_nome' => count(array_filter($resultados, fn($r) => $r['encontrado_por'] === 'NOME')),
-        'rgs_processados' => count($rgsParaBuscar),
-        'cpfs_processados' => count($cpfsParaBuscar),
-        'nomes_processados' => count($nomesParaBuscar)
+        'encontrados_por_nome' => count(array_filter($resultados, fn($r) => $r['encontrado_por'] === 'NOME'))
     ];
     
     echo json_encode([
         'success' => true,
-        'message' => count($resultados) . ' registros processados com busca fonética avançada PT-BR',
+        'message' => count($resultados) . ' registros processados (threshold 90%, avisos apenas para 85-89%)',
         'resultados' => $resultados,
         'estatisticas' => $estatisticas,
         'detalhes_busca' => $estatisticasBusca
