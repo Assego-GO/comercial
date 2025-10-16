@@ -622,10 +622,27 @@ function extrairNome(linha) {
                 nomeExibir = item.nomeextraido || 'Nome não identificado';
             }
             
+            // NOVO: Adicionar aviso de escrita diferente
+            let avisoEscrita = '';
+            if (item.aviso_escrita_diferente) {
+                const aviso = item.aviso_escrita_diferente;
+                avisoEscrita = `
+                    <div class="alert alert-warning alert-sm mt-2 mb-0 py-1 px-2" style="font-size: 0.75rem;">
+                        <i class="fas fa-exclamation-triangle me-1"></i>
+                        <strong>Possível match:</strong> ${aviso.nome_banco} 
+                        (${aviso.similaridade} similar)
+                        ${aviso.rg_associado ? `<br><small>RG: ${aviso.rg_associado}</small>` : ''}
+                    </div>
+                `;
+            }
+            
             return `
                 <tr>
                     <td>${index + 1}</td>
-                    <td><strong>${nomeExibir}</strong></td>
+                    <td>
+                        <strong>${nomeExibir}</strong>
+                        ${avisoEscrita}
+                    </td>
                     <td>${item.rgextraido || item.rgassociado || '-'}</td>
                     <td>${item.cpfextraido || item.cpfassociado || '-'}</td>
                     <td><span class="status-badge ${statusClass}">${statusText}</span></td>
