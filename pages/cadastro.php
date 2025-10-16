@@ -715,13 +715,14 @@ if ($isEdit) {
     <header class="main-header">
         <div class="header-left">
             <div class="logo-section">
-                <div style="width: 40px; height: 40px; background: var(--primary); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white; font-weight: 800;">
-                    A
+                <div style="width: 50px; height: 50px; display: flex; align-items: center; justify-content: center;">
+                    <img src=img/logoassego.png alt="Logo ASSEGO" style="width: 100%; height: 100%; object-fit: contain;">
                 </div>
                 <div>
                     <h1 class="logo-text">ASSEGO</h1>
                     <p class="system-subtitle">Sistema de Gestão</p>
                 </div>
+            </div>
             </div>
         </div>
     </header>
@@ -729,7 +730,11 @@ if ($isEdit) {
     <!-- Content Area -->
     <div class="content-area">
         <!-- Page Header -->
+        <!-- Page Header -->
         <div class="page-header">
+            <div style="display: flex; justify-content: center; margin-bottom: 1.5rem;">
+                <img src="img/logoassego.png" alt="Logo ASSEGO" style="width: 120px; height: 120px; object-fit: contain;">
+            </div>
             <h1 class="page-title">
                 <i class="fas fa-user-plus"></i>
                 <?php echo $isEdit ? 'Editar Associado' : 'Cadastro online ASSEGO'; ?>
