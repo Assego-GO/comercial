@@ -326,6 +326,24 @@ document.addEventListener('DOMContentLoaded', function() {
     gap: 0.75rem;
 }
 
+
+.example-content pre {
+    font-size: 0.875rem;
+    line-height: 1.4;
+}
+
+/* Alerta de escrita diferente */
+.alert-sm {
+    font-size: 0.8rem;
+    line-height: 1.3;
+}
+
+.alert-warning {
+    background-color: #fff3cd;
+    border-color: #ffc107;
+    color: #856404;
+}
+
 /* Debug Panel */
 #debugPanel {
     border: 2px dashed #17a2b8;
