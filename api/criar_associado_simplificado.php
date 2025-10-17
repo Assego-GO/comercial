@@ -3,18 +3,14 @@
  * API para criar novo associado - VERSÃO SIMPLIFICADA
  * api/criar_associado_simplificado.php
  */
-
 ob_start();
-
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: POST');
 header('Access-Control-Allow-Headers: Content-Type');
-
 error_reporting(E_ALL);
 ini_set('display_errors', 0);
 ini_set('log_errors', 1);
-
 ob_clean();
 
 $response = [
@@ -60,8 +56,9 @@ try {
     error_log("Usuário: " . ($_SESSION['user_name'] ?? 'N/A'));
     error_log("Funcionário ID: " . $funcionarioId);
 
-    // Validação básica - apenas campos essenciais
-    $campos_obrigatorios = ['nome', 'cpf', 'rg', 'telefone', 'situacao', 'dataFiliacao'];
+    // ✅ VALIDAÇÃO BÁSICA - APENAS CAMPOS ESSENCIAIS (SEM dataFiliacao)
+    $campos_obrigatorios = ['nome', 'cpf', 'rg', 'telefone', 'situacao'];
+    
     foreach ($campos_obrigatorios as $campo) {
         if (empty($_POST[$campo])) {
             throw new Exception("Campo '$campo' é obrigatório");
@@ -71,7 +68,7 @@ try {
     // ✅ CAPTURA DADOS DE INDICAÇÃO
     $indicacaoNome = trim($_POST['indicacao'] ?? '');
     $temIndicacao = !empty($indicacaoNome);
-    
+
     if ($temIndicacao) {
         error_log("📌 Indicação detectada: $indicacaoNome");
     }
@@ -79,7 +76,6 @@ try {
     // Função auxiliar para limpar campos de data
     function limparCamposData(&$dados) {
         $camposData = ['nasc', 'dataFiliacao', 'dataDesfiliacao'];
-        
         foreach ($camposData as $campo) {
             if (isset($dados[$campo]) && $dados[$campo] === '') {
                 $dados[$campo] = null;
@@ -88,7 +84,7 @@ try {
             }
         }
     }
-    
+
     function converterDataParaMySQL($data) {
         if (empty($data)) return null;
         
@@ -123,7 +119,9 @@ try {
         'estadoCivil' => $_POST['estadoCivil'] ?? null,
         'telefone' => preg_replace('/[^0-9]/', '', $_POST['telefone']),
         'indicacao' => $indicacaoNome,
-        'dataFiliacao' => !empty($_POST['dataFiliacao']) ? $_POST['dataFiliacao'] : null,
+        
+        // ✅ Data de filiação: usa a data de hoje se não informada
+        'dataFiliacao' => !empty($_POST['dataFiliacao']) ? $_POST['dataFiliacao'] : date('Y-m-d'),
         'dataDesfiliacao' => null,
         
         // Financeiro simplificado - apenas optante jurídico
@@ -134,6 +132,8 @@ try {
         'percentualAplicadoJuridico' => '0',
         'servicoJuridico' => null
     ];
+
+    error_log("✓ Data de filiação definida: " . $dados['dataFiliacao']);
 
     // Verifica se optou pelo serviço jurídico
     if (isset($_POST['optanteJuridico']) && $_POST['optanteJuridico'] == '1') {
@@ -149,14 +149,15 @@ try {
     // Processa foto do associado
     if (isset($_FILES['foto']) && $_FILES['foto']['error'] === UPLOAD_ERR_OK) {
         $uploadDir = '../uploads/fotos/';
+        
         if (!file_exists($uploadDir)) {
             mkdir($uploadDir, 0755, true);
         }
-        
+
         $extensao = pathinfo($_FILES['foto']['name'], PATHINFO_EXTENSION);
         $nomeArquivo = 'foto_' . preg_replace('/[^0-9]/', '', $dados['cpf']) . '_' . time() . '.' . $extensao;
         $caminhoCompleto = $uploadDir . $nomeArquivo;
-        
+
         if (move_uploaded_file($_FILES['foto']['tmp_name'], $caminhoCompleto)) {
             $dados['foto'] = 'uploads/fotos/' . $nomeArquivo;
             error_log("✓ Foto do associado salva: " . $dados['foto']);
@@ -165,14 +166,14 @@ try {
 
     $associados = new Associados();
     $indicacoes = new Indicacoes();
-    
+
     // PASSO 1: CRIA O PRÉ-CADASTRO
     $associadoId = $associados->criar($dados);
-    
+
     if (!$associadoId) {
         throw new Exception('Erro ao criar pré-cadastro');
     }
-    
+
     error_log("✓ Pré-cadastro criado com ID: $associadoId");
 
     // =====================================
@@ -181,7 +182,7 @@ try {
     $indicacaoProcessada = false;
     $indicadorId = null;
     $indicadorInfo = null;
-    
+
     if ($temIndicacao) {
         try {
             error_log("=== PROCESSANDO INDICAÇÃO ===");
@@ -194,7 +195,7 @@ try {
                 $funcionarioId,
                 "Indicação registrada no cadastro simplificado"
             );
-            
+
             if ($resultadoIndicacao['sucesso']) {
                 $indicacaoProcessada = true;
                 $indicadorId = $resultadoIndicacao['indicador_id'];
@@ -210,7 +211,6 @@ try {
             } else {
                 error_log("⚠ Erro ao processar indicação: " . $resultadoIndicacao['erro']);
             }
-            
         } catch (Exception $e) {
             error_log("⚠ Exceção ao processar indicação: " . $e->getMessage());
             // Não falha o cadastro por causa da indicação
@@ -224,18 +224,18 @@ try {
     try {
         $db = Database::getInstance(DB_NAME_CADASTRO)->getConnection();
         $db->beginTransaction();
-        
+
         // Serviço Social (sempre obrigatório)
         $stmt = $db->prepare("
             INSERT INTO Servicos_Associado (
-                associado_id, servico_id, tipo_associado, ativo, data_adesao, 
+                associado_id, servico_id, tipo_associado, ativo, data_adesao,
                 valor_aplicado, percentual_aplicado, observacao
             ) VALUES (?, 1, ?, 1, NOW(), ?, ?, ?)
         ");
-        
+
         $valorSocial = floatval($dados['valorSocial']);
         $percentualSocial = floatval($dados['percentualAplicadoSocial']);
-        
+
         $stmt->execute([
             $associadoId,
             'Contribuinte',
@@ -243,7 +243,7 @@ try {
             $percentualSocial,
             "Cadastro simplificado - Tipo: Contribuinte"
         ]);
-        
+
         $servicos_criados[] = 'Social';
         $valor_total_mensal += $valorSocial;
         error_log("✓ Serviço Social salvo: R$ " . number_format($valorSocial, 2, ',', '.'));
@@ -252,14 +252,14 @@ try {
         if ($dados['servicoJuridico'] && floatval($dados['valorJuridico']) > 0) {
             $stmt = $db->prepare("
                 INSERT INTO Servicos_Associado (
-                    associado_id, servico_id, tipo_associado, ativo, data_adesao, 
+                    associado_id, servico_id, tipo_associado, ativo, data_adesao,
                     valor_aplicado, percentual_aplicado, observacao
                 ) VALUES (?, 2, ?, 1, NOW(), ?, ?, ?)
             ");
-            
+
             $valorJuridico = floatval($dados['valorJuridico']);
             $percentualJuridico = floatval($dados['percentualAplicadoJuridico']);
-            
+
             $stmt->execute([
                 $associadoId,
                 'Contribuinte',
@@ -267,15 +267,15 @@ try {
                 $percentualJuridico,
                 "Cadastro simplificado - Optante jurídico"
             ]);
-            
+
             $servicos_criados[] = 'Jurídico';
             $valor_total_mensal += $valorJuridico;
             error_log("✓ Serviço Jurídico salvo: R$ " . number_format($valorJuridico, 2, ',', '.'));
         }
-        
+
         $db->commit();
         error_log("✓ Serviços salvos com sucesso! Total: R$ " . number_format($valor_total_mensal, 2, ',', '.'));
-        
+
     } catch (Exception $e) {
         if (isset($db) && $db->inTransaction()) {
             $db->rollBack();
@@ -295,6 +295,7 @@ try {
             'id' => $associadoId,
             'nome' => $dados['nome'],
             'cpf' => $dados['cpf'],
+            'data_filiacao' => $dados['dataFiliacao'],
             'pre_cadastro' => true,
             
             // Indicação
@@ -322,7 +323,7 @@ try {
             'tipo_cadastro' => 'simplificado'
         ]
     ];
-    
+
     // Atualiza mensagens
     if ($indicacaoProcessada) {
         $response['message'] .= ' Indicação registrada.';
