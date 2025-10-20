@@ -606,7 +606,7 @@ $headerComponent = HeaderComponent::create([
         }
 
         .financial-nav-tabs .nav-tab .nav-tab-btn[data-target="gestao-peculio"] .nav-tab-icon {
-            background: #7c3aed !important;
+            background: #ecc814ff !important;
         }
 
         .financial-nav-tabs .nav-tab .nav-tab-btn[data-target="gestao-peculio"] .nav-tab-icon::before {

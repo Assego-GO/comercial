@@ -1,8 +1,3 @@
-/**
- * Módulo de Gestão de Pecúlio - VERSÃO FINAL
- * Busca TODOS os pecúlios sem limite
- */
-
 window.Peculio = {
     dados: null,
     temPermissao: false,
@@ -12,27 +7,21 @@ window.Peculio = {
     listaTodosPeculios: null,
 
     init(config = {}) {
-        console.log('🏦 Inicializando Gestão de Pecúlio...');
-        
         this.temPermissao = config.temPermissao || false;
         this.isFinanceiro = config.isFinanceiro || false;
         this.isPresidencia = config.isPresidencia || false;
 
         if (!this.temPermissao) {
-            console.log('❌ Usuário sem permissão');
             return;
         }
 
         if (!this.verificarElementos()) {
-            console.error('❌ Elementos não encontrados');
             return;
         }
 
         this.attachEventListeners();
         this.adicionarEstilosMelhorados();
         this.showNotification('Gestão de Pecúlio carregada!', 'success', 2000);
-        
-        console.log('✅ Módulo inicializado');
     },
 
     adicionarEstilosMelhorados() {
@@ -191,7 +180,6 @@ window.Peculio = {
                 flex-wrap: wrap;
             }
 
-            /* Campo de busca na lista */
             .busca-lista-container {
                 margin-bottom: 1rem;
                 position: relative;
@@ -294,10 +282,7 @@ window.Peculio = {
         document.head.appendChild(style);
     },
 
-    // ===== LISTAR TODOS OS PECÚLIOS (SEM LIMITE) =====
     async listarTodos() {
-        console.log('📋 Buscando TODOS os pecúlios do sistema...');
-        
         const btnListar = document.querySelector('.btn-listar-todos');
         const textoOriginal = btnListar ? btnListar.innerHTML : '';
         if (btnListar) {
@@ -306,18 +291,13 @@ window.Peculio = {
         }
 
         try {
-            // Busca TODOS - sem parâmetro de limite
             const response = await fetch('../api/peculio/listar_peculios.php');
-            
-            console.log('Response status:', response.status);
             
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
             
             const result = await response.json();
-            const totalCarregado = result.data?.peculios?.length || 0;
-            console.log(`✅ ${totalCarregado} pecúlios carregados da API`);
 
             if (result.status === 'success') {
                 this.listaTodosPeculios = result.data;
@@ -327,7 +307,6 @@ window.Peculio = {
             }
 
         } catch (error) {
-            console.error('❌ Erro ao listar:', error);
             this.showNotification('Erro ao carregar lista: ' + error.message, 'error');
         } finally {
             if (btnListar) {
@@ -344,8 +323,6 @@ window.Peculio = {
             this.showNotification('Nenhum pecúlio cadastrado', 'info');
             return;
         }
-
-        console.log(`📊 Total: ${estatisticas.total} | Vencidos: ${estatisticas.vencidos} | Próximos: ${estatisticas.proximos_30_dias} | Pendentes: ${estatisticas.pendentes}`);
         
         const modalHtml = `
             <div class="modal fade" id="modalListaPeculios" tabindex="-1">
@@ -382,7 +359,6 @@ window.Peculio = {
                                 </div>
                             </div>
 
-                            <!-- Campo de Busca -->
                             <div class="busca-lista-container">
                                 <input type="text" 
                                        class="busca-lista-input" 
@@ -410,7 +386,6 @@ window.Peculio = {
                                 </button>
                             </div>
 
-                            <!-- Informação de resultados da busca -->
                             <div class="resultado-busca-info" id="resultadoBuscaInfo" style="display: none;"></div>
 
                             <div class="lista-peculios-modal" id="listaModalPeculios">
@@ -430,7 +405,6 @@ window.Peculio = {
         document.getElementById('modalListaPeculios')?.remove();
         document.body.insertAdjacentHTML('beforeend', modalHtml);
 
-        // Event listeners nos filtros
         const filtros = document.querySelectorAll('.filtro-btn');
         filtros.forEach(btn => {
             btn.addEventListener('click', () => {
@@ -438,7 +412,6 @@ window.Peculio = {
                 btn.classList.add('ativo');
                 const filtro = btn.getAttribute('data-filtro');
                 
-                // Limpar busca ao trocar filtro
                 const inputBusca = document.getElementById('buscaListaNome');
                 if (inputBusca) inputBusca.value = '';
                 document.getElementById('limparBuscaLista')?.classList.remove('show');
@@ -448,7 +421,6 @@ window.Peculio = {
             });
         });
 
-        // Event listener para busca em tempo real
         const inputBusca = document.getElementById('buscaListaNome');
         const btnLimpar = document.getElementById('limparBuscaLista');
         
@@ -456,26 +428,22 @@ window.Peculio = {
             inputBusca.addEventListener('input', (e) => {
                 const termo = e.target.value;
                 
-                // Mostrar/esconder botão limpar
                 if (termo.length > 0) {
                     btnLimpar?.classList.add('show');
                 } else {
                     btnLimpar?.classList.remove('show');
                 }
                 
-                // Buscar
                 this.buscarNaLista(peculios, termo);
             });
         }
 
-        // Event listener para limpar busca
         if (btnLimpar) {
             btnLimpar.addEventListener('click', () => {
                 if (inputBusca) inputBusca.value = '';
                 btnLimpar.classList.remove('show');
                 document.getElementById('resultadoBuscaInfo').style.display = 'none';
                 
-                // Recarregar lista com filtro atual
                 const filtroAtivo = document.querySelector('.filtro-btn.ativo');
                 const filtro = filtroAtivo?.getAttribute('data-filtro') || 'todos';
                 this.filtrarLista(peculios, filtro);
@@ -551,14 +519,12 @@ window.Peculio = {
         }
     },
 
-    // ===== BUSCAR NA LISTA =====
     buscarNaLista(peculios, termo) {
         const container = document.getElementById('listaModalPeculios');
         const infoDiv = document.getElementById('resultadoBuscaInfo');
         
         if (!container) return;
 
-        // Se não tem termo, mostrar lista normal com filtro atual
         if (!termo || termo.trim() === '') {
             const filtroAtivo = document.querySelector('.filtro-btn.ativo');
             const filtro = filtroAtivo?.getAttribute('data-filtro') || 'todos';
@@ -567,15 +533,12 @@ window.Peculio = {
             return;
         }
 
-        // Normalizar termo de busca
         const termoNormalizado = termo.toLowerCase().trim();
 
-        // Filtrar por nome
         const resultados = peculios.filter(p => 
             p.nome.toLowerCase().includes(termoNormalizado)
         );
 
-        // Aplicar filtro ativo também
         const filtroAtivo = document.querySelector('.filtro-btn.ativo');
         const filtro = filtroAtivo?.getAttribute('data-filtro') || 'todos';
         
@@ -595,7 +558,6 @@ window.Peculio = {
                 break;
         }
 
-        // Mostrar informação de resultados
         if (infoDiv) {
             infoDiv.style.display = 'block';
             if (resultadosFiltrados.length === 0) {
@@ -607,7 +569,6 @@ window.Peculio = {
             }
         }
 
-        // Renderizar resultados
         if (resultadosFiltrados.length === 0) {
             container.innerHTML = `
                 <div class="alert alert-warning">
@@ -648,7 +609,6 @@ window.Peculio = {
         }
     },
 
-    // ===== DESTACAR TERMO NA BUSCA =====
     highlightTexto(texto, termo) {
         if (!termo || termo.trim() === '') return texto;
         
@@ -739,7 +699,6 @@ window.Peculio = {
             }
 
         } catch (error) {
-            console.error('❌ Erro:', error);
             this.mostrarAlert('Erro ao consultar', 'danger');
         } finally {
             this.mostrarLoading(false);
@@ -1054,11 +1013,7 @@ window.Peculio = {
             'dataPrevistaPeculio', 'valorPeculio', 'dataRecebimentoPeculio'
         ];
 
-        return elementos.every(id => {
-            const exists = !!document.getElementById(id);
-            if (!exists) console.error(`Elemento não encontrado: ${id}`);
-            return exists;
-        });
+        return elementos.every(id => !!document.getElementById(id));
     },
 
     formatarData(data) {
@@ -1098,8 +1053,6 @@ window.Peculio = {
     showNotification(msg, type, duration = 3000) {
         if (window.notifications) {
             window.notifications.show(msg, type, duration);
-        } else {
-            console.log(`${type.toUpperCase()}: ${msg}`);
         }
     }
 };
