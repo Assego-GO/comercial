@@ -3,7 +3,7 @@
 /**
  * Página de Serviços Financeiros - Sistema ASSEGO
  * pages/cadastroForm.php
- * VERSÃO COMPLETA COM TODAS AS FUNCIONALIDADES ORIGINAIS
+ * VERSÃO COM TODOS OS CAMPOS OPCIONAIS
  */
 
 // Configuração e includes
@@ -458,329 +458,7 @@ $lotacoes = [
     "10. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO E",
     "10. PELOTAO DE BOMBEIROS MILITAR",
     "10a COMPANHIA INDEPENDENTE POLICIA MILITAR",
-    "11. BATALHAO BOMBEIRO MILITAR",
-    "11. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "11. CIA INDEPENDENTE DE BOMBEIROS MILITAR",
-    "11. COMANDO REGIONAL DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "11. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "12. BATALHAO BOMBEIRO MILITAR",
-    "12. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "12. CIA INDEPENDENTE DE BOMBEIROS MILITAR",
-    "12. COMANDO REGIONAL DE POLICIA MILITAR DO ESTADO",
-    "12. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "13. BATALHAO BOMBEIRO MILITAR",
-    "13. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "13. CIA INDEPENDENTE DE BOMBEIROS MILITAR",
-    "13. COMANDO REGIONAL DE POLICIA MILITAR DO ESTADO",
-    "13. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DE GOIAS",
-    "14. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "14. CIA INDEPENDENTE DE BOMBEIROS MILITAR",
-    "14. COMANDO REGIONAL DE POLICIA MILITAR DO ESTADO",
-    "14. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "15. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "15. CIA INDEPENDENTE DE BOMBEIROS",
-    "15. COMANDO REGIONAL DE POLICIA MILITAR DO ESTADO",
-    "15. COMPANHIA INDEPENDENTE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "16. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "16. COMANDO REGIONAL DE PM DO ESTADO DE GOIAS",
-    "16. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "16a COMPANHIA INDEPENDENTE DE POLICIA MILITAR/COMPANHIA DE POLICIAMENTO ESPECIALIZADO",
-    "17. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "17. CIA INDEPENDENTE DE BOMBEIROS",
-    "17. COMANDO REGIONAL DE POLICIA MILITAR DO ESTADO",
-    "17. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "18. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "18. CIPM - COMPANHIA DE POLICIAMENTO ESPECIALIZADO",
-    "18. COMANDO REGIONAL DE POLICIA MILITAR DO ESTADO",
-    "19. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "19. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "19o COMANDO REGIONAL DE POLICIA MILITAR",
-    "2. BATALHAO BOMBEIRO MILITAR",
-    "2. BATALHAO DE POLICIA MILITAR DE GOIAS",
-    "2. BATALHAO DE POLICIA MILITAR RODOVIARIO DO ESTADO DE GOIAS",
-    "2. CIA INDEPENDENTE DE BOMBEIROS MILITAR",
-    "2. COMANDO REGIONAL DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "2. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "2. PELOTAO DE BOMBEIROS MILITAR",
-    "20. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "20. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "21. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "21. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "22. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "22. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "23. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "23. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "24. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "24. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "25. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "25a COMPANHIA INDEPENDENTE BOMBEIRO MILITAR",
-    "25a COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "26. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "26a COMPANHIA INDEPENDENTE BOMBEIRO MILITAR",
-    "27. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "27. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "28. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "28. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "29. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "29. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "2a COMPANHIA DE POLICIA MILITAR RURAL",
-    "3. BATALHAO DE BOMBEIROS MILITAR",
-    "3. BATALHAO DE POLICIA MILITAR RODOVIARIO DO ESTADO DE GOIAS",
-    "3. BATALHAO DE POLICIA MILITAR DE GOIAS",
-    "3. CIA INDEPENDENTE DE BOMBEIROS MILITAR",
-    "3. COMANDO REGIONAL DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "3. PELOTAO DE BOMBEIROS MILITAR",
-    "3. REGIONAL DO CORPO DE BOMBEIROS MILITAR DE ANAPOLIS",
-    "30. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "31. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "31. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "32. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "32. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "33. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "33. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "34. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "34. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "35. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "36. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "36. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "37. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "38. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "39. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "39. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "3ª COMPANHIA INDEPENDENTE DE POLICIA MILITAR DE GOIAS",
-    "3ª SEÇÃO DE RECRUTAMENTO E SELEÇÃO DE PESSOAL",
-    "3o PELOTAO BOMBEIRO MILITAR",
-    "4. BATALHAO DE BOMBEIROS MILITAR",
-    "4. BATALHAO DE POLICIA MILITAR DE GOIAS",
-    "4. COMANDO REGIONAL DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "4. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "4. PELOTAO BOMBEIRO MILITAR",
-    "4. SECAO DO ESTADO MAIOR",
-    "40. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "41. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "41.  COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "42.  COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "42o BATALHAO DE POLICIA MILITAR/01o CRPM",
-    "43.  COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "44. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "45. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "46. COMPANHIA INDEPENDENTE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "47. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "48. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "4a COMPANHIA DE POLICIA MILITAR RURAL",
-    "4a COMPANHIA DE POLICIAMENTO RURAL",
-    "4a COMPANHIA DO COMANDO DE DIVISAS - BASE CABECEIRAS",
-    "4ª COMPANHIA DE ROTAM",
-    "4ª SECAO DE ADMINISTRACAO DE PESSOAL",
-    "4o PELOTAO BOMBEIRO MILITAR",
-    "5. BATALHAO DE BOMBEIROS MILITAR",
-    "5. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "5. COMANDO REGIONAL DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "5. COMPANHIA BOMBEIRO MILITAR",
-    "5. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "5. PELOTAO BOMBEIRO MILITAR",
-    "5. SECAO DO ESTADO MAIOR",
-    "5a COMPANHIA DE POLICIAMENTO RURAL",
-    "5a COMPANHIA INDEPENDENTE DE POLICIA MILITAR AMBIENTAL",
-    "6. BATALHAO DE BOMBEIROS MILITAR",
-    "6. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "6. CIA INDEPENDENTE DE BOMBEIROS MILITAR",
-    "6. COMANDO REGIONAL DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "6. PELOTAO BOMBEIRO MILITAR",
-    "6. SECAO DO ESTADO MAIOR",
-    "6a COMPANHIA DO COMANDO DE DIVISAS - CIDADE OCIDENTAL",
-    "6a COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "6o COMANDO REGIONAL BOMBEIRO MILITAR",
-    "7. BATALHAO DE BOMBEIROS MILITAR",
-    "7. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "7. CIA INDEPENDENTE DE BOMBEIROS MILITAR",
-    "7. COMANDO REGIONAL DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "7. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "7. PELOTAO BOMBEIRO MILITAR",
-    "7. SECAO DO ESTADO MAIOR",
-    "7a COMPANHIA INDEPENDENTE DE POLICIA MILITAR - (CPE)",
-    "7o COMANDO REGIONAL BOMBEIRO MILITAR",
-    "8. BATALHAO DE BOMBEIROS MILITAR",
-    "8. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "8. CIA INDEPENDENTE DE BOMBEIROS MILITAR",
-    "8. COMANDO REGIONAL DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "8a SECAO DO ESTADO-MAIOR GERAL",
-    "9. BATALHAO BOMBEIRO MILITAR",
-    "9. BATALHAO DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "9. COMANDO REGIONAL DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "9. COMPANHIA BOMBEIRO MILITAR",
-    "9. COMPANHIA INDEPENDENTE DE POLICIA MILITAR DO ESTADO DE GOIAS",
-    "9. PELOTAO BOMBEIRO MILITAR",
-    "AGENFA LUZIANIA",
-    "ASSESSORIA FUNDACIONAL - DOM PEDRO II",
-    "ASSISTENCIA POLICIA MILITAR DO ESTADO DE GOIAS - M",
-    "ASSISTENCIA POLICIAL MILITAR - ASSEMBLEIA LEGISLAT",
-    "ASSISTENCIA POLICIAL MILITAR - SECRETARIA DE SEGUR",
-    "ASSISTENCIA POLICIAL MILITAR - TRIBUNAL DE CONTAS",
-    "ASSISTENCIA POLICIAL MILITAR - TRIBUNAL DE JUSTICA",
-    "ASSISTENCIA POLICIAL MILITAR DA GOIAS PREVIDENCIA",
-    "ASSISTENCIA POLICIAL MILITAR NO MPGO - GOI",
-    "BASE ADMINISTRATIVA DA POLICIA MILITAR",
-    "BATALHAO DE OPERACOES ESPECIAIS (BOPE)",
-    "BATALHAO DE GIRO (GIRO)",
-    "BATALHAO DE POLICIA MILITAR DE CHOQUE DO ESTADO DE GOIAS (CHOQUE)",
-    "BATALHAO DE POLICIA MILITAR DE EVENTOS (BEPE)",
-    "BATALHAO DE POLICIA MILITAR DE TERMINAL (TERMINAL)",
-    "BATALHAO DE POLICIA MILITAR DE TRANSITO DO ESTADO DE GOIAS (BPTRAN)",
-    "BATALHAO DE POLICIA MILITAR ESCOLAR DO ESTADO DE GOIAS (ESCOLAR)",
-    "BATALHAO DE POLICIA MILITAR FAZENDARIA",
-    "BATALHAO DE POLICIA MILITAR MARIA DA PENHA - CPC",
-    "BATALHAO DE POLICIA MILITAR RURAL/COC",
-    "BATALHAO DE PROTECAO SOCIOAMBIENTA",
-    "BATALHAO DE ROTAM (ROTAM)",
-    "BATALHAO DE SALVAMENTO EM EMERGENCIA",
-    "CENTRO  DE MANUTENCAO",
-    "CENTRO DE INSTRUCAO DA POLICIA MILITAR DE GOIAS",
-    "CENTRO DE OPERACOES AEREAS",
-    "CENTRO DE OPERACOES DA POLICIA MILITAR DO ESTADO DO ESTADO DE GOIAS",
-    "CENTRO DE POLICIA COMUNITARIA",
-    "CENTRO EST. DE ATEND. OP. DE BOMBEIROS",
-    "CENTRO INTEGRADO DE OPERACOES ESTRATEGICAS POLICIA",
-    "CHEFIA DA 2a SECAO DO ESTADO-MAIOR ESTRATEGICO PM/2",
-    "CHEFIA DO ESTADO-MAIOR ESTRATEGICO",
-    "COL DA PM DO EST DE GO - BENEDITA B DE ANDRADE– GO",
-    "COL DA PM DO EST DE GO - PROF IVAN F PIRES DO RIO",
-    "COL DA PM DO ESTADO DE GOIAS - JOAO AUGUSTO PERILO",
-    "COLÉGIO DA PM DO ESTADO DE GOIÁS - XAVIER DE ALMEI",
-    "COLÉGIO DA POLÍCIA MILITAR DO ESTADO DE GOIÁS - AM",
-    "COLÉGIO DA POLÍCIA MILITAR DO ESTADO DE GOIÁS - DE",
-    "COLÉGIO ESTADUAL DA POLÍCIA MILITAR DE GOIÁS JOSÉ",
-    "COLEGIO DA PM DO EST DE GO -  JUSSARA",
-    "COLEGIO DA PM DO EST DE GO -  PALMEIRAS",
-    "COLEGIO DA PM DO EST DE GO - APARECIDA DE GOIANIA",
-    "COLEGIO DA PM DO EST DE GO - ARLINDO COSTA",
-    "COLEGIO DA PM DO EST DE GO - CALDAS NOVAS",
-    "COLEGIO DA PM DO EST DE GO - DOM PRUDENCIO - POSSE",
-    "COLEGIO DA PM DO EST DE GO - FORMOSA",
-    "COLEGIO DA PM DO EST DE GO - HELIO VELOSO - CERES",
-    "COLEGIO DA PM DO EST DE GO - JATAI",
-    "COLEGIO DA PM DO EST DE GO - MAJOR OSCAR ALVELOS",
-    "COLEGIO DA PM DO EST DE GO - MARIA HELENY PERILLO",
-    "COLEGIO DA PM DO EST DE GO - MIRIAM B. FERREIRA",
-    "COLEGIO DA PM DO EST DE GO - SENADOR CANEDO",
-    "COLEGIO DA PM DO EST DE GO ARISTON GOMES DA SILVA",
-    "COLEGIO DA PM DO EST DE GO – APARECIDA DE GOIANIA",
-    "COLEGIO DA PM DO EST DE GO – GOIANESIA",
-    "COLEGIO DA PM DO EST DE GO – INHUMAS",
-    "COLEGIO DA PM DO EST DE GO – JARAGUA",
-    "COLEGIO DA PM DO EST DE GO – NOVO GAMA",
-    "COLEGIO DA PM DO EST DE GO – VALPARAISO",
-    "COLEGIO DA PM DO EST DE GO GERALDA ANDRADE MARTINS",
-    "COLEGIO DA PM DO EST DE GO JOSE S O GOIANIRA",
-    "COLEGIO DA PM DO EST DE GOIAS - JARDIM GUANABARA",
-    "COLEGIO DA PM DO ESTADO DE GOIAS - COLINA AZUL",
-    "COLEGIO DA PM DO ESTADO DE GOIAS - GOIATUBA",
-    "COLEGIO DA PM DO ESTADO DE GOIAS - ITAUCU",
-    "COLEGIO DA PM DO ESTADO DE GOIAS - MANSOES PARAISO",
-    "COLEGIO DA PM DO ESTADO DE GOIAS - WALDEMAR MUNDIM",
-    "COLEGIO DA PM DO ESTADO DE GOIAS DR NEGREIRO",
-    "COLEGIO DA POLICIA MILITAR DE GOIAS - PADRE PELAGIO/GOIANIRA",
-    "COLEGIO DA POLICIA MILITAR DO ESTADO DE GOIAS - PEDRO LUDOVICO TEIXEIRA - TRINDADE",
-    "COLEGIO DA POLICIA MILITAR DO ESTADO DE GOIAS - PO",
-    "COLEGIO DA POLICIA MILITAR DO ESTADO DE GOIAS - QU",
-    "COLEGIO DA POLICIA MILITAR DO ESTADO DE GOIAS - VA",
-    "COLEGIO DA POLICIA MILITAR DO ESTADO DE GOIAS -ANA",
-    "COLEGIO DA POLICIA MILITAR DO ESTADO DE GOIAS -AYR",
-    "COLEGIO DA POLICIA MILITAR DO ESTADO DE GOIAS -HUG",
-    "COLEGIO DA POLICIA MILITAR DO ESTADO DE GOIAS -RIO",
-    "COLEGIO EST. DA PM - CASTELO BRANCO - TRINDADE",
-    "COLEGIO EST. PM - 13 DE MAIO",
-    "COLEGIO EST. PM - AUGUSTA MACHADO - HIDROLÂNDIA",
-    "COLEGIO EST. PM - DOUTOR JOSE FELICIANO FERREIRA",
-    "COLEGIO EST. PM - PASTOR JOSE ANTERO RIBEIRO",
-    "COLEGIO EST. PM - PROFESSOR JOSE DOS REIS MENDES",
-    "COLEGIO EST. PM - ROSA TURISCO DE ARAUJO - ANICUNS",
-    "COMANDO DA ACADEMIA DE POLICIA MILITAR",
-    "COMANDO DA ACADEMIA E ENSINO BOMBEIRO MILITAR",
-    "COMANDO DE APOIO LOGISTICO",
-    "COMANDO DE APOIO LOGISTICO E TECNOLOGIA DA INFORMA",
-    "COMANDO DE ATIVIDADES TECNICAS",
-    "COMANDO DE CORREICOES E DISCIPLINA",
-    "COMANDO DE CORREICOES E DISCIPLINA DA POLICIA MILI",
-    "COMANDO DE ENSINO POLICIAL MILITAR",
-    "COMANDO DE GESTAO E FINANCAS",
-    "COMANDO DE OPERACOES DE DEFESA CIVIL",
-    "COMANDO DE OPERACOES DE DIVISA (COD)",
-    "COMANDO DE OPERACOES DE RECOBRIMENTO",
-    "COMANDO DE POLICIAMENTO AMBIENTAL",
-    "COMANDO DE POLICIAMENTO ESPECIALIZADO",
-    "COMANDO DE SAUDE",
-    "COMANDO DE SAUDE BOMBEIRO MILITAR",
-    "COMANDO GERAL DA POLICIA MILITAR",
-    "COMISSAO DE PROMOCAO DE PRACAS",
-    "COMISSAO PERMANENTE DE MEDALHAS",
-    "COMPANHIA AMBIENTAL DE OPERACOES COM PRODUTOS PERIGOSOS",
-    "COMPANHIA DE POLICIAMENTO COM COES",
-    "COMPANHIA DE POLICIAMENTO ESPECIALIZADO - 20aCIPM - CPE(11oCRPM)",
-    "COMPANHIA INDEPENDENTE BOMBEIRO MILITAR DE GOIANIR",
-    "COMPANHIA INDEPENDENTE BOMBEIRO MILITAR DE NERÓPOL",
-    "COMPANHIA INDEPENDENTE DE OPERACOES ESPECIAIS",
-    "COORDENACAO DE GESTAO DE PESSOAS",
-    "COORDENACAO TCO/PM",
-    "CORPO MUSICAL DA POLICIA MILITAR DO ESTADO DE GOIAS",
-    "CPMG 5 DE JANEIRO/CEPM",
-    "DIRETORIA DE MILITARES",
-    "E.E. VICENCA MARIA DE JESUS",
-    "GAB DA SEC  DE EST DE AGRICULTURA",
-    "GABINETE DO COMANDANTE GERAL DO CBMGO",
-    "GABINETE DO ESTADO-MAIOR GERAL",
-    "GABINETE DO SECRETARIO",
-    "GABINETE DO SECRETARIO-CHEFE",
-    "GERENCIA DA SECRETARIA GERAL",
-    "GERENCIA DE AJUDANCIA DE ORDENS 3",
-    "GERENCIA DE CONTABILIDADE",
-    "GERENCIA DE EXECUCAO ORCAMENTARIA E FINANCEIRA",
-    "GERENCIA DE FOLHA DE PAGAMENTO DE BENEFICIOS",
-    "GERENCIA DE GESTAO DE ATIVOS",
-    "GERENCIA DE GESTAO DE PESSOAS E APOIO LOGISTICO",
-    "GERENCIA DE INFORMATICA E TELECOMUNICACOES",
-    "GERENCIA DE LICITACOES",
-    "GERENCIA DE OPERACOES DE INTELIGENCIA",
-    "GERENCIA DE PENSAO E DIREITOS DE MILITARES",
-    "GERENCIA DE PLANEJAMENTO E GESTAO ESTRATEGICA",
-    "GERENCIA DE SEGURANCA",
-    "GERENCIA DE SEGURANCA DE VOO E CONTROLE DE DADOS A",
-    "GERENCIA DE SEGURANCA E MONITORAMENTO",
-    "GERENCIA DE SEGURANCA PESSOAL, FISICA E DE INSTALA",
-    "GERENCIA DE TRANSPORTE , OPERACIONAL E ADMINISTRAT",
-    "GERENCIA DO OBSERVATORIO DE SEGURANCA PUBLICA",
-    "GRUPAMENTO DE POLICIA MILITAR AEREO ESTADO DE GOIAS",
-    "GRUPAMENTO DE RADIO PATRULHA AEREA",
-    "NAO IDENTIFICADO",
-    "OITAVA SECAO DO ESTADO MAIOR",
-    "PELOTAO BOMBEIRO MILITAR DE SILVANIA",
-    "POSTO DE POLICIAMENTO RODOVIARIO DA GO 010 KM 162 - LUZIANIA",
-    "POSTO DE POLICIAMENTO RODOVIARIO DA GO 080 KM 139 - GOIANESIA",
-    "POSTO DE POLICIAMENTO RODOVIARIO DA GO 080 KM 203 - BARRO ALTO",
-    "POSTO DE POLICIAMENTO RODOVIARIO DA GO 118 KM 095 - SAO JOAO D ALIANCA",
-    "POSTO DE POLICIAMENTO RODOVIARIO DA GO 338 KM 043 - PIRENOPOLIS",
-    "PRIMEIRA SECAO DO ESTADO MAIOR",
-    "PRIMEIRO BATALHAO DE POLICIA MILITAR DE OPERACOES",
-    "QUARTA SECAO DO ESTADO MAIOR",
-    "QUARTEL DA AJUDANCIA GERAL POLICIA MILITAR ESTADO DE GOIAS",
-    "QUARTEL DO COMANDO GERAL",
-    "QUINTA SECAO DO ESTADO MAIOR",
-    "REGIMENTO DE POLICIA MONTADA DO ESTADO DE GOIAS",
-    "SECAO PARLAMENTAR NO CONGRESSO NACIONAL",
-    "SECRETARIA DE ESTADO DA CASA MILITAR",
-    "SEGUNDA SECAO DO ESTADO MAIOR",
-    "SENADOR ONOFRE QUINAN",
-    "SETIMA SECAO DO ESTADO MAIOR",
-    "SEXTA SECAO DO ESTADO MAIOR",
-    "SUBCOMANDANTE-GERAL DA POLICIA MILITAR",
-    "SUBCOMANDO-GERAL DO CORPO DE BOMBEIROS MILITAR",
-    "SUBCONTROLADORIA DE GOVERNO ABERTO E OUVIDORIA GERAL",
-    "SUPERINTENDENCIA DE ACOES E OPERACOES INTEGRADAS",
-    "SUPERINTENDENCIA DE ADMINISTRACAO DO PALACIO PEDRO",
-    "SUPERINTENDENCIA DE GESTAO, PLANEJAMENTO E FINANCA",
-    "SUPERINTENDENCIA DE INTELIGENCIA",
-    "SUPERINTENDENCIA DE SEGURANCA PENITENCIARIA",
-    "TERCEIRA SECAO DO ESTADO MAIOR"
+    "NAO IDENTIFICADO"
 ];
 
 // Array de patentes com encoding correto E hífens corretos (sem duplicação)
@@ -792,7 +470,6 @@ $patentes = [
         'Cabo',
         'Terceiro Sargento',
         'Terceiro-Sargento',
-    
         'Segundo-Sargento',
         'Primeiro Sargento',
         'Primeiro-Sargento',
@@ -934,39 +611,161 @@ $headerComponent = HeaderComponent::create([
             opacity: 1;
         }
 
-        /* ADIÇÃO ESPECÍFICA PARA INDICAR QUE É O SETOR FINANCEIRO */
-        .page-header::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 4px;
-            background: linear-gradient(90deg, #28a745, #20c997);
-            border-radius: 0 0 8px 8px;
+        /* Indicador de campo opcional */
+        .optional-label {
+            color: #6c757d;
+            font-weight: normal;
+            font-size: 0.85em;
         }
 
-        .page-header {
-            position: relative;
-            background: rgba(40, 167, 69, 0.05);
-            border: 1px solid rgba(40, 167, 69, 0.2);
-            border-radius: 12px;
-            padding: 2rem;
-            margin-bottom: 2rem;
-        }
+        /* ================================================
+   CSS ADICIONAL - Agregado Campos Cinzas + Maiúsculas Militares
+   Adicione este CSS ao seu arquivo estilizacao/cadastroForm.css
+   ================================================ */
 
-        .setor-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            background: linear-gradient(135deg, #28a745, #20c997);
-            color: white;
-            padding: 0.5rem 1rem;
-            border-radius: 20px;
-            font-size: 0.875rem;
-            font-weight: 600;
-            margin-bottom: 1rem;
-        }
+/* ===== CAMPOS FINANCEIROS DESABILITADOS PARA AGREGADO ===== */
+
+/* Estilo para campos de input desabilitados */
+.form-input:disabled,
+.form-select:disabled {
+    background-color: #e9ecef !important;
+    color: #6c757d !important;
+    cursor: not-allowed !important;
+    opacity: 0.6 !important;
+    border-color: #dee2e6 !important;
+}
+
+/* Estilo para Select2 desabilitado */
+.select2-container--disabled .select2-selection--single {
+    background-color: #e9ecef !important;
+    cursor: not-allowed !important;
+    border-color: #dee2e6 !important;
+    opacity: 0.6 !important;
+}
+
+.select2-container--disabled .select2-selection--single .select2-selection__rendered {
+    color: #6c757d !important;
+}
+
+.select2-container--disabled .select2-selection--single .select2-selection__arrow {
+    opacity: 0.5 !important;
+}
+
+/* Estilo para labels quando campos estão desabilitados */
+.form-group:has(.form-input:disabled) .form-label,
+.form-group:has(.form-select:disabled) .form-label {
+    color: #6c757d !important;
+    opacity: 0.7;
+}
+
+/* Aviso de agregado no financeiro */
+#avisoAgregadoFinanceiro {
+    background: #fff3cd;
+    border: 1px solid #ffc107;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+#avisoAgregadoFinanceiro i {
+    color: #856404;
+    font-size: 1.25rem;
+}
+
+#avisoAgregadoFinanceiro span {
+    color: #856404;
+    font-weight: 500;
+}
+
+
+/* ===== MAIÚSCULAS NOS DADOS MILITARES ===== */
+
+/* Campo de Unidade em maiúsculas */
+#unidade {
+    text-transform: uppercase !important;
+}
+
+#unidade::placeholder {
+    text-transform: none;
+}
+
+/* Select2 - Input de busca em maiúsculas para campos militares */
+.select2-search__field {
+    text-transform: uppercase !important;
+}
+
+/* Opções selecionadas em maiúsculas nos campos militares */
+#corporacao + .select2-container .select2-selection__rendered,
+#patente + .select2-container .select2-selection__rendered,
+#categoria + .select2-container .select2-selection__rendered,
+#lotacao + .select2-container .select2-selection__rendered {
+    text-transform: uppercase !important;
+}
+
+/* Tags criadas nos Select2 militares em maiúsculas */
+#corporacao + .select2-container .select2-selection__choice,
+#patente + .select2-container .select2-selection__choice,
+#categoria + .select2-container .select2-selection__choice,
+#lotacao + .select2-container .select2-selection__choice {
+    text-transform: uppercase !important;
+}
+
+/* Dropdown de opções em maiúsculas para campos militares */
+.select2-results__option {
+    text-transform: uppercase;
+}
+
+
+/* ===== EFEITO VISUAL PARA CAMPOS DESABILITADOS ===== */
+
+/* Container do serviço quando desabilitado */
+.servico-item[style*="opacity: 0.5"] {
+    background: #f8f9fa !important;
+    border: 1px dashed #dee2e6 !important;
+}
+
+/* Animação suave ao desabilitar/habilitar */
+.form-input,
+.form-select,
+.select2-container .select2-selection--single {
+    transition: background-color 0.3s ease, 
+                color 0.3s ease, 
+                opacity 0.3s ease,
+                border-color 0.3s ease;
+}
+
+
+/* ===== INDICADOR VISUAL PARA CAMPOS DE AGREGADO ===== */
+
+/* Seção financeira quando é agregado */
+.section-card[data-step="4"].agregado-mode .form-grid {
+    position: relative;
+}
+
+.section-card[data-step="4"].agregado-mode .form-grid::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(248, 249, 250, 0.5);
+    pointer-events: none;
+    z-index: 1;
+    border-radius: 8px;
+}
+
+/* Badge para indicar campo desabilitado */
+.campo-desabilitado-agregado::after {
+    content: '(Gerenciado pelo titular)';
+    font-size: 0.7rem;
+    color: #856404;
+    margin-left: 0.5rem;
+    font-weight: normal;
+}
     </style>
 
     <!-- Passar dados para o JavaScript -->
@@ -977,7 +776,8 @@ $headerComponent = HeaderComponent::create([
             associadoId: <?php echo $associadoId ? $associadoId : 'null'; ?>,
             regrasContribuicao: <?php echo json_encode($regrasContribuicao); ?>,
             servicos: <?php echo json_encode($servicos); ?>,
-            associadoData: <?php echo json_encode($associadoData); ?>
+            associadoData: <?php echo json_encode($associadoData); ?>,
+            isSocioAgregado: <?php echo $isSocioAgregado ? 'true' : 'false'; ?>
         };
     </script>
 </head>
@@ -1017,7 +817,7 @@ $headerComponent = HeaderComponent::create([
                     <?php echo $isEdit ? 'Editar Associado' : 'Filiar Novo Associado'; ?>
                 </h1>
                 <p style="color: #6c757d; margin: 0; font-size: 0.95rem;">
-                    <?php echo $isEdit ? 'Atualize os dados do associado' : 'Preencha todos os campos obrigatórios para filiar um novo associado'; ?>
+                    <?php echo $isEdit ? 'Atualize os dados do associado' : 'Preencha os campos desejados para filiar um novo associado'; ?>
                 </p>
             </div>
             <button type="button" class="btn-dashboard" onclick="window.location.href='dashboard.php'">
@@ -1106,7 +906,7 @@ $headerComponent = HeaderComponent::create([
                 <div class="form-group full-width agregado-campos" id="campoCpfTitular" style="display: none; margin-bottom: 1.5rem;">
                     <div style="display: flex; flex-wrap: wrap; gap: 1.5rem; align-items: flex-end;">
                         <div style="flex: 1 1 220px; min-width: 220px;">
-                            <label class="form-label">CPF do Titular <span class="required">*</span></label>
+                            <label class="form-label">CPF do Titular</label>
                             <input type="text" 
                                 class="form-input" 
                                 name="cpfTitular" 
@@ -1131,122 +931,104 @@ $headerComponent = HeaderComponent::create([
             <?php endif; ?>
                         <div class="form-group full-width">
                             <label class="form-label">
-                                Nome Completo <span class="required">*</span>
+                                Nome Completo <span class="optional-label">(opcional)</span>
                             </label>
-                            <input type="text" class="form-input" name="nome" id="nome" required
+                            <input type="text" class="form-input" name="nome" id="nome"
                                 value="<?php echo $associadoData['nome'] ?? ''; ?>"
                                 placeholder="Digite o nome completo do associado">
-                            <span class="form-error">Por favor, insira o nome completo</span>
                         </div>
 
                         <div class="form-group">
                             <label class="form-label">
-                                Data de Nascimento <span class="required">*</span>
+                                Data de Nascimento <span class="optional-label">(opcional)</span>
                             </label>
-                            <input type="date" class="form-input" name="nasc" id="nasc" required
+                            <input type="date" class="form-input" name="nasc" id="nasc"
                                 value="<?php echo $associadoData['nasc'] ?? ''; ?>">
-                            <span class="form-error">Por favor, insira a data de nascimento</span>
                         </div>
 
                         <div class="form-group">
                             <label class="form-label">
-                                Sexo <span class="required">*</span>
+                                Sexo <span class="optional-label">(opcional)</span>
                             </label>
                             <div class="radio-group">
                                 <div class="radio-item">
-                                    <input type="radio" name="sexo" id="sexo_m" value="M" required <?php echo (isset($associadoData['sexo']) && $associadoData['sexo'] == 'M') ? 'checked' : ''; ?>>
+                                    <input type="radio" name="sexo" id="sexo_m" value="M" <?php echo (isset($associadoData['sexo']) && $associadoData['sexo'] == 'M') ? 'checked' : ''; ?>>
                                     <label for="sexo_m">Masculino</label>
                                 </div>
                                 <div class="radio-item">
-                                    <input type="radio" name="sexo" id="sexo_f" value="F" required <?php echo (isset($associadoData['sexo']) && $associadoData['sexo'] == 'F') ? 'checked' : ''; ?>>
+                                    <input type="radio" name="sexo" id="sexo_f" value="F" <?php echo (isset($associadoData['sexo']) && $associadoData['sexo'] == 'F') ? 'checked' : ''; ?>>
                                     <label for="sexo_f">Feminino</label>
                                 </div>
                             </div>
-                            <span class="form-error">Por favor, selecione o sexo</span>
                         </div>
 
                         <div class="form-group">
                             <label class="form-label">
-                                Estado Civil
+                                Estado Civil <span class="optional-label">(opcional)</span>
                             </label>
                             <select class="form-input form-select" name="estadoCivil" id="estadoCivil">
                                 <option value="">Selecione...</option>
-                                <option value="Solteiro(a)" <?php echo (isset($associadoData['estadoCivil']) && $associadoData['estadoCivil'] == 'Solteiro(a)') ? 'selected' : ''; ?>>Solteiro(a)
-                                </option>
+                                <option value="Solteiro(a)" <?php echo (isset($associadoData['estadoCivil']) && $associadoData['estadoCivil'] == 'Solteiro(a)') ? 'selected' : ''; ?>>Solteiro(a)</option>
                                 <option value="Casado(a)" <?php echo (isset($associadoData['estadoCivil']) && $associadoData['estadoCivil'] == 'Casado(a)') ? 'selected' : ''; ?>>Casado(a)</option>
-                                <option value="Divorciado(a)" <?php echo (isset($associadoData['estadoCivil']) && $associadoData['estadoCivil'] == 'Divorciado(a)') ? 'selected' : ''; ?>>Divorciado(a)
-                                </option>
+                                <option value="Divorciado(a)" <?php echo (isset($associadoData['estadoCivil']) && $associadoData['estadoCivil'] == 'Divorciado(a)') ? 'selected' : ''; ?>>Divorciado(a)</option>
                                 <option value="Separado(a) Judicialmente" <?php echo (isset($associadoData['estadoCivil']) && $associadoData['estadoCivil'] == 'Separado(a) Judicialmente') ? 'selected' : ''; ?>>Separado(a) Judicialmente</option>
                                 <option value="Viúvo(a)" <?php echo (isset($associadoData['estadoCivil']) && $associadoData['estadoCivil'] == 'Viúvo(a)') ? 'selected' : ''; ?>>Viúvo(a)</option>
-                                <option value="União Estável" <?php echo (isset($associadoData['estadoCivil']) && $associadoData['estadoCivil'] == 'União Estável') ? 'selected' : ''; ?>>União Estável
-                                </option>
+                                <option value="União Estável" <?php echo (isset($associadoData['estadoCivil']) && $associadoData['estadoCivil'] == 'União Estável') ? 'selected' : ''; ?>>União Estável</option>
                             </select>
                         </div>
 
                         <div class="form-group">
                             <label class="form-label">
-                                RG <span class="required">*</span>
+                                RG <span class="optional-label">(opcional)</span>
                             </label>
-                            <input type="text" class="form-input" name="rg" id="rg" required
+                            <input type="text" class="form-input" name="rg" id="rg"
                                 value="<?php echo $associadoData['rg'] ?? ''; ?>" placeholder="Número do RG">
-                            <span class="form-error">Por favor, insira o RG</span>
                         </div>
 
                         <div class="form-group">
                             <label class="form-label">
-                                CPF <span class="required">*</span>
+                                CPF <span class="optional-label">(opcional)</span>
                             </label>
-                            <input type="text" class="form-input" name="cpf" id="cpf" required
+                            <input type="text" class="form-input" name="cpf" id="cpf"
                                 value="<?php echo $associadoData['cpf'] ?? ''; ?>" placeholder="000.000.000-00">
-                            <span class="form-error">Por favor, insira um CPF válido</span>
                         </div>
 
                         <div class="form-group">
                             <label class="form-label">
-                                Telefone <span class="required">*</span>
+                                Telefone <span class="optional-label">(opcional)</span>
                             </label>
-                            <input type="text" class="form-input" name="telefone" id="telefone" required
+                            <input type="text" class="form-input" name="telefone" id="telefone"
                                 value="<?php echo $associadoData['telefone'] ?? ''; ?>" placeholder="(00) 00000-0000">
-                            <span class="form-error">Por favor, insira o telefone</span>
                         </div>
 
                         <div class="form-group">
                             <label class="form-label">
-                                E-mail
+                                E-mail <span class="optional-label">(opcional)</span>
                             </label>
                             <input type="email" class="form-input" name="email" id="email"
                                 value="<?php echo $associadoData['email'] ?? ''; ?>" placeholder="email@exemplo.com">
-                            <span class="form-error">Por favor, insira um e-mail válido</span>
                         </div>
 
                         <div class="form-group">
                             <label class="form-label">
-                                Escolaridade
+                                Escolaridade <span class="optional-label">(opcional)</span>
                             </label>
                             <select class="form-input form-select" name="escolaridade" id="escolaridade">
                                 <option value="">Selecione...</option>
-                                <option value="Fundamental Incompleto" <?php echo (isset($associadoData['escolaridade']) && $associadoData['escolaridade'] == 'Fundamental Incompleto') ? 'selected' : ''; ?>>
-                                    Fundamental Incompleto</option>
-                                <option value="Fundamental Completo" <?php echo (isset($associadoData['escolaridade']) && $associadoData['escolaridade'] == 'Fundamental Completo') ? 'selected' : ''; ?>>
-                                    Fundamental Completo</option>
-                                <option value="Médio Incompleto" <?php echo (isset($associadoData['escolaridade']) && $associadoData['escolaridade'] == 'Médio Incompleto') ? 'selected' : ''; ?>>Médio
-                                    Incompleto</option>
-                                <option value="Médio Completo" <?php echo (isset($associadoData['escolaridade']) && $associadoData['escolaridade'] == 'Médio Completo') ? 'selected' : ''; ?>>Médio
-                                    Completo</option>
-                                <option value="Superior Incompleto" <?php echo (isset($associadoData['escolaridade']) && $associadoData['escolaridade'] == 'Superior Incompleto') ? 'selected' : ''; ?>>
-                                    Superior Incompleto</option>
-                                <option value="Superior Completo" <?php echo (isset($associadoData['escolaridade']) && $associadoData['escolaridade'] == 'Superior Completo') ? 'selected' : ''; ?>>Superior
-                                    Completo</option>
-                                <option value="Pós-graduação" <?php echo (isset($associadoData['escolaridade']) && $associadoData['escolaridade'] == 'Pós-graduação') ? 'selected' : ''; ?>>Pós-graduação
-                                </option>
+                                <option value="Fundamental Incompleto" <?php echo (isset($associadoData['escolaridade']) && $associadoData['escolaridade'] == 'Fundamental Incompleto') ? 'selected' : ''; ?>>Fundamental Incompleto</option>
+                                <option value="Fundamental Completo" <?php echo (isset($associadoData['escolaridade']) && $associadoData['escolaridade'] == 'Fundamental Completo') ? 'selected' : ''; ?>>Fundamental Completo</option>
+                                <option value="Médio Incompleto" <?php echo (isset($associadoData['escolaridade']) && $associadoData['escolaridade'] == 'Médio Incompleto') ? 'selected' : ''; ?>>Médio Incompleto</option>
+                                <option value="Médio Completo" <?php echo (isset($associadoData['escolaridade']) && $associadoData['escolaridade'] == 'Médio Completo') ? 'selected' : ''; ?>>Médio Completo</option>
+                                <option value="Superior Incompleto" <?php echo (isset($associadoData['escolaridade']) && $associadoData['escolaridade'] == 'Superior Incompleto') ? 'selected' : ''; ?>>Superior Incompleto</option>
+                                <option value="Superior Completo" <?php echo (isset($associadoData['escolaridade']) && $associadoData['escolaridade'] == 'Superior Completo') ? 'selected' : ''; ?>>Superior Completo</option>
+                                <option value="Pós-graduação" <?php echo (isset($associadoData['escolaridade']) && $associadoData['escolaridade'] == 'Pós-graduação') ? 'selected' : ''; ?>>Pós-graduação</option>
                             </select>
                         </div>
 
                         <div class="form-group">
                             <label class="form-label">
-                                Indicado por
-                                <i class="fas fa-info-circle info-tooltip"
-                                    title="Nome da pessoa que indicou o associado"></i>
+                                Indicado por <span class="optional-label">(opcional)</span>
+                                <i class="fas fa-info-circle info-tooltip" title="Nome da pessoa que indicou o associado"></i>
                             </label>
                             <div class="autocomplete-container" style="position: relative;">
                                 <input type="text" class="form-input" name="indicacao" id="indicacao"
@@ -1258,34 +1040,32 @@ $headerComponent = HeaderComponent::create([
 
                         <div class="form-group">
                             <label class="form-label">
-                                Situação <span class="required">*</span>
+                                Situação <span class="optional-label">(opcional)</span>
                             </label>
-                            <select class="form-input form-select" name="situacao" id="situacao" required>
+                            <select class="form-input form-select" name="situacao" id="situacao">
+                                <option value="">Selecione...</option>
                                 <option value="Filiado" <?php echo (!isset($associadoData['situacao']) || $associadoData['situacao'] == 'Filiado') ? 'selected' : ''; ?>>Filiado</option>
                                 <option value="Desfiliado" <?php echo (isset($associadoData['situacao']) && $associadoData['situacao'] == 'Desfiliado') ? 'selected' : ''; ?>>Desfiliado</option>
-                               
                             </select>
                         </div>
 
                         <div class="form-group">
                             <label class="form-label">
-                                Data de Filiação <span class="required">*</span>
+                                Data de Filiação <span class="optional-label">(opcional)</span>
                             </label>
-                            <input type="date" class="form-input" name="dataFiliacao" id="dataFiliacao" required
+                            <input type="date" class="form-input" name="dataFiliacao" id="dataFiliacao"
                                 value="<?php echo $associadoData['data_filiacao'] ?? date('Y-m-d'); ?>">
-                            <span class="form-error">Por favor, insira a data de filiação</span>
                         </div>
 
 
                         <div class="form-group full-width">
                             <label class="form-label">
-    Foto do Associado <span style="color: #6c757d; font-weight: normal;">(opcional)</span>
-</label>
+                                Foto do Associado <span class="optional-label">(opcional)</span>
+                            </label>
                             <div class="photo-upload-container">
                                 <div class="photo-preview" id="photoPreview">
                                     <?php if (isset($associadoData['foto']) && $associadoData['foto']): ?>
                                         <?php
-                                        // Corrige o caminho da foto
                                         $fotoPath = $associadoData['foto'];
                                         if (!str_starts_with($fotoPath, 'http') && !str_starts_with($fotoPath, '../')) {
                                             $fotoPath = '../' . $fotoPath;
@@ -1301,8 +1081,7 @@ $headerComponent = HeaderComponent::create([
                                 </div>
                                 <div>
                                     <input type="file" name="foto" id="foto" accept="image/*" style="display: none;">
-                                    <button type="button" class="photo-upload-btn"
-                                        onclick="document.getElementById('foto').click();">
+                                    <button type="button" class="photo-upload-btn" onclick="document.getElementById('foto').click();">
                                         <i class="fas fa-upload"></i>
                                         Escolher Foto
                                     </button>
@@ -1314,56 +1093,35 @@ $headerComponent = HeaderComponent::create([
                             </div>
                         </div>
 
-                        <!-- Campo para upload da ficha assinada - DISPONÍVEL SEMPRE -->
+                        <!-- Campo para upload da ficha assinada -->
                         <div class="form-group full-width">
                             <label class="form-label">
-                                Ficha de Filiação Assinada 
-                                <?php if (!$isEdit): ?>
-                                    <span class="required">*</span>
-                                <?php endif; ?>
-                                <i class="fas fa-info-circle info-tooltip"
-                                    title="Anexe a foto ou PDF da ficha preenchida e assinada pelo associado"></i>
+                                Ficha de Filiação Assinada <span class="optional-label">(opcional)</span>
+                                <i class="fas fa-info-circle info-tooltip" title="Anexe a foto ou PDF da ficha preenchida e assinada pelo associado"></i>
                             </label>
-                            <div class="ficha-upload-container"
-                                style="background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); padding: 2rem; border-radius: 16px; border: 2px dashed #4caf50;">
+                            <div class="ficha-upload-container" style="background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); padding: 2rem; border-radius: 16px; border: 2px dashed #4caf50;">
                                 <div style="display: flex; align-items: center; gap: 2rem;">
-                                    <div class="ficha-preview" id="fichaPreview"
-                                        style="width: 200px; height: 250px; background: var(--white); border-radius: 12px; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; border: 2px solid #4caf50;">
-                                        <div class="ficha-preview-placeholder"
-                                            style="text-align: center; color: #4caf50;">
-                                            <i class="fas fa-file-contract"
-                                                style="font-size: 4rem; margin-bottom: 1rem;"></i>
+                                    <div class="ficha-preview" id="fichaPreview" style="width: 200px; height: 250px; background: var(--white); border-radius: 12px; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; border: 2px solid #4caf50;">
+                                        <div class="ficha-preview-placeholder" style="text-align: center; color: #4caf50;">
+                                            <i class="fas fa-file-contract" style="font-size: 4rem; margin-bottom: 1rem;"></i>
                                             <p style="font-weight: 600;">Ficha de Filiação</p>
-                                            <p style="font-size: 0.875rem;">
-                                                <?php echo $isEdit ? 'Anexar nova ficha (opcional)' : 'Nenhum arquivo anexado'; ?>
-                                            </p>
+                                            <p style="font-size: 0.875rem;">Nenhum arquivo anexado</p>
                                         </div>
                                     </div>
 
                                     <div style="flex: 1;">
                                         <h4 style="color: #2e7d32; margin-bottom: 1rem;">
-                                            <i class="fas fa-<?php echo $isEdit ? 'plus-circle' : 'check-circle'; ?>"></i> 
-                                            <?php echo $isEdit ? 'Documento Opcional' : 'Documento Obrigatório'; ?>
+                                            <i class="fas fa-plus-circle"></i> Documento Opcional
                                         </h4>
                                         <p style="color: #1b5e20; margin-bottom: 1rem;">
-                                            <?php if ($isEdit): ?>
-                                                Você pode anexar uma nova ficha de filiação que será enviada automaticamente para aprovação da presidência.
-                                                Este processo é opcional para associados em edição.
-                                            <?php else: ?>
-                                                É obrigatório anexar a ficha de filiação preenchida e assinada pelo associado.
-                                                Este documento será enviado automaticamente para aprovação da presidência.
-                                            <?php endif; ?>
+                                            Você pode anexar a ficha de filiação preenchida e assinada pelo associado.
+                                            Este documento será enviado automaticamente para aprovação da presidência.
                                         </p>
 
-                                        <input type="file" name="ficha_assinada" id="ficha_assinada"
-                                            accept=".pdf,.jpg,.jpeg,.png" style="display: none;" 
-                                            <?php echo $isEdit ? '' : 'required'; ?>>
+                                        <input type="file" name="ficha_assinada" id="ficha_assinada" accept=".pdf,.jpg,.jpeg,.png" style="display: none;">
 
-                                        <button type="button" class="btn"
-                                            onclick="document.getElementById('ficha_assinada').click();"
-                                            style="background: #4caf50; color: white; border: none; padding: 0.875rem 1.5rem; border-radius: 12px; font-weight: 600; cursor: pointer;">
-                                            <i class="fas fa-upload"></i> 
-                                            <?php echo $isEdit ? 'Anexar Nova Ficha' : 'Anexar Ficha Assinada'; ?>
+                                        <button type="button" class="btn" onclick="document.getElementById('ficha_assinada').click();" style="background: #4caf50; color: white; border: none; padding: 0.875rem 1.5rem; border-radius: 12px; font-weight: 600; cursor: pointer;">
+                                            <i class="fas fa-upload"></i> Anexar Ficha
                                         </button>
 
                                         <p style="font-size: 0.75rem; color: #2e7d32; margin-top: 0.5rem;">
@@ -1374,22 +1132,6 @@ $headerComponent = HeaderComponent::create([
 
                                 <!-- Campo hidden para sempre enviar automaticamente -->
                                 <input type="hidden" name="enviar_presidencia" id="enviar_presidencia" value="1">
-
-                                <!-- Informação visual de que será enviado automaticamente -->
-                                <div style="margin-top: 1.5rem; padding: 1rem; background: rgba(76, 175, 80, 0.1); border-radius: 8px; border-left: 4px solid #4caf50;">
-                                    <div style="display: flex; align-items: center; gap: 0.5rem; color: #2e7d32;">
-                                        <i class="fas fa-info-circle"></i>
-                                        <strong>Envio Automático Ativado</strong>
-                                    </div>
-                                    <p style="font-size: 0.875rem; color: #2e7d32; margin-top: 0.5rem; margin-left: 1.5rem;">
-                                        <?php if ($isEdit): ?>
-                                            Se uma ficha for anexada, ela será enviada automaticamente para aprovação da presidência após a atualização do cadastro.
-                                        <?php else: ?>
-                                            A ficha de filiação será enviada automaticamente para aprovação da presidência após a conclusão do cadastro.
-                                            Este processo é obrigatório para validar a filiação do novo associado.
-                                        <?php endif; ?>
-                                    </p>
-                                </div>
                             </div>
                         </div>
                     </div>
@@ -1403,14 +1145,14 @@ $headerComponent = HeaderComponent::create([
                         </div>
                         <div>
                             <h2 class="section-title">Dados Militares</h2>
-                            <p class="section-subtitle">Informações sobre a carreira militar</p>
+                            <p class="section-subtitle">Informações sobre a carreira militar (todos opcionais)</p>
                         </div>
                     </div>
 
                     <div class="form-grid">
                         <div class="form-group">
                             <label class="form-label">
-                                Corporação
+                                Corporação <span class="optional-label">(opcional)</span>
                             </label>
                             <select class="form-input form-select" name="corporacao" id="corporacao">
                                 <option value="">Selecione...</option>
@@ -1420,37 +1162,33 @@ $headerComponent = HeaderComponent::create([
                         </div>
 
                         <div class="form-group">
-    <label class="form-label">Patente</label>
-    <select class="form-input form-select" name="patente" id="patente" data-current-value="<?php echo isset($associadoData['patente']) ? htmlspecialchars($associadoData['patente'], ENT_QUOTES, 'UTF-8') : ''; ?>">
-        <option value="">Selecione...</option>
-        
-        <!-- 🆕 OPÇÃO "NENHUMA" ADICIONADA -->
-        <option value="Nenhuma" <?php echo (isset($associadoData['patente']) && $associadoData['patente'] == 'Nenhuma') ? 'selected' : ''; ?>>
-            Nenhuma
-        </option>
-        
-        <?php
-        // Lista todas as patentes sem grupos
-        $todasPatentes = array();
-        foreach ($patentes as $grupo => $listPatentes) {
-            foreach ($listPatentes as $patente) {
-                $todasPatentes[] = $patente;
-            }
-        }
-        sort($todasPatentes);
+                            <label class="form-label">
+                                Patente <span class="optional-label">(opcional)</span>
+                            </label>
+                            <select class="form-input form-select" name="patente" id="patente" data-current-value="<?php echo isset($associadoData['patente']) ? htmlspecialchars($associadoData['patente'], ENT_QUOTES, 'UTF-8') : ''; ?>">
+                                <option value="">Selecione...</option>
+                                <option value="Nenhuma" <?php echo (isset($associadoData['patente']) && $associadoData['patente'] == 'Nenhuma') ? 'selected' : ''; ?>>Nenhuma</option>
+                                <?php
+                                $todasPatentes = array();
+                                foreach ($patentes as $grupo => $listPatentes) {
+                                    foreach ($listPatentes as $patente) {
+                                        $todasPatentes[] = $patente;
+                                    }
+                                }
+                                sort($todasPatentes);
 
-        foreach ($todasPatentes as $patente): ?>
-            <option value="<?php echo htmlspecialchars($patente, ENT_QUOTES, 'UTF-8'); ?>"
-                <?php echo (isset($associadoData['patente']) && $associadoData['patente'] == $patente) ? 'selected' : ''; ?>>
-                <?php echo htmlspecialchars($patente, ENT_QUOTES, 'UTF-8'); ?>
-            </option>
-        <?php endforeach; ?>
-    </select>
-</div>
+                                foreach ($todasPatentes as $patente): ?>
+                                    <option value="<?php echo htmlspecialchars($patente, ENT_QUOTES, 'UTF-8'); ?>"
+                                        <?php echo (isset($associadoData['patente']) && $associadoData['patente'] == $patente) ? 'selected' : ''; ?>>
+                                        <?php echo htmlspecialchars($patente, ENT_QUOTES, 'UTF-8'); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
 
                         <div class="form-group">
                             <label class="form-label">
-                                Situação Funcional
+                                Situação Funcional <span class="optional-label">(opcional)</span>
                             </label>
                             <select class="form-input form-select" name="categoria" id="categoria">
                                 <option value="">Selecione...</option>
@@ -1463,7 +1201,7 @@ $headerComponent = HeaderComponent::create([
 
                         <div class="form-group">
                             <label class="form-label">
-                                Lotação
+                                Lotação <span class="optional-label">(opcional)</span>
                             </label>
                             <select class="form-input form-select" name="lotacao" id="lotacao">
                                 <option value="">Selecione...</option>
@@ -1478,7 +1216,7 @@ $headerComponent = HeaderComponent::create([
 
                         <div class="form-group full-width">
                             <label class="form-label">
-                                Unidade
+                                Unidade <span class="optional-label">(opcional)</span>
                             </label>
                             <input type="text" class="form-input" name="unidade" id="unidade"
                                 value="<?php echo $associadoData['unidade'] ?? ''; ?>"
@@ -1495,7 +1233,7 @@ $headerComponent = HeaderComponent::create([
                         </div>
                         <div>
                             <h2 class="section-title">Endereço</h2>
-                            <p class="section-subtitle">Dados de localização do associado</p>
+                            <p class="section-subtitle">Dados de localização do associado (todos opcionais)</p>
                         </div>
                     </div>
 
@@ -1503,7 +1241,7 @@ $headerComponent = HeaderComponent::create([
                         <div class="cep-search-container">
                             <div class="form-group" style="flex: 1;">
                                 <label class="form-label">
-                                    CEP
+                                    CEP <span class="optional-label">(opcional)</span>
                                 </label>
                                 <input type="text" class="form-input" name="cep" id="cep"
                                     value="<?php echo $associadoData['cep'] ?? ''; ?>" placeholder="00000-000">
@@ -1517,7 +1255,7 @@ $headerComponent = HeaderComponent::create([
                         <div class="form-grid">
                             <div class="form-group full-width">
                                 <label class="form-label">
-                                    Endereço
+                                    Endereço <span class="optional-label">(opcional)</span>
                                 </label>
                                 <input type="text" class="form-input" name="endereco" id="endereco"
                                     value="<?php echo $associadoData['endereco'] ?? ''; ?>"
@@ -1526,7 +1264,7 @@ $headerComponent = HeaderComponent::create([
 
                             <div class="form-group">
                                 <label class="form-label">
-                                    Número
+                                    Número <span class="optional-label">(opcional)</span>
                                 </label>
                                 <input type="text" class="form-input" name="numero" id="numero"
                                     value="<?php echo $associadoData['numero'] ?? ''; ?>" placeholder="Nº">
@@ -1534,7 +1272,7 @@ $headerComponent = HeaderComponent::create([
 
                             <div class="form-group">
                                 <label class="form-label">
-                                    Complemento
+                                    Complemento <span class="optional-label">(opcional)</span>
                                 </label>
                                 <input type="text" class="form-input" name="complemento" id="complemento"
                                     value="<?php echo $associadoData['complemento'] ?? ''; ?>"
@@ -1543,7 +1281,7 @@ $headerComponent = HeaderComponent::create([
 
                             <div class="form-group">
                                 <label class="form-label">
-                                    Bairro
+                                    Bairro <span class="optional-label">(opcional)</span>
                                 </label>
                                 <input type="text" class="form-input" name="bairro" id="bairro"
                                     value="<?php echo $associadoData['bairro'] ?? ''; ?>" placeholder="Nome do bairro">
@@ -1551,7 +1289,7 @@ $headerComponent = HeaderComponent::create([
 
                             <div class="form-group">
                                 <label class="form-label">
-                                    Cidade
+                                    Cidade <span class="optional-label">(opcional)</span>
                                 </label>
                                 <input type="text" class="form-input" name="cidade" id="cidade"
                                     value="<?php echo $associadoData['cidade'] ?? ''; ?>" placeholder="Nome da cidade">
@@ -1568,20 +1306,24 @@ $headerComponent = HeaderComponent::create([
                         </div>
                         <div>
                             <h2 class="section-title">Dados Financeiros</h2>
-                            <p class="section-subtitle">Informações para cobrança e pagamentos</p>
+                            <p class="section-subtitle">Informações para cobrança e pagamentos (todos opcionais<?php echo $isSocioAgregado ? ' - não aplicável para agregados' : ''; ?>)</p>
                         </div>
+                    </div>
+
+                    <!-- Aviso para agregados -->
+                    <div id="avisoAgregadoFinanceiro" style="display: <?php echo $isSocioAgregado ? 'block' : 'none'; ?>; background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem;">
+                        <i class="fas fa-info-circle" style="color: #856404;"></i>
+                        <span style="color: #856404; font-weight: 500;">Para sócios agregados, os dados financeiros são gerenciados pelo titular. Estes campos são opcionais.</span>
                     </div>
 
                     <div class="form-grid">
                         <!-- Tipo de Associado (controla percentuais) -->
                         <div class="form-group full-width">
                             <label class="form-label">
-                                Tipo de Associado <span class="required">*</span>
-                                <i class="fas fa-info-circle info-tooltip"
-                                    title="Define o percentual de cobrança dos serviços. Benemérito e Agregado não têm direito ao serviço jurídico."></i>
+                                Tipo de Associado <span class="optional-label">(opcional)</span>
+                                <i class="fas fa-info-circle info-tooltip" title="Define o percentual de cobrança dos serviços. Benemérito e Agregado não têm direito ao serviço jurídico."></i>
                             </label>
-                            <select class="form-input form-select" name="tipoAssociadoServico" id="tipoAssociadoServico"
-                                required onchange="calcularServicos()">
+                            <select class="form-input form-select" name="tipoAssociadoServico" id="tipoAssociadoServico" onchange="calcularServicos()">
                                 <option value="">Selecione o tipo de associado...</option>
                                 <?php foreach ($tiposAssociado as $tipo): ?>
                                     <option value="<?php echo $tipo; ?>"
@@ -1592,7 +1334,6 @@ $headerComponent = HeaderComponent::create([
                                     </option>
                                 <?php endforeach; ?>
                             </select>
-                            <span class="form-error">Por favor, selecione o tipo de associado</span>
                             <div class="tipo-associado-info" id="infoTipoAssociado" style="display: none;">
                                 <i class="fas fa-info-circle"></i>
                                 <span id="textoInfoTipo"></span>
@@ -1601,31 +1342,25 @@ $headerComponent = HeaderComponent::create([
 
                         <!-- Seção de Serviços -->
                         <div class="form-group full-width">
-                            <div
-                                style="background: var(--white); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--gray-200);">
+                            <div style="background: var(--white); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--gray-200);">
                                 <h4 style="margin-bottom: 1rem; color: var(--primary);">
                                     <i class="fas fa-clipboard-list"></i> Serviços do Associado
                                 </h4>
 
-                                <!-- Serviço Social (Obrigatório) -->
-                                <div class="servico-item"
-                                    style="margin-bottom: 1.5rem; padding: 1rem; background: var(--gray-100); border-radius: 8px;">
-                                    <div
-                                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                                <!-- Serviço Social -->
+                                <div class="servico-item" style="margin-bottom: 1.5rem; padding: 1rem; background: var(--gray-100); border-radius: 8px;">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
                                         <div>
                                             <span style="font-weight: 600; color: var(--success);">
                                                 <i class="fas fa-check-circle"></i> Serviço Social
                                             </span>
-                                            <span
-                                                style="background: var(--success); color: white; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.7rem; margin-left: 0.5rem;">
+                                            <span style="background: var(--success); color: white; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.7rem; margin-left: 0.5rem;">
                                                 OBRIGATÓRIO
                                             </span>
                                         </div>
                                         <div style="text-align: right;">
-                                            <div style="font-size: 0.8rem; color: var(--gray-600);">Valor Base: R$ <span
-                                                    id="valorBaseSocial">173,10</span></div>
-                                            <div style="font-weight: 700; color: var(--success);">Total: R$ <span
-                                                    id="valorFinalSocial">0,00</span></div>
+                                            <div style="font-size: 0.8rem; color: var(--gray-600);">Valor Base: R$ <span id="valorBaseSocial">173,10</span></div>
+                                            <div style="font-weight: 700; color: var(--success);">Total: R$ <span id="valorFinalSocial">0,00</span></div>
                                         </div>
                                     </div>
                                     <div style="font-size: 0.8rem; color: var(--gray-600);">
@@ -1634,33 +1369,25 @@ $headerComponent = HeaderComponent::create([
                                     </div>
                                     <input type="hidden" name="servicoSocial" value="1">
                                     <input type="hidden" name="valorSocial" id="valorSocial" value="0">
-                                    <input type="hidden" name="percentualAplicadoSocial" id="percentualAplicadoSocial"
-                                        value="0">
+                                    <input type="hidden" name="percentualAplicadoSocial" id="percentualAplicadoSocial" value="0">
                                 </div>
 
                                 <!-- Serviço Jurídico (Opcional) -->
-                                <div class="servico-item" id="servicoJuridicoItem"
-                                    style="margin-bottom: 1rem; padding: 1rem; background: var(--gray-100); border-radius: 8px;">
-                                    <div
-                                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                                <div class="servico-item" id="servicoJuridicoItem" style="margin-bottom: 1rem; padding: 1rem; background: var(--gray-100); border-radius: 8px;">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
                                         <div style="display: flex; align-items: center; gap: 0.5rem;">
-                                            <input type="checkbox" name="servicoJuridico" id="servicoJuridico" value="2"
-                                                onchange="calcularServicos()" style="width: 20px; height: 20px;"
+                                            <input type="checkbox" name="servicoJuridico" id="servicoJuridico" value="2" onchange="calcularServicos()" style="width: 20px; height: 20px;"
                                                 <?php echo (isset($associadoData['servicoJuridico']) && $associadoData['servicoJuridico']) ? 'checked' : ''; ?>>
-                                            <label for="servicoJuridico"
-                                                style="font-weight: 600; color: var(--info); cursor: pointer;">
+                                            <label for="servicoJuridico" style="font-weight: 600; color: var(--info); cursor: pointer;">
                                                 <i class="fas fa-balance-scale"></i> Serviço Jurídico
                                             </label>
-                                            <span id="badgeJuridico"
-                                                style="background: var(--info); color: white; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.7rem;">
+                                            <span id="badgeJuridico" style="background: var(--info); color: white; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.7rem;">
                                                 OPCIONAL
                                             </span>
                                         </div>
                                         <div style="text-align: right;">
-                                            <div style="font-size: 0.8rem; color: var(--gray-600);">Valor Base: R$ <span
-                                                    id="valorBaseJuridico">43,28</span></div>
-                                            <div style="font-weight: 700; color: var(--info);">Total: R$ <span
-                                                    id="valorFinalJuridico">0,00</span></div>
+                                            <div style="font-size: 0.8rem; color: var(--gray-600);">Valor Base: R$ <span id="valorBaseJuridico">43,28</span></div>
+                                            <div style="font-weight: 700; color: var(--info);">Total: R$ <span id="valorFinalJuridico">0,00</span></div>
                                         </div>
                                     </div>
                                     <div style="font-size: 0.8rem; color: var(--gray-600);">
@@ -1668,14 +1395,12 @@ $headerComponent = HeaderComponent::create([
                                         <span style="margin-left: 1rem;">Serviço jurídico opcional</span>
                                     </div>
                                     <input type="hidden" name="valorJuridico" id="valorJuridico" value="0">
-                                    <input type="hidden" name="percentualAplicadoJuridico"
-                                        id="percentualAplicadoJuridico" value="0">
+                                    <input type="hidden" name="percentualAplicadoJuridico" id="percentualAplicadoJuridico" value="0">
                                     <div id="mensagemRestricaoJuridico" style="display: none;"></div>
                                 </div>
 
                                 <!-- Total Geral -->
-                                <div
-                                    style="padding: 1rem; background: var(--primary-light); border-radius: 8px; border: 2px solid var(--primary);">
+                                <div style="padding: 1rem; background: var(--primary-light); border-radius: 8px; border: 2px solid var(--primary);">
                                     <div style="display: flex; justify-content: space-between; align-items: center;">
                                         <span style="font-weight: 700; color: var(--primary); font-size: 1.1rem;">
                                             <i class="fas fa-calculator"></i> VALOR TOTAL MENSAL
@@ -1691,11 +1416,10 @@ $headerComponent = HeaderComponent::create([
                         <!-- Categoria do Associado -->
                         <div class="form-group">
                             <label class="form-label">
-                                Categoria do Associado <span class="required">*</span>
-                                <i class="fas fa-info-circle info-tooltip"
-                                    title="Categoria oficial do associado na associação"></i>
+                                Categoria do Associado <span class="optional-label">(opcional)</span>
+                                <i class="fas fa-info-circle info-tooltip" title="Categoria oficial do associado na associação"></i>
                             </label>
-                            <select class="form-input form-select" name="tipoAssociado" id="tipoAssociado" required>
+                            <select class="form-input form-select" name="tipoAssociado" id="tipoAssociado">
                                 <option value="">Selecione...</option>
                                 <option value="Contribuinte" <?php echo (isset($associadoData['tipoAssociado']) && $associadoData['tipoAssociado'] == 'Contribuinte') ? 'selected' : ''; ?>>Contribuinte</option>
                                 <option value="Benemérito" <?php echo (isset($associadoData['tipoAssociado']) && $associadoData['tipoAssociado'] == 'Benemérito') ? 'selected' : ''; ?>>Benemérito</option>
@@ -1703,13 +1427,12 @@ $headerComponent = HeaderComponent::create([
                                 <option value="Agregado" <?php echo (isset($associadoData['tipoAssociado']) && $associadoData['tipoAssociado'] == 'Agregado') ? 'selected' : ''; ?>>Agregado</option>
                                 <option value="Especial" <?php echo (isset($associadoData['tipoAssociado']) && $associadoData['tipoAssociado'] == 'Especial') ? 'selected' : ''; ?>>Especial</option>
                             </select>
-                            <span class="form-error">Por favor, selecione a categoria do associado</span>
                         </div>
 
                         <!-- Situação Financeira -->
                         <div class="form-group">
                             <label class="form-label">
-                                Situação Financeira
+                                Situação Financeira <span class="optional-label">(opcional)</span>
                             </label>
                             <select class="form-input form-select" name="situacaoFinanceira" id="situacaoFinanceira">
                                 <option value="">Selecione...</option>
@@ -1721,7 +1444,7 @@ $headerComponent = HeaderComponent::create([
                         <!-- Vínculo Servidor -->
                         <div class="form-group">
                             <label class="form-label">
-                                Vínculo do Servidor
+                                Vínculo do Servidor <span class="optional-label">(opcional)</span>
                                 <i class="fas fa-info-circle info-tooltip" title="Digite o número do vínculo"></i>
                             </label>
                             <input type="text" class="form-input" name="vinculoServidor" id="vinculoServidor"
@@ -1732,7 +1455,7 @@ $headerComponent = HeaderComponent::create([
                         <!-- Local de Débito -->
                         <div class="form-group">
                             <label class="form-label">
-                                Local de Débito
+                                Local de Débito <span class="optional-label">(opcional)</span>
                             </label>
                             <select class="form-input form-select" name="localDebito" id="localDebito">
                                 <option value="">Selecione...</option>
@@ -1745,7 +1468,7 @@ $headerComponent = HeaderComponent::create([
 
                         <div class="form-group">
                             <label class="form-label">
-                                Agência
+                                Agência <span class="optional-label">(opcional)</span>
                             </label>
                             <input type="text" class="form-input" name="agencia" id="agencia"
                                 value="<?php echo $associadoData['agencia'] ?? ''; ?>" placeholder="Número da agência">
@@ -1753,7 +1476,7 @@ $headerComponent = HeaderComponent::create([
 
                         <div class="form-group">
                             <label class="form-label">
-                                Operação
+                                Operação <span class="optional-label">(opcional)</span>
                             </label>
                             <input type="text" class="form-input" name="operacao" id="operacao"
                                 value="<?php echo $associadoData['operacao'] ?? ''; ?>"
@@ -1762,7 +1485,7 @@ $headerComponent = HeaderComponent::create([
 
                         <div class="form-group">
                             <label class="form-label">
-                                Conta Corrente
+                                Conta Corrente <span class="optional-label">(opcional)</span>
                             </label>
                             <input type="text" class="form-input" name="contaCorrente" id="contaCorrente"
                                 value="<?php echo $associadoData['contaCorrente'] ?? ''; ?>"
@@ -1772,7 +1495,7 @@ $headerComponent = HeaderComponent::create([
                         <!-- Doador -->
                         <div class="form-group">
                             <label class="form-label">
-                                Doador
+                                Doador <span class="optional-label">(opcional)</span>
                                 <i class="fas fa-info-circle info-tooltip" title="Se o associado é doador da ASSEGO"></i>
                             </label>
                             <select class="form-input form-select" name="doador" id="doador">
@@ -1792,7 +1515,7 @@ $headerComponent = HeaderComponent::create([
                         </div>
                         <div>
                             <h2 class="section-title">Dependentes</h2>
-                            <p class="section-subtitle">Adicione os dependentes do associado</p>
+                            <p class="section-subtitle">Adicione os dependentes do associado (opcional)</p>
                         </div>
                     </div>
 
@@ -1838,10 +1561,8 @@ $headerComponent = HeaderComponent::create([
                                             <select class="form-input form-select"
                                                 name="dependentes[<?php echo $index; ?>][sexo]">
                                                 <option value="">Selecione...</option>
-                                                <option value="M" <?php echo ($dependente['sexo'] == 'M') ? 'selected' : ''; ?>>
-                                                    Masculino</option>
-                                                <option value="F" <?php echo ($dependente['sexo'] == 'F') ? 'selected' : ''; ?>>
-                                                    Feminino</option>
+                                                <option value="M" <?php echo ($dependente['sexo'] == 'M') ? 'selected' : ''; ?>>Masculino</option>
+                                                <option value="F" <?php echo ($dependente['sexo'] == 'F') ? 'selected' : ''; ?>>Feminino</option>
                                             </select>
                                         </div>
                                     </div>
@@ -1874,7 +1595,7 @@ $headerComponent = HeaderComponent::create([
                 </div>
             </form>
 
-            <!-- Navigation - VERSÃO REORGANIZADA COM BOTÕES DE SALVAR -->
+            <!-- Navigation -->
             <div class="form-navigation">
                 <div class="nav-buttons-left">
                     <button type="button" class="btn-nav btn-back" id="btnVoltar" onclick="voltarStep()">
@@ -1884,33 +1605,27 @@ $headerComponent = HeaderComponent::create([
                 </div>
 
                 <div class="nav-buttons-right">
-                    <!-- Indicador de salvamento -->
                     <div class="step-save-indicator" id="saveIndicator">
                         <i class="fas fa-check-circle"></i>
                         <span>Salvo com sucesso!</span>
                     </div>
 
-                    <!-- Botão de salvar step atual -->
                     <button type="button" class="btn-save-step" id="btnSalvarStep" onclick="salvarStepAtual()">
                         <i class="fas fa-save"></i>
                         <span class="save-text">Salvar</span>
                     </button>
 
-                    <!-- Botão cancelar -->
                     <button type="button" class="btn-nav btn-back" onclick="cancelarEdicao()" title="Voltar ao Dashboard sem salvar">
                         <i class="fas fa-times"></i>
                         Cancelar
                     </button>
 
-                    <!-- Botão próximo -->
                     <button type="button" class="btn-nav btn-next" id="btnProximo" onclick="proximoStep()">
                         Próximo
                         <i class="fas fa-arrow-right"></i>
                     </button>
 
-                    <!-- Botão salvar completo (apenas no step final) -->
-                    <button type="button" class="btn-nav btn-submit" id="btnSalvar" onclick="salvarAssociado()"
-                        style="display: none;">
+                    <button type="button" class="btn-nav btn-submit" id="btnSalvar" onclick="salvarAssociado()" style="display: none;">
                         <i class="fas fa-save"></i>
                         <?php echo $isEdit ? 'Atualizar' : 'Salvar'; ?> Associado
                     </button>
@@ -1927,305 +1642,37 @@ $headerComponent = HeaderComponent::create([
     <!-- JavaScript do Header Component -->
     <?php $headerComponent->renderJS(); ?>
 
-    <!-- Scripts separados para melhor organização -->
+    <!-- Scripts separados -->
     <script src="js/cadastroForm.js"></script>
     <script src="js/cadastroFormAutocomplete.js"></script>
 
     <script>
-    // Função para definir valor do select após carregar
-    function definirValorSelect(selectId, valor) {
-        console.log(`=== DEFININDO VALOR PARA ${selectId} ===`);
-        console.log(`Valor procurado: "${valor}"`);
-        
-        const select = document.getElementById(selectId);
-        if (!select) {
-            console.warn(`❌ Select ${selectId} não encontrado`);
-            return false;
-        }
-        
-        // Lista todas as opções disponíveis para debug
-        const options = select.querySelectorAll('option');
-        console.log(`Opções disponíveis em ${selectId}:`);
-        options.forEach((option, index) => {
-            if (option.value) {
-                console.log(`  [${index}] "${option.value}"`);
-            }
-        });
-        
-        // Procura a opção exata
-        let encontrou = false;
-        
-        options.forEach(option => {
-            if (option.value === valor) {
-                option.selected = true;
-                encontrou = true;
-                console.log(`✅ Opção encontrada e selecionada: "${valor}"`);
-            }
-        });
-        
-        if (!encontrou) {
-            console.warn(`❌ Valor "${valor}" NÃO encontrado nas opções do select ${selectId}`);
-            console.warn(`Verifique se o valor está exatamente igual no banco e no array PHP`);
-        }
-        
-        // Atualiza Select2 se estiver inicializado
-        if (typeof $ !== 'undefined' && $(`#${selectId}`).hasClass('select2-hidden-accessible')) {
-            $(`#${selectId}`).trigger('change');
-            console.log(`🔄 Select2 atualizado para ${selectId}`);
-        }
-        
-        console.log(`=== FIM ${selectId} ===\n`);
-        return encontrou;
-    }
-
-    // Inicializa Select2 para os campos
-    $(document).ready(function() {
-        console.log('=== INICIALIZANDO PÁGINA ===');
-        
-        // Inicializa Select2 para lotação
-        $('#lotacao').select2({
-            placeholder: 'Selecione ou digite para buscar...',
-            language: 'pt-BR',
-            width: '100%',
-            allowClear: true
-        });
-        
-        // Inicializa Select2 para patente
-        $('#patente').select2({
-            placeholder: 'Selecione a patente...',
-            language: 'pt-BR',
-            width: '100%',
-            allowClear: true,
-            dropdownParent: $('#patente').parent()
-        });
-        
-        // Inicializa Select2 para corporação
-        $('#corporacao').select2({
-            placeholder: 'Selecione a corporação...',
-            language: 'pt-BR',
-            width: '100%',
-            allowClear: true
-        });
-        
-        // Inicializa Select2 para categoria
-        $('#categoria').select2({
-            placeholder: 'Selecione a situação funcional...',
-            language: 'pt-BR',  
-            width: '100%',
-            allowClear: true
-        });
-
-        // Se estiver editando, define valores após inicialização
-        <?php if ($isEdit && isset($associadoData)): ?>
-            console.log('=== MODO EDIÇÃO DETECTADO ===');
-            
-            setTimeout(function() {
-                console.log('Definindo valores dos campos militares...');
-                
-                <?php if (isset($associadoData['patente']) && !empty($associadoData['patente'])): ?>
-                    const patenteAtual = <?php echo json_encode($associadoData['patente']); ?>;
-                    console.log('Patente do banco:', patenteAtual);
-                    
-                    if (!definirValorSelect('patente', patenteAtual)) {
-                        console.error('Falha ao definir patente:', patenteAtual);
-                    }
-                <?php endif; ?>
-                
-                <?php if (isset($associadoData['corporacao']) && !empty($associadoData['corporacao'])): ?>
-                    const corporacaoAtual = <?php echo json_encode($associadoData['corporacao']); ?>;
-                    console.log('Corporação do banco:', corporacaoAtual);
-                    
-                    if (!definirValorSelect('corporacao', corporacaoAtual)) {
-                        console.error('Falha ao definir corporação:', corporacaoAtual);
-                    }
-                <?php endif; ?>
-                
-                <?php if (isset($associadoData['categoria']) && !empty($associadoData['categoria'])): ?>
-                    const categoriaAtual = <?php echo json_encode($associadoData['categoria']); ?>;
-                    console.log('Categoria do banco:', categoriaAtual);
-                    
-                    if (!definirValorSelect('categoria', categoriaAtual)) {
-                        console.error('Falha ao definir categoria:', categoriaAtual);
-                    }
-                <?php endif; ?>
-                
-                <?php if (isset($associadoData['lotacao']) && !empty($associadoData['lotacao'])): ?>
-                    const lotacaoAtual = <?php echo json_encode($associadoData['lotacao']); ?>;
-                    console.log('Lotação do banco:', lotacaoAtual);
-                    
-                    $('#lotacao').val(lotacaoAtual).trigger('change');
-                    console.log('✅ Lotação definida via Select2');
-                <?php endif; ?>
-                
-                <?php if (isset($associadoData['unidade']) && !empty($associadoData['unidade'])): ?>
-                    const unidadeAtual = <?php echo json_encode($associadoData['unidade']); ?>;
-                    console.log('Unidade do banco:', unidadeAtual);
-                    
-                    const unidadeInput = document.getElementById('unidade');
-                    if (unidadeInput) {
-                        unidadeInput.value = unidadeAtual;
-                        console.log('✅ Unidade definida');
-                    }
-                <?php endif; ?>
-                
-                console.log('✓ Valores militares definidos');
-            }, 500);
-            
-            // Busca dados dos serviços ao carregar página de edição
-            buscarDadosServicosAssociado(<?php echo $associadoId; ?>);
-            
-            setTimeout(function() {
-                console.log('🔄 Garantindo que todas as patentes apareçam no dropdown...');
-                
-                $('#patente').select2('destroy').select2({
-                    placeholder: 'Selecione a patente...',
-                    language: 'pt-BR',
-                    width: '100%',
-                    allowClear: true
-                });
-                
-                <?php if (isset($associadoData['patente']) && !empty($associadoData['patente'])): ?>
-                    const patenteParaRedefinir = <?php echo json_encode($associadoData['patente']); ?>;
-                    $('#patente').val(patenteParaRedefinir).trigger('change');
-                    console.log('✅ Patente redefinida após recarregar Select2');
-                <?php endif; ?>
-                
-                console.log('✅ Select2 da patente recarregado com todas as opções');
-            }, 1200);
-        <?php endif; ?>
-        
-        $('#patente').on('select2:open', function() {
-            console.log('🔽 Dropdown da patente aberto - verificando se todas as opções estão disponíveis');
-            
-            const totalOptions = $('#patente option').length;
-            console.log(`📊 Total de opções de patente disponíveis: ${totalOptions}`);
-            
-            if (totalOptions < 15) {
-                console.warn('⚠️ Poucas opções encontradas, pode haver problema no carregamento');
-            }
-        });
-        
-        $('#patente').on('change', function() {
-            const valorSelecionado = $(this).val();
-            console.log(`✅ Patente selecionada: "${valorSelecionado}"`);
-        });
-        
-        console.log('✓ Página inicializada');
-    });
-
-    // Função para buscar dados dos serviços do associado em edição
-    function buscarDadosServicosAssociado(associadoId) {
-        fetch(`../api/buscar_servicos_associado.php?associado_id=${associadoId}`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success' && data.data) {
-                    if (data.data.servicos.social) {
-                        const social = data.data.servicos.social;
-                        document.getElementById('valorSocial').value = social.valor_aplicado;
-                        document.getElementById('percentualAplicadoSocial').value = social.percentual_aplicado;
-                        document.getElementById('valorFinalSocial').textContent = parseFloat(social.valor_aplicado).toFixed(2).replace('.', ',');
-                        document.getElementById('percentualSocial').textContent = parseFloat(social.percentual_aplicado).toFixed(0);
-                    }
-                    
-                    if (data.data.servicos.juridico) {
-                        const juridico = data.data.servicos.juridico;
-                        document.getElementById('servicoJuridico').checked = true;
-                        document.getElementById('valorJuridico').value = juridico.valor_aplicado;
-                        document.getElementById('percentualAplicadoJuridico').value = juridico.percentual_aplicado;
-                        document.getElementById('valorFinalJuridico').textContent = parseFloat(juridico.valor_aplicado).toFixed(2).replace('.', ',');
-                        document.getElementById('percentualJuridico').textContent = parseFloat(juridico.percentual_aplicado).toFixed(0);
-                    }
-                    
-                    document.getElementById('valorTotalGeral').textContent = parseFloat(data.data.valor_total_mensal || 0).toFixed(2).replace('.', ',');
-                    
-                    if (data.data.tipo_associado_servico) {
-                        const selectTipo = document.getElementById('tipoAssociadoServico');
-                        if (selectTipo) {
-                            selectTipo.value = data.data.tipo_associado_servico;
-                        }
-                    }
-                }
-            })
-            .catch(error => {
-                console.error('Erro ao buscar dados dos serviços:', error);
-            });
-    }
-
     // Função para cancelar edição
     function cancelarEdicao() {
         if (confirm('Deseja cancelar? Os dados não salvos serão perdidos.')) {
             window.location.href = 'dashboard.php';
         }
     }
-    // Agregado: lógica JS
-    function toggleAgregadoCampos() {
-        const isAgregado = document.getElementById('isAgregado').checked;
-        document.getElementById('campoCpfTitular').style.display = isAgregado ? 'block' : 'none';
-        document.getElementById('cpfTitular').required = isAgregado;
-        if (!isAgregado) {
-            document.getElementById('cpfTitular').value = '';
-            document.getElementById('nomeTitularInfo').value = '';
-            document.getElementById('erroCpfTitular').style.display = 'none';
+
+    // Função para mostrar/esconder campos de agregado no financeiro
+    function atualizarCamposFinanceiroAgregado() {
+        const isAgregado = document.getElementById('isAgregado')?.checked || window.pageData.isSocioAgregado;
+        const aviso = document.getElementById('avisoAgregadoFinanceiro');
+        
+        if (aviso) {
+            aviso.style.display = isAgregado ? 'block' : 'none';
         }
     }
 
-    $(document).ready(function() {
-        function buscarNomeTitularPorCpf() {
-            const cpf = $('#cpfTitular').val().replace(/\D/g, '');
-            if (cpf.length === 11) {
-                $.get('../api/buscar_associado_por_cpf.php', { cpf: cpf }, function(resp) {
-                    if (resp.status === 'success' && resp.data) {
-                        let nome = resp.data.titular_nome || resp.data.nome || '';
-                        let cpfFormatado = resp.data.titular_cpf || resp.data.cpf || '';
-                        if (cpfFormatado.length === 11) {
-                            cpfFormatado = cpfFormatado.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
-                        }
-                        if (nome && cpfFormatado) {
-                            $('#nomeTitularInfo').val(nome + ' - ' + cpfFormatado);
-                        } else if (nome) {
-                            $('#nomeTitularInfo').val(nome);
-                        } else {
-                            $('#nomeTitularInfo').val('');
-                        }
-                        let situacao = resp.data.titular_situacao || resp.data.situacao || '';
-                        if (situacao && situacao !== 'Filiado') {
-                            $('#erroCpfTitular').show();
-                        } else {
-                            $('#erroCpfTitular').hide();
-                        }
-                    } else {
-                        $('#nomeTitularInfo').val('');
-                        $('#erroCpfTitular').show();
-                    }
-                }, 'json');
-            } else {
-                $('#nomeTitularInfo').val('');
-                $('#erroCpfTitular').show();
-            }
+    // Chama ao carregar e quando muda o checkbox
+    document.addEventListener('DOMContentLoaded', function() {
+        atualizarCamposFinanceiroAgregado();
+        
+        const checkboxAgregado = document.getElementById('isAgregado');
+        if (checkboxAgregado) {
+            checkboxAgregado.addEventListener('change', atualizarCamposFinanceiroAgregado);
         }
-
-        $('#cpfTitular').on('blur', buscarNomeTitularPorCpf);
-        $('#cpfTitular').on('keyup', function() {
-            if ($(this).val().replace(/\D/g, '').length === 11) {
-                buscarNomeTitularPorCpf();
-            } else {
-                $('#nomeTitularInfo').val('');
-                $('#erroCpfTitular').show();
-            }
-        });
-
-        $('#formAssociado').on('submit', function(e) {
-            if ($('#isAgregado').is(':checked')) {
-                if (!$('#cpfTitular').val() || $('#erroCpfTitular').is(':visible')) {
-                    alert('Preencha corretamente o CPF do titular e verifique se está filiado.');
-                    $('#cpfTitular').focus();
-                    e.preventDefault();
-                    return false;
-                }
-            }
-        });
     });
-    // Fim agregado
     </script>
 </body>
 
