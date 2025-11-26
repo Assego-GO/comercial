@@ -20,7 +20,7 @@ function jsonResponse($status, $message, $data = null) {
     exit;
 }
 
-try {
+try { 
     require_once '../../config/config.php';
     require_once '../../config/database.php';
     require_once '../../classes/Database.php';

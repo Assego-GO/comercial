@@ -374,7 +374,7 @@ function gerarExcel($registros, $estatisticas, $filtros) {
     }
     
     echo '</table>';
-    echo '</body></html>';
+    echo '</body></html>' ;
     exit;
 }
 ?>

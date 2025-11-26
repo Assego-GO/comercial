@@ -1367,6 +1367,6 @@ window.mostrarAcoesPeculio = function() {
         container.style.display = 'block';
     }
 }
-
+ 
 console.log('✅ Gestão de Pecúlio carregada com sistema de relatórios');
 </script>
