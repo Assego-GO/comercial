@@ -261,7 +261,7 @@ $headerComponent = HeaderComponent::create([
             font-weight: 800;
             color: var(--dark);
             margin: 0 0 0.5rem 0;
-            }
+        }
 
         .page-subtitle {
             font-size: 1rem;
@@ -752,6 +752,10 @@ $headerComponent = HeaderComponent::create([
             flex-shrink: 0;
         }
 
+
+       .financeiro-option-icon.peculio {
+    background: linear-gradient(135deg, #ffc107 0%, #ff8c00 100%) !important;
+}
         .financeiro-option-content h5 {
             margin: 0 0 0.25rem 0;
             font-size: 1rem;
@@ -838,230 +842,235 @@ $headerComponent = HeaderComponent::create([
                 grid-template-columns: 1fr;
             }
         }
+
         /* === KPIs MODERNOS FINANCEIRO === */
 
-/* Card Principal */
-.dual-stat-card {
-    position: relative;
-    overflow: visible;
-    background: var(--white, white);
-    border: 1px solid #e9ecef;
-    border-radius: 20px;
-    padding: 0;
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 2px 10px rgba(40, 167, 69, 0.08);
-    min-width: 320px;
-    width: 100%;
-}
+        /* Card Principal */
+        .dual-stat-card {
+            position: relative;
+            overflow: visible;
+            background: var(--white, white);
+            border: 1px solid #e9ecef;
+            border-radius: 20px;
+            padding: 0;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 2px 10px rgba(40, 167, 69, 0.08);
+            min-width: 320px;
+            width: 100%;
+        }
 
-.dual-stat-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 4px;
-    background: linear-gradient(135deg, var(--primary, #0056d2) 0%, var(--info, #17a2b8) 100%);
-    transform: scaleX(0);
-    transform-origin: left;
-    transition: transform 0.4s ease;
-}
+        .dual-stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(135deg, var(--primary, #0056d2) 0%, var(--info, #17a2b8) 100%);
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform 0.4s ease;
+        }
 
-.dual-stat-card:hover::before {
-    transform: scaleX(1);
-}
+        .dual-stat-card:hover::before {
+            transform: scaleX(1);
+        }
 
-.dual-stat-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 4px 15px rgba(40, 167, 69, 0.12);
-    border-color: rgba(0, 86, 210, 0.2);
-}
+        .dual-stat-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 4px 15px rgba(40, 167, 69, 0.12);
+            border-color: rgba(0, 86, 210, 0.2);
+        }
 
-/* Header do Card */
-.dual-stat-header {
-    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-    padding: 1rem 1.25rem;
-    border-bottom: 1px solid #e9ecef;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
+        /* Header do Card */
+        .dual-stat-header {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
 
-.dual-stat-title {
-    font-size: 0.8125rem;
-    font-weight: 700;
-    color: var(--dark, #343a40);
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    letter-spacing: 0.5px;
-    text-transform: uppercase;
-}
+        .dual-stat-title {
+            font-size: 0.8125rem;
+            font-weight: 700;
+            color: var(--dark, #343a40);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
 
-.dual-stat-percentage {
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: var(--primary, #0056d2);
-    background: rgba(0, 86, 210, 0.1);
-    padding: 0.25rem 0.75rem;
-    border-radius: 20px;
-    display: flex;
-    align-items: center;
-    gap: 0.375rem;
-}
+        .dual-stat-percentage {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--primary, #0056d2);
+            background: rgba(0, 86, 210, 0.1);
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            gap: 0.375rem;
+        }
 
-/* Layout Desktop - Vertical */
-.dual-stats-row {
-    display: flex;
-    align-items: stretch;
-    padding: 0;
-    min-height: 120px;
-    width: 100%;
-}
+        /* Layout Desktop - Vertical */
+        .dual-stats-row {
+            display: flex;
+            align-items: stretch;
+            padding: 0;
+            min-height: 120px;
+            width: 100%;
+        }
 
-.dual-stat-item {
-    flex: 1;
-    min-width: 0;
-    padding: 1.5rem 0.75rem;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    gap: 1rem;
-    transition: all 0.3s ease;
-    position: relative;
-    width: 50%;
-}
+        .dual-stat-item {
+            flex: 1;
+            min-width: 0;
+            padding: 1.5rem 0.75rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            gap: 1rem;
+            transition: all 0.3s ease;
+            position: relative;
+            width: 50%;
+        }
 
-.dual-stat-item:hover {
-    background: rgba(0, 86, 210, 0.02);
-}
+        .dual-stat-item:hover {
+            background: rgba(0, 86, 210, 0.02);
+        }
 
-.dual-stat-icon {
-    width: 48px;
-    height: 48px;
-    border-radius: 14px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.25rem;
-    flex-shrink: 0;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
+        .dual-stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            flex-shrink: 0;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
 
-.dual-stat-info {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-    text-align: center;
-    align-items: center;
-}
+        .dual-stat-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            text-align: center;
+            align-items: center;
+        }
 
-.dual-stat-value {
-    font-size: 1.75rem;
-    font-weight: 800;
-    color: var(--dark, #343a40);
-    line-height: 1;
-    margin-bottom: 0.25rem;
-    transition: all 0.3s ease;
-}
+        .dual-stat-value {
+            font-size: 1.75rem;
+            font-weight: 800;
+            color: var(--dark, #343a40);
+            line-height: 1;
+            margin-bottom: 0.25rem;
+            transition: all 0.3s ease;
+        }
 
-.dual-stat-label {
-    font-size: 0.875rem;
-    color: var(--secondary, #6c757d);
-    font-weight: 600;
-    line-height: 1;
-}
+        .dual-stat-label {
+            font-size: 0.875rem;
+            color: var(--secondary, #6c757d);
+            font-weight: 600;
+            line-height: 1;
+        }
 
-/* Separador vertical */
-.dual-stats-separator {
-    width: 1px;
-    background: linear-gradient(to bottom, transparent, #dee2e6, transparent);
-    margin: 1.5rem 0;
-    flex-shrink: 0;
-}
+        /* Separador vertical */
+        .dual-stats-separator {
+            width: 1px;
+            background: linear-gradient(to bottom, transparent, #dee2e6, transparent);
+            margin: 1.5rem 0;
+            flex-shrink: 0;
+        }
 
-/* Cores específicas dos ícones FINANCEIRO */
-.ativos-icon {
-    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
-    color: white;
-}
+        /* Cores específicas dos ícones FINANCEIRO */
+        .ativos-icon {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+        }
 
-.inadimplentes-icon {
-    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
-    color: white;
-}
+        .inadimplentes-icon {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+            color: white;
+        }
 
-.arrecadacao-icon {
-    background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
-    color: white;
-}
+        .arrecadacao-icon {
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+            color: white;
+        }
 
-.pagamentos-icon {
-    background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
-    color: white;
-}
+        .pagamentos-icon {
+            background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
+            color: white;
+        }
 
-/* Ajuste do grid para 2 cards lado a lado */
-.stats-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 1.5rem;
-    margin-bottom: 1.5rem;
-}
+        /* Ajuste do grid para 2 cards lado a lado */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
 
-/* Responsividade */
-@media (max-width: 1200px) {
-    .stats-grid {
-        grid-template-columns: 1fr;
-        gap: 1rem;
-    }
-}
+        /* Responsividade */
+        @media (max-width: 1200px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+        }
 
-@media (max-width: 768px) {
-    .dual-stats-row {
-        flex-direction: column;
-        min-height: auto;
-    }
+        @media (max-width: 768px) {
+            .dual-stats-row {
+                flex-direction: column;
+                min-height: auto;
+            }
 
-    .dual-stats-separator {
-        width: 80%;
-        height: 1px;
-        margin: 0.75rem auto;
-        background: linear-gradient(to right, transparent, #dee2e6, transparent);
-    }
+            .dual-stats-separator {
+                width: 80%;
+                height: 1px;
+                margin: 0.75rem auto;
+                background: linear-gradient(to right, transparent, #dee2e6, transparent);
+            }
 
-    .dual-stat-item {
-        padding: 1.25rem;
-        width: 100%;
-        min-width: 0;
-        flex-direction: row !important;
-        align-items: center !important;
-        text-align: left !important;
-        gap: 1rem !important;
-        justify-content: flex-start !important;
-    }
+            .dual-stat-item {
+                padding: 1.25rem;
+                width: 100%;
+                min-width: 0;
+                flex-direction: row !important;
+                align-items: center !important;
+                text-align: left !important;
+                gap: 1rem !important;
+                justify-content: flex-start !important;
+            }
 
-    .dual-stat-info {
-        display: flex !important;
-        flex-direction: column !important;
-        align-items: flex-start !important;
-        text-align: left !important;
-    }
+            .dual-stat-info {
+                display: flex !important;
+                flex-direction: column !important;
+                align-items: flex-start !important;
+                text-align: left !important;
+            }
 
-    .dual-stat-value {
-        font-size: 1.75rem;
-    }
+            .dual-stat-value {
+                font-size: 1.75rem;
+            }
 
-    .dual-stat-icon {
-        width: 48px;
-        height: 48px;
-        font-size: 1.25rem;
-        flex-shrink: 0;
-    }
-}
+            .dual-stat-icon {
+                width: 48px;
+                height: 48px;
+                font-size: 1.25rem;
+                flex-shrink: 0;
+            }
+
+            
+
+            
+        }
     </style>
 </head>
 
@@ -1102,7 +1111,7 @@ $headerComponent = HeaderComponent::create([
                     <!-- Card 1: Associados + Inadimplentes -->
                 </div>
 
-               
+
 
                 <!-- Seções de Serviços -->
                 <div class="services-container" data-aos="fade-up" data-aos-delay="200">
@@ -1248,7 +1257,7 @@ $headerComponent = HeaderComponent::create([
                                 </div>
 
                                 <div class="financeiro-option" onclick="gerenciarPeculio()">
-                                    <div class="financeiro-option-icon">
+                                    <div class="financeiro-option-icon peculio">
                                         <i class="fas fa-piggy-bank"></i>
                                     </div>
                                     <div class="financeiro-option-content">
@@ -1832,6 +1841,17 @@ $headerComponent = HeaderComponent::create([
                 window.location.href = 'gerar_recorrencia.php';
             }, 1000);
         }
+
+        // Força cor amarela no ícone do Pecúlio
+// Força cor amarela no ícone do Pecúlio - VERSÃO ULTRA FORTE
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(() => {
+        const iconePeculio = document.querySelector('.financeiro-option-icon.peculio');
+        if (iconePeculio) {
+            iconePeculio.style.cssText = 'background: linear-gradient(135deg, #ffc107 0%, #ff8c00 100%) !important;';
+        }
+    }, 100);
+});
 
         // Log de inicialização
         console.log('✓ Sistema de Serviços Financeiros carregado com sucesso!');
