@@ -223,15 +223,22 @@ function preencherFiltrosOtimizado(response) {
 
     const selectCorporacao = document.getElementById('filterCorporacao');
     const selectPatente = document.getElementById('filterPatente');
+    const selectTipoAssociado = document.getElementById('filterTipoAssociado'); // NOVO
 
     if (!selectCorporacao || !selectPatente) return;
 
     selectCorporacao.innerHTML = '<option value="">Todos</option>';
     selectPatente.innerHTML = '<option value="">Todos</option>';
 
+    // NOVO: Limpa e preenche Tipo Associado
+    if (selectTipoAssociado) {
+        selectTipoAssociado.innerHTML = '<option value="">Todos</option>';
+    }
+
     // 🚀 Usa dados do servidor se disponíveis
     let corporacoes = response.corporacoes_unicas || [];
     let patentes = response.patentes_unicas || [];
+    let tiposAssociado = response.tipos_associado_unicos || []; // NOVO
 
     // Fallback: extrai dos dados carregados se servidor não enviou
     if (corporacoes.length === 0) {
@@ -248,7 +255,15 @@ function preencherFiltrosOtimizado(response) {
         )].sort();
     }
 
-    // Preenche selects
+    // NOVO: Fallback para tipos de associado
+    if (tiposAssociado.length === 0) {
+        tiposAssociado = [...new Set(todosAssociados
+            .map(a => a.tipo_associado)
+            .filter(t => t && t.trim() !== '')
+        )].sort();
+    }
+
+    // Preenche selects de corporações
     corporacoes.forEach(corp => {
         const option = document.createElement('option');
         option.value = corp;
@@ -256,6 +271,7 @@ function preencherFiltrosOtimizado(response) {
         selectCorporacao.appendChild(option);
     });
 
+    // Preenche selects de patentes
     patentes.forEach(pat => {
         const option = document.createElement('option');
         option.value = pat;
@@ -263,7 +279,17 @@ function preencherFiltrosOtimizado(response) {
         selectPatente.appendChild(option);
     });
 
-    console.log(`✅ Filtros otimizados: ${corporacoes.length} corporações, ${patentes.length} patentes`);
+    // NOVO: Preenche select de tipos de associado
+    if (selectTipoAssociado) {
+        tiposAssociado.forEach(tipo => {
+            const option = document.createElement('option');
+            option.value = tipo;
+            option.textContent = tipo;
+            selectTipoAssociado.appendChild(option);
+        });
+    }
+
+    console.log(`✅ Filtros otimizados: ${corporacoes.length} corporações, ${patentes.length} patentes, ${tiposAssociado.length} tipos de associado`);
 }
 
 // Carrega próximo lote em background
@@ -326,14 +352,15 @@ function carregarProximoLoteBackground(responseAnterior) {
     });
 }
 
-// Verifica se há filtros ativos
+// Função CORRIGIDA para verificar se há filtros ativos
 function temFiltrosAtivos() {
     const search = document.getElementById('searchInput')?.value || '';
     const situacao = document.getElementById('filterSituacao')?.value || '';
+    const tipoAssociado = document.getElementById('filterTipoAssociado')?.value || ''; // NOVO
     const corporacao = document.getElementById('filterCorporacao')?.value || '';
     const patente = document.getElementById('filterPatente')?.value || '';
 
-    return search || situacao || corporacao || patente;
+    return search || situacao || tipoAssociado || corporacao || patente;
 }
 
 // Fallback para carregamento completo (compatibilidade)
@@ -374,10 +401,17 @@ function preencherFiltros() {
 
     const selectCorporacao = document.getElementById('filterCorporacao');
     const selectPatente = document.getElementById('filterPatente');
+    const selectTipoAssociado = document.getElementById('filterTipoAssociado'); // NOVO
 
     selectCorporacao.innerHTML = '<option value="">Todos</option>';
     selectPatente.innerHTML = '<option value="">Todos</option>';
 
+    // NOVO: Limpa Tipo Associado
+    if (selectTipoAssociado) {
+        selectTipoAssociado.innerHTML = '<option value="">Todos</option>';
+    }
+
+    // Corporações
     const corporacoes = [...new Set(todosAssociados
         .map(a => a.corporacao)
         .filter(c => c && c.trim() !== '')
@@ -390,6 +424,7 @@ function preencherFiltros() {
         selectCorporacao.appendChild(option);
     });
 
+    // Patentes
     const patentes = [...new Set(todosAssociados
         .map(a => a.patente)
         .filter(p => p && p.trim() !== '')
@@ -401,6 +436,21 @@ function preencherFiltros() {
         option.textContent = pat;
         selectPatente.appendChild(option);
     });
+
+    // NOVO: Tipos de Associado
+    if (selectTipoAssociado) {
+        const tiposAssociado = [...new Set(todosAssociados
+            .map(a => a.tipo_associado)
+            .filter(t => t && t.trim() !== '')
+        )].sort();
+
+        tiposAssociado.forEach(tipo => {
+            const option = document.createElement('option');
+            option.value = tipo;
+            option.textContent = tipo;
+            selectTipoAssociado.appendChild(option);
+        });
+    }
 
     console.log(`Filtros preenchidos: ${corporacoes.length} corporações, ${patentes.length} patentes`);
 }
@@ -568,23 +618,34 @@ function renderizarTabela(dados) {
 // Aplica filtros
 function aplicarFiltros() {
     console.log('Aplicando filtros...');
+
     const searchTerm = document.getElementById('searchInput').value.toLowerCase();
     const filterSituacao = document.getElementById('filterSituacao').value;
+    const filterTipoAssociado = document.getElementById('filterTipoAssociado')?.value || ''; // NOVO
     const filterCorporacao = document.getElementById('filterCorporacao').value;
     const filterPatente = document.getElementById('filterPatente').value;
 
     associadosFiltrados = todosAssociados.filter(associado => {
+        // Filtro de busca
         const matchSearch = !searchTerm ||
             (associado.nome && associado.nome.toLowerCase().includes(searchTerm)) ||
             (associado.cpf && associado.cpf.includes(searchTerm)) ||
             (associado.rg && associado.rg.includes(searchTerm)) ||
             (associado.telefone && associado.telefone.includes(searchTerm));
 
+        // Filtro de situação (apenas Filiado/Desfiliado)
         const matchSituacao = !filterSituacao || associado.situacao === filterSituacao;
+
+        // NOVO: Filtro de tipo de associado (Contribuinte, Agregado, etc)
+        const matchTipoAssociado = !filterTipoAssociado || associado.tipo_associado === filterTipoAssociado;
+
+        // Filtro de corporação
         const matchCorporacao = !filterCorporacao || associado.corporacao === filterCorporacao;
+
+        // Filtro de patente
         const matchPatente = !filterPatente || associado.patente === filterPatente;
 
-        return matchSearch && matchSituacao && matchCorporacao && matchPatente;
+        return matchSearch && matchSituacao && matchTipoAssociado && matchCorporacao && matchPatente;
     });
 
     console.log(`Filtros aplicados: ${associadosFiltrados.length} de ${todosAssociados.length} registros`);
@@ -597,10 +658,17 @@ function aplicarFiltros() {
 // Limpa filtros
 function limparFiltros() {
     console.log('Limpando filtros...');
+
     document.getElementById('searchInput').value = '';
     document.getElementById('filterSituacao').value = '';
     document.getElementById('filterCorporacao').value = '';
     document.getElementById('filterPatente').value = '';
+
+    // NOVO: Limpa filtro de tipo associado
+    const filterTipoAssociado = document.getElementById('filterTipoAssociado');
+    if (filterTipoAssociado) {
+        filterTipoAssociado.value = '';
+    }
 
     associadosFiltrados = [...todosAssociados];
     paginaAtual = 1;
@@ -3001,8 +3069,10 @@ document.addEventListener('DOMContentLoaded', function () {
     // Adiciona listeners aos filtros
     const searchInput = document.getElementById('searchInput');
     const filterSituacao = document.getElementById('filterSituacao');
+    const filterTipoAssociado = document.getElementById('filterTipoAssociado'); // NOVO
     const filterCorporacao = document.getElementById('filterCorporacao');
     const filterPatente = document.getElementById('filterPatente');
+
 
     if (searchInput) {
         // Remove old listener first
@@ -3011,6 +3081,7 @@ document.addEventListener('DOMContentLoaded', function () {
         searchInput.addEventListener('input', handleSearchInput);
     }
     if (filterSituacao) filterSituacao.addEventListener('change', aplicarFiltros);
+    if (filterTipoAssociado) filterTipoAssociado.addEventListener('change', aplicarFiltros); // NOVO
     if (filterCorporacao) filterCorporacao.addEventListener('change', aplicarFiltros);
     if (filterPatente) filterPatente.addEventListener('change', aplicarFiltros);
 
