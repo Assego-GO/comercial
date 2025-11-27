@@ -2018,7 +2018,7 @@ body {
         function verHistorico(documentoId, tipo = 'SOCIO') {
             // Escolher endpoint baseado no tipo
             const endpoint = tipo === 'AGREGADO' 
-                ? '../api/documentos/agregados_historico.php'
+                ? '../api/documentos/documentos_agregados_historico.php'
                 : '../api/documentos/documentos_historico_fluxo.php';
 
             $.get(endpoint, {
@@ -2158,13 +2158,13 @@ body {
             carregarDocumentosFluxo();
         }
 
-        // MODIFICADO: Download com tipo
-        function downloadDocumento(id, tipo = 'SOCIO') {
-            const endpoint = tipo === 'AGREGADO' 
-                ? '../api/documentos/agregados_download.php?id=' + id
-                : '../api/documentos/documentos_download.php?id=' + id;
-            window.open(endpoint, '_blank');
-        }
+       // CÓDIGO CORRIGIDO:
+function downloadDocumento(id, tipo = 'SOCIO') {
+    const endpoint = tipo === 'AGREGADO' 
+        ? '../api/documentos/documentos_download.php?id=' + id + '&tipo=agregado'
+        : '../api/documentos/documentos_download.php?id=' + id;
+    window.open(endpoint, '_blank');
+}
 
         // Funções auxiliares
         function formatarData(dataStr) {
