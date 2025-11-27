@@ -253,7 +253,7 @@ try {
     }
     
     // =============================
-    // VERIFICA SE JÁ EXISTE
+    // VERIFICA SE JÁ EXISTE SIM
     // =============================
     
     $cpfAgregado = $dados['cpf'];
@@ -352,7 +352,7 @@ try {
             :socio_titular_nome, :socio_titular_fone, :socio_titular_cpf, :socio_titular_email,
             :cep, :endereco, :numero, :bairro, :cidade, :estado,
             :banco, :banco_outro_nome, :agencia, :conta_corrente,
-            :dependentes, 'ativo', 86.55,
+            :dependentes, 'inativo', 86.55,
             NOW(), NOW(), 1
         )";
         
