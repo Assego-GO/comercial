@@ -211,7 +211,7 @@ window.Peculio = {
                         <i class="fas fa-piggy-bank"></i>
                     </div>
                     <h1 class="relatorio-titulo">${titulo}</h1>
-                    <p class="relatorio-subtitulo">ASSEGO - Associação dos Servidores da Segurança de Goiás</p>
+                    <p class="relatorio-subtitulo">ASSEGO - Associação dos Subtenentes e Sargentos do Estado de Goiás</p>
                 </div>
                 
                 <div class="relatorio-info">
