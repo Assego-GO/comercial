@@ -16,7 +16,7 @@ require_once '../classes/Database.php';
 require_once '../classes/Auth.php';
 require_once '../classes/Funcionarios.php';
 require_once '../classes/Documentos.php';
-require_once '../classes/Permissoes.php'; // Adicionar a classe de Permissões
+require_once '../classes/Permissoes.php'; 
 require_once './components/header.php';
 
 // Inicia autenticação
@@ -1168,6 +1168,273 @@ $headerComponent = HeaderComponent::create([
                 margin-bottom: 1rem;
             }
         }
+        /* ===== ESTILOS PARA LISTA UNIFICADA E PAGINAÇÃO ===== */
+        
+        /* Stats Mini Row */
+        .stats-mini-row {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            padding: 1rem;
+            background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+            border-radius: 12px;
+            border: 1px solid var(--gray-200);
+        }
+        
+        .stat-mini-item {
+            flex: 1;
+            min-width: 120px;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1rem;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s ease;
+        }
+        
+        .stat-mini-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .stat-mini-item i {
+            font-size: 1.25rem;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 123, 255, 0.1);
+            border-radius: 8px;
+        }
+        
+        .stat-mini-item .stat-mini-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--gray-800);
+            line-height: 1;
+        }
+        
+        .stat-mini-item .stat-mini-label {
+            font-size: 0.75rem;
+            color: var(--gray-600);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .text-purple {
+            color: #9b59b6 !important;
+        }
+        
+        /* Pagination Container */
+        .pagination-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            margin-top: 1.5rem;
+            border: 1px solid var(--gray-200);
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        
+        .pagination-info {
+            color: var(--gray-600);
+            font-size: 0.875rem;
+        }
+        
+        .pagination {
+            margin: 0;
+            display: flex;
+            gap: 0.25rem;
+            flex-wrap: wrap;
+        }
+        
+        .pagination .page-item .page-link {
+            border: 1px solid var(--gray-300);
+            color: var(--gray-700);
+            padding: 0.5rem 0.875rem;
+            border-radius: 6px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            background: white;
+        }
+        
+        .pagination .page-item .page-link:hover {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+        }
+        
+        .pagination .page-item.active .page-link {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+        }
+        
+        .pagination .page-item.disabled .page-link {
+            background: var(--gray-100);
+            color: var(--gray-400);
+            cursor: not-allowed;
+        }
+        
+        /* Filter actions responsivo */
+        .filter-actions {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        
+        .items-per-page {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        /* Badge do tipo de documento */
+        .badge-tipo-socio {
+            background: linear-gradient(135deg, #007bff, #0056b3) !important;
+            color: white !important;
+        }
+        
+        .badge-tipo-agregado {
+            background: linear-gradient(135deg, #9b59b6, #8e44ad) !important;
+            color: white !important;
+        }
+        
+        /* Responsividade para paginação */
+        @media (max-width: 768px) {
+            .pagination-container {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .pagination-info {
+                order: 2;
+            }
+            
+            .stats-mini-row {
+                justify-content: center;
+            }
+            
+            .stat-mini-item {
+                min-width: 140px;
+                flex: 0 0 calc(50% - 0.5rem);
+            }
+            
+            .filter-actions {
+                width: 100%;
+                justify-content: center;
+            }
+            
+            .items-per-page {
+                width: 100%;
+                justify-content: center;
+                margin-top: 0.5rem;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .stat-mini-item {
+                flex: 1 1 100%;
+            }
+            
+            .pagination .page-link {
+                padding: 0.4rem 0.6rem;
+                font-size: 0.8rem;
+            }
+        }
+        
+        /* ===== ESTILOS PARA SÓCIOS AGREGADOS ===== */
+        :root {
+            --purple: #9b59b6;
+            --purple-dark: #8e44ad;
+            --purple-light: rgba(155, 89, 182, 0.1);
+            --purple-rgb: 155, 89, 182;
+        }
+
+        .agregados-section {
+            margin-top: 3rem;
+            padding-top: 2rem;
+            border-top: 3px solid var(--purple);
+        }
+
+        .agregados-section .section-title-icon {
+            background: linear-gradient(135deg, var(--purple), var(--purple-dark));
+        }
+
+        .bg-purple {
+            background: linear-gradient(135deg, var(--purple), var(--purple-dark)) !important;
+        }
+
+        .document-agregado {
+            border-left: 4px solid var(--purple) !important;
+        }
+
+        .document-agregado .document-icon-modern {
+            background: linear-gradient(135deg, var(--purple), var(--purple-dark));
+        }
+
+        .badge-agregado {
+            background: linear-gradient(135deg, var(--purple), var(--purple-dark)) !important;
+            color: white !important;
+        }
+
+        .agregado-titular-info {
+            background: var(--purple-light);
+            border-left: 3px solid var(--purple);
+            padding: 0.75rem 1rem;
+            border-radius: 0 8px 8px 0;
+            margin-top: 0.5rem;
+        }
+
+        .titular-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            color: var(--gray-600);
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        .titular-value {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--gray-800);
+        }
+
+        .btn-action.purple {
+            background: var(--purple);
+            color: white;
+        }
+
+        .btn-action.purple:hover {
+            background: var(--purple-dark);
+            transform: translateY(-1px);
+        }
+
+        .filter-bar-agregados .btn-action.primary {
+            background: var(--purple);
+        }
+
+        .filter-bar-agregados .btn-action.primary:hover {
+            background: var(--purple-dark);
+        }
+
+        /* Timeline roxo para agregados */
+        .timeline-agregado .timeline-marker {
+            background: var(--purple);
+        }
+
+        /* Badge de pendentes roxo */
+        .badge-agregados-pendentes {
+            background: var(--purple) !important;
+            color: white !important;
+        }
     </style>
 </head>
 
@@ -1389,29 +1656,66 @@ $headerComponent = HeaderComponent::create([
                     </div>
                 </div>
 
-                <!-- Documents Section -->
+                <!-- ========================================== -->
+                <!-- SEÇÃO UNIFICADA DE DOCUMENTOS -->
+                <!-- ========================================== -->
                 <div class="documents-section" data-aos="fade-up" data-aos-delay="200">
                     <div class="section-header">
                         <h2 class="section-title">
                             <div class="section-title-icon">
                                 <i class="fas fa-file-signature"></i>
                             </div>
-                            Documentos Pendentes de Assinatura
+                            Documentos para Assinatura
+                            <span class="badge bg-primary ms-2" id="badgeTotalDocumentos">0</span>
                         </h2>
                         <div class="section-actions">
-                            <button class="btn-action secondary" onclick="atualizarLista()">
+                            <button class="btn-action secondary" onclick="atualizarListaUnificada()">
                                 <i class="fas fa-sync-alt"></i>
                                 Atualizar
                             </button>
                         </div>
                     </div>
 
-                    <!-- Filter Bar -->
+                    <!-- Estatísticas Rápidas -->
+                    <div class="stats-mini-row mb-3">
+                        <div class="stat-mini-item" id="statSocios">
+                            <i class="fas fa-user text-primary"></i>
+                            <span class="stat-mini-value">0</span>
+                            <span class="stat-mini-label">Sócios</span>
+                        </div>
+                        <div class="stat-mini-item" id="statAgregados">
+                            <i class="fas fa-user-friends text-purple"></i>
+                            <span class="stat-mini-value">0</span>
+                            <span class="stat-mini-label">Agregados</span>
+                        </div>
+                        <div class="stat-mini-item" id="statPendentes">
+                            <i class="fas fa-clock text-warning"></i>
+                            <span class="stat-mini-value">0</span>
+                            <span class="stat-mini-label">Pendentes</span>
+                        </div>
+                        <div class="stat-mini-item" id="statAssinados">
+                            <i class="fas fa-check-circle text-success"></i>
+                            <span class="stat-mini-value">0</span>
+                            <span class="stat-mini-label">Assinados</span>
+                        </div>
+                    </div>
+
+                    <!-- Filter Bar Unificada -->
                     <div class="filter-bar">
                         <div class="filter-row">
+                            <!-- NOVO: Filtro de Tipo de Pessoa -->
+                            <div class="filter-group">
+                                <label class="filter-label">Tipo de Pessoa</label>
+                                <select class="filter-select" id="filtroTipoPessoa">
+                                    <option value="">Todos (Sócios e Agregados)</option>
+                                    <option value="SOCIO">Apenas Sócios</option>
+                                    <option value="AGREGADO">Apenas Agregados</option>
+                                </select>
+                            </div>
+
                             <div class="filter-group">
                                 <label class="filter-label">Status do Fluxo</label>
-                                <select class="filter-select" id="filtroStatusFluxo">
+                                <select class="filter-select" id="filtroStatus">
                                     <option value="">Todos os Status</option>
                                     <option value="DIGITALIZADO">Aguardando Envio</option>
                                     <option value="AGUARDANDO_ASSINATURA">Na Presidência</option>
@@ -1430,9 +1734,9 @@ $headerComponent = HeaderComponent::create([
                             </div>
 
                             <div class="filter-group">
-                                <label class="filter-label">Buscar Associado</label>
-                                <input type="text" class="filter-input" id="filtroBuscaFluxo"
-                                    placeholder="Nome ou CPF do associado">
+                                <label class="filter-label">Buscar</label>
+                                <input type="text" class="filter-input" id="filtroBusca"
+                                    placeholder="Nome ou CPF...">
                             </div>
 
                             <div class="filter-group">
@@ -1446,21 +1750,47 @@ $headerComponent = HeaderComponent::create([
                             </div>
                         </div>
 
-                        <div class="filter-row">
-                            <button class="btn-action secondary" onclick="limparFiltros()">
-                                <i class="fas fa-eraser"></i>
-                                Limpar Filtros
-                            </button>
-                            <button class="btn-action primary" onclick="aplicarFiltros()">
-                                <i class="fas fa-filter"></i>
-                                Aplicar Filtros
-                            </button>
+                        <div class="filter-row justify-content-between">
+                            <div class="filter-actions">
+                                <button class="btn-action secondary" onclick="limparFiltrosUnificado()">
+                                    <i class="fas fa-eraser"></i>
+                                    Limpar Filtros
+                                </button>
+                                <button class="btn-action primary" onclick="aplicarFiltrosUnificado()">
+                                    <i class="fas fa-filter"></i>
+                                    Aplicar Filtros
+                                </button>
+                            </div>
+
+                            <!-- Controle de Itens por Página -->
+                            <div class="items-per-page">
+                                <label class="filter-label me-2">Exibir:</label>
+                                <select class="filter-select" id="itensPorPagina" style="width: auto; min-width: 80px;">
+                                    <option value="10">10</option>
+                                    <option value="20" selected>20</option>
+                                    <option value="50">50</option>
+                                    <option value="100">100</option>
+                                </select>
+                                <span class="ms-2 text-muted">por página</span>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Documents List -->
-                    <div class="documents-list" id="documentsList">
+                    <!-- Documents List Unificada -->
+                    <div class="documents-list" id="documentosUnificadosList">
                         <!-- Documentos serão carregados aqui -->
+                    </div>
+
+                    <!-- Componente de Paginação -->
+                    <div class="pagination-container" id="paginacaoContainer">
+                        <div class="pagination-info">
+                            <span id="paginacaoInfo">Mostrando 0 de 0 documentos</span>
+                        </div>
+                        <nav aria-label="Navegação de páginas">
+                            <ul class="pagination" id="paginacaoControles">
+                                <!-- Controles de paginação serão inseridos aqui via JS -->
+                            </ul>
+                        </nav>
                     </div>
                 </div>
 
@@ -1850,6 +2180,113 @@ $headerComponent = HeaderComponent::create([
         </div>
     </div>
 
+    <!-- ========================================== -->
+    <!-- MODAIS PARA SÓCIOS AGREGADOS -->
+    <!-- ========================================== -->
+
+    <!-- Modal de Assinatura de Agregado -->
+    <div class="modal fade" id="assinaturaAgregadoModal" tabindex="-1" aria-labelledby="assinaturaAgregadoModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-purple text-white">
+                    <h5 class="modal-title" id="assinaturaAgregadoModalLabel">
+                        <i class="fas fa-user-friends me-2"></i>
+                        Assinar Ficha de Sócio Agregado
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Preview do Documento Agregado -->
+                    <div class="document-preview">
+                        <div class="preview-header">
+                            <div class="preview-icon" style="background: linear-gradient(135deg, #9b59b6, #8e44ad);">
+                                <i class="fas fa-user-friends text-white"></i>
+                            </div>
+                            <div class="preview-title">
+                                <h5>Ficha de Sócio Agregado</h5>
+                                <p class="text-muted mb-0">Vinculado a um sócio titular</p>
+                            </div>
+                            <button class="btn-action purple" onclick="visualizarDocumentoAgregado()">
+                                <i class="fas fa-eye"></i>
+                                Visualizar
+                            </button>
+                        </div>
+                        <div class="preview-details">
+                            <div class="detail-item">
+                                <span class="detail-label">Agregado</span>
+                                <span class="detail-value" id="previewAgregadoNome">-</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">CPF Agregado</span>
+                                <span class="detail-value" id="previewAgregadoCPF">-</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Sócio Titular</span>
+                                <span class="detail-value" id="previewTitularNome">-</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Data de Upload</span>
+                                <span class="detail-value" id="previewAgregadoData">-</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Observações -->
+                    <div class="mb-3">
+                        <label class="form-label">Observações (opcional)</label>
+                        <textarea class="form-control" id="observacoesAgregado" rows="3"
+                            placeholder="Adicione observações sobre a assinatura..."></textarea>
+                    </div>
+
+                    <!-- Confirmação -->
+                    <div class="alert alert-info d-flex align-items-center" style="background: rgba(155, 89, 182, 0.1); border-color: #9b59b6;">
+                        <i class="fas fa-info-circle me-2" style="color: #9b59b6;"></i>
+                        <div>
+                            <strong>Importante:</strong> Ao assinar, você confirma que revisou a ficha do agregado e
+                            autoriza o vínculo com o sócio titular.
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <input type="hidden" id="documentoAgregadoId">
+                    <button type="button" class="btn-action secondary" data-bs-dismiss="modal">
+                        Cancelar
+                    </button>
+                    <button type="button" class="btn-action purple" onclick="confirmarAssinaturaAgregado()">
+                        <i class="fas fa-check"></i>
+                        Confirmar Assinatura
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Histórico de Agregado -->
+    <div class="modal fade" id="historicoAgregadoModal" tabindex="-1" aria-labelledby="historicoAgregadoModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-purple text-white">
+                    <h5 class="modal-title" id="historicoAgregadoModalLabel">
+                        <i class="fas fa-history me-2"></i>
+                        Histórico do Documento - Agregado
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="historicoAgregadoContent" class="timeline-agregado">
+                        <!-- Timeline será carregada aqui -->
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-action secondary" data-bs-dismiss="modal">
+                        Fechar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
@@ -1858,20 +2295,31 @@ $headerComponent = HeaderComponent::create([
     <?php $headerComponent->renderJS(); ?>
 
     <script>
-        // ===== VARIÁVEIS GLOBAIS =====
-        let documentosFluxo = [];
+        // ===== VARIÁVEIS GLOBAIS - SISTEMA UNIFICADO =====
+        let documentosUnificados = [];
         let paginaAtual = 1;
-        let statusFiltro = '';
-        let termoBusca = '';
-        let ordenacao = 'desc';
+        let totalPaginas = 1;
+        let totalRegistros = 0;
+        let itensPorPagina = 20;
         let carregandoDocumentos = false;
         let estatisticasGlobais = {};
         let documentoSelecionado = null;
         let arquivoAssinado = null;
-        let filtrosAtuais = {};
+        let filtrosAtuais = {
+            tipo: '',
+            status: '',
+            busca: '',
+            periodo: '',
+            tipoFluxo: ''
+        };
         let valoresBaseAtuais = {};
         let dadosSimulacao = {};
         const temPermissao = typeof window.temPermissaoPresidencia !== 'undefined' ? window.temPermissaoPresidencia : true;
+
+        // Variáveis de compatibilidade (mantidas para funções existentes)
+        let documentosFluxo = [];
+        let documentosAgregados = [];
+        let documentoAgregadoSelecionado = null;
 
         // ===== SISTEMA DE NOTIFICAÇÕES UNIFICADO =====
         class NotificationSystem {
@@ -2040,54 +2488,53 @@ $headerComponent = HeaderComponent::create([
             }
         }
 
-        // ===== CARREGAMENTO DE DOCUMENTOS DO FLUXO INTERNO =====
-        async function carregarDocumentosFluxo(resetarPagina = false) {
+        // ===== CARREGAMENTO UNIFICADO DE DOCUMENTOS =====
+        async function carregarDocumentosUnificados(resetarPagina = false) {
             if (carregandoDocumentos) return;
 
             carregandoDocumentos = true;
 
-            const container = document.getElementById('documentsList');
+            const container = document.getElementById('documentosUnificadosList');
 
             if (!container) {
-                console.error('Container de documentos não encontrado');
+                console.error('Container de documentos unificados não encontrado');
                 carregandoDocumentos = false;
                 return;
             }
 
-            if (resetarPagina || paginaAtual === 1) {
-                mostrarSkeletonLoading();
+            if (resetarPagina) {
+                paginaAtual = 1;
             }
 
+            mostrarSkeletonLoading();
+
             try {
-                console.log('🔄 Carregando documentos do fluxo interno...');
+                console.log('🔄 Carregando documentos unificados...');
 
-                // Montar filtros para o fluxo interno
-                const filtros = {};
+                // Coletar valores dos filtros
+                filtrosAtuais = {
+                    tipo: document.getElementById('filtroTipoPessoa')?.value || '',
+                    status: document.getElementById('filtroStatus')?.value || '',
+                    busca: document.getElementById('filtroBusca')?.value || '',
+                    periodo: document.getElementById('filtroPeriodo')?.value || '',
+                    tipoFluxo: document.getElementById('filtroTipoFluxo')?.value || ''
+                };
 
-                const statusFiltroAtual = document.getElementById('filtroStatusFluxo')?.value || '';
-                const termoBuscaAtual = document.getElementById('filtroBuscaFluxo')?.value || '';
-                const tipoFluxo = document.getElementById('filtroTipoFluxo')?.value || '';
-                const periodo = document.getElementById('filtroPeriodo')?.value || '';
+                itensPorPagina = parseInt(document.getElementById('itensPorPagina')?.value) || 20;
 
-                if (statusFiltroAtual) {
-                    filtros.status = statusFiltroAtual;
-                }
+                // Montar parâmetros da requisição
+                const params = new URLSearchParams({
+                    pagina: paginaAtual,
+                    por_pagina: itensPorPagina
+                });
 
-                if (termoBuscaAtual) {
-                    filtros.busca = termoBuscaAtual;
-                }
+                if (filtrosAtuais.tipo) params.append('tipo', filtrosAtuais.tipo);
+                if (filtrosAtuais.status) params.append('status', filtrosAtuais.status);
+                if (filtrosAtuais.busca) params.append('busca', filtrosAtuais.busca);
+                if (filtrosAtuais.periodo) params.append('periodo', filtrosAtuais.periodo);
+                if (filtrosAtuais.tipoFluxo) params.append('tipo_fluxo', filtrosAtuais.tipoFluxo);
 
-                if (tipoFluxo) {
-                    filtros.tipo_origem = tipoFluxo;
-                }
-
-                if (periodo) {
-                    filtros.periodo = periodo;
-                }
-
-                const params = new URLSearchParams(filtros);
-
-                const response = await fetch(`../api/documentos/documentos_fluxo_listar.php?${params}`, {
+                const response = await fetch(`../api/documentos/documentos_unificados_listar.php?${params}`, {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json',
@@ -2103,14 +2550,23 @@ $headerComponent = HeaderComponent::create([
                 const data = await response.json();
 
                 if (data.status === 'success') {
-                    documentosFluxo = data.data || [];
-                    console.log('✅ Documentos do fluxo interno carregados:', documentosFluxo.length);
+                    documentosUnificados = data.data || [];
+                    totalRegistros = data.paginacao?.total_registros || 0;
+                    totalPaginas = data.paginacao?.total_paginas || 1;
+                    paginaAtual = data.paginacao?.pagina_atual || 1;
+                    
+                    // Atualizar estatísticas
+                    if (data.estatisticas) {
+                        atualizarEstatisticasMini(data.estatisticas);
+                    }
 
-                    renderizarDocumentosFluxo();
+                    console.log('✅ Documentos unificados carregados:', documentosUnificados.length, 'de', totalRegistros);
 
-                    // notifications.show(`${documentosFluxo.length} documento(s) carregado(s) do sistema interno`, 'success', 3000);
+                    renderizarDocumentosUnificados();
+                    renderizarPaginacao();
+
                 } else {
-                    throw new Error(data.message || 'Erro ao carregar documentos do fluxo interno');
+                    throw new Error(data.message || 'Erro ao carregar documentos');
                 }
 
             } catch (error) {
@@ -2122,59 +2578,73 @@ $headerComponent = HeaderComponent::create([
             }
         }
 
-        // ===== RENDERIZAÇÃO DOS DOCUMENTOS DO FLUXO INTERNO =====
-        function renderizarDocumentosFluxo() {
-            const container = document.getElementById('documentsList');
+        // ===== ATUALIZAR ESTATÍSTICAS MINI =====
+        function atualizarEstatisticasMini(stats) {
+            // Atualizar cards de estatísticas
+            const statSocios = document.querySelector('#statSocios .stat-mini-value');
+            const statAgregados = document.querySelector('#statAgregados .stat-mini-value');
+            const statPendentes = document.querySelector('#statPendentes .stat-mini-value');
+            const statAssinados = document.querySelector('#statAssinados .stat-mini-value');
+            const badgeTotal = document.getElementById('badgeTotalDocumentos');
+
+            if (statSocios) statSocios.textContent = stats.total_socios || 0;
+            if (statAgregados) statAgregados.textContent = stats.total_agregados || 0;
+            if (statPendentes) statPendentes.textContent = (stats.pendentes_socios || 0) + (stats.pendentes_agregados || 0);
+            if (statAssinados) statAssinados.textContent = (stats.assinados_socios || 0) + (stats.assinados_agregados || 0);
+            if (badgeTotal) badgeTotal.textContent = totalRegistros;
+        }
+
+        // ===== RENDERIZAÇÃO UNIFICADA =====
+        function renderizarDocumentosUnificados() {
+            const container = document.getElementById('documentosUnificadosList');
             container.innerHTML = '';
 
             // Adicionar CSS moderno se não existir
             adicionarEstilosModernos();
 
-            console.log('📋 Renderizando documentos do fluxo interno:', documentosFluxo.length);
+            console.log('📋 Renderizando documentos unificados:', documentosUnificados.length);
 
-            if (documentosFluxo.length === 0) {
-                mostrarEstadoVazio();
+            if (documentosUnificados.length === 0) {
+                mostrarEstadoVazioUnificado();
                 return;
             }
 
-            // Ordenar por data (mais recentes primeiro)
-            documentosFluxo.sort((a, b) => {
-                const dataA = new Date(a.data_upload || 0);
-                const dataB = new Date(b.data_upload || 0);
-                return dataB - dataA;
-            });
-
             // Renderizar cada documento
-            documentosFluxo.forEach(doc => {
+            documentosUnificados.forEach(doc => {
                 const itemDiv = document.createElement('div');
-                itemDiv.className = 'document-item-modern document-fluxo-interno';
+                const isSocio = doc.tipo_documento === 'SOCIO';
+                itemDiv.className = `document-item-modern ${isSocio ? 'document-fluxo-interno' : 'document-agregado'}`;
                 itemDiv.dataset.docId = doc.id;
+                itemDiv.dataset.tipoDoc = doc.tipo_documento;
 
-                renderizarDocumentoFluxoInterno(itemDiv, doc);
+                if (isSocio) {
+                    renderizarDocumentoSocio(itemDiv, doc);
+                } else {
+                    renderizarDocumentoAgregado(itemDiv, doc);
+                }
 
                 container.appendChild(itemDiv);
             });
         }
 
-        // ===== RENDERIZAÇÃO ESPECÍFICA PARA FLUXO INTERNO =====
-        function renderizarDocumentoFluxoInterno(container, doc) {
+        // ===== RENDERIZAR DOCUMENTO DE SÓCIO =====
+        function renderizarDocumentoSocio(container, doc) {
             const statusIcon = getStatusIconFluxo(doc.status_fluxo);
-            const actionButtons = getActionButtonsFluxo(doc);
+            const actionButtons = getActionButtonsUnificado(doc);
             const isPresencial = doc.tipo_origem === 'FISICO';
             const diasEmProcesso = doc.dias_em_processo || 0;
 
             container.innerHTML = `
         <div class="document-card-modern">
-            <!-- Header com badges organizados -->
             <div class="document-header-modern">
                 <div class="document-icon-modern">
                     <i class="fas fa-file-pdf"></i>
                 </div>
                 <div class="document-title-section">
-                    <h6 class="document-title-modern">Ficha de Filiação</h6>
+                    <h6 class="document-title-modern">${doc.tipo_descricao || 'Ficha de Filiação'}</h6>
                     <div class="document-badges">
-                        <span class="badge badge-sistema bg-success">
-                            <i class="fas fa-building"></i> Sistema Interno
+                        <span class="badge badge-tipo-socio">
+                            <i class="fas fa-user"></i> Sócio
                         </span>
                         <span class="badge badge-origem bg-${isPresencial ? 'warning' : 'info'}">
                             <i class="fas fa-${isPresencial ? 'handshake' : 'desktop'}"></i> ${isPresencial ? 'Presencial' : 'Virtual'}
@@ -2182,7 +2652,7 @@ $headerComponent = HeaderComponent::create([
                         <span class="badge badge-status status-${doc.status_fluxo?.toLowerCase().replace('_', '-')}">
                             ${statusIcon} ${doc.status_descricao || doc.status_fluxo}
                         </span>
-                        ${diasEmProcesso > 0 ? `
+                        ${diasEmProcesso > 3 ? `
                         <span class="badge badge-urgencia bg-danger">
                             <i class="fas fa-exclamation-triangle"></i> ${diasEmProcesso} dias
                         </span>
@@ -2194,25 +2664,23 @@ $headerComponent = HeaderComponent::create([
                 </div>
             </div>
             
-            <!-- Informações do Associado -->
             <div class="document-associado-info">
                 <div class="info-row">
                     <i class="fas fa-user icon-info"></i>
                     <div class="info-content">
                         <span class="info-label">Associado:</span>
-                        <span class="info-value">${doc.associado_nome || 'N/A'}</span>
+                        <span class="info-value">${doc.nome || 'N/A'}</span>
                     </div>
                 </div>
                 <div class="info-row">
                     <i class="fas fa-id-card icon-info"></i>
                     <div class="info-content">
                         <span class="info-label">CPF:</span>
-                        <span class="info-value">${formatarCPF(doc.associado_cpf)}</span>
+                        <span class="info-value">${formatarCPF(doc.cpf)}</span>
                     </div>
                 </div>
             </div>
             
-            <!-- Grid de informações técnicas -->
             <div class="document-meta-grid">
                 <div class="meta-item-modern">
                     <i class="fas fa-calendar-plus meta-icon"></i>
@@ -2231,8 +2699,8 @@ $headerComponent = HeaderComponent::create([
                 <div class="meta-item-modern">
                     <i class="fas fa-hashtag meta-icon"></i>
                     <div class="meta-content">
-                        <span class="meta-label">ID Associado</span>
-                        <span class="meta-value">${doc.associado_id || 'N/A'}</span>
+                        <span class="meta-label">ID</span>
+                        <span class="meta-value">${doc.pessoa_id || doc.id}</span>
                     </div>
                 </div>
                 <div class="meta-item-modern">
@@ -2245,6 +2713,483 @@ $headerComponent = HeaderComponent::create([
             </div>
         </div>
     `;
+        }
+
+        // ===== RENDERIZAR DOCUMENTO DE AGREGADO =====
+        function renderizarDocumentoAgregado(container, doc) {
+            const statusIcon = getStatusIconFluxo(doc.status_fluxo);
+            const actionButtons = getActionButtonsUnificado(doc);
+            const diasEmProcesso = doc.dias_em_processo || 0;
+
+            container.innerHTML = `
+        <div class="document-card-modern">
+            <div class="document-header-modern">
+                <div class="document-icon-modern" style="background: linear-gradient(135deg, #9b59b6, #8e44ad);">
+                    <i class="fas fa-user-friends"></i>
+                </div>
+                <div class="document-title-section">
+                    <h6 class="document-title-modern">${doc.tipo_descricao || 'Ficha de Sócio Agregado'}</h6>
+                    <div class="document-badges">
+                        <span class="badge badge-tipo-agregado">
+                            <i class="fas fa-user-friends"></i> Agregado
+                        </span>
+                        <span class="badge badge-status status-${doc.status_fluxo?.toLowerCase().replace('_', '-')}">
+                            ${statusIcon} ${doc.status_descricao || doc.status_fluxo}
+                        </span>
+                        ${diasEmProcesso > 3 ? `
+                        <span class="badge badge-urgencia bg-danger">
+                            <i class="fas fa-exclamation-triangle"></i> ${diasEmProcesso} dias
+                        </span>
+                        ` : ''}
+                    </div>
+                </div>
+                <div class="document-actions-modern">
+                    ${actionButtons}
+                </div>
+            </div>
+            
+            <div class="document-associado-info">
+                <div class="info-row">
+                    <i class="fas fa-user-plus icon-info" style="color: #9b59b6;"></i>
+                    <div class="info-content">
+                        <span class="info-label">Agregado:</span>
+                        <span class="info-value">${doc.nome || 'N/A'}</span>
+                    </div>
+                </div>
+                <div class="info-row">
+                    <i class="fas fa-id-card icon-info" style="color: #9b59b6;"></i>
+                    <div class="info-content">
+                        <span class="info-label">CPF:</span>
+                        <span class="info-value">${formatarCPF(doc.cpf)}</span>
+                    </div>
+                </div>
+                <div class="agregado-titular-info">
+                    <div class="info-row mb-0">
+                        <i class="fas fa-user-tie icon-info" style="color: #9b59b6;"></i>
+                        <div class="info-content">
+                            <span class="titular-label">Sócio Titular:</span>
+                            <span class="titular-value">${doc.titular_nome || 'N/A'} - ${formatarCPF(doc.titular_cpf)}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="document-meta-grid">
+                <div class="meta-item-modern" style="border-left-color: #9b59b6;">
+                    <i class="fas fa-calendar-plus meta-icon" style="color: #9b59b6;"></i>
+                    <div class="meta-content">
+                        <span class="meta-label">Upload</span>
+                        <span class="meta-value">${formatarData(doc.data_upload)}</span>
+                    </div>
+                </div>
+                <div class="meta-item-modern" style="border-left-color: #9b59b6;">
+                    <i class="fas fa-building meta-icon" style="color: #9b59b6;"></i>
+                    <div class="meta-content">
+                        <span class="meta-label">Departamento</span>
+                        <span class="meta-value">${doc.departamento_atual_nome || 'Comercial'}</span>
+                    </div>
+                </div>
+                <div class="meta-item-modern" style="border-left-color: #9b59b6;">
+                    <i class="fas fa-hashtag meta-icon" style="color: #9b59b6;"></i>
+                    <div class="meta-content">
+                        <span class="meta-label">ID</span>
+                        <span class="meta-value">${doc.pessoa_id || doc.id}</span>
+                    </div>
+                </div>
+                <div class="meta-item-modern" style="border-left-color: #9b59b6;">
+                    <i class="fas fa-link meta-icon" style="color: #9b59b6;"></i>
+                    <div class="meta-content">
+                        <span class="meta-label">Parentesco</span>
+                        <span class="meta-value">${doc.parentesco || 'N/A'}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+        }
+
+        // ===== BOTÕES DE AÇÃO UNIFICADOS =====
+        function getActionButtonsUnificado(doc) {
+            let buttons = '';
+            const isSocio = doc.tipo_documento === 'SOCIO';
+            const btnClass = isSocio ? 'primary' : 'purple';
+
+            // Botão download
+            buttons += `
+        <button class="btn-action ${btnClass}" onclick="downloadDocumentoUnificado(${doc.id}, '${doc.tipo_documento}')" title="Download">
+            <i class="fas fa-download"></i>
+            <span class="btn-text">Baixar</span>
+        </button>
+    `;
+
+            // Ações específicas por status
+            switch (doc.status_fluxo) {
+                case 'AGUARDANDO_ASSINATURA':
+                    buttons += `
+                <button class="btn-action success" onclick="abrirModalAssinaturaUnificado(${doc.id}, '${doc.tipo_documento}')" title="Assinar Documento">
+                    <i class="fas fa-signature"></i>
+                    <span class="btn-text">Assinar</span>
+                </button>
+            `;
+                    break;
+
+                case 'ASSINADO':
+                    buttons += `
+                <button class="btn-action warning" onclick="finalizarProcessoUnificado(${doc.id}, '${doc.tipo_documento}')" title="Finalizar Processo">
+                    <i class="fas fa-flag-checkered"></i>
+                    <span class="btn-text">Finalizar</span>
+                </button>
+            `;
+                    break;
+            }
+
+            // Histórico
+            buttons += `
+        <button class="btn-action secondary" onclick="verHistoricoUnificado(${doc.id}, '${doc.tipo_documento}')" title="Ver Histórico">
+            <i class="fas fa-history"></i>
+            <span class="btn-text">Histórico</span>
+        </button>
+    `;
+
+            return buttons;
+        }
+
+        // ===== RENDERIZAR PAGINAÇÃO =====
+        function renderizarPaginacao() {
+            const paginacaoInfo = document.getElementById('paginacaoInfo');
+            const paginacaoControles = document.getElementById('paginacaoControles');
+
+            if (!paginacaoInfo || !paginacaoControles) return;
+
+            // Calcular intervalo exibido
+            const inicio = ((paginaAtual - 1) * itensPorPagina) + 1;
+            const fim = Math.min(paginaAtual * itensPorPagina, totalRegistros);
+
+            paginacaoInfo.textContent = totalRegistros > 0 
+                ? `Mostrando ${inicio} a ${fim} de ${totalRegistros} documentos`
+                : 'Nenhum documento encontrado';
+
+            // Gerar controles de paginação
+            let html = '';
+
+            // Botão Anterior
+            html += `
+        <li class="page-item ${paginaAtual <= 1 ? 'disabled' : ''}">
+            <a class="page-link" href="#" onclick="irParaPagina(${paginaAtual - 1}); return false;">
+                <i class="fas fa-chevron-left"></i>
+            </a>
+        </li>
+    `;
+
+            // Calcular páginas a mostrar
+            const maxPaginas = 5;
+            let startPage = Math.max(1, paginaAtual - Math.floor(maxPaginas / 2));
+            let endPage = Math.min(totalPaginas, startPage + maxPaginas - 1);
+
+            if (endPage - startPage < maxPaginas - 1) {
+                startPage = Math.max(1, endPage - maxPaginas + 1);
+            }
+
+            // Primeira página se não estiver no intervalo
+            if (startPage > 1) {
+                html += `
+            <li class="page-item">
+                <a class="page-link" href="#" onclick="irParaPagina(1); return false;">1</a>
+            </li>
+        `;
+                if (startPage > 2) {
+                    html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+                }
+            }
+
+            // Páginas do intervalo
+            for (let i = startPage; i <= endPage; i++) {
+                html += `
+            <li class="page-item ${i === paginaAtual ? 'active' : ''}">
+                <a class="page-link" href="#" onclick="irParaPagina(${i}); return false;">${i}</a>
+            </li>
+        `;
+            }
+
+            // Última página se não estiver no intervalo
+            if (endPage < totalPaginas) {
+                if (endPage < totalPaginas - 1) {
+                    html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+                }
+                html += `
+            <li class="page-item">
+                <a class="page-link" href="#" onclick="irParaPagina(${totalPaginas}); return false;">${totalPaginas}</a>
+            </li>
+        `;
+            }
+
+            // Botão Próximo
+            html += `
+        <li class="page-item ${paginaAtual >= totalPaginas ? 'disabled' : ''}">
+            <a class="page-link" href="#" onclick="irParaPagina(${paginaAtual + 1}); return false;">
+                <i class="fas fa-chevron-right"></i>
+            </a>
+        </li>
+    `;
+
+            paginacaoControles.innerHTML = html;
+        }
+
+        // ===== NAVEGAÇÃO DE PÁGINAS =====
+        function irParaPagina(pagina) {
+            if (pagina < 1 || pagina > totalPaginas || pagina === paginaAtual) return;
+            paginaAtual = pagina;
+            carregarDocumentosUnificados(false);
+            
+            // Scroll suave para o topo da lista
+            document.getElementById('documentosUnificadosList')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        // ===== FUNÇÕES DE FILTROS UNIFICADOS =====
+        function configurarFiltrosUnificado() {
+            const filtroTipo = document.getElementById('filtroTipoPessoa');
+            const filtroStatus = document.getElementById('filtroStatus');
+            const filtroBusca = document.getElementById('filtroBusca');
+            const filtroTipoFluxo = document.getElementById('filtroTipoFluxo');
+            const filtroPeriodo = document.getElementById('filtroPeriodo');
+            const itensPorPaginaSelect = document.getElementById('itensPorPagina');
+
+            // Event listeners com debounce para busca
+            if (filtroTipo) {
+                filtroTipo.addEventListener('change', () => carregarDocumentosUnificados(true));
+            }
+
+            if (filtroStatus) {
+                filtroStatus.addEventListener('change', () => carregarDocumentosUnificados(true));
+            }
+
+            if (filtroBusca) {
+                filtroBusca.addEventListener('input', debounce(() => carregarDocumentosUnificados(true), 500));
+            }
+
+            if (filtroTipoFluxo) {
+                filtroTipoFluxo.addEventListener('change', () => carregarDocumentosUnificados(true));
+            }
+
+            if (filtroPeriodo) {
+                filtroPeriodo.addEventListener('change', () => carregarDocumentosUnificados(true));
+            }
+
+            if (itensPorPaginaSelect) {
+                itensPorPaginaSelect.addEventListener('change', () => carregarDocumentosUnificados(true));
+            }
+        }
+
+        function aplicarFiltrosUnificado() {
+            carregarDocumentosUnificados(true);
+        }
+
+        function limparFiltrosUnificado() {
+            document.getElementById('filtroTipoPessoa').value = '';
+            document.getElementById('filtroStatus').value = '';
+            document.getElementById('filtroTipoFluxo').value = '';
+            document.getElementById('filtroBusca').value = '';
+            document.getElementById('filtroPeriodo').value = '';
+            document.getElementById('itensPorPagina').value = '20';
+
+            carregarDocumentosUnificados(true);
+        }
+
+        function atualizarListaUnificada() {
+            cache.clear();
+            carregarDocumentosUnificados(true);
+        }
+
+        // ===== ESTADO VAZIO UNIFICADO =====
+        function mostrarEstadoVazioUnificado() {
+            const container = document.getElementById('documentosUnificadosList');
+
+            let mensagem = 'Nenhum documento encontrado';
+            let icone = 'fas fa-inbox';
+            let descricao = 'Ainda não há documentos registrados no sistema.';
+
+            if (filtrosAtuais.tipo || filtrosAtuais.status || filtrosAtuais.busca) {
+                mensagem = 'Nenhum documento encontrado com os filtros aplicados';
+                icone = 'fas fa-filter';
+                descricao = 'Tente ajustar os filtros ou fazer uma nova busca.';
+            }
+
+            container.innerHTML = `
+        <div class="empty-state-modern">
+            <div class="empty-state-content">
+                <div class="empty-state-icon-wrapper">
+                    <i class="${icone} empty-state-icon"></i>
+                </div>
+                <h5 class="empty-state-title">${mensagem}</h5>
+                <p class="empty-state-description">${descricao}</p>
+                
+                <div class="empty-state-actions">
+                    <button class="btn-action primary" onclick="limparFiltrosUnificado()">
+                        <i class="fas fa-times"></i>
+                        Limpar Filtros
+                    </button>
+                    <button class="btn-action secondary" onclick="carregarDocumentosUnificados(true)">
+                        <i class="fas fa-refresh"></i>
+                        Atualizar
+                    </button>
+                </div>
+                
+                <div class="empty-state-tips">
+                    <h6>💡 Dicas:</h6>
+                    <ul>
+                        <li>Use o filtro <strong>Tipo de Pessoa</strong> para ver apenas Sócios ou Agregados</li>
+                        <li>A busca funciona por nome ou CPF</li>
+                        <li>A lista é atualizada automaticamente a cada 30 segundos</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    `;
+        }
+
+        // ===== AÇÕES UNIFICADAS =====
+        function downloadDocumentoUnificado(documentoId, tipo) {
+            console.log('Download documento:', documentoId, tipo);
+            const endpoint = tipo === 'SOCIO' 
+                ? '../api/documentos/documentos_download.php' 
+                : '../api/documentos/documentos_agregados_download.php';
+            
+            notifications.show('Preparando download...', 'info', 2000);
+            window.open(`${endpoint}?id=${documentoId}`, '_blank');
+        }
+
+        function abrirModalAssinaturaUnificado(documentoId, tipo) {
+            const documento = documentosUnificados.find(doc => doc.id === documentoId && doc.tipo_documento === tipo);
+
+            if (!documento) {
+                notifications.show('Documento não encontrado', 'error');
+                return;
+            }
+
+            documentoSelecionado = documento;
+
+            if (tipo === 'SOCIO') {
+                // Usar modal de sócio
+                document.getElementById('documentoId').value = documentoId;
+                document.getElementById('previewAssociado').textContent = documento.nome;
+                document.getElementById('previewCPF').textContent = formatarCPF(documento.cpf);
+                document.getElementById('previewData').textContent = formatarData(documento.data_upload);
+                document.getElementById('previewOrigem').textContent = documento.tipo_origem === 'VIRTUAL' ? 'Virtual' : 'Presencial';
+                document.getElementById('previewSubtitulo').textContent = documento.tipo_origem === 'VIRTUAL' ? 'Gerado pelo sistema' : 'Digitalizado';
+
+                document.getElementById('uploadSection').classList.add('d-none');
+                document.getElementById('fileInfo').innerHTML = '';
+                arquivoAssinado = null;
+
+                new bootstrap.Modal(document.getElementById('assinaturaModal')).show();
+            } else {
+                // Usar modal de agregado
+                document.getElementById('documentoAgregadoId').value = documentoId;
+                document.getElementById('previewAgregadoNome').textContent = documento.nome || '-';
+                document.getElementById('previewAgregadoCPF').textContent = formatarCPF(documento.cpf);
+                document.getElementById('previewTitularNome').textContent = documento.titular_nome || '-';
+                document.getElementById('previewAgregadoData').textContent = formatarData(documento.data_upload);
+                document.getElementById('observacoesAgregado').value = '';
+
+                new bootstrap.Modal(document.getElementById('assinaturaAgregadoModal')).show();
+            }
+        }
+
+        function finalizarProcessoUnificado(documentoId, tipo) {
+            const documento = documentosUnificados.find(doc => doc.id === documentoId && doc.tipo_documento === tipo);
+
+            if (!documento) {
+                notifications.show('Documento não encontrado', 'error');
+                return;
+            }
+
+            const tipoLabel = tipo === 'SOCIO' ? 'sócio' : 'agregado';
+
+            if (!confirm(`Deseja finalizar o processo do ${tipoLabel} "${documento.nome}"?\n\nIsso irá concluir o fluxo de aprovação.`)) {
+                return;
+            }
+
+            const endpoint = tipo === 'SOCIO' 
+                ? '../api/documentos/documentos_finalizar.php' 
+                : '../api/documentos/documentos_agregados_finalizar.php';
+
+            fetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    documento_id: documentoId,
+                    observacao: `Processo finalizado - ${tipo === 'SOCIO' ? 'Sócio aprovado' : 'Agregado ativado'}`
+                })
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.status === 'success') {
+                    notifications.show(`Processo do ${tipoLabel} finalizado com sucesso!`, 'success');
+                    carregarDocumentosUnificados();
+                } else {
+                    throw new Error(result.message || 'Erro desconhecido');
+                }
+            })
+            .catch(error => {
+                console.error('Erro ao finalizar processo:', error);
+                notifications.show('Erro ao finalizar: ' + error.message, 'error');
+            });
+        }
+
+        function verHistoricoUnificado(documentoId, tipo) {
+            const endpoint = tipo === 'SOCIO' 
+                ? '../api/documentos/documentos_historico_fluxo.php' 
+                : '../api/documentos/documentos_agregados_historico.php';
+
+            fetch(`${endpoint}?documento_id=${documentoId}`)
+                .then(response => response.json())
+                .then(result => {
+                    if (result.status === 'success') {
+                        renderizarHistoricoModal(result.data);
+                        new bootstrap.Modal(document.getElementById('historicoModal')).show();
+                    } else {
+                        notifications.show('Erro ao carregar histórico', 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro ao carregar histórico:', error);
+                    notifications.show('Erro ao carregar histórico', 'error');
+                });
+        }
+
+        // ===== FUNÇÕES LEGADAS (mantidas para compatibilidade) =====
+        // Alias para funções antigas
+        function carregarDocumentosFluxo(resetar = false) {
+            carregarDocumentosUnificados(resetar);
+        }
+
+        function renderizarDocumentosFluxo() {
+            renderizarDocumentosUnificados();
+        }
+
+        function atualizarLista() {
+            atualizarListaUnificada();
+        }
+
+        function aplicarFiltros() {
+            aplicarFiltrosUnificado();
+        }
+
+        function limparFiltros() {
+            limparFiltrosUnificado();
+        }
+
+        function configurarFiltros() {
+            configurarFiltrosUnificado();
+        }
+
+        function mostrarEstadoVazio() {
+            mostrarEstadoVazioUnificado();
+        }
+
+        // ===== RENDERIZAÇÃO ESPECÍFICA PARA FLUXO INTERNO (mantida para compatibilidade) =====
+        function renderizarDocumentoFluxoInterno(container, doc) {
+            renderizarDocumentoSocio(container, doc);
         }
 
         // ===== FUNÇÕES DE SUPORTE PARA ÍCONES E AÇÕES =====
@@ -3350,7 +4295,8 @@ $headerComponent = HeaderComponent::create([
 
         // ===== FUNÇÕES DE APOIO PARA INTERFACE =====
         function mostrarSkeletonLoading() {
-            const container = document.getElementById('documentsList');
+            const container = document.getElementById('documentosUnificadosList');
+            if (!container) return;
             container.innerHTML = '';
 
             // Adicionar estilos modernos primeiro
@@ -3607,7 +4553,8 @@ $headerComponent = HeaderComponent::create([
         }
 
         function mostrarErroCarregamento(mensagem) {
-            const container = document.getElementById('documentsList');
+            const container = document.getElementById('documentosUnificadosList');
+            if (!container) return;
             container.innerHTML = `
         <div class="error-state-modern">
             <div class="error-state-content">
@@ -3618,7 +4565,7 @@ $headerComponent = HeaderComponent::create([
                 <p class="error-state-description">${escapeHtml(mensagem)}</p>
                 
                 <div class="error-state-actions">
-                    <button class="btn-action primary" onclick="carregarDocumentosFluxo(true)">
+                    <button class="btn-action primary" onclick="carregarDocumentosUnificados(true)">
                         <i class="fas fa-redo"></i>
                         Tentar Novamente
                     </button>
@@ -4123,6 +5070,525 @@ $headerComponent = HeaderComponent::create([
             };
         }
 
+        // ========================================
+        // FUNÇÕES PARA SÓCIOS AGREGADOS
+        // ========================================
+
+        // Carregar documentos de agregados
+        async function carregarDocumentosAgregados(resetar = false) {
+            if (carregandoAgregados) return;
+            carregandoAgregados = true;
+
+            const container = document.getElementById('agregadosList');
+            if (!container) {
+                console.error('Container de agregados não encontrado');
+                carregandoAgregados = false;
+                return;
+            }
+
+            if (resetar) {
+                mostrarSkeletonLoadingAgregados();
+            }
+
+            try {
+                console.log('🔄 Carregando documentos de agregados...');
+
+                const filtros = {};
+                const statusFiltro = document.getElementById('filtroStatusAgregados')?.value || '';
+                const buscaFiltro = document.getElementById('filtroBuscaAgregados')?.value || '';
+                const periodoFiltro = document.getElementById('filtroPeriodoAgregados')?.value || '';
+
+                if (statusFiltro) filtros.status = statusFiltro;
+                if (buscaFiltro) filtros.busca = buscaFiltro;
+                if (periodoFiltro) filtros.periodo = periodoFiltro;
+
+                const params = new URLSearchParams(filtros);
+
+                const response = await fetch(`../api/documentos/documentos_agregados_listar.php?${params}`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    credentials: 'same-origin'
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Erro HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    documentosAgregados = data.data || [];
+                    console.log('✅ Documentos de agregados carregados:', documentosAgregados.length);
+
+                    // Atualizar badge de pendentes
+                    const pendentes = documentosAgregados.filter(d => d.status_fluxo === 'AGUARDANDO_ASSINATURA').length;
+                    const badge = document.getElementById('badgeAgregadosPendentes');
+                    if (badge) {
+                        badge.textContent = pendentes;
+                        badge.style.display = pendentes > 0 ? 'inline-block' : 'none';
+                    }
+
+                    renderizarDocumentosAgregados();
+                } else {
+                    throw new Error(data.message || 'Erro ao carregar documentos de agregados');
+                }
+
+            } catch (error) {
+                console.error('❌ Erro ao carregar agregados:', error);
+                mostrarErroCarregamentoAgregados(error.message);
+                notifications.show('Erro ao carregar agregados: ' + error.message, 'error');
+            } finally {
+                carregandoAgregados = false;
+            }
+        }
+
+        // Renderizar documentos de agregados
+        function renderizarDocumentosAgregados() {
+            const container = document.getElementById('agregadosList');
+            container.innerHTML = '';
+
+            console.log('📋 Renderizando documentos de agregados:', documentosAgregados.length);
+
+            if (documentosAgregados.length === 0) {
+                mostrarEstadoVazioAgregados();
+                return;
+            }
+
+            documentosAgregados.sort((a, b) => {
+                const dataA = new Date(a.data_upload || 0);
+                const dataB = new Date(b.data_upload || 0);
+                return dataB - dataA;
+            });
+
+            documentosAgregados.forEach(doc => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'document-item-modern document-agregado';
+                itemDiv.dataset.docId = doc.id;
+
+                const statusIcon = getStatusIconFluxo(doc.status_fluxo);
+                const actionButtons = getActionButtonsAgregado(doc);
+                const diasEmProcesso = doc.dias_em_processo || 0;
+
+                itemDiv.innerHTML = `
+                    <div class="document-card-modern">
+                        <div class="document-header-modern">
+                            <div class="document-icon-modern">
+                                <i class="fas fa-user-friends"></i>
+                            </div>
+                            <div class="document-title-section">
+                                <h6 class="document-title-modern">Ficha de Sócio Agregado</h6>
+                                <div class="document-badges">
+                                    <span class="badge badge-agregado">
+                                        <i class="fas fa-user-friends"></i> Agregado
+                                    </span>
+                                    <span class="badge badge-status status-${doc.status_fluxo?.toLowerCase().replace('_', '-')}">
+                                        ${statusIcon} ${doc.status_descricao || doc.status_fluxo}
+                                    </span>
+                                    ${diasEmProcesso > 0 ? `
+                                    <span class="badge badge-urgencia bg-danger">
+                                        <i class="fas fa-exclamation-triangle"></i> ${diasEmProcesso} dias
+                                    </span>
+                                    ` : ''}
+                                </div>
+                            </div>
+                            <div class="document-actions-modern">
+                                ${actionButtons}
+                            </div>
+                        </div>
+                        
+                        <div class="document-associado-info">
+                            <div class="info-row">
+                                <i class="fas fa-user-plus icon-info" style="color: #9b59b6;"></i>
+                                <div class="info-content">
+                                    <span class="info-label">Agregado:</span>
+                                    <span class="info-value">${doc.agregado_nome || 'N/A'}</span>
+                                </div>
+                            </div>
+                            <div class="info-row">
+                                <i class="fas fa-id-card icon-info" style="color: #9b59b6;"></i>
+                                <div class="info-content">
+                                    <span class="info-label">CPF:</span>
+                                    <span class="info-value">${formatarCPF(doc.agregado_cpf)}</span>
+                                </div>
+                            </div>
+                            <div class="agregado-titular-info">
+                                <div class="info-row mb-0">
+                                    <i class="fas fa-user-tie icon-info" style="color: #9b59b6;"></i>
+                                    <div class="info-content">
+                                        <span class="titular-label">Sócio Titular:</span>
+                                        <span class="titular-value">${doc.titular_nome || 'N/A'} - ${formatarCPF(doc.titular_cpf)}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="document-meta-grid">
+                            <div class="meta-item-modern" style="border-left-color: #9b59b6;">
+                                <i class="fas fa-calendar-plus meta-icon" style="color: #9b59b6;"></i>
+                                <div class="meta-content">
+                                    <span class="meta-label">Upload</span>
+                                    <span class="meta-value">${formatarData(doc.data_upload)}</span>
+                                </div>
+                            </div>
+                            <div class="meta-item-modern" style="border-left-color: #9b59b6;">
+                                <i class="fas fa-hashtag meta-icon" style="color: #9b59b6;"></i>
+                                <div class="meta-content">
+                                    <span class="meta-label">ID Agregado</span>
+                                    <span class="meta-value">${doc.agregado_id || 'N/A'}</span>
+                                </div>
+                            </div>
+                            <div class="meta-item-modern" style="border-left-color: #9b59b6;">
+                                <i class="fas fa-building meta-icon" style="color: #9b59b6;"></i>
+                                <div class="meta-content">
+                                    <span class="meta-label">Departamento</span>
+                                    <span class="meta-value">${doc.departamento_atual_nome || 'Comercial'}</span>
+                                </div>
+                            </div>
+                            <div class="meta-item-modern" style="border-left-color: #9b59b6;">
+                                <i class="fas fa-link meta-icon" style="color: #9b59b6;"></i>
+                                <div class="meta-content">
+                                    <span class="meta-label">Parentesco</span>
+                                    <span class="meta-value">${doc.parentesco || 'N/A'}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                container.appendChild(itemDiv);
+            });
+        }
+
+        // Botões de ação para agregados
+        function getActionButtonsAgregado(doc) {
+            let buttons = '';
+
+            buttons += `
+                <button class="btn-action purple" onclick="downloadDocumentoAgregado(${doc.id})" title="Download">
+                    <i class="fas fa-download"></i>
+                    <span class="btn-text">Baixar</span>
+                </button>
+            `;
+
+            switch (doc.status_fluxo) {
+                case 'AGUARDANDO_ASSINATURA':
+                    buttons += `
+                        <button class="btn-action success" onclick="abrirModalAssinaturaAgregado(${doc.id})" title="Assinar Documento">
+                            <i class="fas fa-signature"></i>
+                            <span class="btn-text">Assinar</span>
+                        </button>
+                    `;
+                    break;
+
+                case 'ASSINADO':
+                    buttons += `
+                        <button class="btn-action warning" onclick="finalizarProcessoAgregado(${doc.id})" title="Finalizar Processo">
+                            <i class="fas fa-flag-checkered"></i>
+                            <span class="btn-text">Finalizar</span>
+                        </button>
+                    `;
+                    break;
+            }
+
+            buttons += `
+                <button class="btn-action secondary" onclick="verHistoricoAgregado(${doc.id})" title="Ver Histórico">
+                    <i class="fas fa-history"></i>
+                    <span class="btn-text">Histórico</span>
+                </button>
+            `;
+
+            return buttons;
+        }
+
+        // Download de documento de agregado
+        function downloadDocumentoAgregado(documentoId) {
+            console.log('Iniciando download do documento Agregado ID:', documentoId);
+            notifications.show('Preparando download da ficha de agregado...', 'info', 2000);
+            window.open('../api/documentos/documentos_agregados_download.php?id=' + documentoId, '_blank');
+        }
+
+        // Abrir modal de assinatura de agregado
+        function abrirModalAssinaturaAgregado(documentoId) {
+            const documento = documentosAgregados.find(doc => doc.id === documentoId);
+
+            if (!documento) {
+                notifications.show('Documento não encontrado', 'error');
+                return;
+            }
+
+            documentoAgregadoSelecionado = documento;
+
+            document.getElementById('documentoAgregadoId').value = documentoId;
+            document.getElementById('previewAgregadoNome').textContent = documento.agregado_nome || '-';
+            document.getElementById('previewAgregadoCPF').textContent = formatarCPF(documento.agregado_cpf);
+            document.getElementById('previewTitularNome').textContent = documento.titular_nome || '-';
+            document.getElementById('previewAgregadoData').textContent = formatarData(documento.data_upload);
+            document.getElementById('observacoesAgregado').value = '';
+
+            new bootstrap.Modal(document.getElementById('assinaturaAgregadoModal')).show();
+        }
+
+        // Confirmar assinatura de agregado
+        function confirmarAssinaturaAgregado() {
+            const documentoId = document.getElementById('documentoAgregadoId').value;
+            const observacoes = document.getElementById('observacoesAgregado').value.trim();
+
+            if (!documentoId) {
+                notifications.show('ID do documento não encontrado', 'error');
+                return;
+            }
+
+            const btnAssinar = event.target;
+            const originalContent = btnAssinar.innerHTML;
+
+            btnAssinar.disabled = true;
+            btnAssinar.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Assinando...';
+
+            fetch('../api/documentos/documentos_agregados_assinar.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    documento_id: documentoId,
+                    observacao: observacoes || 'Ficha de agregado assinada pela presidência'
+                })
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.status === 'success') {
+                    bootstrap.Modal.getInstance(document.getElementById('assinaturaAgregadoModal')).hide();
+                    notifications.show('Ficha de agregado assinada com sucesso!', 'success');
+                    carregarDocumentosAgregados(true);
+                } else {
+                    throw new Error(result.message || 'Erro desconhecido');
+                }
+            })
+            .catch(error => {
+                console.error('Erro ao assinar documento de agregado:', error);
+                notifications.show('Erro ao assinar: ' + error.message, 'error');
+            })
+            .finally(() => {
+                btnAssinar.disabled = false;
+                btnAssinar.innerHTML = originalContent;
+            });
+        }
+
+        // Finalizar processo de agregado
+        function finalizarProcessoAgregado(documentoId) {
+            const documento = documentosAgregados.find(doc => doc.id === documentoId);
+
+            if (!documento) {
+                notifications.show('Documento não encontrado', 'error');
+                return;
+            }
+
+            if (!confirm(`Deseja finalizar o processo do agregado "${documento.agregado_nome}"?\n\nIsso irá ativar o agregado no sistema.`)) {
+                return;
+            }
+
+            fetch('../api/documentos/documentos_agregados_finalizar.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    documento_id: documentoId,
+                    observacao: 'Processo finalizado - Agregado ativado'
+                })
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.status === 'success') {
+                    notifications.show('Processo do agregado finalizado com sucesso! Agregado ativado.', 'success');
+                    carregarDocumentosAgregados(true);
+                } else {
+                    throw new Error(result.message || 'Erro desconhecido');
+                }
+            })
+            .catch(error => {
+                console.error('Erro ao finalizar processo de agregado:', error);
+                notifications.show('Erro ao finalizar: ' + error.message, 'error');
+            });
+        }
+
+        // Ver histórico de agregado
+        function verHistoricoAgregado(documentoId) {
+            fetch('../api/documentos/documentos_agregados_historico.php?documento_id=' + documentoId)
+                .then(response => response.json())
+                .then(result => {
+                    if (result.status === 'success') {
+                        renderizarHistoricoAgregado(result.data);
+                        new bootstrap.Modal(document.getElementById('historicoAgregadoModal')).show();
+                    } else {
+                        notifications.show('Erro ao carregar histórico', 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro ao carregar histórico de agregado:', error);
+                    notifications.show('Erro ao carregar histórico', 'error');
+                });
+        }
+
+        // Renderizar histórico de agregado
+        function renderizarHistoricoAgregado(historico) {
+            const container = document.getElementById('historicoAgregadoContent');
+            container.innerHTML = '';
+
+            if (!historico || historico.length === 0) {
+                container.innerHTML = '<p class="text-muted text-center">Nenhum histórico disponível</p>';
+                return;
+            }
+
+            const timeline = document.createElement('div');
+            timeline.className = 'timeline';
+
+            historico.forEach(item => {
+                const timelineItem = document.createElement('div');
+                timelineItem.className = 'timeline-item';
+
+                timelineItem.innerHTML = `
+                    <div class="timeline-marker" style="background: #9b59b6;"></div>
+                    <div class="timeline-content">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h6 class="mb-1">${item.status_novo_desc || item.status_novo}</h6>
+                                <p class="mb-2">${item.observacao || 'Sem observações'}</p>
+                                <small class="text-muted">
+                                    Por: ${item.funcionario_nome || 'Sistema'}
+                                </small>
+                            </div>
+                            <div class="text-end">
+                                <small class="text-muted">${formatarData(item.data_acao)}</small>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                timeline.appendChild(timelineItem);
+            });
+
+            container.appendChild(timeline);
+        }
+
+        // Visualizar documento de agregado
+        function visualizarDocumentoAgregado() {
+            if (documentoAgregadoSelecionado) {
+                window.open('../api/documentos/documentos_agregados_download.php?id=' + documentoAgregadoSelecionado.id, '_blank');
+            }
+        }
+
+        // Configurar filtros de agregados
+        function configurarFiltrosAgregados() {
+            const filtroStatus = document.getElementById('filtroStatusAgregados');
+            const filtroBusca = document.getElementById('filtroBuscaAgregados');
+            const filtroPeriodo = document.getElementById('filtroPeriodoAgregados');
+
+            if (filtroStatus) {
+                filtroStatus.addEventListener('change', () => carregarDocumentosAgregados(true));
+            }
+
+            if (filtroBusca) {
+                filtroBusca.addEventListener('input', debounce(() => carregarDocumentosAgregados(true), 500));
+            }
+
+            if (filtroPeriodo) {
+                filtroPeriodo.addEventListener('change', () => carregarDocumentosAgregados(true));
+            }
+        }
+
+        function aplicarFiltrosAgregados() {
+            carregarDocumentosAgregados(true);
+        }
+
+        function limparFiltrosAgregados() {
+            document.getElementById('filtroStatusAgregados').value = '';
+            document.getElementById('filtroBuscaAgregados').value = '';
+            document.getElementById('filtroPeriodoAgregados').value = '';
+            carregarDocumentosAgregados(true);
+        }
+
+        function atualizarListaAgregados() {
+            carregarDocumentosAgregados(true);
+        }
+
+        // Skeleton loading para agregados
+        function mostrarSkeletonLoadingAgregados() {
+            const container = document.getElementById('agregadosList');
+            container.innerHTML = '';
+
+            for (let i = 0; i < 3; i++) {
+                const skeleton = document.createElement('div');
+                skeleton.className = 'document-item-modern document-agregado loading-skeleton';
+                skeleton.innerHTML = `
+                    <div class="document-card-modern">
+                        <div class="document-header-modern">
+                            <div style="width: 48px; height: 48px; background: #e0e0e0; border-radius: 10px;"></div>
+                            <div style="flex: 1;">
+                                <div style="height: 20px; background: #e0e0e0; border-radius: 4px; margin-bottom: 0.5rem; width: 60%;"></div>
+                                <div style="display: flex; gap: 0.5rem;">
+                                    <div style="height: 24px; background: #e0e0e0; border-radius: 6px; width: 80px;"></div>
+                                    <div style="height: 24px; background: #e0e0e0; border-radius: 6px; width: 100px;"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="background: #f5f5f5; border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">
+                            <div style="height: 16px; background: #e0e0e0; border-radius: 4px; margin-bottom: 0.5rem; width: 70%;"></div>
+                            <div style="height: 16px; background: #e0e0e0; border-radius: 4px; width: 50%;"></div>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(skeleton);
+            }
+        }
+
+        // Estado vazio para agregados
+        function mostrarEstadoVazioAgregados() {
+            const container = document.getElementById('agregadosList');
+            container.innerHTML = `
+                <div class="empty-state-modern">
+                    <div class="empty-state-content">
+                        <div class="empty-state-icon-wrapper" style="background: linear-gradient(135deg, rgba(155, 89, 182, 0.1), rgba(155, 89, 182, 0.2));">
+                            <i class="fas fa-user-friends empty-state-icon" style="color: #9b59b6;"></i>
+                        </div>
+                        <h5 class="empty-state-title">Nenhuma ficha de agregado encontrada</h5>
+                        <p class="empty-state-description">Não há documentos de sócios agregados no momento.</p>
+                        <div class="empty-state-actions">
+                            <button class="btn-action purple" onclick="carregarDocumentosAgregados(true)">
+                                <i class="fas fa-refresh"></i>
+                                Atualizar Lista
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Erro de carregamento para agregados
+        function mostrarErroCarregamentoAgregados(mensagem) {
+            const container = document.getElementById('agregadosList');
+            container.innerHTML = `
+                <div class="error-state-modern">
+                    <div class="error-state-content">
+                        <div class="error-state-icon-wrapper">
+                            <i class="fas fa-exclamation-triangle error-state-icon"></i>
+                        </div>
+                        <h5 class="error-state-title">Erro ao carregar agregados</h5>
+                        <p class="error-state-description">${escapeHtml(mensagem)}</p>
+                        <div class="error-state-actions">
+                            <button class="btn-action purple" onclick="carregarDocumentosAgregados(true)">
+                                <i class="fas fa-redo"></i>
+                                Tentar Novamente
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
         // ===== INICIALIZAÇÃO PRINCIPAL =====
         document.addEventListener('DOMContentLoaded', function () {
             // Inicializa AOS se disponível
@@ -4160,7 +5626,7 @@ $headerComponent = HeaderComponent::create([
             console.log('✅ Usuário autorizado - carregando funcionalidades do sistema interno...');
 
             // Configurar todas as funcionalidades
-            configurarFiltros();
+            configurarFiltrosUnificado();
             configurarUpload();
             configurarMetodoAssinatura();
 
@@ -4170,9 +5636,9 @@ $headerComponent = HeaderComponent::create([
             // Verificar compatibilidade
             const compatibilidade = garantirCompatibilidade();
 
-            // Carregar documentos do fluxo interno
-            console.log('📋 Iniciando carregamento de documentos do sistema interno...');
-            carregarDocumentosFluxo(true);
+            // Carregar documentos unificados (sócios + agregados)
+            console.log('📋 Iniciando carregamento de documentos unificados...');
+            carregarDocumentosUnificados(true);
 
             // Event listeners para cálculo de impacto em tempo real (valores base)
             const valorSocial = document.getElementById('valorBaseSocial');
@@ -4196,7 +5662,7 @@ $headerComponent = HeaderComponent::create([
             setInterval(function () {
                 if (temPermissao && document.hasFocus() && !document.querySelector('.modal.show')) {
                     console.log('🔄 Auto-refresh executado');
-                    carregarDocumentosFluxo();
+                    carregarDocumentosUnificados();
                 }
             }, 30000);
 
@@ -4221,6 +5687,7 @@ $headerComponent = HeaderComponent::create([
             console.log('✅ Sistema da Presidência INTERNO v2.0 carregado com sucesso!');
             console.log('📋 Sistemas integrados:', {
                 'Sistema Interno': '✅ Fluxo presencial e virtual',
+                'Sócios Agregados': '✅ Gestão de agregados',
                 'Valores Base': '✅ Gestão financeira'
             });
             console.log('🎨 Interface:', {
