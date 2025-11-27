@@ -2,7 +2,7 @@
 /**
  * API para Criar/Atualizar Sócio Agregado - COM SALVAMENTO DE DOCUMENTO
  * api/criar_agregado.php
- * ✅ VERSÃO FINAL COMPLETA
+ * ✅ VERSÃO CORRIGIDA - USA TABELA Documentos_Agregado + PASTA INDIVIDUAL
  */
 
 header('Content-Type: application/json; charset=utf-8');
@@ -56,6 +56,32 @@ function limparDados($dados) {
         $dadosLimpos[$key] = is_string($value) ? trim($value) : $value;
     }
     return $dadosLimpos;
+}
+
+/**
+ * ✅ Cria pasta de documentos para o agregado
+ */
+function criarPastaAgregado($agregadoId) {
+    $basePath = '../uploads/documentos/agregados/';
+    $pastaAgregado = $basePath . $agregadoId . '/';
+    
+    if (!file_exists($basePath)) {
+        if (!mkdir($basePath, 0755, true)) {
+            logError("❌ Erro ao criar pasta base: " . $basePath);
+            return false;
+        }
+        logError("✓ Pasta base criada: " . $basePath);
+    }
+    
+    if (!file_exists($pastaAgregado)) {
+        if (!mkdir($pastaAgregado, 0755, true)) {
+            logError("❌ Erro ao criar pasta do agregado: " . $pastaAgregado);
+            return false;
+        }
+        logError("✓ Pasta do agregado criada: " . $pastaAgregado);
+    }
+    
+    return $pastaAgregado;
 }
 
 try {
@@ -253,7 +279,7 @@ try {
     }
     
     // =============================
-    // VERIFICA SE JÁ EXISTE SIM
+    // VERIFICA SE JÁ EXISTE
     // =============================
     
     $cpfAgregado = $dados['cpf'];
@@ -326,7 +352,7 @@ try {
             banco = :banco, banco_outro_nome = :banco_outro_nome,
             agencia = :agencia, conta_corrente = :conta_corrente,
             dependentes = :dependentes, data_atualizacao = NOW()
-        WHERE id = :id AND ativo = 1";
+        WHERE id = :id AND inativo = 0";
         
         $parametros[':id'] = $agregadoId;
         $stmt = $db->prepare($sql);
@@ -364,6 +390,20 @@ try {
         
         $agregadoId = $db->lastInsertId();
         logError("✅ Agregado criado - ID: " . $agregadoId);
+    }
+    
+    // =============================
+    // ✅ CRIA PASTA DO AGREGADO
+    // =============================
+    
+    $pastaAgregado = criarPastaAgregado($agregadoId);
+    
+    if (!$pastaAgregado) {
+        logError("⚠ Não foi possível criar pasta do agregado, usando pasta padrão");
+        $pastaAgregado = '../uploads/fichas_agregados/';
+        if (!file_exists($pastaAgregado)) {
+            mkdir($pastaAgregado, 0755, true);
+        }
     }
     
     // =============================
@@ -406,63 +446,64 @@ try {
     }
     
     // =============================
-    // 🆕 SALVA DOCUMENTO (FICHA)
+    // ✅ SALVA DOCUMENTO NA PASTA INDIVIDUAL
+    // ✅ USA TABELA Documentos_Agregado
     // =============================
     
     $documentoId = null;
+    $caminhoDocumento = null;
     
     if (isset($_FILES['ficha_assinada']) && $_FILES['ficha_assinada']['error'] === UPLOAD_ERR_OK) {
         try {
             logError("📄 Processando upload da ficha assinada");
             
-            // Upload do arquivo
-            $uploadDir = '../uploads/fichas_agregados/';
-            if (!file_exists($uploadDir)) {
-                mkdir($uploadDir, 0755, true);
-            }
-            
             $arquivo = $_FILES['ficha_assinada'];
-            $nomeArquivo = 'ficha_agregado_' . $agregadoId . '_' . time() . '_' . basename($arquivo['name']);
-            $caminhoCompleto = $uploadDir . $nomeArquivo;
+            $extensao = pathinfo($arquivo['name'], PATHINFO_EXTENSION);
+            $nomeArquivo = 'ficha_filiacao_' . date('Ymd_His') . '.' . $extensao;
+            $caminhoCompleto = $pastaAgregado . $nomeArquivo;
             
             if (move_uploaded_file($arquivo['tmp_name'], $caminhoCompleto)) {
                 logError("✓ Arquivo salvo: " . $caminhoCompleto);
                 
-                // Insere no banco COM AGREGADO_ID
+                // Monta caminho relativo para salvar no banco
+                $caminhoRelativo = str_replace('../', '', $pastaAgregado) . $nomeArquivo;
+                $caminhoDocumento = $caminhoRelativo;
+                
+                // ✅ Insere na tabela Documentos_Agregado
                 $stmtDoc = $db->prepare("
-                    INSERT INTO Documentos_Associado (
-                        agregado_id, tipo_documento, tipo_origem, caminho_arquivo,
-                        status_fluxo, departamento_atual, data_upload
+                    INSERT INTO Documentos_Agregado (
+                        agregado_id, 
+                        tipo_documento, 
+                        tipo_origem, 
+                        caminho_arquivo,
+                        status_fluxo, 
+                        departamento_atual, 
+                        data_upload
                     ) VALUES (?, 'FICHA_FILIACAO', 'FISICO', ?, 'AGUARDANDO_ASSINATURA', 2, NOW())
                 ");
                 
                 $stmtDoc->execute([
                     $agregadoId,
-                    'uploads/fichas_agregados/' . $nomeArquivo
+                    $caminhoRelativo
                 ]);
                 
                 $documentoId = $db->lastInsertId();
                 
-                logError("✅ Documento criado - ID: " . $documentoId);
+                logError("✅ Documento criado na tabela Documentos_Agregado - ID: " . $documentoId);
+                logError("   Caminho: " . $caminhoRelativo);
                 
-                // Registra no histórico
-                $stmtHist = $db->prepare("
-                    INSERT INTO DocumentosFluxoHistorico (
-                        documento_id, status_anterior, status_novo,
-                        departamento_origem, departamento_destino,
-                        funcionario_id, observacao, data_acao
-                    ) VALUES (?, NULL, 'AGUARDANDO_ASSINATURA', 10, 2, 1, 'Ficha de agregado anexada', NOW())
-                ");
-                $stmtHist->execute([$documentoId]);
-                
-                logError("✓ Histórico registrado");
+            } else {
+                logError("❌ Erro ao mover arquivo para: " . $caminhoCompleto);
             }
             
         } catch (Exception $e) {
             logError("⚠ Erro ao salvar documento: " . $e->getMessage());
         }
     } else {
-        logError("⚠ Nenhuma ficha anexada");
+        logError("⚠ Nenhuma ficha anexada ou erro no upload");
+        if (isset($_FILES['ficha_assinada'])) {
+            logError("  Código de erro: " . $_FILES['ficha_assinada']['error']);
+        }
     }
     
     // =============================
@@ -481,7 +522,7 @@ try {
             'associado_id' => $agregadoId,
             'nome' => $dados['nome'],
             'cpf' => $dados['cpf'],
-            'documento_id' => $documentoId
+            'pasta_documentos' => str_replace('../', '', $pastaAgregado)
         ],
         'json_export' => [
             'salvo' => $resultadoJson['sucesso']
@@ -490,8 +531,8 @@ try {
             'enviado' => $resultadoZapSign['sucesso']
         ],
         'documento' => [
-            'criado' => $documentoId !== null,
-            'id' => $documentoId
+            'id' => $documentoId,
+            'caminho' => $caminhoDocumento
         ]
     ], JSON_UNESCAPED_UNICODE);
     

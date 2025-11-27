@@ -3048,15 +3048,13 @@ $headerComponent = HeaderComponent::create([
         }
 
         // ===== AÇÕES UNIFICADAS =====
-        function downloadDocumentoUnificado(documentoId, tipo) {
-            console.log('Download documento:', documentoId, tipo);
-            const endpoint = tipo === 'SOCIO' 
-                ? '../api/documentos/documentos_download.php' 
-                : '../api/documentos/documentos_agregados_download.php';
-            
-            notifications.show('Preparando download...', 'info', 2000);
-            window.open(`${endpoint}?id=${documentoId}`, '_blank');
-        }
+     function downloadDocumentoUnificado(documentoId, tipo) {
+    console.log('Download documento:', documentoId, tipo);
+    const tipoParam = tipo === 'AGREGADO' ? '&tipo=agregado' : '';
+    
+    notifications.show('Preparando download...', 'info', 2000);
+    window.open(`../api/documentos/documentos_download.php?id=${documentoId}${tipoParam}`, '_blank');
+}
 
         function abrirModalAssinaturaUnificado(documentoId, tipo) {
             const documento = documentosUnificados.find(doc => doc.id === documentoId && doc.tipo_documento === tipo);
@@ -5304,10 +5302,11 @@ $headerComponent = HeaderComponent::create([
         }
 
         // Download de documento de agregado
+    
+
         function downloadDocumentoAgregado(documentoId) {
-            console.log('Iniciando download do documento Agregado ID:', documentoId);
-            notifications.show('Preparando download da ficha de agregado...', 'info', 2000);
-            window.open('../api/documentos/documentos_agregados_download.php?id=' + documentoId, '_blank');
+        notifications.show('Preparando download da ficha de agregado...', 'info', 2000);
+        window.open('../api/documentos/documentos_download.php?id=' + documentoId + '&tipo=agregado', '_blank');
         }
 
         // Abrir modal de assinatura de agregado
