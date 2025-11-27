@@ -136,6 +136,8 @@ class HeaderComponent
         return 0;
     }
 
+    //DETECTA
+
     /**
      * Detecta automaticamente qual é a página ativa
      */
