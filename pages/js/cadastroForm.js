@@ -1,286 +1,107 @@
-// === AGREGADO: Buscar nome do titular pelo CPF ===
-function buscarNomeTitularPorCpf() {
-    console.log('🔍 Função buscarNomeTitularPorCpf chamada');
-    
-    const cpfInput = document.getElementById('cpfTitular');
-    const nomeInput = document.getElementById('nomeTitularInfo');
-    const erroSpan = document.getElementById('erroCpfTitular');
-    
-    if (!cpfInput || !nomeInput || !erroSpan) {
-        console.error('❌ Elementos do DOM não encontrados!', { cpfInput, nomeInput, erroSpan });
-        return;
-    }
-
-    const cpf = cpfInput.value.replace(/\D/g, '');
-    console.log('CPF digitado:', cpfInput.value);
-    console.log('CPF limpo:', cpf);
-    
-    // Limpa o campo se CPF for inválido
-    if (cpf.length !== 11) {
-        nomeInput.value = '';
-        nomeInput.style.background = '#f5f5f5';
-        nomeInput.style.color = '#666';
-        erroSpan.style.display = 'block';
-        erroSpan.textContent = 'CPF deve ter 11 dígitos';
-        console.log('❌ CPF inválido (não tem 11 dígitos)');
-        return;
-    }
-    
-    // Mostra loading
-    nomeInput.value = 'Buscando...';
-    nomeInput.style.background = '#fff3cd';
-    nomeInput.style.color = '#856404';
-    erroSpan.style.display = 'none';
-    
-    console.log('📡 Fazendo requisição para API...');
-    console.log('URL:', `../api/buscar_associado_por_cpf.php?cpf=${cpf}`);
-    
-    // Faz a requisição
-    fetch(`../api/buscar_associado_por_cpf.php?cpf=${cpf}`)
-        .then(response => {
-            console.log('📥 Resposta recebida:', response.status);
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}`);
-            }
-            return response.json();
-        })
-        .then(data => {
-            console.log('✅ Dados recebidos:', data);
-            
-            if (data.status === 'success' && data.data) {
-                const titular = data.data;
-                let nome = titular.titular_nome || titular.nome || '';
-                let cpfFormatado = titular.titular_cpf || titular.cpf || '';
-                let situacao = titular.titular_situacao || titular.situacao || '';
-                
-                console.log('Nome encontrado:', nome);
-                console.log('Situação:', situacao);
-                
-                // Formata CPF
-                if (cpfFormatado && cpfFormatado.length === 11) {
-                    cpfFormatado = cpfFormatado.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
-                }
-                
-                // Preenche o campo
-                if (nome && cpfFormatado) {
-                    nomeInput.value = `${nome} - ${cpfFormatado}`;
-                } else if (nome) {
-                    nomeInput.value = nome;
-                } else {
-                    nomeInput.value = '';
-                }
-                
-                // Verifica situação
-                if (situacao && situacao !== 'Filiado') {
-                    nomeInput.style.background = '#f8d7da';
-                    nomeInput.style.color = '#721c24';
-                    erroSpan.style.display = 'block';
-                    erroSpan.textContent = `Titular está ${situacao}. Somente titulares FILIADOS podem ter agregados.`;
-                    console.log('⚠️ Titular não está filiado:', situacao);
-                } else {
-                    nomeInput.style.background = '#d4edda';
-                    nomeInput.style.color = '#155724';
-                    erroSpan.style.display = 'none';
-                    console.log('✅ Titular válido e filiado');
-                }
-                
-            } else {
-                console.log('❌ Associado não encontrado');
-                nomeInput.value = '';
-                nomeInput.style.background = '#f8d7da';
-                nomeInput.style.color = '#721c24';
-                erroSpan.style.display = 'block';
-                erroSpan.textContent = 'CPF não encontrado ou não é um associado filiado';
-            }
-        })
-        .catch(error => {
-            console.error('❌ Erro na busca:', error);
-            nomeInput.value = '';
-            nomeInput.style.background = '#f8d7da';
-            nomeInput.style.color = '#721c24';
-            erroSpan.style.display = 'block';
-            erroSpan.textContent = 'Erro ao buscar CPF. Tente novamente.';
-        });
-}
-
-// === FUNÇÃO PARA DETECTAR SE É SÓCIO AGREGADO ===
-function verificarSeEhAgregadoECarregarDados() {
-    console.log('🔍 Verificando se associado é um sócio agregado...');
-    
-    if (!isEdit || !associadoId) {
-        console.log('⚠️ Não é modo edição ou não tem ID - pulando verificação');
-        return;
-    }
-    
-    // Busca o CPF do associado atual no formulário
-    const cpfAtual = document.getElementById('cpf')?.value;
-    if (!cpfAtual) {
-        console.log('⚠️ CPF não encontrado no formulário - aguardando 2 segundos...');
-        // Tenta novamente após 2 segundos (pode estar carregando ainda)
-        setTimeout(verificarSeEhAgregadoECarregarDados, 2000);
-        return;
-    }
-    
-    console.log('🔍 Verificando CPF:', cpfAtual);
-    
-    // Usa a API existente para buscar dados
-    fetch(`../api/buscar_associado_por_cpf.php?cpf=${cpfAtual}`)
-        .then(response => response.json())
-        .then(data => {
-            console.log('📥 Resposta busca por CPF:', data);
-            
-            if (data.status === 'success' && data.data) {
-                // Verifica se tem dados de agregado na resposta
-                if (data.data.agregado_id && data.data.agregado_nome) {
-                    console.log('✅ ASSOCIADO É UM SÓCIO AGREGADO!');
-                    
-                    // Ativa o modo agregado automaticamente
-                    ativarModoAgregadoAutomatico(data.data);
-                    
-                } else if (data.data.titular_id && data.data.titular_nome) {
-                    console.log('ℹ️ Associado é um titular normal (não é agregado)');
-                } else {
-                    console.log('ℹ️ Dados insuficientes para determinar tipo');
-                }
-            } else {
-                console.log('⚠️ Não foi possível verificar o tipo do associado');
-            }
-        })
-        .catch(error => {
-            console.error('❌ Erro ao verificar se é agregado:', error);
-        });
-}
-
-// === ATIVAR MODO AGREGADO AUTOMATICAMENTE ===
-function ativarModoAgregadoAutomatico(dadosResposta) {
-    console.log('🔄 Ativando modo agregado automaticamente...', dadosResposta);
-    
-    // 1. Marca o checkbox de agregado
-    const checkboxAgregado = document.getElementById('isAgregado');
-    if (checkboxAgregado) {
-        checkboxAgregado.checked = true;
-        console.log('✅ Checkbox agregado marcado');
-    }
-    
-    // 2. Mostra os campos de titular
-    const campoCpfTitular = document.getElementById('campoCpfTitular');
-    if (campoCpfTitular) {
-        campoCpfTitular.style.display = 'block';
-        console.log('✅ Campos de titular exibidos');
-    }
-    
-    // 3. Preenche CPF do titular (busca na estrutura de dados da API existente)
-    const cpfTitularInput = document.getElementById('cpfTitular');
-    let cpfTitular = dadosResposta.agregado_socio_titular_cpf || dadosResposta.titular_cpf;
-    
-    if (cpfTitularInput && cpfTitular) {
-        // Formata o CPF se necessário
-        let cpfFormatado = cpfTitular;
-        if (cpfFormatado.length === 11) {
-            cpfFormatado = cpfFormatado.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
-        }
-        cpfTitularInput.value = cpfFormatado;
-        console.log('✅ CPF do titular preenchido:', cpfFormatado);
-    }
-    
-    // 4. Preenche nome do titular
-    const nomeTitularInput = document.getElementById('nomeTitularInfo');
-    let nomeTitular = dadosResposta.agregado_socio_titular_nome || dadosResposta.titular_nome;
-    
-    if (nomeTitularInput && nomeTitular) {
-        let nomeCompleto = nomeTitular;
-        
-        // Se tem CPF, adiciona no formato "Nome - CPF"
-        if (cpfTitular) {
-            let cpfFormatado = cpfTitular;
-            if (cpfFormatado.length === 11) {
-                cpfFormatado = cpfFormatado.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
-            }
-            nomeCompleto += ` - ${cpfFormatado}`;
-        }
-        
-        nomeTitularInput.value = nomeCompleto;
-        nomeTitularInput.style.background = '#d4edda';
-        nomeTitularInput.style.color = '#155724';
-        console.log('✅ Nome do titular preenchido:', nomeCompleto);
-    }
-    
-    // 5. Esconde erro se estava visível
-    const erroSpan = document.getElementById('erroCpfTitular');
-    if (erroSpan) {
-        erroSpan.style.display = 'none';
-    }
-    
-    // 6. Define como obrigatório
-    if (cpfTitularInput) {
-        cpfTitularInput.required = true;
-    }
-    
-    console.log('🎉 Modo agregado ativado automaticamente com sucesso!');
-}
-
 /**
- * cadastroForm.js - JavaScript Completo com Salvamento Multi-Step
- * Versão com botões de salvar em cada step + controle serviço jurídico + busca agregados + detecção automática
+ * cadastroForm.js - JavaScript Completo do Formulário de Filiação
+ * Versão: 2.0 - Atualizado com correções para agregados
+ * Data: 26/11/2025
+ * 
+ * Funcionalidades:
+ * - Navegação multi-step
+ * - Salvamento individual por step
+ * - Validações robustas
+ * - Controle de serviço jurídico
+ * - Busca de agregados
+ * - Detecção automática de agregados
+ * - NOVO: Preenchimento automático de dados militares para agregados
+ * - NOVO: Desabilitação de campos financeiros para agregados
  */
 
-// Estado do formulário - DECLARADO PRIMEIRO
+// Estado do formulário
 let currentStep = 1;
 const totalSteps = 6;
 let dependenteIndex = 0;
-
-// Depois pega os dados da página
 const isEdit = window.pageData ? window.pageData.isEdit : false;
 const associadoId = window.pageData ? window.pageData.associadoId : null;
-
-// Dados carregados dos serviços (para edição)
 let servicosCarregados = null;
-
-// VARIÁVEIS GLOBAIS PARA DADOS DOS SERVIÇOS
 let regrasContribuicao = [];
 let servicosData = [];
 let tiposAssociadoData = [];
 let dadosCarregados = false;
-
-// NOVOS: Estados de salvamento por step
-let stepsSalvos = new Set(); // Armazena quais steps foram salvos
-let salvandoStep = false; // Flag para evitar salvamentos duplicados
+let stepsSalvos = new Set();
+let salvandoStep = false;
 
 // Inicialização
 document.addEventListener('DOMContentLoaded', function () {
-    console.log('=== INICIANDO FORMULÁRIO DE FILIAÇÃO COM SALVAMENTO MULTI-STEP ===');
+    console.log('=== INICIANDO FORMULÁRIO DE FILIAÇÃO ===');
     console.log('Modo edição:', isEdit, 'ID:', associadoId);
 
-    // 🆕 PRIMEIRA COISA: Verifica se é agregado (MODO EDIÇÃO)
+    // Verifica se é agregado (MODO EDIÇÃO)
     if (isEdit && associadoId) {
         setTimeout(() => {
             verificarSeEhAgregadoECarregarDados();
         }, 1500);
     }
 
-    // 🆕 Configura listeners para CPF do titular (AGREGADOS)
-    console.log('🚀 Configurando listeners para CPF do titular (agregados)');
+    // Configura listeners para CPF do titular (AGREGADOS)
+    configurarListenersCpfTitular();
+
+    // Atalho ESC para voltar ao dashboard
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            if (confirm('Deseja voltar ao dashboard? Os dados não salvos serão perdidos.')) {
+                window.location.href = 'dashboard.php';
+            }
+        }
+    });
+
+    // Carrega dados de serviços do banco
+    carregarDadosServicos()
+        .then(() => {
+            console.log('✓ Dados de serviços carregados');
+            aplicarMascaras();
+            inicializarSelect2();
+            inicializarUploadPreviews();
+            setupRealtimeValidation();
+            configurarListenersServicos();
+
+            if (isEdit && associadoId) {
+                setTimeout(() => {
+                    carregarServicosAssociado();
+                }, 1000);
+            }
+
+            updateProgressBar();
+            updateNavigationButtons();
+            setTimeout(() => {
+                inicializarNavegacaoSteps();
+            }, 1000);
+
+            const dependentesExistentes = document.querySelectorAll('.dependente-card');
+            if (dependentesExistentes.length > 0) {
+                dependenteIndex = dependentesExistentes.length;
+            }
+
+            console.log('✓ Formulário inicializado completamente!');
+        })
+        .catch(error => {
+            console.error('Erro ao carregar dados de serviços:', error);
+            showAlert('Erro ao carregar dados do sistema. Algumas funcionalidades podem não funcionar.', 'warning');
+        });
+});
+
+// ===========================
+// AGREGADOS: FUNÇÕES PRINCIPAIS
+// ===========================
+
+function configurarListenersCpfTitular() {
+    console.log('🚀 Configurando listeners para CPF do titular');
     
     const cpfInput = document.getElementById('cpfTitular');
     if (cpfInput) {
-        console.log('✅ Campo cpfTitular encontrado');
-        
-        // Listener para quando o campo perde o foco
-        cpfInput.addEventListener('blur', function() {
-            console.log('👁️ Campo cpfTitular perdeu o foco (blur)');
-            buscarNomeTitularPorCpf();
-        });
-        
-        // Listener para quando o usuário digita
+        cpfInput.addEventListener('blur', buscarNomeTitularPorCpf);
         cpfInput.addEventListener('keyup', function() {
             const cpfLimpo = this.value.replace(/\D/g, '');
-            console.log('⌨️ Keyup - CPF atual:', cpfLimpo);
-            
             if (cpfLimpo.length === 11) {
-                console.log('✅ CPF completo (11 dígitos) - buscando...');
                 buscarNomeTitularPorCpf();
             } else {
-                // Limpa o campo se não tiver 11 dígitos
                 const nomeInput = document.getElementById('nomeTitularInfo');
                 const erroSpan = document.getElementById('erroCpfTitular');
                 if (nomeInput) {
@@ -294,86 +115,185 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             }
         });
-        
-        console.log('✅ Listeners adicionados ao campo cpfTitular');
-    } else {
-        console.warn('⚠️ Campo cpfTitular NÃO encontrado no DOM (talvez não seja modo agregado)');
+        console.log('✅ Listeners do CPF titular configurados');
     }
+}
 
-    // Atalho ESC para voltar ao dashboard
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') {
-            if (confirm('Deseja voltar ao dashboard? Os dados não salvos serão perdidos.')) {
-                window.location.href = 'dashboard.php';
+function buscarNomeTitularPorCpf() {
+    console.log('🔍 Buscando titular por CPF');
+    
+    const cpfInput = document.getElementById('cpfTitular');
+    const nomeInput = document.getElementById('nomeTitularInfo');
+    const erroSpan = document.getElementById('erroCpfTitular');
+    
+    if (!cpfInput || !nomeInput || !erroSpan) return;
+
+    const cpf = cpfInput.value.replace(/\D/g, '');
+    
+    if (cpf.length !== 11) {
+        nomeInput.value = '';
+        nomeInput.style.background = '#f5f5f5';
+        nomeInput.style.color = '#666';
+        erroSpan.style.display = 'block';
+        erroSpan.textContent = 'CPF deve ter 11 dígitos';
+        return;
+    }
+    
+    nomeInput.value = 'Buscando...';
+    nomeInput.style.background = '#fff3cd';
+    nomeInput.style.color = '#856404';
+    erroSpan.style.display = 'none';
+    
+    fetch(`../api/buscar_associado_por_cpf.php?cpf=${cpf}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success' && data.data) {
+                const titular = data.data;
+                let nome = titular.titular_nome || titular.nome || '';
+                let cpfFormatado = titular.titular_cpf || titular.cpf || '';
+                let situacao = titular.titular_situacao || titular.situacao || '';
+                
+                if (cpfFormatado && cpfFormatado.length === 11) {
+                    cpfFormatado = cpfFormatado.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+                }
+                
+                if (nome && cpfFormatado) {
+                    nomeInput.value = `${nome} - ${cpfFormatado}`;
+                } else if (nome) {
+                    nomeInput.value = nome;
+                } else {
+                    nomeInput.value = '';
+                }
+                
+                if (situacao && situacao !== 'Filiado') {
+                    nomeInput.style.background = '#f8d7da';
+                    nomeInput.style.color = '#721c24';
+                    erroSpan.style.display = 'block';
+                    erroSpan.textContent = `Titular está ${situacao}. Somente titulares FILIADOS podem ter agregados.`;
+                } else {
+                    nomeInput.style.background = '#d4edda';
+                    nomeInput.style.color = '#155724';
+                    erroSpan.style.display = 'none';
+                }
+            } else {
+                nomeInput.value = '';
+                nomeInput.style.background = '#f8d7da';
+                nomeInput.style.color = '#721c24';
+                erroSpan.style.display = 'block';
+                erroSpan.textContent = 'CPF não encontrado ou não é um associado filiado';
             }
-        }
-    });
-
-    // PRIMEIRA COISA: Carrega dados de serviços do banco
-    carregarDadosServicos()
-        .then(() => {
-            console.log('✓ Dados de serviços carregados, continuando inicialização...');
-
-            // Máscaras
-            aplicarMascaras();
-
-            // Select2
-            inicializarSelect2();
-
-            // Preview de arquivos
-            inicializarUploadPreviews();
-
-            // Validação em tempo real
-            setupRealtimeValidation();
-
-            // Event listeners dos serviços (INCLUINDO CONTROLE JURÍDICO)
-            configurarListenersServicos();
-
-            // Carrega dados dos serviços se estiver editando
-            if (isEdit && associadoId) {
-                setTimeout(() => {
-                    carregarServicosAssociado();
-                }, 1000);
-            }
-
-            // Atualiza interface
-            updateProgressBar();
-            updateNavigationButtons();
-            setTimeout(() => {
-                inicializarNavegacaoSteps();
-            }, 1000);
-
-            // Se for modo edição e houver dependentes já carregados, atualiza o índice
-            const dependentesExistentes = document.querySelectorAll('.dependente-card');
-            if (dependentesExistentes.length > 0) {
-                dependenteIndex = dependentesExistentes.length;
-            }
-
-            console.log('✓ Formulário inicializado com sucesso (+ salvamento multi-step + busca agregados + detecção automática)!');
-
         })
         .catch(error => {
-            console.error('Erro ao carregar dados de serviços:', error);
-            showAlert('Erro ao carregar dados do sistema. Algumas funcionalidades podem não funcionar.', 'warning');
+            console.error('Erro ao buscar CPF:', error);
+            nomeInput.value = '';
+            nomeInput.style.background = '#f8d7da';
+            nomeInput.style.color = '#721c24';
+            erroSpan.style.display = 'block';
+            erroSpan.textContent = 'Erro ao buscar CPF. Tente novamente.';
         });
-});
+}
 
-// === FUNÇÃO TOGGLEAGREGADOCAMPOS ATUALIZADA ===
+function verificarSeEhAgregadoECarregarDados() {
+    console.log('🔍 Verificando se associado é um sócio agregado...');
+    
+    if (!isEdit || !associadoId) return;
+    
+    const cpfAtual = document.getElementById('cpf')?.value;
+    if (!cpfAtual) {
+        setTimeout(verificarSeEhAgregadoECarregarDados, 2000);
+        return;
+    }
+    
+    fetch(`../api/buscar_associado_por_cpf.php?cpf=${cpfAtual}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success' && data.data) {
+                if (data.data.agregado_id && data.data.agregado_nome) {
+                    console.log('✅ ASSOCIADO É UM SÓCIO AGREGADO!');
+                    ativarModoAgregadoAutomatico(data.data);
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Erro ao verificar se é agregado:', error);
+        });
+}
+
+function ativarModoAgregadoAutomatico(dadosResposta) {
+    console.log('🔄 Ativando modo agregado automaticamente');
+    
+    const checkboxAgregado = document.getElementById('isAgregado');
+    if (checkboxAgregado) {
+        checkboxAgregado.checked = true;
+    }
+    
+    const campoCpfTitular = document.getElementById('campoCpfTitular');
+    if (campoCpfTitular) {
+        campoCpfTitular.style.display = 'block';
+    }
+    
+    const cpfTitularInput = document.getElementById('cpfTitular');
+    let cpfTitular = dadosResposta.agregado_socio_titular_cpf || dadosResposta.titular_cpf;
+    
+    if (cpfTitularInput && cpfTitular) {
+        let cpfFormatado = cpfTitular;
+        if (cpfFormatado.length === 11) {
+            cpfFormatado = cpfFormatado.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+        }
+        cpfTitularInput.value = cpfFormatado;
+    }
+    
+    const nomeTitularInput = document.getElementById('nomeTitularInfo');
+    let nomeTitular = dadosResposta.agregado_socio_titular_nome || dadosResposta.titular_nome;
+    
+    if (nomeTitularInput && nomeTitular) {
+        let nomeCompleto = nomeTitular;
+        if (cpfTitular) {
+            let cpfFormatado = cpfTitular;
+            if (cpfFormatado.length === 11) {
+                cpfFormatado = cpfFormatado.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+            }
+            nomeCompleto += ` - ${cpfFormatado}`;
+        }
+        nomeTitularInput.value = nomeCompleto;
+        nomeTitularInput.style.background = '#d4edda';
+        nomeTitularInput.style.color = '#155724';
+    }
+    
+    const erroSpan = document.getElementById('erroCpfTitular');
+    if (erroSpan) {
+        erroSpan.style.display = 'none';
+    }
+    
+    if (cpfTitularInput) {
+        cpfTitularInput.required = true;
+    }
+    
+    console.log('🎉 Modo agregado ativado automaticamente!');
+}
+
+// ===========================
+// NOVO: PREENCHIMENTO AUTOMÁTICO DE DADOS MILITARES
+// ===========================
+
 function toggleAgregadoCampos() {
-    const isAgregado = document.getElementById('isAgregado').checked;
+    const isAgregado = document.getElementById('isAgregado')?.checked;
     const campoCpfTitular = document.getElementById('campoCpfTitular');
     const cpfTitularInput = document.getElementById('cpfTitular');
     const nomeTitularInput = document.getElementById('nomeTitularInfo');
     const erroSpan = document.getElementById('erroCpfTitular');
     
     if (isAgregado) {
-        // Mostra campos
         if (campoCpfTitular) campoCpfTitular.style.display = 'block';
         if (cpfTitularInput) cpfTitularInput.required = true;
         
-        console.log('✅ Modo agregado ATIVADO manualmente');
+        // NOVO: Preenche dados militares
+        setTimeout(() => {
+            preencherDadosMilitaresAgregado();
+        }, 100);
+        
+        console.log('✅ Modo agregado ATIVADO');
     } else {
-        // Esconde campos
         if (campoCpfTitular) campoCpfTitular.style.display = 'none';
         if (cpfTitularInput) {
             cpfTitularInput.required = false;
@@ -386,17 +306,260 @@ function toggleAgregadoCampos() {
         }
         if (erroSpan) erroSpan.style.display = 'none';
         
+        // NOVO: Limpa dados militares
+        limparDadosMilitares();
+        
         console.log('❌ Modo agregado DESATIVADO');
     }
 }
 
-// Validação ao submeter o formulário (AGREGADOS)
+function preencherDadosMilitaresAgregado() {
+    console.log('📋 Preenchendo dados militares com "AGREGADO"');
+    
+    // Corporação
+    const corporacaoSelect = $('#corporacao');
+    if (corporacaoSelect.length) {
+        if (corporacaoSelect.find('option[value="AGREGADO"]').length === 0) {
+            corporacaoSelect.append(new Option('AGREGADO', 'AGREGADO', true, true));
+        } else {
+            corporacaoSelect.val('AGREGADO');
+        }
+        corporacaoSelect.trigger('change');
+        console.log('  ✓ Corporação: AGREGADO');
+    }
+    
+    // Patente
+    const patenteSelect = $('#patente');
+    if (patenteSelect.length) {
+        if (patenteSelect.find('option[value="Nenhuma"]').length > 0) {
+            patenteSelect.val('Nenhuma');
+            console.log('  ✓ Patente: Nenhuma');
+        } else {
+            if (patenteSelect.find('option[value="AGREGADO"]').length === 0) {
+                patenteSelect.append(new Option('AGREGADO', 'AGREGADO', true, true));
+            } else {
+                patenteSelect.val('AGREGADO');
+            }
+            console.log('  ✓ Patente: AGREGADO');
+        }
+        patenteSelect.trigger('change');
+    }
+    
+    // Situação Funcional
+    const categoriaSelect = $('#categoria');
+    if (categoriaSelect.length) {
+        if (categoriaSelect.find('option[value="AGREGADO"]').length === 0) {
+            categoriaSelect.append(new Option('AGREGADO', 'AGREGADO', true, true));
+        } else {
+            categoriaSelect.val('AGREGADO');
+        }
+        categoriaSelect.trigger('change');
+        console.log('  ✓ Situação Funcional: AGREGADO');
+    }
+    
+    // Lotação
+    const lotacaoSelect = $('#lotacao');
+    if (lotacaoSelect.length) {
+        if (lotacaoSelect.find('option[value="AGREGADO"]').length === 0) {
+            lotacaoSelect.append(new Option('AGREGADO', 'AGREGADO', true, true));
+        } else {
+            lotacaoSelect.val('AGREGADO');
+        }
+        lotacaoSelect.trigger('change');
+        console.log('  ✓ Lotação: AGREGADO');
+    }
+    
+    // Unidade
+    const unidadeInput = document.getElementById('unidade');
+    if (unidadeInput) {
+        unidadeInput.value = 'AGREGADO';
+        console.log('  ✓ Unidade: AGREGADO');
+    }
+    
+    console.log('✅ Dados militares preenchidos com "AGREGADO"');
+}
+
+function limparDadosMilitares() {
+    console.log('🧹 Limpando dados militares');
+    
+    $('#corporacao').val('').trigger('change');
+    $('#patente').val('').trigger('change');
+    $('#categoria').val('').trigger('change');
+    $('#lotacao').val('').trigger('change');
+    
+    const unidadeInput = document.getElementById('unidade');
+    if (unidadeInput) {
+        unidadeInput.value = '';
+    }
+    
+    console.log('✅ Dados militares limpos');
+}
+
+// ===========================
+// NOVO: DESABILITAÇÃO DE CAMPOS FINANCEIROS
+// ===========================
+
+function controlarCamposFinanceirosAgregado() {
+    console.log('🔒 Controlando campos financeiros para agregado');
+    
+    const isAgregado = document.getElementById('isAgregado')?.checked;
+    
+    const camposFinanceiros = [
+        'vinculoServidor',
+        'localDebito',
+        'agencia',
+        'operacao',
+        'contaCorrente',
+        'doador'
+    ];
+    
+    if (isAgregado) {
+        console.log('🔒 Desabilitando campos financeiros');
+        
+        camposFinanceiros.forEach(campoId => {
+            const campo = document.getElementById(campoId);
+            if (campo) {
+                campo.disabled = true;
+                campo.required = false;
+                campo.style.background = '#e9ecef';
+                campo.style.color = '#6c757d';
+                campo.style.cursor = 'not-allowed';
+                campo.style.opacity = '0.6';
+                
+                if (campo.tagName === 'SELECT') {
+                    campo.value = '';
+                } else {
+                    campo.value = '';
+                }
+                
+                if (typeof $ !== 'undefined' && $(campo).hasClass('select2-hidden-accessible')) {
+                    $(campo).trigger('change');
+                }
+                
+                console.log(`  ✓ Campo ${campoId} desabilitado`);
+            }
+        });
+        
+        adicionarMensagemCamposFinanceirosAgregado();
+        
+    } else {
+        console.log('🔓 Habilitando campos financeiros');
+        
+        camposFinanceiros.forEach(campoId => {
+            const campo = document.getElementById(campoId);
+            if (campo) {
+                campo.disabled = false;
+                campo.style.background = '';
+                campo.style.color = '';
+                campo.style.cursor = '';
+                campo.style.opacity = '';
+                
+                console.log(`  ✓ Campo ${campoId} habilitado`);
+            }
+        });
+        
+        removerMensagemCamposFinanceirosAgregado();
+    }
+    
+    console.log(`✅ Campos financeiros ${isAgregado ? 'desabilitados' : 'habilitados'}`);
+}
+
+function adicionarMensagemCamposFinanceirosAgregado() {
+    removerMensagemCamposFinanceirosAgregado();
+    
+    const stepFinanceiro = document.querySelector('.section-card[data-step="4"]');
+    if (!stepFinanceiro) return;
+    
+    const mensagem = document.createElement('div');
+    mensagem.id = 'mensagem-campos-financeiros-agregado';
+    mensagem.style.cssText = `
+        background: linear-gradient(135deg, #fff3cd 0%, #ffeeba 100%);
+        color: #856404;
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 1.5rem;
+        border-left: 4px solid #ffc107;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        font-size: 0.95rem;
+        box-shadow: 0 2px 4px rgba(255, 193, 7, 0.2);
+    `;
+    
+    mensagem.innerHTML = `
+        <i class="fas fa-info-circle" style="font-size: 1.5rem;"></i>
+        <div>
+            <strong>Agregado detectado</strong><br>
+            <span style="font-size: 0.875rem;">
+                Os campos financeiros (banco, agência, conta) não são necessários para associados agregados.
+                Esses dados já estão vinculados ao sócio titular.
+            </span>
+        </div>
+    `;
+    
+    const formGrid = stepFinanceiro.querySelector('.form-grid');
+    if (formGrid) {
+        formGrid.parentNode.insertBefore(mensagem, formGrid);
+    }
+}
+
+function removerMensagemCamposFinanceirosAgregado() {
+    const mensagem = document.getElementById('mensagem-campos-financeiros-agregado');
+    if (mensagem) {
+        mensagem.remove();
+    }
+}
+
+// ===========================
+// INTEGRAÇÃO COM NAVEGAÇÃO DE STEPS
+// ===========================
+
+function aoEntrarStepMilitares() {
+    const isAgregado = document.getElementById('isAgregado')?.checked;
+    
+    if (isAgregado) {
+        console.log('📋 Step Militares + Modo Agregado - preenchendo');
+        setTimeout(() => {
+            preencherDadosMilitaresAgregado();
+        }, 200);
+    }
+}
+
+function aoEntrarStepFinanceiro() {
+    console.log('💰 Entrando no step Financeiro');
+    setTimeout(() => {
+        controlarCamposFinanceirosAgregado();
+    }, 200);
+}
+
+// Listener do checkbox agregado
+document.addEventListener('DOMContentLoaded', function() {
+    const checkboxAgregado = document.getElementById('isAgregado');
+    if (checkboxAgregado) {
+        checkboxAgregado.addEventListener('change', function() {
+            toggleAgregadoCampos();
+            
+            const stepAtivo = document.querySelector('.section-card.active');
+            if (stepAtivo && stepAtivo.getAttribute('data-step') === '4') {
+                setTimeout(() => {
+                    controlarCamposFinanceirosAgregado();
+                }, 100);
+            }
+        });
+    }
+    
+    if (checkboxAgregado?.checked) {
+        setTimeout(() => {
+            toggleAgregadoCampos();
+        }, 500);
+    }
+});
+
+// Validação ao submeter
 document.getElementById('formAssociado')?.addEventListener('submit', function(e) {
     const isAgregado = document.getElementById('isAgregado')?.checked;
     
     if (isAgregado) {
-        console.log('📝 Validando CPF do titular antes de submeter...');
-        
         const cpfTitular = document.getElementById('cpfTitular')?.value;
         const nomeTitular = document.getElementById('nomeTitularInfo')?.value;
         const erroVisivel = document.getElementById('erroCpfTitular')?.style.display !== 'none';
@@ -405,53 +568,50 @@ document.getElementById('formAssociado')?.addEventListener('submit', function(e)
             e.preventDefault();
             alert('Por favor, preencha corretamente o CPF do titular e verifique se está filiado.');
             document.getElementById('cpfTitular')?.focus();
-            console.log('❌ Validação falhou - CPF do titular inválido');
             return false;
         }
-        
-        console.log('✅ Validação OK - pode submeter');
     }
 });
 
-// Aplicar máscaras
+// ===========================
+// MÁSCARAS
+// ===========================
+
 function aplicarMascaras() {
     console.log('Aplicando máscaras...');
     
-    // Máscara para CPF
     $('#cpf').mask('000.000.000-00', {
         placeholder: '000.000.000-00',
         clearIfNotMatch: true
     });
     
-    // Máscara para CPF do Titular (AGREGADOS)
     $('#cpfTitular').mask('000.000.000-00', {
         placeholder: '000.000.000-00',
         clearIfNotMatch: true
     });
     
-    // Máscara para telefone
     $('#telefone').mask('(00) 00000-0000', {
         placeholder: '(00) 00000-0000'
     });
     
-    // Máscara para celular
     $('#celular').mask('(00) 00000-0000', {
         placeholder: '(00) 00000-0000'
     });
     
-    // Máscara para CEP
     $('#cep').mask('00000-000', {
         placeholder: '00000-000'
     });
     
-    console.log('✓ Máscaras aplicadas (incluindo CPF do titular)');
+    console.log('✓ Máscaras aplicadas');
 }
 
-// Inicializar Select2
+// ===========================
+// SELECT2
+// ===========================
+
 function inicializarSelect2() {
     console.log('Inicializando Select2...');
     
-    // Select2 PADRÃO (sem digitação livre) - para campos que devem ter apenas opções fixas
     $('.form-select').not('#corporacao, #patente, #categoria, #lotacao').select2({
         language: 'pt-BR',
         theme: 'default',
@@ -461,11 +621,6 @@ function inicializarSelect2() {
         }
     });
     
-    // ========================================
-    // 🆕 SELECT2 COM DIGITAÇÃO LIVRE (TAGS)
-    // ========================================
-    
-    // Corporação - pode selecionar ou digitar
     $('#corporacao').select2({
         language: 'pt-BR',
         theme: 'default',
@@ -475,18 +630,11 @@ function inicializarSelect2() {
         tags: true,
         createTag: function (params) {
             var term = $.trim(params.term);
-            if (term === '') {
-                return null;
-            }
-            return {
-                id: term,
-                text: term,
-                newTag: true
-            }
+            if (term === '') return null;
+            return { id: term, text: term, newTag: true }
         }
     });
     
-    // Patente - pode selecionar ou digitar
     $('#patente').select2({
         language: 'pt-BR',
         theme: 'default',
@@ -497,18 +645,11 @@ function inicializarSelect2() {
         dropdownParent: $('#patente').parent(),
         createTag: function (params) {
             var term = $.trim(params.term);
-            if (term === '') {
-                return null;
-            }
-            return {
-                id: term,
-                text: term,
-                newTag: true
-            }
+            if (term === '') return null;
+            return { id: term, text: term, newTag: true }
         }
     });
     
-    // Situação Funcional (categoria) - pode selecionar ou digitar
     $('#categoria').select2({
         language: 'pt-BR',
         theme: 'default',
@@ -518,18 +659,11 @@ function inicializarSelect2() {
         tags: true,
         createTag: function (params) {
             var term = $.trim(params.term);
-            if (term === '') {
-                return null;
-            }
-            return {
-                id: term,
-                text: term,
-                newTag: true
-            }
+            if (term === '') return null;
+            return { id: term, text: term, newTag: true }
         }
     });
     
-    // Lotação - pode selecionar ou digitar
     $('#lotacao').select2({
         language: 'pt-BR',
         theme: 'default',
@@ -539,14 +673,16 @@ function inicializarSelect2() {
         tags: true
     });
     
-    console.log('✓ Select2 inicializado (com digitação livre nos campos militares)');
+    console.log('✓ Select2 inicializado');
 }
 
-// Inicializar uploads e previews
+// ===========================
+// UPLOADS E PREVIEWS
+// ===========================
+
 function inicializarUploadPreviews() {
     console.log('Configurando uploads...');
     
-    // Preview de foto
     const fotoInput = document.getElementById('foto');
     if (fotoInput) {
         fotoInput.addEventListener('change', function (e) {
@@ -568,7 +704,6 @@ function inicializarUploadPreviews() {
         });
     }
 
-    // Preview da ficha assinada
     const fichaInput = document.getElementById('ficha_assinada');
     if (fichaInput) {
         fichaInput.addEventListener('change', function (e) {
@@ -593,7 +728,6 @@ function inicializarUploadPreviews() {
                         </div>
                     `;
                 } else {
-                    // Para imagens, mostra preview
                     const reader = new FileReader();
                     reader.onload = function (e) {
                         preview.innerHTML = `<img src="${e.target.result}" alt="Preview" style="width: 100%; height: 100%; object-fit: cover;">`;
@@ -607,9 +741,12 @@ function inicializarUploadPreviews() {
     console.log('✓ Uploads configurados');
 }
 
-// FUNÇÃO NOVA: Controlar serviço jurídico por tipo de associado
+// ===========================
+// CONTROLE SERVIÇO JURÍDICO
+// ===========================
+
 function controlarServicoJuridico() {
-    console.log('=== CONTROLANDO ACESSO AO SERVIÇO JURÍDICO ===');
+    console.log('=== CONTROLANDO SERVIÇO JURÍDICO ===');
     
     const tipoAssociado = document.getElementById('tipoAssociadoServico')?.value;
     const servicoJuridicoCheckbox = document.getElementById('servicoJuridico');
@@ -619,35 +756,27 @@ function controlarServicoJuridico() {
     const infoTipoAssociado = document.getElementById('infoTipoAssociado');
     const textoInfoTipo = document.getElementById('textoInfoTipo');
     
-    // Tipos que NÃO têm direito ao serviço jurídico
     const tiposSemJuridico = ['Benemérito', 'Benemerito', 'Agregado'];
-    
-    console.log('Tipo selecionado:', tipoAssociado);
-    console.log('Tipos sem jurídico:', tiposSemJuridico);
     
     if (tiposSemJuridico.includes(tipoAssociado)) {
         console.log('❌ Tipo não tem direito ao serviço jurídico');
         
-        // Desabilita o serviço jurídico
         if (servicoJuridicoCheckbox) {
             servicoJuridicoCheckbox.disabled = true;
             servicoJuridicoCheckbox.checked = false;
         }
         
-        // Adiciona classes visuais
         if (servicoJuridicoItem) {
             servicoJuridicoItem.classList.add('desabilitado', 'servico-bloqueado');
             servicoJuridicoItem.style.opacity = '0.5';
             servicoJuridicoItem.style.pointerEvents = 'none';
         }
         
-        // Atualiza o badge
         if (badgeJuridico) {
             badgeJuridico.style.background = '#dc3545';
             badgeJuridico.textContent = 'INDISPONÍVEL';
         }
         
-        // Mostra mensagem de restrição
         if (mensagemContainer) {
             mensagemContainer.style.display = 'block';
             mensagemContainer.innerHTML = `
@@ -662,7 +791,6 @@ function controlarServicoJuridico() {
                     display: flex;
                     align-items: center;
                     gap: 0.5rem;
-                    box-shadow: 0 2px 4px rgba(220, 53, 69, 0.1);
                 ">
                     <i class="fas fa-exclamation-triangle"></i>
                     Associados do tipo "${tipoAssociado}" não têm direito ao serviço jurídico conforme regulamento da ASSEGO.
@@ -670,67 +798,52 @@ function controlarServicoJuridico() {
             `;
         }
         
-        // Mostra informação no campo de tipo
         if (infoTipoAssociado && textoInfoTipo) {
             infoTipoAssociado.style.display = 'block';
             textoInfoTipo.innerHTML = `Tipo "${tipoAssociado}" não tem direito ao serviço jurídico.`;
             infoTipoAssociado.style.color = '#dc3545';
         }
         
-        // Zera os valores do serviço jurídico
         zerarValoresJuridico();
         
     } else {
         console.log('✅ Tipo tem direito ao serviço jurídico');
         
-        // Habilita o serviço jurídico
         if (servicoJuridicoCheckbox) {
             servicoJuridicoCheckbox.disabled = false;
         }
         
-        // Remove classes visuais
         if (servicoJuridicoItem) {
             servicoJuridicoItem.classList.remove('desabilitado', 'servico-bloqueado');
             servicoJuridicoItem.style.opacity = '1';
             servicoJuridicoItem.style.pointerEvents = 'auto';
         }
         
-        // Restaura o badge
         if (badgeJuridico) {
             badgeJuridico.style.background = 'var(--info)';
             badgeJuridico.textContent = 'OPCIONAL';
         }
         
-        // Esconde mensagem de restrição
         if (mensagemContainer) {
             mensagemContainer.style.display = 'none';
             mensagemContainer.innerHTML = '';
         }
         
-        // Esconde informação do tipo se era sobre restrição
         if (textoInfoTipo && textoInfoTipo.textContent.includes('não tem direito')) {
             if (infoTipoAssociado) {
                 infoTipoAssociado.style.display = 'none';
             }
         }
     }
-    
-    console.log('=== FIM CONTROLE SERVIÇO JURÍDICO ===');
 }
 
-// FUNÇÃO NOVA: Zerar valores do serviço jurídico
 function zerarValoresJuridico() {
-    console.log('Zerando valores do serviço jurídico...');
-    
     updateElementSafe('valorJuridico', '0', 'value');
     updateElementSafe('percentualAplicadoJuridico', '0', 'value');
     updateElementSafe('valorFinalJuridico', '0,00');
     updateElementSafe('percentualJuridico', '0');
-    
-    console.log('✓ Valores jurídicos zerados');
 }
 
-// FUNÇÃO NOVA: Validar tipos e serviços
 function validarTipoEServicos() {
     const tipoAssociado = document.getElementById('tipoAssociadoServico')?.value;
     
@@ -739,104 +852,83 @@ function validarTipoEServicos() {
         return false;
     }
     
-    // Executa o controle uma última vez para garantir consistência
     controlarServicoJuridico();
-    
     return true;
 }
 
-// Configurar listeners dos serviços (ATUALIZADA)
 function configurarListenersServicos() {
-    console.log('Configurando listeners dos serviços + controle jurídico...');
+    console.log('Configurando listeners dos serviços');
     
     const tipoAssociadoEl = document.getElementById('tipoAssociadoServico');
     const servicoJuridicoEl = document.getElementById('servicoJuridico');
 
     if (tipoAssociadoEl) {
         tipoAssociadoEl.addEventListener('change', function() {
-            console.log('Tipo de associado alterado:', this.value);
             controlarServicoJuridico();
             calcularServicos();
         });
-        console.log('✓ Listener do tipo de associado adicionado (+ controle jurídico)');
     }
 
     if (servicoJuridicoEl) {
         servicoJuridicoEl.addEventListener('change', calcularServicos);
-        console.log('✓ Listener do serviço jurídico adicionado');
     }
     
-    console.log('✓ Listeners dos serviços configurados');
+    console.log('✓ Listeners configurados');
 }
 
-// FUNÇÃO CORRIGIDA: Carrega dados de serviços via AJAX
+// ===========================
+// CARREGAR DADOS DE SERVIÇOS
+// ===========================
+
 function carregarDadosServicos() {
-    console.log('=== CARREGANDO DADOS DE SERVIÇOS DO BANCO ===');
+    console.log('=== CARREGANDO DADOS DE SERVIÇOS ===');
 
     return fetch('../api/buscar_dados_servicos.php')
         .then(response => {
             if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                throw new Error(`HTTP ${response.status}`);
             }
             return response.json();
         })
         .then(data => {
-            console.log('Resposta da API de serviços:', data);
-
             if (data.status === 'success') {
-                // CARREGA DADOS REAIS DO BANCO
                 regrasContribuicao = data.regras || [];
                 servicosData = data.servicos || [];
                 tiposAssociadoData = data.tipos_associado || [];
                 dadosCarregados = true;
 
-                console.log('✓ Dados carregados do banco:');
-                console.log('- Serviços:', servicosData.length);
-                console.log('- Regras:', regrasContribuicao.length);
-                console.log('- Tipos:', tiposAssociadoData.length);
+                console.log('✓ Dados carregados:', {
+                    servicos: servicosData.length,
+                    regras: regrasContribuicao.length,
+                    tipos: tiposAssociadoData.length
+                });
 
-                // Preenche o select de tipos de associado
                 preencherSelectTiposAssociado();
-
                 return true;
-
             } else {
-                console.error('API retornou erro:', data.message);
                 throw new Error(data.message || 'Erro na API');
             }
         })
         .catch(error => {
-            console.error('Erro ao carregar dados de serviços:', error);
-
-            // FALLBACK: Usa dados básicos se falhar
-            console.warn('Usando dados de fallback básicos...');
+            console.error('Erro ao carregar dados:', error);
             useHardcodedData();
             preencherSelectTiposAssociado();
-
-            console.log('✓ Dados de fallback carregados');
             return true;
         });
 }
 
-// Preencher select de tipos de associado
 function preencherSelectTiposAssociado() {
     const select = document.getElementById('tipoAssociadoServico');
-    if (!select) {
-        console.warn('Select tipoAssociadoServico não encontrado');
-        return;
-    }
+    if (!select) return;
 
-    // Limpa opções existentes (exceto a primeira)
     while (select.children.length > 1) {
         select.removeChild(select.lastChild);
     }
 
-    // Adiciona tipos do banco
     tiposAssociadoData.forEach(tipo => {
         const option = document.createElement('option');
         option.value = tipo;
         
-        // Adiciona indicação visual para tipos sem direito ao jurídico
         const tiposSemJuridico = ['Benemérito', 'Benemerito', 'Agregado'];
         if (tiposSemJuridico.includes(tipo)) {
             option.textContent = `${tipo} (Sem serviço jurídico)`;
@@ -850,18 +942,12 @@ function preencherSelectTiposAssociado() {
         select.appendChild(option);
     });
 
-    console.log(`✓ Select preenchido com ${tiposAssociadoData.length} tipos de associado (+ indicações de restrição)`);
-
-    // Atualiza Select2 se estiver inicializado
     if (typeof $ !== 'undefined' && $('#tipoAssociadoServico').hasClass('select2-hidden-accessible')) {
         $('#tipoAssociadoServico').trigger('change');
     }
 }
 
-// Dados hardcoded como último recurso
 function useHardcodedData() {
-    console.warn('Usando dados hardcoded como fallback');
-
     servicosData = [
         { id: "1", nome: "Social", valor_base: "173.10" },
         { id: "2", nome: "Jurídico", valor_base: "43.28" }
@@ -872,53 +958,24 @@ function useHardcodedData() {
         { tipo_associado: "Contribuinte", servico_id: "2", percentual_valor: "100.00" },
         { tipo_associado: "Aluno", servico_id: "1", percentual_valor: "50.00" },
         { tipo_associado: "Aluno", servico_id: "2", percentual_valor: "100.00" },
-        { tipo_associado: "Soldado 2ª Classe", servico_id: "1", percentual_valor: "50.00" },
-        { tipo_associado: "Soldado 2ª Classe", servico_id: "2", percentual_valor: "100.00" },
-        { tipo_associado: "Soldado 1ª Classe", servico_id: "1", percentual_valor: "100.00" },
-        { tipo_associado: "Soldado 1ª Classe", servico_id: "2", percentual_valor: "100.00" },
         { tipo_associado: "Agregado", servico_id: "1", percentual_valor: "50.00" },
-        { tipo_associado: "Agregado", servico_id: "2", percentual_valor: "0.00" },
-        { tipo_associado: "Remido", servico_id: "1", percentual_valor: "0.00" },
-        { tipo_associado: "Remido", servico_id: "2", percentual_valor: "100.00" },
-        { tipo_associado: "Remido 50%", servico_id: "1", percentual_valor: "50.00" },
-        { tipo_associado: "Remido 50%", servico_id: "2", percentual_valor: "100.00" },
-        { tipo_associado: "Benemerito", servico_id: "1", percentual_valor: "0.00" },
-        { tipo_associado: "Benemerito", servico_id: "2", percentual_valor: "0.00" }
+        { tipo_associado: "Agregado", servico_id: "2", percentual_valor: "0.00" }
     ];
 
-    tiposAssociadoData = ["Contribuinte", "Aluno", "Soldado 2ª Classe", "Soldado 1ª Classe", "Agregado", "Remido 50%", "Remido", "Benemerito"];
+    tiposAssociadoData = ["Contribuinte", "Aluno", "Agregado", "Remido", "Benemerito"];
     dadosCarregados = true;
-
-    console.log('Dados hardcoded definidos:', { regrasContribuicao, servicosData });
 }
 
-// Função para carregar serviços do associado (modo edição)
 function carregarServicosAssociado() {
-    if (!associadoId) {
-        console.log('Não é modo edição, pulando carregamento de serviços');
-        return;
-    }
-
-    console.log('=== CARREGANDO SERVIÇOS DO ASSOCIADO ===');
-    console.log('ID do associado:', associadoId);
+    if (!associadoId) return;
 
     fetch(`../api/buscar_servicos_associado.php?associado_id=${associadoId}`)
-        .then(response => {
-            console.log('Response status:', response.status);
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-            return response.json();
-        })
+        .then(response => response.json())
         .then(data => {
-            console.log('Resposta da API:', data);
-
             if (data.status === 'success' && data.data) {
                 servicosCarregados = data.data;
                 preencherDadosServicos(data.data);
-                console.log('✓ Serviços carregados e preenchidos com sucesso');
             } else {
-                console.warn('API retornou erro:', data.message || 'Erro desconhecido');
                 setTimeout(() => {
                     if (document.getElementById('tipoAssociadoServico').value) {
                         controlarServicoJuridico();
@@ -929,39 +986,23 @@ function carregarServicosAssociado() {
         })
         .catch(error => {
             console.error('Erro ao carregar serviços:', error);
-            setTimeout(() => {
-                if (document.getElementById('tipoAssociadoServico').value) {
-                    controlarServicoJuridico();
-                    calcularServicos();
-                }
-            }, 500);
         });
 }
 
-// FUNÇÃO CORRIGIDA: Preencher dados dos serviços
 function preencherDadosServicos(dadosServicos) {
-    console.log('=== PREENCHENDO DADOS DOS SERVIÇOS ===');
-    console.log('Dados recebidos:', dadosServicos);
-
-    // Limpa valores anteriores primeiro
     resetarCalculos();
 
-    // Define o tipo de associado
     if (dadosServicos.tipo_associado_servico) {
         const selectElement = document.getElementById('tipoAssociadoServico');
         if (selectElement) {
             selectElement.value = dadosServicos.tipo_associado_servico;
 
-            // Trigger change para atualizar Select2
             if (typeof $ !== 'undefined' && $('#tipoAssociadoServico').length) {
                 $('#tipoAssociadoServico').trigger('change');
             }
-
-            console.log('✓ Tipo de associado definido:', dadosServicos.tipo_associado_servico);
         }
     }
 
-    // Preenche dados do serviço social
     if (dadosServicos.servicos && dadosServicos.servicos.social) {
         const social = dadosServicos.servicos.social;
 
@@ -970,20 +1011,15 @@ function preencherDadosServicos(dadosServicos) {
         updateElementSafe('valorFinalSocial', parseFloat(social.valor_aplicado).toFixed(2).replace('.', ','));
         updateElementSafe('percentualSocial', parseFloat(social.percentual_aplicado).toFixed(0));
 
-        // Busca valor base para exibição
         const servicoSocial = servicosData.find(s => s.id == 1);
         if (servicoSocial) {
             updateElementSafe('valorBaseSocial', parseFloat(servicoSocial.valor_base).toFixed(2).replace('.', ','));
         }
-
-        console.log('✓ Serviço Social preenchido:', social);
     }
 
-    // Preenche dados do serviço jurídico se existir
     if (dadosServicos.servicos && dadosServicos.servicos.juridico) {
         const juridico = dadosServicos.servicos.juridico;
 
-        // Marca o checkbox
         const juridicoCheckEl = document.getElementById('servicoJuridico');
         if (juridicoCheckEl) {
             juridicoCheckEl.checked = true;
@@ -994,44 +1030,29 @@ function preencherDadosServicos(dadosServicos) {
         updateElementSafe('valorFinalJuridico', parseFloat(juridico.valor_aplicado).toFixed(2).replace('.', ','));
         updateElementSafe('percentualJuridico', parseFloat(juridico.percentual_aplicado).toFixed(0));
 
-        // Busca valor base para exibição
         const servicoJuridico = servicosData.find(s => s.id == 2);
         if (servicoJuridico) {
             updateElementSafe('valorBaseJuridico', parseFloat(servicoJuridico.valor_base).toFixed(2).replace('.', ','));
         }
-
-        console.log('✓ Serviço Jurídico preenchido:', juridico);
     } else {
-        // Garante que o checkbox está desmarcado
         const juridicoCheckEl = document.getElementById('servicoJuridico');
         if (juridicoCheckEl) {
             juridicoCheckEl.checked = false;
         }
-        console.log('✓ Serviço Jurídico não contratado');
     }
 
-    // Atualiza total geral
     const totalMensal = dadosServicos.valor_total_mensal || 0;
     updateElementSafe('valorTotalGeral', parseFloat(totalMensal).toFixed(2).replace('.', ','));
 
-    // IMPORTANTE: Executa controle do serviço jurídico após preencher
     setTimeout(() => {
         controlarServicoJuridico();
     }, 100);
-
-    console.log('✓ Total mensal:', totalMensal);
-    console.log('=== FIM PREENCHIMENTO ===');
 }
 
-// FUNÇÃO CORRIGIDA: Cálculo de serviços (INCLUINDO CONTROLE JURÍDICO)
 function calcularServicos() {
-    console.log('=== CALCULANDO SERVIÇOS + CONTROLE JURÍDICO ===');
-    
-    // PRIMEIRO: Controla o acesso ao serviço jurídico
     controlarServicoJuridico();
 
     if (!dadosCarregados) {
-        console.warn('Dados ainda não carregados, aguardando...');
         setTimeout(calcularServicos, 500);
         return;
     }
@@ -1039,22 +1060,16 @@ function calcularServicos() {
     const tipoAssociadoEl = document.getElementById('tipoAssociadoServico');
     const servicoJuridicoEl = document.getElementById('servicoJuridico');
 
-    if (!tipoAssociadoEl || !servicoJuridicoEl) {
-        console.error('Elementos não encontrados');
-        return;
-    }
+    if (!tipoAssociadoEl || !servicoJuridicoEl) return;
 
     const tipoAssociado = tipoAssociadoEl.value;
     const servicoJuridicoChecked = servicoJuridicoEl.checked && !servicoJuridicoEl.disabled;
-
-    console.log('Calculando para:', { tipoAssociado, servicoJuridicoChecked, disabled: servicoJuridicoEl.disabled });
 
     if (!tipoAssociado) {
         resetarCalculos();
         return;
     }
 
-    // Buscar regras para o tipo de associado selecionado
     const regrasSocial = regrasContribuicao.filter(r =>
         r.tipo_associado === tipoAssociado && r.servico_id == 1
     );
@@ -1062,11 +1077,8 @@ function calcularServicos() {
         r.tipo_associado === tipoAssociado && r.servico_id == 2
     );
 
-    console.log('Regras encontradas:', { regrasSocial, regrasJuridico });
-
     let valorTotalGeral = 0;
 
-    // Calcular Serviço Social (sempre obrigatório)
     if (regrasSocial.length > 0) {
         const regra = regrasSocial[0];
         const servicoSocial = servicosData.find(s => s.id == 1);
@@ -1074,9 +1086,6 @@ function calcularServicos() {
         const percentual = parseFloat(regra.percentual_valor);
         const valorFinal = (valorBase * percentual) / 100;
 
-        console.log('Cálculo Social:', { valorBase, percentual, valorFinal });
-
-        // Atualiza elementos do DOM
         updateElementSafe('valorBaseSocial', valorBase.toFixed(2).replace('.', ','));
         updateElementSafe('percentualSocial', percentual.toFixed(0));
         updateElementSafe('valorFinalSocial', valorFinal.toFixed(2).replace('.', ','));
@@ -1086,15 +1095,12 @@ function calcularServicos() {
         valorTotalGeral += valorFinal;
     }
 
-    // Calcular Serviço Jurídico (SE habilitado E selecionado)
     if (servicoJuridicoChecked && regrasJuridico.length > 0) {
         const regra = regrasJuridico[0];
         const servicoJuridico = servicosData.find(s => s.id == 2);
         const valorBase = parseFloat(servicoJuridico?.valor_base || 43.28);
         const percentual = parseFloat(regra.percentual_valor);
         const valorFinal = (valorBase * percentual) / 100;
-
-        console.log('Cálculo Jurídico:', { valorBase, percentual, valorFinal });
 
         updateElementSafe('valorBaseJuridico', valorBase.toFixed(2).replace('.', ','));
         updateElementSafe('percentualJuridico', percentual.toFixed(0));
@@ -1104,52 +1110,37 @@ function calcularServicos() {
 
         valorTotalGeral += valorFinal;
     } else {
-        // Reset jurídico se não selecionado ou desabilitado
         updateElementSafe('percentualJuridico', '0');
         updateElementSafe('valorFinalJuridico', '0,00');
         updateElementSafe('valorJuridico', '0', 'value');
         updateElementSafe('percentualAplicadoJuridico', '0', 'value');
-        
-        console.log('Serviço jurídico zerado (não selecionado ou desabilitado)');
     }
 
-    // Atualizar total geral
     updateElementSafe('valorTotalGeral', valorTotalGeral.toFixed(2).replace('.', ','));
-
-    console.log('Valor total calculado:', valorTotalGeral);
-    console.log('=== FIM CÁLCULO SERVIÇOS ===');
 }
 
-// Função para resetar cálculos
 function resetarCalculos() {
-    console.log('Resetando cálculos...');
-
-    // Valores base dos serviços vindos do banco
     const servicoSocial = servicosData.find(s => s.id == 1);
     const servicoJuridico = servicosData.find(s => s.id == 2);
 
     const valorBaseSocial = servicoSocial ? parseFloat(servicoSocial.valor_base).toFixed(2).replace('.', ',') : '173,10';
     const valorBaseJuridico = servicoJuridico ? parseFloat(servicoJuridico.valor_base).toFixed(2).replace('.', ',') : '43,28';
 
-    // Social
     updateElementSafe('valorBaseSocial', valorBaseSocial);
     updateElementSafe('percentualSocial', '0');
     updateElementSafe('valorFinalSocial', '0,00');
     updateElementSafe('valorSocial', '0', 'value');
     updateElementSafe('percentualAplicadoSocial', '0', 'value');
 
-    // Jurídico
     updateElementSafe('valorBaseJuridico', valorBaseJuridico);
     updateElementSafe('percentualJuridico', '0');
     updateElementSafe('valorFinalJuridico', '0,00');
     updateElementSafe('valorJuridico', '0', 'value');
     updateElementSafe('percentualAplicadoJuridico', '0', 'value');
 
-    // Total
     updateElementSafe('valorTotalGeral', '0,00');
 }
 
-// Função auxiliar para atualizar elementos com segurança
 function updateElementSafe(elementId, value, property = 'textContent') {
     const element = document.getElementById(elementId);
     if (element) {
@@ -1158,60 +1149,38 @@ function updateElementSafe(elementId, value, property = 'textContent') {
         } else {
             element[property] = value;
         }
-    } else {
-        console.warn(`Elemento ${elementId} não encontrado`);
     }
 }
 
-// ===== NOVAS FUNÇÕES DE SALVAMENTO MULTI-STEP =====
+// ===========================
+// SALVAMENTO MULTI-STEP
+// ===========================
 
-// FUNÇÃO PRINCIPAL: Salvar apenas o step atual
 function salvarStepAtual() {
-    if (salvandoStep) {
-        console.log('Já está salvando, ignorando...');
-        return;
-    }
+    if (salvandoStep) return;
 
-    console.log(`=== SALVANDO STEP ${currentStep} ===`);
-
-    // Validação específica do step atual
     if (!validarStepAtual()) {
         showAlert('Por favor, corrija os erros antes de salvar.', 'warning');
         return;
     }
 
-    // ✅ VERIFICA SE É AGREGADO
     const isAgregado = document.getElementById('isAgregado')?.checked;
     
-    console.log('🔍 Verificação:', {
-        isAgregado: isAgregado,
-        isEdit: isEdit,
-        associadoId: associadoId,
-        currentStep: currentStep
-    });
-
-    // ✅✅✅ SE FOR AGREGADO EM MODO EDIÇÃO, USA salvarAssociado() ✅✅✅
     if (isAgregado && isEdit) {
-        console.log('🔄 AGREGADO em EDIÇÃO detectado - usando salvarAssociado()');
-        salvarAssociado(); // Chama a função principal que já está corrigida
+        salvarAssociado();
         return;
     }
 
-    // Para novos cadastros de AGREGADO, step 1 precisa criar o registro primeiro
     if (isAgregado && !isEdit && !window.pageData.associadoId && currentStep === 1) {
-        console.log('🔄 AGREGADO NOVO - step 1 - criando registro');
         salvarNovoAssociadoPrimeiroPasso();
         return;
     }
 
-    // Para novos cadastros de ASSOCIADO NORMAL, step 1 precisa criar o registro primeiro
     if (!isAgregado && !isEdit && !window.pageData.associadoId && currentStep === 1) {
-        console.log('🔄 ASSOCIADO NOVO - step 1 - criando registro');
         salvarNovoAssociadoPrimeiroPasso();
         return;
     }
 
-    // ✅ PARA TODOS OS OUTROS CASOS: Usa a API de atualização
     salvandoStep = true;
     mostrarEstadoSalvando();
 
@@ -1223,11 +1192,8 @@ function salvarStepAtual() {
         return;
     }
 
-    // Usa a API de atualização existente (só para associados normais)
     const associadoAtualId = isEdit ? associadoId : window.pageData.associadoId;
     const url = `../api/atualizar_associado.php?id=${associadoAtualId}`;
-
-    console.log(`Chamando API de atualização: ${url}`);
 
     fetch(url, {
         method: 'POST',
@@ -1239,15 +1205,12 @@ function salvarStepAtual() {
         salvandoStep = false;
 
         if (data.status === 'success') {
-            // Marca step como salvo
             stepsSalvos.add(currentStep);
             
-            // Se ainda não tinha ID (primeiro salvamento), armazena
             if (!isEdit && !window.pageData.associadoId && data.data && data.data.id) {
                 window.pageData.associadoId = data.data.id;
                 window.pageData.isEdit = true;
                 
-                // Adiciona campo hidden com ID
                 let hiddenId = document.getElementById('associado_id_hidden');
                 if (!hiddenId) {
                     hiddenId = document.createElement('input');
@@ -1262,9 +1225,6 @@ function salvarStepAtual() {
             mostrarSucessoSalvamento();
             atualizarIndicadoresStep();
 
-            console.log(`✓ Step ${currentStep} salvo com sucesso!`);
-            
-            // Mostra mensagem específica do step salvo
             const stepNames = {
                 1: 'Dados Pessoais',
                 2: 'Dados Militares', 
@@ -1276,29 +1236,24 @@ function salvarStepAtual() {
             showAlert(`${stepNames[currentStep]} salvos com sucesso!`, 'success');
 
         } else {
-            console.error('Erro ao salvar step:', data);
             showAlert(data.message || 'Erro ao salvar dados!', 'error');
         }
     })
     .catch(error => {
         esconderEstadoSalvando();
         salvandoStep = false;
-        console.error('Erro na requisição:', error);
         showAlert('Erro de comunicação com o servidor!', 'error');
     });
 }
 
-// Criar FormData específico para cada step
 function criarFormDataStep(step) {
     const form = document.getElementById('formAssociado');
     const formData = new FormData();
 
-    // ID do associado (se existir)
     if (isEdit || window.pageData.associadoId) {
         formData.append('id', isEdit ? associadoId : window.pageData.associadoId);
     }
 
-    // SEMPRE inclui campos obrigatórios básicos para passar na validação da API
     const camposObrigatoriosBasicos = ['nome', 'cpf', 'rg', 'telefone', 'situacao'];
     camposObrigatoriosBasicos.forEach(campo => {
         const element = form.elements[campo];
@@ -1312,9 +1267,8 @@ function criarFormDataStep(step) {
         }
     });
 
-    // Campos específicos por step
     switch(step) {
-        case 1: // Dados Pessoais
+        case 1:
             const camposStep1 = [
                 'nome', 'nasc', 'sexo', 'estadoCivil', 'rg', 'cpf', 
                 'telefone', 'email', 'escolaridade', 'indicacao', 
@@ -1333,7 +1287,6 @@ function criarFormDataStep(step) {
                 }
             });
 
-            // 🆕 AGREGADO: Adiciona CPF do titular se for agregado
             const isAgregado = document.getElementById('isAgregado')?.checked;
             if (isAgregado) {
                 const cpfTitular = document.getElementById('cpfTitular')?.value;
@@ -1344,22 +1297,19 @@ function criarFormDataStep(step) {
                 formData.append('isAgregado', '1');
             }
 
-            // Arquivos (foto e ficha assinada)
             const fotoFile = document.getElementById('foto').files[0];
             if (fotoFile) {
                 formData.append('foto', fotoFile);
             }
 
-            // Ficha assinada (disponível tanto para novos cadastros quanto para edição)
             const fichaFile = document.getElementById('ficha_assinada')?.files[0];
             if (fichaFile) {
                 formData.append('ficha_assinada', fichaFile);
                 formData.append('enviar_presidencia', '1');
-                console.log('✓ Ficha assinada anexada:', fichaFile.name);
             }
             break;
 
-        case 2: // Dados Militares
+        case 2:
             const camposStep2 = ['corporacao', 'patente', 'categoria', 'lotacao', 'unidade'];
             camposStep2.forEach(campo => {
                 const element = form.elements[campo];
@@ -1369,7 +1319,7 @@ function criarFormDataStep(step) {
             });
             break;
 
-        case 3: // Endereço
+        case 3:
             const camposStep3 = ['cep', 'endereco', 'numero', 'complemento', 'bairro', 'cidade'];
             camposStep3.forEach(campo => {
                 const element = form.elements[campo];
@@ -1379,7 +1329,7 @@ function criarFormDataStep(step) {
             });
             break;
 
-        case 4: // Financeiro
+        case 4:
             const camposStep4 = [
                 'tipoAssociadoServico', 'tipoAssociado', 'situacaoFinanceira', 
                 'vinculoServidor', 'localDebito', 'agencia', 'operacao', 
@@ -1393,7 +1343,6 @@ function criarFormDataStep(step) {
                 }
             });
 
-            // Dados dos serviços
             formData.append('servicoSocial', '1');
             formData.append('valorSocial', document.getElementById('valorSocial')?.value || '0');
             formData.append('percentualAplicadoSocial', document.getElementById('percentualAplicadoSocial')?.value || '0');
@@ -1406,7 +1355,7 @@ function criarFormDataStep(step) {
             }
             break;
 
-        case 5: // Dependentes
+        case 5:
             const dependentesCards = document.querySelectorAll('.dependente-card');
             dependentesCards.forEach((card, index) => {
                 const inputs = card.querySelectorAll('input, select');
@@ -1417,19 +1366,12 @@ function criarFormDataStep(step) {
                 });
             });
             break;
-
-        default:
-            console.warn('Step não reconhecido:', step);
-            return null;
     }
 
     return formData;
 }
 
-// Salvar novo associado - primeiro passo (usa API existente)
 function salvarNovoAssociadoPrimeiroPasso() {
-    console.log('=== SALVANDO NOVO ASSOCIADO - USANDO API EXISTENTE ===');
-
     if (!validarStepAtual()) {
         showAlert('Por favor, corrija os erros antes de salvar.', 'warning');
         return;
@@ -1438,15 +1380,12 @@ function salvarNovoAssociadoPrimeiroPasso() {
     salvandoStep = true;
     mostrarEstadoSalvando();
 
-    // Usa o FormData completo mas só com os campos preenchidos
     const formData = new FormData(document.getElementById('formAssociado'));
 
-    // Verifica se é agregado
     const isAgregado = document.getElementById('isAgregado')?.checked;
     let url = '../api/criar_associado.php';
     if (isAgregado) {
         url = '../api/criar_agregado.php';
-        // Garante que o campo do CPF do titular seja enviado corretamente
         const cpfTitular = document.getElementById('cpfTitular')?.value;
         if (cpfTitular) {
             formData.append('socioTitularCpf', cpfTitular);
@@ -1463,11 +1402,9 @@ function salvarNovoAssociadoPrimeiroPasso() {
         salvandoStep = false;
 
         if (data.status === 'success') {
-            // Atualiza estado para modo edição
             window.pageData.isEdit = true;
             window.pageData.associadoId = data.data.associado_id || data.data.id;
             
-            // Adiciona campo hidden com ID
             const hiddenId = document.createElement('input');
             hiddenId.type = 'hidden';
             hiddenId.name = 'id';
@@ -1475,28 +1412,23 @@ function salvarNovoAssociadoPrimeiroPasso() {
             hiddenId.value = window.pageData.associadoId;
             document.getElementById('formAssociado').appendChild(hiddenId);
 
-            // Marca step como salvo
             stepsSalvos.add(1);
             mostrarSucessoSalvamento();
             atualizarIndicadoresStep();
 
-            console.log('✓ Associado criado com sucesso! ID:', window.pageData.associadoId);
             showAlert('Dados Pessoais salvos com sucesso! Associado criado.', 'success');
 
         } else {
-            console.error('Erro ao criar associado:', data);
             showAlert(data.message || 'Erro ao criar associado!', 'error');
         }
     })
     .catch(error => {
         esconderEstadoSalvando();
         salvandoStep = false;
-        console.error('Erro na requisição:', error);
         showAlert('Erro de comunicação com o servidor!', 'error');
     });
 }
 
-// Estados visuais do botão de salvamento
 function mostrarEstadoSalvando() {
     const btn = document.getElementById('btnSalvarStep');
     const saveText = btn?.querySelector('.save-text');
@@ -1539,7 +1471,6 @@ function mostrarSucessoSalvamento() {
 }
 
 function atualizarIndicadoresStep() {
-    // Atualiza indicadores visuais nos steps salvos
     stepsSalvos.forEach(stepNum => {
         const stepElement = document.querySelector(`[data-step="${stepNum}"]`);
         if (stepElement) {
@@ -1548,9 +1479,11 @@ function atualizarIndicadoresStep() {
     });
 }
 
-// Funções de navegação
+// ===========================
+// NAVEGAÇÃO
+// ===========================
+
 function proximoStep() {
-    // VALIDAÇÃO ESPECÍFICA para step financeiro
     if (currentStep === 4) {
         if (!validarTipoEServicos()) {
             return;
@@ -1559,12 +1492,9 @@ function proximoStep() {
     
     if (validarStepAtual()) {
         if (currentStep < totalSteps) {
-            // Marca step atual como completo
             document.querySelector(`[data-step="${currentStep}"]`).classList.add('completed');
-            
             irParaStep(currentStep + 1);
             
-            // Se for o último step, preenche a revisão
             if (currentStep === totalSteps) {
                 preencherRevisao();
             }
@@ -1578,33 +1508,46 @@ function voltarStep() {
     }
 }
 
+function irParaStep(numeroStep) {
+    if (numeroStep < 1 || numeroStep > totalSteps) return;
+    
+    if (numeroStep > currentStep && !validarStepAtual()) {
+        return;
+    }
+    
+    currentStep = numeroStep;
+    mostrarStep(currentStep);
+}
+
 function mostrarStep(step) {
-    // Esconde todos os cards
     document.querySelectorAll('.section-card').forEach(card => {
         card.classList.remove('active');
     });
 
-    // Mostra o card atual
     document.querySelector(`.section-card[data-step="${step}"]`).classList.add('active');
 
-    // Atualiza progress
+    // Executa lógicas específicas por step
+    if (step === 2) {
+        aoEntrarStepMilitares();
+    } else if (step === 4) {
+        aoEntrarStepFinanceiro();
+    }
+
     updateProgressBar();
     updateNavigationButtons();
+    
     setTimeout(() => {
         inicializarNavegacaoSteps();
     }, 1000);
 
-    // Scroll para o topo
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// Atualiza barra de progresso
 function updateProgressBar() {
     const progressLine = document.getElementById('progressLine');
     const progressPercent = ((currentStep - 1) / (totalSteps - 1)) * 100;
     progressLine.style.width = progressPercent + '%';
 
-    // Atualiza steps
     document.querySelectorAll('.step').forEach((step, index) => {
         const stepNumber = index + 1;
 
@@ -1620,24 +1563,20 @@ function updateProgressBar() {
     });
 }
 
-// Botões de navegação + salvamento
 function updateNavigationButtons() {
     const btnVoltar = document.getElementById('btnVoltar');
     const btnProximo = document.getElementById('btnProximo');
     const btnSalvar = document.getElementById('btnSalvar');
     const btnSalvarStep = document.getElementById('btnSalvarStep');
 
-    // Botão voltar
     if (btnVoltar) {
         btnVoltar.style.display = currentStep === 1 ? 'none' : 'flex';
     }
 
-    // Botão de salvar step atual (mostra em todos os steps exceto o último)
     if (btnSalvarStep) {
         if (currentStep < totalSteps) {
             btnSalvarStep.style.display = 'flex';
             
-            // Atualiza texto baseado no estado
             const saveText = btnSalvarStep.querySelector('.save-text');
             if (saveText) {
                 if (stepsSalvos.has(currentStep)) {
@@ -1651,7 +1590,6 @@ function updateNavigationButtons() {
         }
     }
 
-    // Botões próximo/salvar completo
     if (currentStep === totalSteps) {
         if (btnProximo) btnProximo.style.display = 'none';
         if (btnSalvar) btnSalvar.style.display = 'flex';
@@ -1661,18 +1599,50 @@ function updateNavigationButtons() {
     }
 }
 
-// VALIDAÇÃO CORRIGIDA do step atual
+function inicializarNavegacaoSteps() {
+    document.querySelectorAll('.step').forEach(step => {
+        step.style.cursor = 'pointer';
+        step.style.transition = 'all 0.3s ease';
+        
+        step.addEventListener('click', function() {
+            const numeroStep = parseInt(this.getAttribute('data-step'));
+            if (numeroStep) {
+                irParaStep(numeroStep);
+                
+                this.style.transform = 'scale(0.95)';
+                setTimeout(() => {
+                    this.style.transform = 'scale(1)';
+                }, 150);
+            }
+        });
+        
+        step.addEventListener('mouseenter', function() {
+            if (!this.classList.contains('active')) {
+                this.style.transform = 'scale(1.05)';
+                this.style.opacity = '0.8';
+            }
+        });
+        
+        step.addEventListener('mouseleave', function() {
+            this.style.transform = 'scale(1)';
+            this.style.opacity = '1';
+        });
+    });
+}
+
+// ===========================
+// VALIDAÇÃO
+// ===========================
+
 function validarStepAtual() {
     const stepCard = document.querySelector(`.section-card[data-step="${currentStep}"]`);
     const requiredFields = stepCard.querySelectorAll('[required]');
     let isValid = true;
 
-    // Limpa erros anteriores
     stepCard.querySelectorAll('.form-input').forEach(field => {
         field.classList.remove('error');
     });
 
-    // Valida campos obrigatórios
     requiredFields.forEach(field => {
         if (!field.value.trim()) {
             field.classList.add('error');
@@ -1680,9 +1650,7 @@ function validarStepAtual() {
         }
     });
 
-    // Validações específicas por step
     if (currentStep === 1) {
-        // 🆕 VALIDAÇÃO AGREGADO
         const isAgregado = document.getElementById('isAgregado')?.checked;
         if (isAgregado) {
             const cpfTitular = document.getElementById('cpfTitular')?.value;
@@ -1696,7 +1664,6 @@ function validarStepAtual() {
             }
         }
         
-        // Valida CPF
         const cpfField = document.getElementById('cpf');
         if (cpfField && cpfField.value && !validarCPF(cpfField.value)) {
             cpfField.classList.add('error');
@@ -1704,25 +1671,14 @@ function validarStepAtual() {
             showAlert('CPF inválido!', 'error');
         }
 
-        // Valida ficha assinada (apenas para novos cadastros)
         if (!isEdit) {
             const fichaField = document.getElementById('ficha_assinada');
             if (!fichaField.files || fichaField.files.length === 0) {
                 showAlert('Por favor, anexe a ficha de filiação assinada!', 'error');
                 isValid = false;
             }
-        } else {
-            const fichaField = document.getElementById('ficha_assinada');
-            if (fichaField && fichaField.files && fichaField.files.length > 0) {
-                const file = fichaField.files[0];
-                if (file.size > 10 * 1024 * 1024) {
-                    showAlert('O arquivo da ficha é muito grande! Máximo: 10MB', 'error');
-                    isValid = false;
-                }
-            }
         }
 
-        // Valida email
         const emailField = document.getElementById('email');
         if (emailField && emailField.value && !validarEmail(emailField.value)) {
             emailField.classList.add('error');
@@ -1732,7 +1688,6 @@ function validarStepAtual() {
     }
 
     if (currentStep === 4) {
-        // Validação do step financeiro + controle jurídico
         const tipoAssociadoServico = document.getElementById('tipoAssociadoServico');
         const tipoAssociado = document.getElementById('tipoAssociado');
         const valorSocial = document.getElementById('valorSocial');
@@ -1749,20 +1704,9 @@ function validarStepAtual() {
             showAlert('Por favor, selecione a categoria do associado!', 'error');
         }
 
-        // Aceita valor 0 para isentos, só não aceita vazio
         if (valorSocial && valorSocial.value === '') {
             isValid = false;
             showAlert('Erro no cálculo dos serviços. Verifique o tipo de associado selecionado!', 'error');
-        }
-        
-        // Verifica se o serviço jurídico está corretamente configurado
-        const servicoJuridicoEl = document.getElementById('servicoJuridico');
-        const tipoSelecionado = tipoAssociadoServico?.value;
-        const tiposSemJuridico = ['Benemérito', 'Benemerito', 'Agregado'];
-        
-        if (tiposSemJuridico.includes(tipoSelecionado) && servicoJuridicoEl && servicoJuridicoEl.checked) {
-            showAlert(`Associados do tipo "${tipoSelecionado}" não podem contratar o serviço jurídico!`, 'error');
-            isValid = false;
         }
     }
 
@@ -1773,11 +1717,7 @@ function validarStepAtual() {
     return isValid;
 }
 
-// Validação em tempo real
 function setupRealtimeValidation() {
-    console.log('Configurando validação em tempo real...');
-    
-    // Remove classe de erro ao digitar
     document.querySelectorAll('.form-input').forEach(input => {
         input.addEventListener('input', function () {
             if (this.value.trim()) {
@@ -1786,7 +1726,6 @@ function setupRealtimeValidation() {
         });
     });
 
-    // Validação específica de CPF
     const cpfField = document.getElementById('cpf');
     if (cpfField) {
         cpfField.addEventListener('blur', function () {
@@ -1797,7 +1736,6 @@ function setupRealtimeValidation() {
         });
     }
 
-    // Validação específica de email
     const emailField = document.getElementById('email');
     if (emailField) {
         emailField.addEventListener('blur', function () {
@@ -1807,20 +1745,14 @@ function setupRealtimeValidation() {
             }
         });
     }
-    
-    console.log('✓ Validação em tempo real configurada');
 }
 
-// Funções de validação
 function validarCPF(cpf) {
     cpf = cpf.replace(/[^\d]/g, '');
 
     if (cpf.length !== 11) return false;
-
-    // Verifica sequências inválidas
     if (/^(\d)\1{10}$/.test(cpf)) return false;
 
-    // Validação do dígito verificador
     let soma = 0;
     let resto;
 
@@ -1849,50 +1781,217 @@ function validarEmail(email) {
     return re.test(email);
 }
 
-// Buscar CEP
-function buscarCEP() {
-    const cepField = document.getElementById('cep');
-    if (!cepField) return;
+function validarFormularioCompleto() {
+    const form = document.getElementById('formAssociado');
+    if (!form) return false;
 
-    const cep = cepField.value.replace(/\D/g, '');
+    const requiredFields = form.querySelectorAll('[required]');
+    let isValid = true;
 
-    if (cep.length !== 8) {
-        showAlert('CEP inválido!', 'error');
-        return;
-    }
+    requiredFields.forEach(field => {
+        if (isEdit && field.name === 'foto') {
+            return;
+        }
 
-    showLoading();
+        if (!field.value.trim()) {
+            field.classList.add('error');
+            isValid = false;
+        }
+    });
 
-    fetch(`https://viacep.com.br/ws/${cep}/json/`)
-        .then(response => response.json())
-        .then(data => {
-            hideLoading();
-
-            if (data.erro) {
-                showAlert('CEP não encontrado!', 'error');
-                return;
-            }
-
-            const enderecoField = document.getElementById('endereco');
-            const bairroField = document.getElementById('bairro');
-            const cidadeField = document.getElementById('cidade');
-            const numeroField = document.getElementById('numero');
-
-            if (enderecoField) enderecoField.value = data.logradouro;
-            if (bairroField) bairroField.value = data.bairro;
-            if (cidadeField) cidadeField.value = data.localidade;
-
-            // Foca no campo número
-            if (numeroField) numeroField.focus();
-        })
-        .catch(error => {
-            hideLoading();
-            console.error('Erro ao buscar CEP:', error);
-            showAlert('Erro ao buscar CEP!', 'error');
-        });
+    return isValid;
 }
 
-// Gerenciar dependentes
+// ===========================
+// SALVAR ASSOCIADO COMPLETO
+// ===========================
+
+function salvarAssociado() {
+    console.log('=== SALVANDO ASSOCIADO/AGREGADO ===');
+    
+    const isAgregado = document.getElementById('isAgregado')?.checked;
+    
+    if (isAgregado) {
+        const cpfTitular = document.getElementById('cpfTitular')?.value;
+        const nomeTitular = document.getElementById('nomeTitularInfo')?.value;
+        const erroVisivel = document.getElementById('erroCpfTitular')?.style.display !== 'none';
+        
+        if (!cpfTitular || !nomeTitular || erroVisivel) {
+            showAlert('Por favor, preencha corretamente o CPF do titular e verifique se está filiado.', 'error');
+            document.getElementById('cpfTitular')?.focus();
+            return;
+        }
+    }
+    
+    if (!validarFormularioCompleto()) {
+        showAlert('Por favor, verifique todos os campos obrigatórios!', 'error');
+        return;
+    }
+    
+    showLoading();
+    
+    const formulario = document.querySelector('form');
+    const formData = new FormData(formulario);
+    
+    // Campos manuais
+    const camposManuais = [
+        { id: 'nome', name: 'nome' },
+        { id: 'cpf', name: 'cpf' },
+        { id: 'rg', name: 'rg' },
+        { id: 'telefone', name: 'telefone' },
+        { id: 'celular', name: 'celular' },
+        { id: 'email', name: 'email' },
+        { id: 'endereco', name: 'endereco' },
+        { id: 'numero', name: 'numero' },
+        { id: 'complemento', name: 'complemento' },
+        { id: 'bairro', name: 'bairro' },
+        { id: 'cidade', name: 'cidade' },
+        { id: 'estado', name: 'estado' },
+        { id: 'cep', name: 'cep' },
+        { id: 'banco', name: 'banco' },
+        { id: 'agencia', name: 'agencia' },
+        { id: 'contaCorrente', name: 'contaCorrente' },
+        { id: 'estadoCivil', name: 'estadoCivil' },
+        { id: 'dataFiliacao', name: 'dataFiliacao' },
+        { id: 'situacao', name: 'situacao' },
+        { id: 'escolaridade', name: 'escolaridade' }
+    ];
+
+    camposManuais.forEach(campo => {
+        const elemento = document.getElementById(campo.id);
+        if (elemento && elemento.value && elemento.value.trim() !== '') {
+            formData.set(campo.name, elemento.value);
+        }
+    });
+    
+    // Data de nascimento
+    let campoNasc = document.getElementById('nasc');
+    if (campoNasc && campoNasc.value) {
+        formData.set('dataNascimento', campoNasc.value);
+        formData.set('nasc', campoNasc.value);
+        formData.set('data_nascimento', campoNasc.value);
+    }
+
+    // Celular
+    if (!formData.get('celular')) {
+        const telefone = document.getElementById('telefone');
+        if (telefone && telefone.value) {
+            formData.set('celular', telefone.value);
+        }
+    }
+
+    // Estado
+    if (!formData.get('estado')) {
+        formData.set('estado', 'GO');
+    }
+    
+    // Agregados
+    if (isAgregado) {
+        if (!formData.get('banco') || formData.get('banco') === '') {
+            formData.set('banco', 'Não informado');
+        }
+        if (!formData.get('agencia') || formData.get('agencia') === '') {
+            formData.set('agencia', '');
+        }
+        if (!formData.get('contaCorrente') || formData.get('contaCorrente') === '') {
+            formData.set('contaCorrente', '');
+        }
+        
+        const cpfTitular = document.getElementById('cpfTitular')?.value;
+        if (cpfTitular) {
+            formData.set('cpfTitular', cpfTitular);
+            formData.set('socioTitularCpf', cpfTitular);
+        }
+    }
+
+    // Select2
+    const camposSelect2 = [
+        'corporacao', 'patente', 'categoria', 'lotacao',
+        'tipoAssociadoServico', 'tipoAssociado', 'situacaoFinanceira'
+    ];
+    
+    camposSelect2.forEach(campo => {
+        const elemento = document.getElementById(campo);
+        if (elemento && elemento.value) {
+            formData.set(campo, elemento.value);
+        }
+    });
+
+    // Sexo
+    const sexoRadio = document.querySelector('input[name="sexo"]:checked');
+    if (sexoRadio) {
+        formData.set('sexo', sexoRadio.value);
+    }
+    
+    // Serviços
+    const servicoSocial = document.getElementById('valorSocial');
+    if (servicoSocial && servicoSocial.value) {
+        formData.set('servicoSocial', '1');
+        formData.set('valorSocial', servicoSocial.value);
+        formData.set('percentualAplicadoSocial', document.getElementById('percentualAplicadoSocial')?.value || '0');
+    }
+    
+    const servicoJuridico = document.getElementById('servicoJuridico');
+    if (servicoJuridico && servicoJuridico.checked && !servicoJuridico.disabled) {
+        formData.set('servicoJuridico', '2');
+        formData.set('valorJuridico', document.getElementById('valorJuridico')?.value || '0');
+        formData.set('percentualAplicadoJuridico', document.getElementById('percentualAplicadoJuridico')?.value || '0');
+    }
+    
+    // URL
+    const associadoId = document.getElementById('associadoId')?.value;
+    let url;
+    
+    if (isAgregado) {
+        url = '../api/criar_agregado.php';
+    } else {
+        url = associadoId ? 
+            `../api/atualizar_associado.php?id=${associadoId}` : 
+            '../api/criar_associado.php';
+    }
+    
+    fetch(url, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.text())
+    .then(text => {
+        let data;
+        try {
+            data = JSON.parse(text);
+        } catch (e) {
+            console.error('Erro no JSON:', e);
+            hideLoading();
+            showAlert('Erro: Resposta inválida do servidor.', 'error');
+            return;
+        }
+        
+        hideLoading();
+        
+        if (data.status === 'success') {
+            showAlert(data.message || 'Salvo com sucesso!', 'success');
+            setTimeout(() => {
+                window.location.reload();
+            }, 1500);
+        } else {
+            let erro = data.message || 'Erro ao salvar';
+            if (data.errors && Array.isArray(data.errors)) {
+                erro += ':\n• ' + data.errors.join('\n• ');
+            }
+            showAlert(erro, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Erro na requisição:', error);
+        hideLoading();
+        showAlert('Erro de comunicação: ' + error.message, 'error');
+    });
+}
+
+// ===========================
+// DEPENDENTES
+// ===========================
+
 function adicionarDependente() {
     const container = document.getElementById('dependentesContainer');
     if (!container) return;
@@ -1943,7 +2042,6 @@ function adicionarDependente() {
 
     container.insertAdjacentHTML('beforeend', dependenteHtml);
 
-    // Inicializa Select2 nos novos selects
     $(`[data-index="${novoIndex}"] .form-select`).select2({
         language: 'pt-BR',
         theme: 'default',
@@ -1959,7 +2057,6 @@ function removerDependente(button) {
 
     setTimeout(() => {
         card.remove();
-        // Reordena os números
         document.querySelectorAll('.dependente-card').forEach((card, index) => {
             const numberEl = card.querySelector('.dependente-number');
             if (numberEl) {
@@ -1969,286 +2066,17 @@ function removerDependente(button) {
     }, 300);
 }
 
-function salvarAssociado() {
-    console.log('=== SALVANDO ASSOCIADO COMPLETO ===');
-    
-    // ✅ VALIDAÇÃO AGREGADO
-    const isAgregado = document.getElementById('isAgregado')?.checked;
-    if (isAgregado) {
-        const cpfTitular = document.getElementById('cpfTitular')?.value;
-        const nomeTitular = document.getElementById('nomeTitularInfo')?.value;
-        const erroVisivel = document.getElementById('erroCpfTitular')?.style.display !== 'none';
-        
-        if (!cpfTitular || !nomeTitular || erroVisivel) {
-            showAlert('Por favor, preencha corretamente o CPF do titular e verifique se está filiado.', 'error');
-            document.getElementById('cpfTitular')?.focus();
-            return;
-        }
-        
-        console.log('✅ Validação de agregado OK', { cpfTitular, nomeTitular });
-    }
-    
-    // Validação final
-    if (!validarFormularioCompleto()) {
-        showAlert('Por favor, verifique todos os campos obrigatórios!', 'error');
-        return;
-    }
-    
-    showLoading();
-    
-    // ✅ BUSCA FORMULÁRIO
-    const formulario = document.querySelector('form');
-    
-    if (!formulario) {
-        console.error('❌ Formulário não encontrado!');
-        hideLoading();
-        showAlert('Erro: Formulário não encontrado na página!', 'error');
-        return;
-    }
-    
-    console.log('✅ Formulário encontrado');
-    const formData = new FormData(formulario);
-    
-    // ✅✅✅ ADICIONA CAMPOS MANUALMENTE DO DOM (SOLUÇÃO DO PROBLEMA) ✅✅✅
-    console.log('📦 Adicionando campos manualmente do DOM...');
-    
-    const camposManuais = [
-        { id: 'nome', name: 'nome' },
-        { id: 'cpf', name: 'cpf' },
-        { id: 'rg', name: 'rg' },
-        { id: 'nasc', name: 'dataNascimento' },
-        { id: 'data_nascimento', name: 'dataNascimento' },
-        { id: 'dataNascimento', name: 'dataNascimento' },
-        { id: 'telefone', name: 'telefone' },
-        { id: 'celular', name: 'celular' },
-        { id: 'email', name: 'email' },
-        { id: 'endereco', name: 'endereco' },
-        { id: 'numero', name: 'numero' },
-        { id: 'complemento', name: 'complemento' },
-        { id: 'bairro', name: 'bairro' },
-        { id: 'cidade', name: 'cidade' },
-        { id: 'estado', name: 'estado' },
-        { id: 'uf', name: 'estado' },
-        { id: 'cep', name: 'cep' },
-        { id: 'banco', name: 'banco' },
-        { id: 'localDebito', name: 'banco' },
-        { id: 'agencia', name: 'agencia' },
-        { id: 'contaCorrente', name: 'contaCorrente' },
-        { id: 'estadoCivil', name: 'estadoCivil' },
-        { id: 'dataFiliacao', name: 'dataFiliacao' },
-        { id: 'situacao', name: 'situacao' },
-        { id: 'escolaridade', name: 'escolaridade' },
-        { id: 'operacao', name: 'operacao' },
-        { id: 'indicacao', name: 'indicacao' }
-    ];
+// ===========================
+// REVISÃO
+// ===========================
 
-    camposManuais.forEach(campo => {
-        const elemento = document.getElementById(campo.id);
-        if (elemento && elemento.value && elemento.value.trim() !== '') {
-            formData.set(campo.name, elemento.value);
-            console.log(`  ✓ ${campo.name}: ${elemento.value}`);
-        }
-    });
-
-    // ✅ CELULAR: Tenta telefone se celular não existir
-    if (!formData.get('celular')) {
-        const telefone = document.getElementById('telefone');
-        if (telefone && telefone.value) {
-            formData.set('celular', telefone.value);
-            console.log(`  ✓ celular (do telefone): ${telefone.value}`);
-        }
-    }
-
-    // ✅ ESTADO: Busca em múltiplos possíveis lugares
-    if (!formData.get('estado')) {
-        // Tenta buscar de um select
-        const estadoSelect = document.querySelector('select[name="estado"], select[name="uf"], select#estado, select#uf');
-        if (estadoSelect && estadoSelect.value) {
-            formData.set('estado', estadoSelect.value);
-            console.log(`  ✓ estado (do select): ${estadoSelect.value}`);
-        } else {
-            // Tenta buscar de um input
-            const estadoInput = document.querySelector('input[name="estado"], input[name="uf"], input#estado, input#uf');
-            if (estadoInput && estadoInput.value) {
-                formData.set('estado', estadoInput.value);
-                console.log(`  ✓ estado (do input): ${estadoInput.value}`);
-            } else {
-                // Se ainda não encontrou, define GO (Goiás) como padrão baseado na cidade
-                const cidade = formData.get('cidade');
-                if (cidade && cidade.includes('Goiânia')) {
-                    formData.set('estado', 'GO');
-                    console.log(`  ✓ estado (padrão GO pela cidade): GO`);
-                }
-            }
-        }
-    }
-
-    // ✅ CAMPOS SELECT2 (podem não ser capturados normalmente)
-    console.log('📦 Adicionando campos Select2...');
-    const camposSelect2 = [
-        { id: 'corporacao', name: 'corporacao' },
-        { id: 'patente', name: 'patente' },
-        { id: 'categoria', name: 'categoria' },
-        { id: 'lotacao', name: 'lotacao' },
-        { id: 'unidade', name: 'unidade' },
-        { id: 'tipoAssociadoServico', name: 'tipoAssociadoServico' },
-        { id: 'tipoAssociado', name: 'tipoAssociado' },
-        { id: 'situacaoFinanceira', name: 'situacaoFinanceira' },
-        { id: 'vinculoServidor', name: 'vinculoServidor' }
-    ];
-    
-    camposSelect2.forEach(campo => {
-        const elemento = document.getElementById(campo.id);
-        if (elemento && elemento.value) {
-            formData.set(campo.name, elemento.value);
-            console.log(`  ✓ Select2 ${campo.name}: ${elemento.value}`);
-        }
-    });
-
-    // ✅ CAMPOS DE RADIO (sexo)
-    const sexoRadio = document.querySelector('input[name="sexo"]:checked');
-    if (sexoRadio) {
-        formData.set('sexo', sexoRadio.value);
-        console.log(`  ✓ sexo: ${sexoRadio.value}`);
-    }
-    
-    // ✅ CPF DO TITULAR (AGREGADOS)
-    if (isAgregado) {
-        const cpfTitular = document.getElementById('cpfTitular')?.value;
-        if (cpfTitular) {
-            formData.set('cpfTitular', cpfTitular);
-            formData.set('socioTitularCpf', cpfTitular);
-            console.log('✅ CPF do titular:', cpfTitular);
-        }
-    }
-    
-    // ✅ DADOS DOS SERVIÇOS (FINANCEIRO)
-    const servicoSocial = document.getElementById('valorSocial');
-    const servicoJuridico = document.getElementById('servicoJuridico');
-    
-    if (servicoSocial && servicoSocial.value) {
-        formData.set('servicoSocial', '1');
-        formData.set('valorSocial', servicoSocial.value);
-        formData.set('percentualAplicadoSocial', document.getElementById('percentualAplicadoSocial')?.value || '0');
-        console.log('  ✓ Serviço Social adicionado');
-    }
-    
-    if (servicoJuridico && servicoJuridico.checked && !servicoJuridico.disabled) {
-        formData.set('servicoJuridico', '2');
-        formData.set('valorJuridico', document.getElementById('valorJuridico')?.value || '0');
-        formData.set('percentualAplicadoJuridico', document.getElementById('percentualAplicadoJuridico')?.value || '0');
-        console.log('  ✓ Serviço Jurídico adicionado');
-    }
-    
-    // ✅ LOG FINAL - CAMPOS CRÍTICOS
-    console.log('📦 VERIFICAÇÃO FINAL DOS CAMPOS OBRIGATÓRIOS:');
-    console.log('  nome:', formData.get('nome'));
-    console.log('  cpf:', formData.get('cpf'));
-    console.log('  dataNascimento:', formData.get('dataNascimento'));
-    console.log('  telefone:', formData.get('telefone'));
-    console.log('  celular:', formData.get('celular'));
-    console.log('  estado:', formData.get('estado'));
-    console.log('  banco:', formData.get('banco'));
-    console.log('  cpfTitular:', formData.get('cpfTitular'));
-    console.log('  estadoCivil:', formData.get('estadoCivil'));
-    console.log('  dataFiliacao:', formData.get('dataFiliacao'));
-    
-    // ⚠️ VALIDAÇÃO FINAL: Garante que campos críticos existem
-    const camposCriticos = [
-        { campo: 'celular', nome: 'Celular' },
-        { campo: 'estado', nome: 'Estado' }
-    ];
-    
-    let faltaCampo = false;
-    camposCriticos.forEach(item => {
-        if (!formData.get(item.campo)) {
-            console.error(`❌ Campo ${item.campo} está faltando!`);
-            faltaCampo = true;
-        }
-    });
-    
-    if (faltaCampo) {
-        hideLoading();
-        showAlert('Erro: Campos obrigatórios não foram preenchidos (Celular e Estado). Verifique o formulário.', 'error');
-        return;
-    }
-    
-    // ✅ DEFINE URL
-    const associadoId = document.getElementById('associadoId')?.value;
-    let url;
-    
-    if (isAgregado) {
-        url = '../api/criar_agregado.php';
-        console.log('📋 Modo AGREGADO');
-    } else {
-        url = associadoId ? 
-            `../api/atualizar_associado.php?id=${associadoId}` : 
-            '../api/criar_associado.php';
-        console.log('📋 Modo ASSOCIADO NORMAL');
-    }
-    
-    console.log('📡 Enviando para:', url);
-    console.log('🆔 ID:', associadoId || 'Novo');
-    
-    // ✅ ENVIA REQUISIÇÃO
-    fetch(url, {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => {
-        console.log('📥 Response Status:', response.status);
-        return response.text();
-    })
-    .then(text => {
-        console.log('📄 Resposta do servidor (primeiros 1000 chars):');
-        console.log(text.substring(0, 1000));
-        
-        let data;
-        try {
-            data = JSON.parse(text);
-        } catch (e) {
-            console.error('❌ Erro ao fazer parse JSON:', e);
-            console.error('📄 Resposta completa:', text);
-            hideLoading();
-            showAlert('Resposta inválida do servidor. Verifique o console (F12) para mais detalhes.', 'error');
-            return;
-        }
-        
-        hideLoading();
-        
-        if (data.status === 'success') {
-            showAlert(data.message || 'Salvo com sucesso!', 'success');
-            console.log('✅ Operação concluída com sucesso:', data);
-            
-            setTimeout(() => {
-                window.location.reload();
-            }, 1500);
-        } else {
-            let erro = data.message || 'Erro ao salvar';
-            if (data.errors && Array.isArray(data.errors)) {
-                erro += ':\n• ' + data.errors.join('\n• ');
-            }
-            showAlert(erro, 'error');
-            console.error('❌ Erro retornado pelo servidor:', data);
-        }
-    })
-    .catch(error => {
-        console.error('❌ Erro na requisição:', error);
-        hideLoading();
-        showAlert('Erro ao comunicar com o servidor: ' + error.message, 'error');
-    });
-}
-// Preencher revisão
 function preencherRevisao() {
-    console.log('Preenchendo revisão...');
-    
     const container = document.getElementById('revisaoContainer');
     if (!container) return;
 
     const form = document.getElementById('formAssociado');
     const formData = new FormData(form);
 
-    // Coleta dados dos campos
     const dadosRevisao = {
         nome: formData.get('nome') || '-',
         cpf: formData.get('cpf') || '-',
@@ -2260,7 +2088,6 @@ function preencherRevisao() {
         valorTotal: document.getElementById('valorTotalGeral')?.textContent || '0,00'
     };
 
-    // Status do serviço jurídico
     const servicoJuridicoEl = document.getElementById('servicoJuridico');
     const statusJuridico = servicoJuridicoEl?.disabled 
         ? '❌ Não disponível para este tipo'
@@ -2323,7 +2150,6 @@ function preencherRevisao() {
         </div>
     `;
 
-    // Mostra quais steps foram salvos
     if (stepsSalvos.size > 0) {
         html += `
             <div class="alert-custom alert-info" style="background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%); color: #0c5460; border: 1px solid #b8daff;">
@@ -2339,43 +2165,57 @@ function preencherRevisao() {
     }
 
     container.innerHTML = html;
-    console.log('✓ Revisão preenchida com indicação de steps salvos');
 }
 
-// Validação do formulário completo
-function validarFormularioCompleto() {
-    console.log('Validando formulário completo...');
-    
-    const form = document.getElementById('formAssociado');
-    if (!form) return false;
+// ===========================
+// BUSCAR CEP
+// ===========================
 
-    const requiredFields = form.querySelectorAll('[required]');
-    let isValid = true;
+function buscarCEP() {
+    const cepField = document.getElementById('cep');
+    if (!cepField) return;
 
-    requiredFields.forEach(field => {
-        // Pula validação da foto se for modo edição
-        if (isEdit && field.name === 'foto') {
-            return;
-        }
+    const cep = cepField.value.replace(/\D/g, '');
 
-        if (!field.value.trim()) {
-            field.classList.add('error');
-            isValid = false;
+    if (cep.length !== 8) {
+        showAlert('CEP inválido!', 'error');
+        return;
+    }
 
-            // Encontra em qual step está o campo
-            const stepCard = field.closest('.section-card');
-            if (stepCard) {
-                const step = stepCard.getAttribute('data-step');
-                console.log(`Campo obrigatório vazio no step ${step}: ${field.name}`);
+    showLoading();
+
+    fetch(`https://viacep.com.br/ws/${cep}/json/`)
+        .then(response => response.json())
+        .then(data => {
+            hideLoading();
+
+            if (data.erro) {
+                showAlert('CEP não encontrado!', 'error');
+                return;
             }
-        }
-    });
 
-    console.log('Formulário válido:', isValid);
-    return isValid;
+            const enderecoField = document.getElementById('endereco');
+            const bairroField = document.getElementById('bairro');
+            const cidadeField = document.getElementById('cidade');
+            const numeroField = document.getElementById('numero');
+
+            if (enderecoField) enderecoField.value = data.logradouro;
+            if (bairroField) bairroField.value = data.bairro;
+            if (cidadeField) cidadeField.value = data.localidade;
+
+            if (numeroField) numeroField.focus();
+        })
+        .catch(error => {
+            hideLoading();
+            console.error('Erro ao buscar CEP:', error);
+            showAlert('Erro ao buscar CEP!', 'error');
+        });
 }
 
-// Funções auxiliares
+// ===========================
+// UTILIDADES
+// ===========================
+
 function showLoading() {
     const overlay = document.getElementById('loadingOverlay');
     if (overlay) overlay.classList.add('active');
@@ -2384,51 +2224,6 @@ function showLoading() {
 function hideLoading() {
     const overlay = document.getElementById('loadingOverlay');
     if (overlay) overlay.classList.remove('active');
-}
-
-// Navegação por clique nos steps
-function irParaStep(numeroStep) {
-    if (numeroStep < 1 || numeroStep > totalSteps) return;
-    
-    if (numeroStep > currentStep && !validarStepAtual()) {
-        return;
-    }
-    
-    currentStep = numeroStep;
-    mostrarStep(currentStep);
-}
-
-function inicializarNavegacaoSteps() {
-    document.querySelectorAll('.step').forEach(step => {
-        step.style.cursor = 'pointer';
-        step.style.transition = 'all 0.3s ease';
-        
-        step.addEventListener('click', function() {
-            const numeroStep = parseInt(this.getAttribute('data-step'));
-            if (numeroStep) {
-                irParaStep(numeroStep);
-                
-                this.style.transform = 'scale(0.95)';
-                setTimeout(() => {
-                    this.style.transform = 'scale(1)';
-                }, 150);
-            }
-        });
-        
-        step.addEventListener('mouseenter', function() {
-            if (!this.classList.contains('active')) {
-                this.style.transform = 'scale(1.05)';
-                this.style.opacity = '0.8';
-            }
-        });
-        
-        step.addEventListener('mouseleave', function() {
-            this.style.transform = 'scale(1)';
-            this.style.opacity = '1';
-        });
-    });
-    
-    console.log('✓ Navegação por clique nos steps inicializada');
 }
 
 function showAlert(message, type = 'info') {
@@ -2459,7 +2254,7 @@ function showAlert(message, type = 'info') {
     }, 5000);
 }
 
-// Atalhos de teclado para navegação
+// Atalhos de teclado
 document.addEventListener('keydown', function(e) {
     if (!e.target.matches('input, textarea, select')) {
         if (e.key >= '1' && e.key <= '6') {
@@ -2485,14 +2280,4 @@ document.addEventListener('keydown', function(e) {
     }
 });
 
-// Log final
-console.log('✓ JavaScript do formulário carregado completamente!');
-console.log('✓ Funcionalidades incluídas:');
-console.log('  - Salvamento individual por step');
-console.log('  - Controle de serviço jurídico por tipo de associado');
-console.log('  - Busca de titular para agregados (CPF)');
-console.log('  - Validações robustas por step');
-console.log('  - Indicadores visuais de steps salvos');
-console.log('  - Atalho Ctrl+S para salvamento rápido');
-console.log('  - Estados visuais de salvamento em andamento');
-console.log('  - Lógica para esconder checkbox "Cadastrar como Agregado" se já for agregado');
+console.log('✅ cadastroForm.js v2.0 carregado completamente!');

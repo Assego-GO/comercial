@@ -1,11 +1,13 @@
 <?php
 
 /**
- * Página de Gerenciamento do Fluxo de Assinatura - VERSÃO PADRONIZADA
+ * Página de Gerenciamento do Fluxo de Assinatura - VERSÃO UNIFICADA
  * pages/documentos_fluxo.php
  * 
  * Esta página gerencia o fluxo de assinatura dos documentos
- * anexados durante o pré-cadastro
+ * anexados durante o pré-cadastro (SÓCIOS E AGREGADOS)
+ * 
+ * MODIFICADO: Integração com API unificada documentos_unificados_listar.php
  */
 
 // Tratamento de erros para debug
@@ -138,6 +140,11 @@ $headerComponent = HeaderComponent::create([
     --shadow-lg: 0 1rem 3rem rgba(0, 0, 0, 0.175);
     --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1);
     --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+    /* NOVO: Cores para tipos de documento */
+    --socio-color: #0056d2;
+    --socio-light: rgba(0, 86, 210, 0.1);
+    --agregado-color: #6f42c1;
+    --agregado-light: rgba(111, 66, 193, 0.1);
 }
 
 * {
@@ -376,6 +383,15 @@ body {
     background: linear-gradient(135deg, #007bff 0%, #6610f2 100%);
 }
 
+/* NOVO: Ícones para sócios e agregados */
+.socios-icon {
+    background: linear-gradient(135deg, var(--socio-color) 0%, #003d94 100%);
+}
+
+.agregados-icon {
+    background: linear-gradient(135deg, var(--agregado-color) 0%, #5a32a3 100%);
+}
+
 /* Efeitos hover específicos */
 .dual-stat-item:hover .aguardando-icon {
     transform: scale(1.1) rotate(5deg);
@@ -397,6 +413,16 @@ body {
     box-shadow: 0 8px 25px rgba(0, 123, 255, 0.4);
 }
 
+.dual-stat-item:hover .socios-icon {
+    transform: scale(1.1) rotate(5deg);
+    box-shadow: 0 8px 25px rgba(0, 86, 210, 0.4);
+}
+
+.dual-stat-item:hover .agregados-icon {
+    transform: scale(1.1) rotate(-5deg);
+    box-shadow: 0 8px 25px rgba(111, 66, 193, 0.4);
+}
+
 /* === CONTAINERS === */
 .documents-container {
     background: var(--white);
@@ -412,6 +438,11 @@ body {
     margin-bottom: 1.5rem;
     padding-bottom: 1rem;
     border-bottom: 1px solid var(--border-light);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
 }
 
 .documents-title {
@@ -447,7 +478,7 @@ body {
 
 .filters-row {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 1rem;
     margin-bottom: 1rem;
 }
@@ -510,6 +541,23 @@ body {
     box-shadow: var(--shadow-lg);
 }
 
+/* NOVO: Estilos para tipos de documento (Sócio vs Agregado) */
+.document-card.tipo-socio {
+    border-left: 4px solid var(--socio-color);
+}
+
+.document-card.tipo-agregado {
+    border-left: 4px solid var(--agregado-color);
+}
+
+.document-card.tipo-socio:hover {
+    border-color: var(--socio-color);
+}
+
+.document-card.tipo-agregado:hover {
+    border-color: var(--agregado-color);
+}
+
 .document-header {
     display: flex;
     align-items: center;
@@ -530,6 +578,17 @@ body {
     box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
 }
 
+/* NOVO: Ícones diferenciados por tipo */
+.document-icon.socio {
+    background: linear-gradient(135deg, var(--socio-color) 0%, #003d94 100%);
+    box-shadow: 0 4px 12px rgba(0, 86, 210, 0.3);
+}
+
+.document-icon.agregado {
+    background: linear-gradient(135deg, var(--agregado-color) 0%, #5a32a3 100%);
+    box-shadow: 0 4px 12px rgba(111, 66, 193, 0.3);
+}
+
 .document-info {
     flex: 1;
 }
@@ -545,6 +604,51 @@ body {
     font-size: 0.875rem;
     color: var(--gray-600);
     margin: 0;
+}
+
+/* NOVO: Badge de tipo de documento */
+.badge-tipo {
+    padding: 0.35rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.badge-tipo.socio {
+    background: var(--socio-light);
+    color: var(--socio-color);
+}
+
+.badge-tipo.agregado {
+    background: var(--agregado-light);
+    color: var(--agregado-color);
+}
+
+/* NOVO: Informações do titular (para agregados) */
+.titular-info {
+    background: var(--agregado-light);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    margin-bottom: 1rem;
+    border-left: 3px solid var(--agregado-color);
+}
+
+.titular-info-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--agregado-color);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.25rem;
+}
+
+.titular-info-value {
+    font-size: 0.875rem;
+    color: var(--dark);
+    font-weight: 500;
 }
 
 /* === STATUS BADGES === */
@@ -929,6 +1033,63 @@ body {
     margin: 0 auto;
 }
 
+/* === PAGINAÇÃO === */
+.pagination-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    padding: 1.5rem 0;
+    border-top: 1px solid var(--gray-200);
+    margin-top: 1.5rem;
+}
+
+.pagination-info {
+    font-size: 0.875rem;
+    color: var(--gray-600);
+}
+
+.pagination-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.pagination-btn {
+    padding: 0.5rem 0.875rem;
+    border: 1px solid var(--gray-300);
+    background: white;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.875rem;
+}
+
+.pagination-btn:hover:not(:disabled) {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+}
+
+.pagination-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.pagination-btn.active {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+}
+
+.pagination-select {
+    padding: 0.5rem;
+    border: 1px solid var(--gray-300);
+    border-radius: 8px;
+    font-size: 0.875rem;
+}
+
 /* === ANIMAÇÕES === */
 @keyframes fadeIn {
     from {
@@ -1021,6 +1182,11 @@ body {
     .document-actions {
         justify-content: center;
     }
+
+    .pagination-container {
+        flex-direction: column;
+        text-align: center;
+    }
 }
 
 /* Toast Container */
@@ -1050,7 +1216,7 @@ body {
                     Fluxo de Assinatura de Documentos
                 </h1>
                 <p class="page-subtitle">
-                    Gerencie o processo de assinatura das fichas de filiação com eficiência e controle
+                    Gerencie o processo de assinatura das fichas de filiação de <strong>Sócios e Agregados</strong> com eficiência e controle
                 </p>
             </div>
 
@@ -1065,7 +1231,6 @@ body {
                 </div>
             <?php endif; ?>
 
-            <!-- Stats Grid -->
             <!-- Stats Grid -->
             <div class="stats-grid" data-aos="fade-up">
                 <!-- Card 1: Aguardando Envio + Na Presidência -->
@@ -1086,7 +1251,7 @@ body {
                                 <i class="fas fa-upload"></i>
                             </div>
                             <div class="dual-stat-info">
-                                <div class="dual-stat-value"><?php echo number_format($aguardandoEnvio, 0, ',', '.'); ?></div>
+                                <div class="dual-stat-value" id="statAguardandoEnvio"><?php echo number_format($aguardandoEnvio, 0, ',', '.'); ?></div>
                                 <div class="dual-stat-label">Aguardando Envio</div>
                             </div>
                         </div>
@@ -1096,16 +1261,49 @@ body {
                                 <i class="fas fa-signature"></i>
                             </div>
                             <div class="dual-stat-info">
-                                <div class="dual-stat-value"><?php echo number_format($naPresidencia, 0, ',', '.'); ?></div>
+                                <div class="dual-stat-value" id="statNaPresidencia"><?php echo number_format($naPresidencia, 0, ',', '.'); ?></div>
                                 <div class="dual-stat-label">Na Presidência</div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                
+                <!-- NOVO Card 2: Sócios + Agregados -->
+                <div class="stat-card dual-stat-card">
+                    <div class="dual-stat-header">
+                        <div class="dual-stat-title">
+                            <i class="fas fa-users"></i>
+                            Por Tipo
+                        </div>
+                        <div class="dual-stat-percentage">
+                            <i class="fas fa-chart-pie"></i>
+                            Distribuição
+                        </div>
+                    </div>
+                    <div class="dual-stats-row">
+                        <div class="dual-stat-item">
+                            <div class="dual-stat-icon socios-icon">
+                                <i class="fas fa-user-tie"></i>
+                            </div>
+                            <div class="dual-stat-info">
+                                <div class="dual-stat-value" id="statTotalSocios">0</div>
+                                <div class="dual-stat-label">Sócios</div>
+                            </div>
+                        </div>
+                        <div class="dual-stats-separator"></div>
+                        <div class="dual-stat-item">
+                            <div class="dual-stat-icon agregados-icon">
+                                <i class="fas fa-users"></i>
+                            </div>
+                            <div class="dual-stat-info">
+                                <div class="dual-stat-value" id="statTotalAgregados">0</div>
+                                <div class="dual-stat-label">Agregados</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
-                <!-- Card 2: Assinados + Finalizados -->
+                <!-- Card 3: Assinados + Finalizados -->
                 <div class="stat-card dual-stat-card">
                     <div class="dual-stat-header">
                         <div class="dual-stat-title">
@@ -1123,7 +1321,7 @@ body {
                                 <i class="fas fa-check"></i>
                             </div>
                             <div class="dual-stat-info">
-                                <div class="dual-stat-value"><?php echo number_format($assinados, 0, ',', '.'); ?></div>
+                                <div class="dual-stat-value" id="statAssinados"><?php echo number_format($assinados, 0, ',', '.'); ?></div>
                                 <div class="dual-stat-label">Assinados</div>
                             </div>
                         </div>
@@ -1133,7 +1331,7 @@ body {
                                 <i class="fas fa-flag-checkered"></i>
                             </div>
                             <div class="dual-stat-info">
-                                <div class="dual-stat-value"><?php echo number_format($finalizados, 0, ',', '.'); ?></div>
+                                <div class="dual-stat-value" id="statFinalizados"><?php echo number_format($finalizados, 0, ',', '.'); ?></div>
                                 <div class="dual-stat-label">Finalizados</div>
                             </div>
                         </div>
@@ -1148,9 +1346,20 @@ body {
                     1. Ficha anexada no pré-cadastro → 2. Envio para presidência → 3. Assinatura → 4. Retorno ao comercial → 5. Aprovação do pré-cadastro
                 </div>
             </div>
+
             <!-- Filters Bar -->
             <div class="filters-bar animate__animated animate__fadeIn" data-aos="fade-up" data-aos-delay="500">
                 <div class="filters-row">
+                    <!-- NOVO: Filtro de Tipo de Pessoa -->
+                    <div class="filter-group">
+                        <label class="filter-label">Tipo de Pessoa</label>
+                        <select class="filter-select" id="filtroTipoPessoa">
+                            <option value="">Todos (Sócios e Agregados)</option>
+                            <option value="SOCIO">Apenas Sócios</option>
+                            <option value="AGREGADO">Apenas Agregados</option>
+                        </select>
+                    </div>
+
                     <div class="filter-group">
                         <label class="filter-label">Status do Fluxo</label>
                         <select class="filter-select" id="filtroStatusFluxo">
@@ -1163,9 +1372,9 @@ body {
                     </div>
 
                     <div class="filter-group">
-                        <label class="filter-label">Buscar Associado</label>
+                        <label class="filter-label">Buscar</label>
                         <input type="text" class="filter-input" id="filtroBuscaFluxo"
-                            placeholder="Nome ou CPF do associado">
+                            placeholder="Nome, CPF ou Titular...">
                     </div>
 
                     <div class="filter-group">
@@ -1198,10 +1407,30 @@ body {
                         <i class="fas fa-file-alt"></i>
                         Documentos em Fluxo
                     </h3>
+                    <!-- NOVO: Seletor de itens por página -->
+                    <div class="d-flex align-items-center gap-2">
+                        <label class="filter-label mb-0">Exibir:</label>
+                        <select class="pagination-select" id="itensPorPagina" onchange="mudarItensPorPagina()">
+                            <option value="10">10</option>
+                            <option value="20" selected>20</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                        </select>
+                    </div>
                 </div>
 
                 <div class="documents-list" id="documentosFluxoList">
                     <!-- Documentos serão carregados aqui -->
+                </div>
+
+                <!-- NOVO: Container de paginação -->
+                <div class="pagination-container" id="paginacaoContainer" style="display: none;">
+                    <div class="pagination-info" id="paginacaoInfo">
+                        Exibindo 0-0 de 0 registros
+                    </div>
+                    <div class="pagination-controls" id="paginacaoControles">
+                        <!-- Controles serão gerados dinamicamente -->
+                    </div>
                 </div>
             </div>
         </div>
@@ -1247,6 +1476,7 @@ body {
                 <div class="modal-body">
                     <form id="assinaturaForm">
                         <input type="hidden" id="assinaturaDocumentoId">
+                        <input type="hidden" id="assinaturaTipoDocumento">
 
                         <div class="mb-4">
                             <label class="form-label fw-semibold">Arquivo Assinado (opcional)</label>
@@ -1304,8 +1534,13 @@ body {
         // Variáveis globais
         let arquivoAssinaturaSelecionado = null;
         let filtrosAtuais = {};
+        // NOVO: Variáveis de paginação
+        let paginaAtual = 1;
+        let totalPaginas = 1;
+        let totalRegistros = 0;
+        let itensPorPagina = 20;
 
-        // Carregar documentos em fluxo
+        // MODIFICADO: Carregar documentos usando API unificada
         function carregarDocumentosFluxo(filtros = {}) {
             const container = document.getElementById('documentosFluxoList');
 
@@ -1316,9 +1551,31 @@ body {
                 </div>
             `;
 
-            $.get('../api/documentos/documentos_fluxo_listar.php', filtros, function(response) {
+            // MODIFICADO: Preparar parâmetros para API unificada
+            const params = new URLSearchParams();
+            params.append('pagina', paginaAtual);
+            params.append('por_pagina', itensPorPagina);
+
+            // Mapear filtros
+            if (filtros.tipo) params.append('tipo', filtros.tipo);
+            if (filtros.status) params.append('status', filtros.status);
+            if (filtros.busca) params.append('busca', filtros.busca);
+            if (filtros.periodo) params.append('periodo', filtros.periodo);
+
+            // MODIFICADO: Usar nova API unificada
+            $.get('../api/documentos/documentos_unificados_listar.php?' + params.toString(), function(response) {
                 if (response.status === 'success') {
                     renderizarDocumentosFluxo(response.data);
+                    
+                    // NOVO: Atualizar paginação
+                    if (response.paginacao) {
+                        atualizarPaginacao(response.paginacao);
+                    }
+
+                    // NOVO: Atualizar estatísticas
+                    if (response.estatisticas) {
+                        atualizarEstatisticas(response.estatisticas);
+                    }
                 } else {
                     container.innerHTML = `
                         <div class="empty-state">
@@ -1339,6 +1596,113 @@ body {
             });
         }
 
+        // NOVO: Atualizar estatísticas na interface
+        function atualizarEstatisticas(stats) {
+            if (stats.total_socios !== undefined) {
+                document.getElementById('statTotalSocios').textContent = stats.total_socios.toLocaleString('pt-BR');
+            }
+            if (stats.total_agregados !== undefined) {
+                document.getElementById('statTotalAgregados').textContent = stats.total_agregados.toLocaleString('pt-BR');
+            }
+            if (stats.pendentes_socios !== undefined && stats.pendentes_agregados !== undefined) {
+                const totalPendentes = stats.pendentes_socios + stats.pendentes_agregados;
+                document.getElementById('statNaPresidencia').textContent = totalPendentes.toLocaleString('pt-BR');
+            }
+            if (stats.assinados_socios !== undefined && stats.assinados_agregados !== undefined) {
+                const totalAssinados = stats.assinados_socios + stats.assinados_agregados;
+                document.getElementById('statAssinados').textContent = totalAssinados.toLocaleString('pt-BR');
+            }
+        }
+
+        // NOVO: Atualizar paginação
+        function atualizarPaginacao(paginacao) {
+            const container = document.getElementById('paginacaoContainer');
+            const info = document.getElementById('paginacaoInfo');
+            const controles = document.getElementById('paginacaoControles');
+
+            totalPaginas = paginacao.total_paginas;
+            totalRegistros = paginacao.total_registros;
+            paginaAtual = paginacao.pagina_atual;
+
+            if (totalRegistros === 0) {
+                container.style.display = 'none';
+                return;
+            }
+
+            container.style.display = 'flex';
+
+            // Calcular intervalo de exibição
+            const inicio = ((paginaAtual - 1) * itensPorPagina) + 1;
+            const fim = Math.min(paginaAtual * itensPorPagina, totalRegistros);
+            info.textContent = `Exibindo ${inicio}-${fim} de ${totalRegistros.toLocaleString('pt-BR')} registros`;
+
+            // Gerar controles de paginação
+            let controlesHTML = '';
+
+            // Botão anterior
+            controlesHTML += `
+                <button class="pagination-btn" onclick="irParaPagina(${paginaAtual - 1})" ${paginaAtual <= 1 ? 'disabled' : ''}>
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+            `;
+
+            // Números das páginas
+            const maxBotoes = 5;
+            let inicioBtn = Math.max(1, paginaAtual - Math.floor(maxBotoes / 2));
+            let fimBtn = Math.min(totalPaginas, inicioBtn + maxBotoes - 1);
+
+            if (fimBtn - inicioBtn + 1 < maxBotoes) {
+                inicioBtn = Math.max(1, fimBtn - maxBotoes + 1);
+            }
+
+            if (inicioBtn > 1) {
+                controlesHTML += `<button class="pagination-btn" onclick="irParaPagina(1)">1</button>`;
+                if (inicioBtn > 2) {
+                    controlesHTML += `<span class="px-2">...</span>`;
+                }
+            }
+
+            for (let i = inicioBtn; i <= fimBtn; i++) {
+                controlesHTML += `
+                    <button class="pagination-btn ${i === paginaAtual ? 'active' : ''}" onclick="irParaPagina(${i})">${i}</button>
+                `;
+            }
+
+            if (fimBtn < totalPaginas) {
+                if (fimBtn < totalPaginas - 1) {
+                    controlesHTML += `<span class="px-2">...</span>`;
+                }
+                controlesHTML += `<button class="pagination-btn" onclick="irParaPagina(${totalPaginas})">${totalPaginas}</button>`;
+            }
+
+            // Botão próximo
+            controlesHTML += `
+                <button class="pagination-btn" onclick="irParaPagina(${paginaAtual + 1})" ${paginaAtual >= totalPaginas ? 'disabled' : ''}>
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            `;
+
+            controles.innerHTML = controlesHTML;
+        }
+
+        // NOVO: Ir para página específica
+        function irParaPagina(pagina) {
+            if (pagina < 1 || pagina > totalPaginas) return;
+            paginaAtual = pagina;
+            carregarDocumentosFluxo(filtrosAtuais);
+            
+            // Scroll suave para o topo da lista
+            document.getElementById('documentosFluxoList').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        // NOVO: Mudar itens por página
+        function mudarItensPorPagina() {
+            itensPorPagina = parseInt(document.getElementById('itensPorPagina').value);
+            paginaAtual = 1; // Resetar para primeira página
+            carregarDocumentosFluxo(filtrosAtuais);
+        }
+
+        // MODIFICADO: Renderizar documentos com suporte a tipos
         function renderizarDocumentosFluxo(documentos) {
             const container = document.getElementById('documentosFluxoList');
             container.innerHTML = '';
@@ -1348,7 +1712,7 @@ body {
                     <div class="empty-state">
                         <i class="fas fa-folder-open"></i>
                         <h5>Nenhum documento em fluxo</h5>
-                        <p>Os documentos anexados durante o pré-cadastro aparecerão aqui</p>
+                        <p>Os documentos de sócios e agregados aparecerão aqui</p>
                     </div>
                 `;
                 return;
@@ -1356,32 +1720,57 @@ body {
 
             documentos.forEach(doc => {
                 const statusClass = doc.status_fluxo.toLowerCase().replace('_', '-');
+                // NOVO: Determinar se é sócio ou agregado
+                const isSocio = doc.tipo_documento === 'SOCIO';
+                const tipoClass = isSocio ? 'socio' : 'agregado';
+                const tipoLabel = isSocio ? 'Sócio' : 'Agregado';
+                const tipoIcon = isSocio ? 'fa-user-tie' : 'fa-users';
+                
+                // NOVO: Informações do titular (apenas para agregados)
+                const titularInfo = !isSocio && doc.titular_nome ? `
+                    <div class="titular-info">
+                        <div class="titular-info-label">
+                            <i class="fas fa-user me-1"></i> Sócio Titular
+                        </div>
+                        <div class="titular-info-value">
+                            ${doc.titular_nome} ${doc.titular_cpf ? '- CPF: ' + formatarCPF(doc.titular_cpf) : ''}
+                        </div>
+                    </div>
+                ` : '';
+
                 const cardHtml = `
-                    <div class="document-card" data-aos="fade-up">
+                    <div class="document-card tipo-${tipoClass}" data-aos="fade-up">
                         <div class="document-header">
-                            <div class="document-icon">
+                            <div class="document-icon ${tipoClass}">
                                 <i class="fas fa-file-pdf"></i>
                             </div>
                             <div class="document-info">
-                                <h6 class="document-title">Ficha de Filiação</h6>
+                                <h6 class="document-title">${doc.tipo_descricao || 'Ficha de Filiação'}</h6>
                                 <p class="document-subtitle">${doc.tipo_origem === 'VIRTUAL' ? 'Gerada no Sistema' : 'Digitalizada'}</p>
                             </div>
-                            <div class="ms-auto">
+                            <div class="d-flex flex-column align-items-end gap-2">
+                                <!-- NOVO: Badge de tipo -->
+                                <span class="badge-tipo ${tipoClass}">
+                                    <i class="fas ${tipoIcon}"></i>
+                                    ${tipoLabel}
+                                </span>
                                 <span class="status-badge ${statusClass}">
                                     <i class="fas fa-${getStatusIcon(doc.status_fluxo)}"></i>
                                     ${doc.status_descricao}
                                 </span>
                             </div>
                         </div>
+
+                        ${titularInfo}
                         
                         <div class="document-meta">
                             <div class="meta-item">
                                 <i class="fas fa-user"></i>
-                                <span><strong>${doc.associado_nome}</strong></span>
+                                <span><strong>${doc.nome || doc.associado_nome || 'N/A'}</strong></span>
                             </div>
                             <div class="meta-item">
                                 <i class="fas fa-id-card"></i>
-                                <span>CPF: ${formatarCPF(doc.associado_cpf)}</span>
+                                <span>CPF: ${formatarCPF(doc.cpf || doc.associado_cpf)}</span>
                             </div>
                             <div class="meta-item">
                                 <i class="fas fa-building"></i>
@@ -1432,14 +1821,16 @@ body {
                         </div>
                         
                         <div class="document-actions">
-                            <button class="btn-modern btn-primary-premium btn-sm" onclick="downloadDocumento(${doc.id})">
+                            ${doc.caminho_arquivo ? `
+                            <button class="btn-modern btn-primary-premium btn-sm" onclick="downloadDocumento(${doc.id}, '${doc.tipo_documento}')">
                                 <i class="fas fa-download me-1"></i>
                                 Baixar
                             </button>
+                            ` : ''}
                             
                             ${getAcoesFluxo(doc)}
                             
-                            <button class="btn-modern btn-secondary-premium btn-sm" onclick="verHistorico(${doc.id})">
+                            <button class="btn-modern btn-secondary-premium btn-sm" onclick="verHistorico(${doc.id}, '${doc.tipo_documento}')">
                                 <i class="fas fa-history me-1"></i>
                                 Histórico
                             </button>
@@ -1461,13 +1852,15 @@ body {
             return icons[status] || 'file';
         }
 
+        // MODIFICADO: Ações com suporte ao tipo de documento
         function getAcoesFluxo(doc) {
             let acoes = '';
+            const tipo = doc.tipo_documento || 'SOCIO';
 
             switch (doc.status_fluxo) {
                 case 'DIGITALIZADO':
                     acoes = `
-                        <button class="btn-modern btn-warning-premium btn-sm" onclick="enviarParaAssinatura(${doc.id})">
+                        <button class="btn-modern btn-warning-premium btn-sm" onclick="enviarParaAssinatura(${doc.id}, '${tipo}')">
                             <i class="fas fa-paper-plane me-1"></i>
                             Enviar
                         </button>
@@ -1477,7 +1870,7 @@ body {
                 case 'AGUARDANDO_ASSINATURA':
                     <?php if ($auth->isDiretor() || $usuarioLogado['departamento_id'] == 2): ?>
                         acoes = `
-                        <button class="btn-modern btn-success-premium btn-sm" onclick="abrirModalAssinatura(${doc.id})">
+                        <button class="btn-modern btn-success-premium btn-sm" onclick="abrirModalAssinatura(${doc.id}, '${tipo}')">
                             <i class="fas fa-signature me-1"></i>
                             Assinar
                         </button>
@@ -1487,7 +1880,7 @@ body {
 
                 case 'ASSINADO':
                     acoes = `
-                        <button class="btn-modern btn-primary-premium btn-sm" onclick="finalizarProcesso(${doc.id})">
+                        <button class="btn-modern btn-primary-premium btn-sm" onclick="finalizarProcesso(${doc.id}, '${tipo}')">
                             <i class="fas fa-flag-checkered me-1"></i>
                             Finalizar
                         </button>
@@ -1507,10 +1900,16 @@ body {
             return acoes;
         }
 
-        function enviarParaAssinatura(documentoId) {
+        // MODIFICADO: Enviar para assinatura com tipo
+        function enviarParaAssinatura(documentoId, tipo = 'SOCIO') {
             if (confirm('Deseja enviar este documento para assinatura na presidência?')) {
+                // Escolher endpoint baseado no tipo
+                const endpoint = tipo === 'AGREGADO' 
+                    ? '../api/documentos/agregados_enviar_assinatura.php'
+                    : '../api/documentos/documentos_enviar_assinatura.php';
+
                 $.ajax({
-                    url: '../api/documentos/documentos_enviar_assinatura.php',
+                    url: endpoint,
                     type: 'POST',
                     contentType: 'application/json',
                     data: JSON.stringify({
@@ -1532,8 +1931,10 @@ body {
             }
         }
 
-        function abrirModalAssinatura(documentoId) {
+        // MODIFICADO: Abrir modal com tipo
+        function abrirModalAssinatura(documentoId, tipo = 'SOCIO') {
             document.getElementById('assinaturaDocumentoId').value = documentoId;
+            document.getElementById('assinaturaTipoDocumento').value = tipo;
             document.getElementById('assinaturaObservacao').value = '';
             document.getElementById('assinaturaFilesList').innerHTML = '';
             arquivoAssinaturaSelecionado = null;
@@ -1542,8 +1943,10 @@ body {
             modal.show();
         }
 
+        // MODIFICADO: Assinar documento com tipo
         function assinarDocumento() {
             const documentoId = document.getElementById('assinaturaDocumentoId').value;
+            const tipo = document.getElementById('assinaturaTipoDocumento').value || 'SOCIO';
             const observacao = document.getElementById('assinaturaObservacao').value;
 
             const formData = new FormData();
@@ -1554,8 +1957,13 @@ body {
                 formData.append('arquivo_assinado', arquivoAssinaturaSelecionado);
             }
 
+            // Escolher endpoint baseado no tipo
+            const endpoint = tipo === 'AGREGADO' 
+                ? '../api/documentos/agregados_assinar.php'
+                : '../api/documentos/documentos_assinar.php';
+
             $.ajax({
-                url: '../api/documentos/documentos_assinar.php',
+                url: endpoint,
                 type: 'POST',
                 data: formData,
                 processData: false,
@@ -1575,10 +1983,16 @@ body {
             });
         }
 
-        function finalizarProcesso(documentoId) {
+        // MODIFICADO: Finalizar processo com tipo
+        function finalizarProcesso(documentoId, tipo = 'SOCIO') {
             if (confirm('Deseja finalizar o processo deste documento?')) {
+                // Escolher endpoint baseado no tipo
+                const endpoint = tipo === 'AGREGADO' 
+                    ? '../api/documentos/agregados_finalizar.php'
+                    : '../api/documentos/documentos_finalizar.php';
+
                 $.ajax({
-                    url: '../api/documentos/documentos_finalizar.php',
+                    url: endpoint,
                     type: 'POST',
                     contentType: 'application/json',
                     data: JSON.stringify({
@@ -1600,8 +2014,14 @@ body {
             }
         }
 
-        function verHistorico(documentoId) {
-            $.get('../api/documentos/documentos_historico_fluxo.php', {
+        // MODIFICADO: Ver histórico com tipo
+        function verHistorico(documentoId, tipo = 'SOCIO') {
+            // Escolher endpoint baseado no tipo
+            const endpoint = tipo === 'AGREGADO' 
+                ? '../api/documentos/agregados_historico.php'
+                : '../api/documentos/documentos_historico_fluxo.php';
+
+            $.get(endpoint, {
                 documento_id: documentoId
             }, function(response) {
                 if (response.status === 'success') {
@@ -1617,7 +2037,7 @@ body {
         function renderizarHistorico(historico) {
             const container = document.getElementById('historicoContent');
 
-            if (historico.length === 0) {
+            if (!historico || historico.length === 0) {
                 container.innerHTML = '<p class="text-muted text-center">Nenhum histórico disponível</p>';
                 return;
             }
@@ -1629,13 +2049,13 @@ body {
                     <div class="timeline-item">
                         <div class="timeline-content">
                             <div class="timeline-header">
-                                <h6 class="timeline-title">${item.status_novo}</h6>
+                                <h6 class="timeline-title">${item.status_novo || item.acao || 'Ação'}</h6>
                                 <span class="timeline-date">${formatarData(item.data_acao)}</span>
                             </div>
-                            <p class="mb-2">${item.observacao}</p>
+                            <p class="mb-2">${item.observacao || 'Sem observações'}</p>
                             <p class="text-muted mb-0">
                                 <small>
-                                    Por: ${item.funcionario_nome}<br>
+                                    Por: ${item.funcionario_nome || 'Sistema'}<br>
                                     ${item.dept_origem_nome ? `De: ${item.dept_origem_nome}<br>` : ''}
                                     ${item.dept_destino_nome ? `Para: ${item.dept_destino_nome}` : ''}
                                 </small>
@@ -1707,8 +2127,13 @@ body {
             document.getElementById('assinaturaFileInput').value = '';
         }
 
+        // MODIFICADO: Aplicar filtros com novo campo de tipo
         function aplicarFiltros() {
             filtrosAtuais = {};
+
+            // NOVO: Filtro de tipo de pessoa
+            const tipo = document.getElementById('filtroTipoPessoa').value;
+            if (tipo) filtrosAtuais.tipo = tipo;
 
             const status = document.getElementById('filtroStatusFluxo').value;
             if (status) filtrosAtuais.status = status;
@@ -1719,19 +2144,26 @@ body {
             const periodo = document.getElementById('filtroPeriodo').value;
             if (periodo) filtrosAtuais.periodo = periodo;
 
+            paginaAtual = 1; // Resetar para primeira página ao filtrar
             carregarDocumentosFluxo(filtrosAtuais);
         }
 
         function limparFiltros() {
+            document.getElementById('filtroTipoPessoa').value = '';
             document.getElementById('filtroStatusFluxo').value = '';
             document.getElementById('filtroBuscaFluxo').value = '';
             document.getElementById('filtroPeriodo').value = '';
             filtrosAtuais = {};
+            paginaAtual = 1;
             carregarDocumentosFluxo();
         }
 
-        function downloadDocumento(id) {
-            window.open('../api/documentos/documentos_download.php?id=' + id, '_blank');
+        // MODIFICADO: Download com tipo
+        function downloadDocumento(id, tipo = 'SOCIO') {
+            const endpoint = tipo === 'AGREGADO' 
+                ? '../api/documentos/agregados_download.php?id=' + id
+                : '../api/documentos/documentos_download.php?id=' + id;
+            window.open(endpoint, '_blank');
         }
 
         // Funções auxiliares
