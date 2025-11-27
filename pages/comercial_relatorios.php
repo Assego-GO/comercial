@@ -12,7 +12,7 @@ require_once '../classes/Database.php';
 require_once '../classes/Auth.php';
 require_once '../classes/Funcionarios.php';
 require_once '../classes/Permissoes.php';
-require_once './components/header.php';
+require_once './components/header.php'; 
 
 // Inicia autenticação
 $auth = new Auth();
@@ -567,6 +567,147 @@ if (empty($patentesDB)) {
             background: var(--gray-100);
         }
 
+        /* Melhorias visuais para tabelas de relatórios */
+        table.dataTable {
+            border-collapse: separate !important;
+            border-spacing: 0;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e3e6f0;
+        }
+
+        table.dataTable thead th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white !important;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            letter-spacing: 0.8px;
+            padding: 1.25rem 1rem;
+            border: none;
+            white-space: nowrap;
+            position: relative;
+        }
+
+        table.dataTable thead th::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        table.dataTable tbody td {
+            padding: 1rem;
+            vertical-align: middle;
+            border-bottom: 1px solid #e9ecef;
+            border-right: 1px solid #f1f3f5;
+            font-size: 0.9rem;
+            color: #495057;
+        }
+
+        table.dataTable tbody td:last-child {
+            border-right: none;
+        }
+
+        table.dataTable tbody tr {
+            transition: all 0.3s ease;
+        }
+
+        table.dataTable tbody tr:nth-child(even) {
+            background-color: #f8f9fc;
+        }
+
+        table.dataTable tbody tr:nth-child(odd) {
+            background-color: #ffffff;
+        }
+
+        table.dataTable tbody tr:hover {
+            background: linear-gradient(90deg, #f0f4ff 0%, #e3ebff 100%) !important;
+            transform: scale(1.005);
+            box-shadow: 0 3px 12px rgba(102, 126, 234, 0.2);
+            cursor: pointer;
+        }
+
+        /* Destaque para coluna # (número) */
+        table.dataTable tbody td:first-child {
+            font-weight: 700;
+            color: #667eea;
+            text-align: center;
+            background-color: rgba(102, 126, 234, 0.08);
+            font-size: 0.95rem;
+        }
+
+        /* Estilo especial para células com N/D */
+        table.dataTable tbody td {
+            position: relative;
+        }
+
+        table.dataTable tbody td:contains("N/D"),
+        table.dataTable tbody td[data-nd="true"] {
+            color: #6c757d !important;
+            font-style: italic;
+            font-weight: 500;
+            background-color: #f8f9fa !important;
+        }
+
+        /* Badge dentro da tabela */
+        table.dataTable tbody .badge {
+            font-weight: 600;
+            padding: 0.4rem 0.85rem;
+            font-size: 0.8rem;
+            border-radius: 0.5rem;
+            letter-spacing: 0.3px;
+        }
+
+        /* Cores para badges */
+        .badge.bg-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            box-shadow: 0 2px 6px rgba(102, 126, 234, 0.3);
+        }
+
+        .badge.bg-success {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%) !important;
+            box-shadow: 0 2px 6px rgba(40, 167, 69, 0.3);
+        }
+
+        .badge.bg-danger {
+            background: linear-gradient(135deg, #dc3545 0%, #e91e63 100%) !important;
+            box-shadow: 0 2px 6px rgba(220, 53, 69, 0.3);
+        }
+
+        /* Separadores visuais entre colunas */
+        table.dataTable tbody td {
+            border-right: 1px solid #f0f2f5;
+        }
+
+        table.dataTable tbody td:last-child {
+            border-right: none;
+        }
+
+        /* Scroll personalizado */
+        .dataTables_wrapper::-webkit-scrollbar {
+            height: 10px;
+            width: 10px;
+        }
+
+        .dataTables_wrapper::-webkit-scrollbar-track {
+            background: #f1f3f5;
+            border-radius: 10px;
+        }
+
+        .dataTables_wrapper::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 10px;
+        }
+
+        .dataTables_wrapper::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+        }
+
         /* Badge Status */
         .badge-status {
             padding: 0.25rem 0.5rem;
@@ -574,6 +715,44 @@ if (empty($patentesDB)) {
             font-weight: 600;
             font-size: 0.75rem;
             display: inline-block;
+        }
+
+        /* Estilo especial para células N/D ou vazias */
+        .cell-nd {
+            color: #6c757d !important;
+            font-style: italic;
+            font-weight: 500;
+            text-align: center;
+            background-color: rgba(108, 117, 125, 0.08) !important;
+        }
+
+        table.dataTable tbody tr:hover .cell-nd {
+            background-color: rgba(108, 117, 125, 0.15) !important;
+        }
+
+        /* Estilo especial para células N/D */
+        .cell-nd {
+            color: #9ca3af !important;
+            font-style: italic;
+            font-weight: 500;
+            text-align: center;
+        }
+
+        /* Melhorias nos botões DataTables */
+        .dt-buttons {
+            margin-bottom: 1rem;
+        }
+
+        .dt-button {
+            border-radius: 6px !important;
+            padding: 0.5rem 1rem !important;
+            margin-right: 0.5rem !important;
+            transition: all 0.2s ease !important;
+        }
+
+        .dt-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
         }
 
         .badge-status.ativo {
@@ -627,6 +806,385 @@ if (empty($patentesDB)) {
             .export-buttons {
                 width: 100%;
                 justify-content: flex-start;
+            }
+        }
+
+        /* ===================================================================
+           MELHORIAS VISUAIS PARA RELATÓRIO DE DESFILIAÇÕES - V2.0
+           =================================================================== */
+
+        /* Estilo melhorado para a tabela de relatórios */
+        #reportTable {
+            border-collapse: separate !important;
+            border-spacing: 0;
+            width: 100%;
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        /* Header da tabela - visual mais moderno */
+        #reportTable thead {
+            background: linear-gradient(135deg, #0056d2 0%, #4A90E2 100%);
+        }
+
+        #reportTable thead th {
+            color: white !important;
+            font-weight: 600 !important;
+            font-size: 13px !important;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 16px 12px !important;
+            border: none !important;
+            text-align: left;
+        }
+
+        /* Primeira coluna (número) com destaque */
+        #reportTable thead th:first-child {
+            text-align: center;
+            width: 60px;
+        }
+
+        /* Corpo da tabela com alternância de cores suave */
+        #reportTable tbody tr {
+            transition: all 0.2s ease;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        #reportTable tbody tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+
+        #reportTable tbody tr:nth-child(odd) {
+            background-color: #ffffff;
+        }
+
+        #reportTable tbody tr:hover {
+            background-color: #e3f2fd !important;
+            transform: scale(1.01);
+            box-shadow: 0 2px 8px rgba(0, 86, 210, 0.15);
+            cursor: pointer;
+        }
+
+        /* Células do corpo */
+        #reportTable tbody td {
+            padding: 14px 12px !important;
+            font-size: 14px !important;                    /* ✅ FONTE MAIOR */
+            color: #000000 !important;                     /* ✅ PRETO */
+            vertical-align: middle;
+            border: none !important;
+            font-weight: 500;                              /* ✅ MAIS FORTE */
+        }
+
+        /* Coluna de número centralizada */
+        #reportTable tbody td:first-child {
+            text-align: center;
+            font-weight: 600;
+            color: #0056d2;
+            font-size: 13px;
+        }
+
+        /* ✅ CPF - PRETO E VISÍVEL */
+        #reportTable tbody td:nth-child(3) {
+            font-family: 'Courier New', monospace;
+            font-size: 14px !important;                    /* ✅ MAIOR */
+            color: #000000 !important;                     /* ✅ PRETO */
+            font-weight: 600 !important;                   /* ✅ NEGRITO */
+        }
+
+        /* Destaque para patente e corporação */
+        #reportTable tbody td:nth-child(4) {
+            font-weight: 600;
+            color: #000000 !important;                     /* ✅ PRETO */
+        }
+
+        #reportTable tbody td:nth-child(5) {
+            font-weight: 600;
+            color: #000000 !important;                     /* ✅ PRETO */
+        }
+
+        /* Badge para status N/D */
+        .badge-nd {
+            background-color: #ffc107;
+            color: #000;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            display: inline-block;
+        }
+
+        /* Container da tabela com padding */
+        .table-responsive {
+            padding: 20px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+            margin-top: 20px;
+        }
+
+        /* Botões de exportação estilizados */
+        .dt-buttons {
+            margin-bottom: 20px !important;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .dt-buttons .btn {
+            border-radius: 8px !important;
+            padding: 8px 16px !important;
+            font-size: 13px !important;
+            font-weight: 500 !important;
+            transition: all 0.2s ease !important;
+            border: none !important;
+        }
+
+        .dt-buttons .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+        }
+
+        /* Paginação estilizada */
+        .dataTables_wrapper .dataTables_paginate {
+            margin-top: 20px !important;
+        }
+
+        .dataTables_wrapper .dataTables_paginate .paginate_button {
+            border-radius: 6px !important;
+            margin: 0 4px !important;
+            padding: 6px 12px !important;
+            border: 1px solid #dee2e6 !important;
+            transition: all 0.2s ease;
+        }
+
+        .dataTables_wrapper .dataTables_paginate .paginate_button.current {
+            background: #0056d2 !important;
+            color: white !important;
+            border-color: #0056d2 !important;
+        }
+
+        .dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+            background: #e3f2fd !important;
+            border-color: #0056d2 !important;
+            color: #0056d2 !important;
+        }
+
+        /* Info e busca */
+        .dataTables_wrapper .dataTables_info {
+            color: #6c757d;
+            font-size: 13px;
+            padding-top: 12px;
+        }
+
+        .dataTables_wrapper .dataTables_filter input {
+            border-radius: 8px !important;
+            border: 1px solid #dee2e6 !important;
+            padding: 8px 16px !important;
+            font-size: 13px !important;
+            transition: all 0.2s ease;
+        }
+
+        .dataTables_wrapper .dataTables_filter input:focus {
+            border-color: #0056d2 !important;
+            box-shadow: 0 0 0 3px rgba(0, 86, 210, 0.1) !important;
+            outline: none !important;
+        }
+
+        /* Animação de carregamento suave */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        #reportTable tbody tr {
+            animation: fadeIn 0.3s ease;
+        }
+
+        /* Scroll horizontal suave */
+        .table-responsive {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .table-responsive::-webkit-scrollbar {
+            height: 8px;
+        }
+
+        .table-responsive::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+
+        .table-responsive::-webkit-scrollbar-thumb {
+            background: #0056d2;
+            border-radius: 10px;
+        }
+
+        .table-responsive::-webkit-scrollbar-thumb:hover {
+            background: #003d99;
+        }
+
+        /* ===================================================================
+           ESTILOS PARA IMPRESSÃO E PDF - VERSÃO PROFISSIONAL
+           =================================================================== */
+        
+        @media print {
+            /* Reset geral para impressão */
+            * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                color-adjust: exact !important;
+            }
+            
+            /* Ocultar elementos desnecessários */
+            .filters-container,
+            .export-buttons,
+            .dt-buttons,
+            .dataTables_filter,
+            .dataTables_length,
+            .dataTables_info,
+            .dataTables_paginate,
+            .btn,
+            button,
+            .navbar,
+            .sidebar,
+            header,
+            .toast-container,
+            .loading-container {
+                display: none !important;
+            }
+            
+            /* Container principal */
+            body {
+                background: white !important;
+                margin: 0;
+                padding: 20px;
+            }
+            
+            .main-wrapper,
+            .content-area {
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+            
+            /* Título do relatório */
+            .results-title {
+                font-size: 22px !important;         /* ✅ FONTE MAIOR */
+                color: #0056d2 !important;          /* ✅ AZUL */
+                margin-bottom: 20px !important;
+                text-align: center;
+                font-weight: bold;
+                page-break-after: avoid;
+            }
+            
+            /* Tabela - estilo limpo e profissional */
+            #reportTable {
+                width: 100% !important;
+                border-collapse: collapse !important;
+                page-break-inside: avoid;
+                font-size: 11px !important;        /* ✅ FONTE MAIOR */
+            }
+            
+            /* Header da tabela - cinza claro profissional (SEM ROXO!) */
+            #reportTable thead {
+                background: #f5f5f5 !important;
+                border-bottom: 2px solid #333 !important;
+            }
+            
+            #reportTable thead th {
+                background: #f5f5f5 !important;
+                color: #000000 !important;         /* ✅ PRETO */
+                font-weight: 600 !important;
+                font-size: 12px !important;        /* ✅ FONTE MAIOR */
+                padding: 10px 8px !important;
+                border: 1px solid #ddd !important;
+                text-align: left !important;
+                text-transform: uppercase;
+            }
+            
+            /* Linhas da tabela */
+            #reportTable tbody tr {
+                page-break-inside: avoid;
+                page-break-after: auto;
+                border-bottom: 1px solid #e0e0e0 !important;
+            }
+            
+            #reportTable tbody tr:nth-child(even) {
+                background: #fafafa !important;
+            }
+            
+            #reportTable tbody tr:nth-child(odd) {
+                background: white !important;
+            }
+            
+            /* Células da tabela */
+            #reportTable tbody td {
+                padding: 8px 8px !important;
+                font-size: 11px !important;        /* ✅ FONTE MAIOR */
+                color: #000000 !important;         /* ✅ PRETO */
+                border: 1px solid #e0e0e0 !important;
+                vertical-align: middle !important;
+            }
+            
+            /* Coluna de número */
+            #reportTable tbody td:first-child,
+            #reportTable thead th:first-child {
+                text-align: center !important;
+                font-weight: 600 !important;
+                width: 40px !important;
+            }
+            
+            /* Badge N/D para impressão */
+            .badge-nd {
+                background: #fff3cd !important;
+                color: #856404 !important;
+                padding: 3px 8px !important;
+                border-radius: 4px !important;
+                font-size: 10px !important;        /* ✅ FONTE MAIOR */
+                font-weight: 600 !important;
+                border: 1px solid #ffc107 !important;
+                display: inline-block !important;
+            }
+            
+            /* Ajustes de página */
+            @page {
+                size: A4 landscape;
+                margin: 15mm 10mm 15mm 10mm;
+            }
+            
+            /* Cabeçalho do relatório */
+            .page-header {
+                text-align: center;
+                margin-bottom: 20px;
+                page-break-after: avoid;
+            }
+            
+            /* Quebra de página */
+            .page-break {
+                page-break-before: always;
+            }
+            
+            /* Container da tabela */
+            .table-responsive {
+                overflow: visible !important;
+                padding: 0 !important;
+                box-shadow: none !important;
+                border-radius: 0 !important;
+            }
+            
+            /* Remover sombras */
+            * {
+                box-shadow: none !important;
+                text-shadow: none !important;
             }
         }
     </style>
@@ -745,7 +1303,7 @@ if (empty($patentesDB)) {
                         <div class="col-md-3">
                             <label class="form-label-custom">
                                 <i class="fas fa-building"></i>
-                                Corporação
+                                Tipo
                             </label>
                             <select name="corporacao" class="form-select form-select-custom select2" id="corporacao">
                                 <option value="">Todas as corporações</option>
@@ -804,7 +1362,7 @@ if (empty($patentesDB)) {
                                 <option value="nome">Nome (A-Z)</option>
                                 <option value="data">Data (Mais recente)</option>
                                 <option value="patente">Patente (Hierarquia)</option>
-                                <option value="corporacao">Corporação</option>
+                                <option value="corporacao">Tipo</option>
                             </select>
                         </div>
 
@@ -1060,8 +1618,10 @@ if (empty($patentesDB)) {
                 tableHTML += '<tr>';
                 tableHTML += `<td>${index + 1}</td>`;
                 headers.forEach(header => {
-                    const value = row[header.key] || '-';
-                    tableHTML += `<td>${formatValue(value, header.type)}</td>`;
+                    const value = row[header.key];
+                    const formattedValue = formatValue(value, header.type);
+                    const cssClass = (formattedValue === 'N/D') ? ' class="cell-nd"' : '';
+                    tableHTML += `<td${cssClass}>${formattedValue}</td>`;
                 });
                 tableHTML += '</tr>';
             });
@@ -1193,14 +1753,243 @@ if (empty($patentesDB)) {
                         extend: 'pdf',
                         text: '<i class="fas fa-file-pdf"></i> PDF',
                         className: 'btn btn-sm btn-danger',
-                        title: `Relatório_${currentReportType}_${new Date().toISOString().split('T')[0]}`,
+                        title: '', // Removido para usar messageTop
+                        messageTop: function() {
+                            // Título bonito e formatado
+                            const tipoRelatorio = document.getElementById('tipoRelatorio').value;
+                            const tipoTexto = {
+                                'desfiliacoes': 'Desfiliações',
+                                'aniversariantes': 'Aniversariantes',
+                                'novos_cadastros': 'Novos Cadastros',
+                                'indicacoes': 'Indicações'
+                            };
+                            const dataAtual = new Date().toLocaleDateString('pt-BR');
+                            return `Relatório de ${tipoTexto[tipoRelatorio] || 'Relatório'}\n${dataAtual}`;
+                        },
                         orientation: 'landscape',
-                        pageSize: 'A4'
+                        pageSize: 'A4',
+                        customize: function(doc) {
+                            // ✅ CUSTOMIZAÇÃO DO PDF - VISUAL PROFISSIONAL, LIMPO E BONITO
+                            
+                            // ✅ Título do documento - AZUL e bonito
+                            doc.content[0].text = doc.content[0].text;
+                            doc.content[0].alignment = 'center';
+                            doc.content[0].fontSize = 18;
+                            doc.content[0].bold = true;
+                            doc.content[0].margin = [0, 0, 0, 20];
+                            doc.content[0].color = '#0056d2'; // ✅ AZUL
+                            
+                            // Configurar a tabela
+                            if (doc.content[1] && doc.content[1].table) {
+                                const table = doc.content[1].table;
+                                
+                                // ✅ Estilo do header - CINZA CLARO (SEM ROXO), TEXTO PRETO, FONTE MAIOR
+                                if (table.body && table.body[0]) {
+                                    table.body[0].forEach(cell => {
+                                        cell.fillColor = '#f5f5f5';  // ✅ Cinza claro
+                                        cell.color = '#000000';      // ✅ PRETO
+                                        cell.bold = true;
+                                        cell.fontSize = 11;          // ✅ FONTE MAIOR
+                                        cell.alignment = 'left';
+                                    });
+                                    
+                                    // Primeira coluna (#) centralizada
+                                    if (table.body[0][0]) {
+                                        table.body[0][0].alignment = 'center';
+                                    }
+                                }
+                                
+                                // ✅ Estilo das linhas - alternância suave, FONTES MAIORES
+                                for (let i = 1; i < table.body.length; i++) {
+                                    const row = table.body[i];
+                                    
+                                    // Alternância de cores nas linhas
+                                    if (i % 2 === 0) {
+                                        row.forEach(cell => {
+                                            cell.fillColor = '#fafafa';  // Cinza muito claro
+                                        });
+                                    } else {
+                                        row.forEach(cell => {
+                                            cell.fillColor = '#ffffff';  // Branco
+                                        });
+                                    }
+                                    
+                                    // ✅ Estilo do texto - PRETO e FONTE MAIOR
+                                    row.forEach((cell, index) => {
+                                        cell.fontSize = 10;      // ✅ FONTE MAIOR (era 8)
+                                        cell.color = '#000000';  // ✅ PRETO
+                                        
+                                        // Primeira coluna centralizada
+                                        if (index === 0) {
+                                            cell.alignment = 'center';
+                                            cell.bold = true;
+                                        }
+                                        
+                                        // ✅ CPF em PRETO e FONTE MAIOR
+                                        if (index === 2) { // Coluna CPF
+                                            cell.color = '#000000';  // ✅ PRETO
+                                            cell.fontSize = 10;      // ✅ FONTE MAIOR
+                                        }
+                                    });
+                                }
+                                
+                                // Larguras das colunas
+                                table.widths = Array(table.body[0].length).fill('auto');
+                                
+                                // Bordas da tabela
+                                doc.content[1].layout = {
+                                    hLineWidth: function(i, node) {
+                                        if (i === 0 || i === 1) return 2;
+                                        return 0.5;
+                                    },
+                                    vLineWidth: function(i) {
+                                        return 0.5;
+                                    },
+                                    hLineColor: function(i, node) {
+                                        if (i === 0 || i === 1) return '#333333';
+                                        return '#e0e0e0';
+                                    },
+                                    vLineColor: function(i) {
+                                        return '#e0e0e0';
+                                    },
+                                    paddingLeft: function(i) { return 6; },
+                                    paddingRight: function(i) { return 6; },
+                                    paddingTop: function(i) { return 5; },
+                                    paddingBottom: function(i) { return 5; }
+                                };
+                            }
+                            
+                            // Configurações da página
+                            doc.pageMargins = [30, 50, 30, 40];
+                            doc.defaultStyle.fontSize = 10; // ✅ FONTE PADRÃO MAIOR
+                            
+                            // Rodapé com data de geração
+                            doc.footer = function(currentPage, pageCount) {
+                                return {
+                                    columns: [
+                                        {
+                                            text: `Gerado em: ${new Date().toLocaleString('pt-BR')}`,
+                                            alignment: 'left',
+                                            fontSize: 9,
+                                            color: '#666666',
+                                            margin: [30, 0]
+                                        },
+                                        {
+                                            text: `Página ${currentPage} de ${pageCount}`,
+                                            alignment: 'right',
+                                            fontSize: 9,
+                                            color: '#666666',
+                                            margin: [0, 0, 30, 0]
+                                        }
+                                    ]
+                                };
+                            };
+                        }
                     },
                     {
                         extend: 'print',
                         text: '<i class="fas fa-print"></i> Imprimir',
-                        className: 'btn btn-sm btn-info'
+                        className: 'btn btn-sm btn-info',
+                        title: '',
+                        messageTop: function() {
+                            const tipoRelatorio = document.getElementById('tipoRelatorio').value;
+                            const tipoTexto = {
+                                'desfiliacoes': 'Desfiliações',
+                                'aniversariantes': 'Aniversariantes',
+                                'novos_cadastros': 'Novos Cadastros',
+                                'indicacoes': 'Indicações'
+                            };
+                            const dataAtual = new Date().toLocaleDateString('pt-BR');
+                            // ✅ TÍTULO BONITO EM AZUL
+                            return `<h2 style="text-align: center; margin-bottom: 25px; color: #0056d2; font-weight: bold; font-size: 22px;">
+                                        Relatório de ${tipoTexto[tipoRelatorio] || 'Relatório'}
+                                    </h2>
+                                    <p style="text-align: center; margin-bottom: 20px; color: #666; font-size: 14px;">
+                                        ${dataAtual}
+                                    </p>`;
+                        },
+                        customize: function(win) {
+                            // ✅ CUSTOMIZAÇÃO DA IMPRESSÃO - BONITO, LIMPO E PROFISSIONAL
+                            
+                            $(win.document.body).css({
+                                'background': 'white',
+                                'padding': '20px',
+                                'font-family': 'Arial, sans-serif'
+                            });
+                            
+                            // ✅ Estilo da tabela - FONTES MAIORES
+                            $(win.document.body).find('table')
+                                .addClass('compact')
+                                .css({
+                                    'font-size': '11px',      // ✅ FONTE MAIOR
+                                    'border-collapse': 'collapse',
+                                    'width': '100%',
+                                    'margin-top': '20px'
+                                });
+                            
+                            // ✅ Header da tabela - CINZA CLARO (SEM ROXO!), PRETO, FONTE MAIOR
+                            $(win.document.body).find('table thead tr')
+                                .css({
+                                    'background': '#f5f5f5',
+                                    'border-bottom': '2px solid #333'
+                                });
+                            
+                            $(win.document.body).find('table thead th')
+                                .css({
+                                    'background': '#f5f5f5',
+                                    'color': '#000000',      // ✅ PRETO
+                                    'font-weight': '600',
+                                    'font-size': '12px',     // ✅ FONTE MAIOR
+                                    'padding': '10px 8px',
+                                    'border': '1px solid #ddd',
+                                    'text-align': 'left',
+                                    'text-transform': 'uppercase'
+                                });
+                            
+                            // ✅ Linhas da tabela - alternância suave
+                            $(win.document.body).find('table tbody tr:even')
+                                .css('background', '#fafafa');
+                            
+                            $(win.document.body).find('table tbody tr:odd')
+                                .css('background', 'white');
+                            
+                            // ✅ Células da tabela - PRETO e FONTE MAIOR
+                            $(win.document.body).find('table tbody td')
+                                .css({
+                                    'padding': '8px 8px',
+                                    'font-size': '11px',     // ✅ FONTE MAIOR
+                                    'color': '#000000',      // ✅ PRETO
+                                    'border': '1px solid #e0e0e0',
+                                    'vertical-align': 'middle'
+                                });
+                            
+                            // ✅ CPF em PRETO
+                            $(win.document.body).find('table tbody td:nth-child(3)')
+                                .css({
+                                    'color': '#000000',      // ✅ PRETO
+                                    'font-size': '11px'      // ✅ FONTE MAIOR
+                                });
+                            
+                            // Primeira coluna centralizada
+                            $(win.document.body).find('table tbody td:first-child, table thead th:first-child')
+                                .css({
+                                    'text-align': 'center',
+                                    'font-weight': '600'
+                                });
+                            
+                            // Badge N/D para impressão
+                            $(win.document.body).find('.badge-nd')
+                                .css({
+                                    'background': '#fff3cd',
+                                    'color': '#856404',
+                                    'padding': '3px 8px',
+                                    'border-radius': '4px',
+                                    'font-size': '10px',
+                                    'font-weight': '600',
+                                    'border': '1px solid #ffc107',
+                                    'display': 'inline-block'
+                                });
+                        }
                     }
                 ]
             });
@@ -1239,7 +2028,19 @@ if (empty($patentesDB)) {
 
         // Formatar valores
         function formatValue(value, type) {
-            if (!value || value === null || value === '' || value === undefined) return '-';
+            // Tratamento completo de valores inválidos
+            if (!value || 
+                value === null || 
+                value === '' || 
+                value === undefined ||
+                value === 'null' ||
+                value === 'undefined' ||
+                value === 'undefined//' ||
+                String(value).toLowerCase() === 'null' ||
+                String(value).toLowerCase() === 'undefined' ||
+                String(value).includes('undefined')) {
+                return 'N/D';
+            }
 
             switch (type) {
                 case 'date':
@@ -1250,18 +2051,46 @@ if (empty($patentesDB)) {
                     return formatPhone(value);
                 case 'number':
                     const num = parseInt(value);
-                    if (isNaN(num)) return '0';
+                    if (isNaN(num)) return 'N/D';
                     return num.toLocaleString('pt-BR');
                 default:
-                    return value || '-';
+                    return value || 'N/D';
             }
         }
 
         // Formatar data
         function formatDate(date) {
-            if (!date || date === '0000-00-00' || date === '') return '-';
-            const [year, month, day] = date.split('-');
-            return `${day}/${month}/${year}`;
+            // ✅ CORREÇÃO: Tratar todos os casos de data inválida ou ausente
+            if (!date || 
+                date === '0000-00-00' || 
+                date === '' || 
+                date === 'N/D' || 
+                date === null || 
+                date === undefined ||
+                date === 'null' ||
+                date === 'undefined' ||
+                date === 'undefined//' ||
+                String(date).toLowerCase() === 'null' ||
+                String(date).toLowerCase() === 'undefined' ||
+                String(date).includes('undefined')) {
+                return '<span class="badge-nd">N/D</span>';
+            }
+            
+            // Converter para string caso não seja
+            date = String(date);
+            
+            // Se já estiver no formato dd/mm/yyyy, retornar como está
+            if (date.includes('/') && !date.includes('undefined')) return date;
+            
+            // Se estiver no formato yyyy-mm-dd, converter
+            if (date.includes('-')) {
+                const [year, month, day] = date.split('-');
+                if (year && month && day && year !== '0000') {
+                    return `${day}/${month}/${year}`;
+                }
+            }
+            
+            return '<span class="badge-nd">N/D</span>';
         }
 
         // Formatar CPF
