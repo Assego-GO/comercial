@@ -518,11 +518,18 @@ $headerComponent = HeaderComponent::create([
                             <option value="">Todos</option>
                             <option value="Filiado">Filiado</option>
                             <option value="Desfiliado">Desfiliado</option>
-                            <option value="Remido">Remido</option>
-                            <option value="Agregado">Agregado</option>
                         </select>
                     </div>
 
+                    <!-- NOVO FILTRO 2: Tipo Associado (Contribuinte, Agregado, etc) -->
+                    <div class="filter-group">
+                        <label class="filter-label">Tipo Associado</label>
+                        <select class="filter-select" id="filterTipoAssociado">
+                            <option value="">Todos</option>
+                            <!-- Será preenchido dinamicamente -->
+                        </select>
+                    </div>
+                    
                     <div class="filter-group">
                         <label class="filter-label">Corporação</label>
                         <select class="filter-select" id="filterCorporacao">
@@ -699,22 +706,29 @@ $headerComponent = HeaderComponent::create([
                 <!-- Visão Geral Tab -->
                 <div id="overview-tab" class="tab-content active">
                     <!-- Conteúdo será inserido dinamicamente -->
-                    
+
                     <!-- NOVA SEÇÃO: Observações Recentes -->
-                    <div class="observacoes-overview-section" style="margin-top: 2rem; padding: 1rem 2rem; border-top: 1px solid #e5e7eb;">
-                        <div class="observacoes-overview-header" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid #e5e7eb;">
+                    <div class="observacoes-overview-section"
+                        style="margin-top: 2rem; padding: 1rem 2rem; border-top: 1px solid #e5e7eb;">
+                        <div class="observacoes-overview-header"
+                            style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid #e5e7eb;">
                             <div style="display: flex; align-items: center; gap: 0.75rem;">
-                                <div style="width: 36px; height: 36px; background: linear-gradient(135deg, #7c3aed, #5b21b6); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white;">
+                                <div
+                                    style="width: 36px; height: 36px; background: linear-gradient(135deg, #7c3aed, #5b21b6); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white;">
                                     <i class="fas fa-sticky-note"></i>
                                 </div>
                                 <h4 style="margin: 0; color: #1f2937; font-weight: 600;">Observações Recentes</h4>
                             </div>
-                            <button onclick="abrirModalNovaObservacao()" style="background: #7c3aed; color: white; border: none; padding: 0.5rem; border-radius: 6px; cursor: pointer; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;" title="Nova Observação">
+                            <button onclick="abrirModalNovaObservacao()"
+                                style="background: #7c3aed; color: white; border: none; padding: 0.5rem; border-radius: 6px; cursor: pointer; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;"
+                                title="Nova Observação">
                                 <i class="fas fa-plus"></i>
                             </button>
                         </div>
-                        <div id="overviewObservacoes" style="background: #f9fafb; border-radius: 8px; padding: 1rem; min-height: 100px;">
-                            <div style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 2rem; color: #6b7280;">
+                        <div id="overviewObservacoes"
+                            style="background: #f9fafb; border-radius: 8px; padding: 1rem; min-height: 100px;">
+                            <div
+                                style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 2rem; color: #6b7280;">
                                 <i class="fas fa-spinner fa-spin"></i>
                                 <span>Carregando observações...</span>
                             </div>
@@ -1045,7 +1059,7 @@ $headerComponent = HeaderComponent::create([
     <!-- CSS e JavaScript inline -->
     <style>
         /* === ESTILOS COMPLETOS DOS CARDS COM GRÁFICOS DE PIZZA RESPONSIVOS === */
-        
+
         /* Card Principal */
         .dual-stat-card {
             position: relative;
@@ -1213,14 +1227,14 @@ $headerComponent = HeaderComponent::create([
         }
 
         /* === GRÁFICOS DE PIZZA RESPONSIVOS COM 3 FATIAS === */
-        
+
         /* Configuração específica para cards com gráficos */
         .corporacoes-pie .triple-stats-row,
         .associados-pie .dual-stats-row,
         .distribuicao-pie .dual-stats-row {
             min-height: 140px;
         }
-        
+
         /* Container do gráfico pizza - escondido por padrão */
         .pie-chart-container {
             position: absolute;
@@ -1332,7 +1346,8 @@ $headerComponent = HeaderComponent::create([
 
         /* BOTÃO TOGGLE PARA MOBILE */
         .chart-toggle-btn {
-            display: none; /* Escondido por padrão */
+            display: none;
+            /* Escondido por padrão */
             align-items: center;
             gap: 0.5rem;
             background: var(--primary);
@@ -1369,11 +1384,12 @@ $headerComponent = HeaderComponent::create([
 
         /* === MOBILE: GRÁFICOS CLICÁVEIS === */
         @media (max-width: 768px) {
+
             /* Mostrar botões toggle apenas no mobile */
             .chart-toggle-btn {
                 display: inline-flex !important;
             }
-            
+
             /* Esconder gráficos por padrão no mobile */
             .pie-chart-container {
                 position: static !important;
@@ -1396,7 +1412,7 @@ $headerComponent = HeaderComponent::create([
                 height: 0;
                 transition: all 0.3s ease;
             }
-            
+
             /* Mostrar gráfico quando ativo */
             .pie-chart-container.active {
                 opacity: 1 !important;
@@ -1405,7 +1421,7 @@ $headerComponent = HeaderComponent::create([
                 height: auto;
                 margin-top: 0.75rem;
             }
-            
+
             /* SVG no mobile */
             .pie-chart {
                 width: 100px !important;
@@ -1418,7 +1434,7 @@ $headerComponent = HeaderComponent::create([
                 display: block !important;
                 flex-shrink: 0;
             }
-            
+
             /* Layout dos items no mobile */
             .dual-stat-item {
                 padding: 1.25rem !important;
@@ -1433,7 +1449,7 @@ $headerComponent = HeaderComponent::create([
                 box-sizing: border-box;
                 position: relative;
             }
-            
+
             .dual-stat-info {
                 display: flex !important;
                 flex-direction: column !important;
@@ -1442,7 +1458,7 @@ $headerComponent = HeaderComponent::create([
                 width: 100%;
                 margin-bottom: 0.5rem;
             }
-            
+
             .dual-stats-row {
                 flex-direction: column;
                 min-height: auto;
@@ -1485,15 +1501,16 @@ $headerComponent = HeaderComponent::create([
                 align-items: center !important;
                 text-align: center !important;
             }
-            
+
             /* Containers dos stats no mobile */
             .stats-grid {
                 grid-template-columns: 1fr !important;
                 gap: 1rem !important;
                 padding: 0 0.5rem;
             }
-            
-            .dual-stat-card, .triple-stat-card {
+
+            .dual-stat-card,
+            .triple-stat-card {
                 margin: 0 auto;
                 max-width: 100%;
                 overflow: hidden;
@@ -1507,7 +1524,7 @@ $headerComponent = HeaderComponent::create([
                 min-width: 160px !important;
                 padding: 0.5rem !important;
             }
-            
+
             .pie-chart {
                 width: 90px !important;
                 height: 90px !important;
@@ -1516,11 +1533,11 @@ $headerComponent = HeaderComponent::create([
                 min-width: 90px !important;
                 min-height: 90px !important;
             }
-            
+
             .dual-stat-value {
                 font-size: 1.25rem !important;
             }
-            
+
             .dual-stat-icon {
                 width: 40px !important;
                 height: 40px !important;
@@ -1535,7 +1552,7 @@ $headerComponent = HeaderComponent::create([
                 min-width: 140px !important;
                 padding: 0.375rem !important;
             }
-            
+
             .pie-chart {
                 width: 80px !important;
                 height: 80px !important;
@@ -1544,15 +1561,15 @@ $headerComponent = HeaderComponent::create([
                 min-width: 80px !important;
                 min-height: 80px !important;
             }
-            
+
             .pie-legend {
                 font-size: 0.65rem !important;
             }
-            
+
             .legend-item {
                 gap: 0.25rem !important;
             }
-            
+
             .color-dot {
                 width: 6px !important;
                 height: 6px !important;
@@ -1673,9 +1690,12 @@ $headerComponent = HeaderComponent::create([
 
         /* Animações */
         @keyframes float {
-            0%, 100% {
+
+            0%,
+            100% {
                 transform: translateY(0);
             }
+
             50% {
                 transform: translateY(-3px);
             }
@@ -1792,7 +1812,7 @@ $headerComponent = HeaderComponent::create([
         function toggleChart(button, chartType) {
             const chartContainer = button.parentElement.querySelector('.pie-chart-container');
             const isActive = chartContainer.classList.contains('active');
-            
+
             if (isActive) {
                 // Esconder gráfico
                 chartContainer.classList.remove('active');
@@ -1803,7 +1823,7 @@ $headerComponent = HeaderComponent::create([
                 chartContainer.classList.add('active');
                 button.classList.add('active');
                 button.innerHTML = '<i class="fas fa-eye-slash"></i> Ocultar';
-                
+
                 // Animar o gráfico quando mostrar
                 setTimeout(() => {
                     const chartData = getChartData(chartType);
@@ -1819,7 +1839,7 @@ $headerComponent = HeaderComponent::create([
             const ativa = parseInt(document.getElementById(`${chartType}Ativa`)?.textContent || '0');
             const reserva = parseInt(document.getElementById(`${chartType}Reserva`)?.textContent || '0');
             const pensionista = parseInt(document.getElementById(`${chartType}Pensionista`)?.textContent || '0');
-            
+
             return { ativa, reserva, pensionista };
         }
 
@@ -2028,7 +2048,7 @@ $headerComponent = HeaderComponent::create([
 
                         document.getElementById('capitalPercent').textContent = `${stats.capital_percentual}%`;
                         document.getElementById('interiorPercent').textContent = `${stats.interior_percentual}%`;
-                        
+
                         // ANIMAR GRÁFICOS - VERSÃO COMBINADA
                         // Desktop: anima automaticamente
                         // Mobile: só anima quando o usuário clicar no botão toggle
@@ -2038,21 +2058,21 @@ $headerComponent = HeaderComponent::create([
                                 // Card 1: Associados
                                 animarGraficoPizza('ativos', associadosAtiva, associadosReserva, associadosPensionista);
                                 animarGraficoPizza('novos', novosAtiva, novosReserva, novosPensionista);
-                                
+
                                 // Card 2: Corporações
                                 animarGraficoPizza('pm', pmAtiva, pmReserva, pmPensionista);
                                 animarGraficoPizza('bm', bmAtiva, bmReserva, bmPensionista);
                                 animarGraficoPizza('outros', outrosAtiva, outrosReserva, outrosPensionista);
-                                
+
                                 // Card 3: Distribuição
                                 animarGraficoPizza('capital', capitalAtiva, capitalReserva, capitalPensionista);
                                 animarGraficoPizza('interior', interiorAtiva, interiorReserva, interiorPensionista);
                             }, 500);
                         }
                         // No mobile, os gráficos só serão animados quando o usuário clicar no botão toggle
-                        
+
                         console.log('Estatísticas carregadas com gráficos de pizza 3 fatias responsivos:', stats);
-                        
+
                     } else {
                         console.error('Erro ao carregar estatísticas:', data.message);
                     }
@@ -2093,7 +2113,7 @@ $headerComponent = HeaderComponent::create([
         function carregarObservacoesVisaoGeral(associadoId) {
             const container = document.getElementById('overviewObservacoes');
             if (!container) return;
-            
+
             // Mostrar loading
             container.innerHTML = `
                 <div style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 2rem; color: #6b7280;">
@@ -2108,7 +2128,7 @@ $headerComponent = HeaderComponent::create([
                 .then(data => {
                     if (data.status === 'success') {
                         const observacoes = data.data || [];
-                        
+
                         // Atualizar contador na aba de observações
                         const countBadge = document.getElementById('observacoesCountBadge');
                         if (countBadge) {
@@ -2123,7 +2143,7 @@ $headerComponent = HeaderComponent::create([
 
                         // Renderizar observações na visão geral (apenas as 3 mais recentes)
                         renderizarObservacoesSimples(observacoes.slice(0, 3), observacoes.length);
-                        
+
                     } else {
                         container.innerHTML = `
                             <div style="text-align: center; padding: 2rem; color: #9ca3af;">
@@ -2147,7 +2167,7 @@ $headerComponent = HeaderComponent::create([
         // NOVA FUNÇÃO: Renderizar observações simples
         function renderizarObservacoesSimples(observacoes, totalObservacoes) {
             const container = document.getElementById('overviewObservacoes');
-            
+
             if (!observacoes || observacoes.length === 0) {
                 container.innerHTML = `
                     <div style="text-align: center; padding: 2rem; color: #9ca3af;">
@@ -2159,10 +2179,10 @@ $headerComponent = HeaderComponent::create([
             }
 
             let html = '';
-            
+
             observacoes.forEach(obs => {
                 const dataFormatada = formatarDataSimples(obs.data_criacao);
-                
+
                 html += `
                     <div class="observacao-item-overview">
                         <div class="observacao-header-overview">
@@ -2200,7 +2220,7 @@ $headerComponent = HeaderComponent::create([
         // Funções auxiliares simples
         function formatarDataSimples(dataStr) {
             if (!dataStr) return 'Data não informada';
-            
+
             try {
                 const data = new Date(dataStr);
                 const agora = new Date();
@@ -2213,7 +2233,7 @@ $headerComponent = HeaderComponent::create([
                 if (diffMins < 60) return `${diffMins}min atrás`;
                 if (diffHoras < 24) return `${diffHoras}h atrás`;
                 if (diffDias < 7) return `${diffDias}d atrás`;
-                
+
                 return data.toLocaleDateString('pt-BR');
             } catch (e) {
                 return 'Data inválida';
@@ -2232,18 +2252,18 @@ $headerComponent = HeaderComponent::create([
             document.querySelectorAll('.tab-content').forEach(tab => {
                 tab.classList.remove('active');
             });
-            
+
             // Remover classe active dos botões
             document.querySelectorAll('.tab-button').forEach(btn => {
                 btn.classList.remove('active');
             });
-            
+
             // Mostrar a aba selecionada
             document.getElementById(tabName + '-tab').classList.add('active');
-            
+
             // Ativar o botão correspondente
             document.querySelector(`[onclick="abrirTab('${tabName}')"]`).classList.add('active');
-            
+
             // Se for a aba overview e temos um associado, carregar observações
             if (tabName === 'overview' && associadoAtual) {
                 carregarObservacoesVisaoGeral(associadoAtual.id);

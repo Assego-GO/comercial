@@ -2,7 +2,13 @@
 /**
  * Script OTIMIZADO para carregar dados dos associados
  * api/carregar_associados.php
- * VERSÃO COM PAGINAÇÃO E CARREGAMENTO INTELIGENTE
+ * 
+ * VERSÃO CORRIGIDA - Com filtro de tipo_associado funcionando corretamente
+ * 
+ * MUDANÇAS PRINCIPAIS:
+ * 1. Aceita parâmetro GET 'tipo_associado' para filtrar no servidor
+ * 2. Usa INNER JOIN com Servicos_Associado quando filtro está ativo
+ * 3. Retorna contagem correta de registros filtrados
  */
 
 // Desabilita erros de exibição
@@ -101,26 +107,56 @@ try {
         ]
     );
 
-    // 🚀 NOVIDADE: Parâmetros de paginação
+    // Parâmetros de paginação
     $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
     $limit = isset($_GET['limit']) ? min(500, max(10, intval($_GET['limit']))) : 100;
-    $loadType = $_GET['load_type'] ?? 'initial'; // 'initial', 'page', 'all'
+    $loadType = $_GET['load_type'] ?? 'initial';
+    
+    // NOVO: Parâmetro de filtro por tipo_associado
+    $filterTipoAssociado = isset($_GET['tipo_associado']) ? trim($_GET['tipo_associado']) : '';
     
     $offset = ($page - 1) * $limit;
 
-    // Conta o total de registros (uma vez só)
-    $countStmt = $pdo->query("SELECT COUNT(*) as total FROM Associados WHERE pre_cadastro = 0");
+    // CORREÇÃO PRINCIPAL: A query agora usa JOIN para filtrar corretamente por tipo_associado
+    // quando o filtro está ativo
+    
+    $whereConditions = ["a.pre_cadastro = 0"];
+    $joinServicos = "";
+    $params = [];
+    
+    // Se tiver filtro de tipo_associado, fazer JOIN com Servicos_Associado
+    if (!empty($filterTipoAssociado)) {
+        $joinServicos = "INNER JOIN Servicos_Associado sa ON a.id = sa.associado_id AND sa.ativo = 1";
+        $whereConditions[] = "sa.tipo_associado = :tipo_associado";
+        $params[':tipo_associado'] = $filterTipoAssociado;
+    }
+    
+    $whereClause = implode(' AND ', $whereConditions);
+
+    // Conta o total de registros COM o filtro aplicado
+    $countSql = "
+        SELECT COUNT(DISTINCT a.id) as total 
+        FROM Associados a
+        $joinServicos
+        WHERE $whereClause
+    ";
+    
+    $countStmt = $pdo->prepare($countSql);
+    foreach ($params as $key => $value) {
+        $countStmt->bindValue($key, $value);
+    }
+    $countStmt->execute();
     $totalRegistros = $countStmt->fetch()['total'];
 
-    // 🚀 QUERY OTIMIZADA: Remove dados desnecessários para listagem
+    // Define o limite
     if ($loadType === 'all') {
-        // Carrega todos (para compatibilidade com código existente)
         $sqlLimit = "LIMIT 15000";
     } else {
-        // Carrega apenas a página solicitada
         $sqlLimit = "LIMIT $limit OFFSET $offset";
     }
 
+    // QUERY PRINCIPAL CORRIGIDA
+    // Usa DISTINCT para evitar duplicatas quando há múltiplos serviços
     $sql = "
     SELECT DISTINCT
         a.id,
@@ -130,23 +166,39 @@ try {
         a.telefone,
         a.foto,
         COALESCE(a.situacao, 'Desfiliado') as situacao,
-        -- Dados básicos apenas para listagem
         m.corporacao,
         m.patente,
-        c.dataFiliacao as data_filiacao
+        c.dataFiliacao as data_filiacao,
+        -- Busca o tipo_associado (se filtro ativo, já está no JOIN)
+        " . (empty($filterTipoAssociado) ? "
+        (SELECT sa2.tipo_associado 
+         FROM Servicos_Associado sa2 
+         WHERE sa2.associado_id = a.id AND sa2.ativo = 1 
+         ORDER BY sa2.id DESC LIMIT 1) as tipo_associado
+        " : "sa.tipo_associado as tipo_associado") . "
     FROM Associados a
     LEFT JOIN Militar m ON a.id = m.associado_id
     LEFT JOIN Contrato c ON a.id = c.associado_id
-    WHERE a.pre_cadastro = 0
+    $joinServicos
+    WHERE $whereClause
     ORDER BY a.id DESC
     $sqlLimit
     ";
 
-    $stmt = $pdo->query($sql);
+    $stmt = $pdo->prepare($sql);
+    foreach ($params as $key => $value) {
+        $stmt->bindValue($key, $value);
+    }
+    $stmt->execute();
+    
     $dados = [];
     $associadosIds = [];
 
     while ($row = $stmt->fetch()) {
+        // Evita duplicatas por ID
+        if (in_array($row['id'], $associadosIds)) {
+            continue;
+        }
         $associadosIds[] = $row['id'];
         
         $dados[] = [
@@ -160,17 +212,18 @@ try {
             'patente' => $row['patente'] ?? '',
             'data_filiacao' => $row['data_filiacao'] ?? '',
             'foto' => $row['foto'] ?? '',
-            // 🚀 Dados extras carregados sob demanda
+            'tipo_associado' => $row['tipo_associado'] ?? '',
             'detalhes_carregados' => false
         ];
     }
 
-    // 🚀 Se for carregamento inicial, também busca os filtros
+    // Busca os filtros disponíveis
     $corporacoes = [];
     $patentes = [];
+    $tiposAssociado = [];
     
     if ($loadType === 'initial' || $loadType === 'all') {
-        // Busca corporações únicas (otimizado)
+        // Busca corporações únicas
         $sqlCorp = "SELECT DISTINCT corporacao FROM Militar WHERE corporacao IS NOT NULL AND corporacao != '' ORDER BY corporacao";
         $stmtCorp = $pdo->query($sqlCorp);
         while ($corp = $stmtCorp->fetch()) {
@@ -181,7 +234,7 @@ try {
         $corporacoes = array_unique($corporacoes);
         sort($corporacoes);
 
-        // Busca patentes únicas (otimizado)
+        // Busca patentes únicas
         $sqlPat = "SELECT DISTINCT patente FROM Militar WHERE patente IS NOT NULL AND patente != '' ORDER BY patente";
         $stmtPat = $pdo->query($sqlPat);
         while ($pat = $stmtPat->fetch()) {
@@ -190,6 +243,26 @@ try {
             }
         }
         sort($patentes);
+
+        // CORREÇÃO: Busca tipos de associado únicos - conta quantos associados tem cada tipo
+        $sqlTipos = "
+            SELECT DISTINCT sa.tipo_associado, COUNT(DISTINCT sa.associado_id) as total
+            FROM Servicos_Associado sa 
+            WHERE sa.tipo_associado IS NOT NULL 
+              AND sa.tipo_associado != '' 
+              AND sa.ativo = 1 
+            GROUP BY sa.tipo_associado
+            ORDER BY sa.tipo_associado
+        ";
+        $stmtTipos = $pdo->query($sqlTipos);
+        while ($tipo = $stmtTipos->fetch()) {
+            if (!empty($tipo['tipo_associado'])) {
+                $tiposAssociado[] = [
+                    'valor' => $tipo['tipo_associado'],
+                    'total' => $tipo['total']
+                ];
+            }
+        }
     }
 
     $response = [
@@ -202,6 +275,7 @@ try {
         'has_next' => ($offset + $limit) < $totalRegistros,
         'dados' => $dados,
         'load_type' => $loadType,
+        'filtro_tipo_associado' => $filterTipoAssociado, // DEBUG: mostra o filtro aplicado
         'timestamp' => date('Y-m-d H:i:s')
     ];
 
@@ -209,6 +283,8 @@ try {
     if ($loadType === 'initial' || $loadType === 'all') {
         $response['corporacoes_unicas'] = $corporacoes;
         $response['patentes_unicas'] = $patentes;
+        $response['tipos_associado_unicos'] = array_column($tiposAssociado, 'valor');
+        $response['tipos_associado_contagem'] = $tiposAssociado; // Com contagem
     }
 
     sendResponse($response);
