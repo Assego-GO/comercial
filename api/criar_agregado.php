@@ -1,7 +1,8 @@
 <?php
 /**
- * API para Criar/Atualizar Sócio Agregado - VERIFICAÇÃO POR CPF
+ * API para Criar/Atualizar Sócio Agregado - COM SALVAMENTO DE DOCUMENTO
  * api/criar_agregado.php
+ * ✅ VERSÃO FINAL COMPLETA
  */
 
 header('Content-Type: application/json; charset=utf-8');
@@ -61,8 +62,39 @@ try {
     logError("=== INÍCIO CRIAR/ATUALIZAR AGREGADO ===");
     
     $dadosRecebidos = $_POST;
+    
+    logError("📦 Campos de data recebidos:", [
+        'nasc' => $dadosRecebidos['nasc'] ?? 'VAZIO',
+        'dataNascimento' => $dadosRecebidos['dataNascimento'] ?? 'VAZIO',
+        'data_nascimento' => $dadosRecebidos['data_nascimento'] ?? 'VAZIO'
+    ]);
+    
     $dados = limparDados($dadosRecebidos);
-    unset($dados['id']); // Remove ID se vier
+    unset($dados['id']);
+    
+    // =============================
+    // COMPATIBILIDADE DE CAMPOS
+    // =============================
+    
+    if (empty($dados['dataNascimento']) && !empty($dados['nasc'])) {
+        $dados['dataNascimento'] = $dados['nasc'];
+        logError("✓ Campo 'nasc' convertido para 'dataNascimento'");
+    }
+    
+    if (empty($dados['dataNascimento']) && !empty($dados['data_nascimento'])) {
+        $dados['dataNascimento'] = $dados['data_nascimento'];
+        logError("✓ Campo 'data_nascimento' convertido para 'dataNascimento'");
+    }
+    
+    if (empty($dados['celular']) && !empty($dados['telefone'])) {
+        $dados['celular'] = $dados['telefone'];
+        logError("✓ Campo 'telefone' copiado para 'celular'");
+    }
+    
+    if (empty($dados['telefone']) && !empty($dados['celular'])) {
+        $dados['telefone'] = $dados['celular'];
+        logError("✓ Campo 'celular' copiado para 'telefone'");
+    }
     
     $db = Database::getInstance(DB_NAME_CADASTRO)->getConnection();
     
@@ -115,13 +147,12 @@ try {
         exit;
     }
     
-    // Sobrescreve com dados do banco
     $dados['socioTitularNome'] = $titular['nome'];
     $dados['socioTitularCpf'] = $titular['cpf'];
     $dados['socioTitularFone'] = $titular['telefone'] ?? '';
     $dados['socioTitularEmail'] = $titular['email'] ?? '';
     
-    logError("✓ Titular validado", ['nome' => $titular['nome'], 'cpf' => $titular['cpf']]);
+    logError("✓ Titular validado", ['nome' => $titular['nome']]);
     
     // =============================
     // VALIDAÇÕES OBRIGATÓRIAS
@@ -138,11 +169,7 @@ try {
         'endereco' => 'Endereço',
         'numero' => 'Número',
         'bairro' => 'Bairro',
-        'cidade' => 'Cidade',
-        'estado' => 'Estado',
-        'banco' => 'Banco',
-        'agencia' => 'Agência',
-        'contaCorrente' => 'Conta corrente'
+        'cidade' => 'Cidade'
     ];
     
     $errosValidacao = [];
@@ -150,7 +177,27 @@ try {
     foreach ($camposObrigatorios as $campo => $nomeCampo) {
         if (empty($dados[$campo])) {
             $errosValidacao[] = "Campo obrigatório: {$nomeCampo}";
+            logError("❌ Campo vazio: $campo");
         }
+    }
+    
+    if (empty($dados['estado'])) {
+        $dados['estado'] = 'GO';
+        logError("✓ Estado preenchido automaticamente como 'GO'");
+    }
+    
+    if (empty($dados['banco'])) {
+        $dados['banco'] = 'Não informado';
+    }
+    if (empty($dados['agencia'])) {
+        $dados['agencia'] = '';
+    }
+    if (empty($dados['contaCorrente'])) {
+        $dados['contaCorrente'] = '';
+    }
+    
+    if (($dados['banco'] ?? '') === 'outro' && empty($dados['bancoOutroNome'])) {
+        $errosValidacao[] = "Nome do banco obrigatório quando 'Outro'";
     }
     
     if (!empty($dados['cpf']) && !validarCPF($dados['cpf'])) {
@@ -161,11 +208,8 @@ try {
         $errosValidacao[] = "E-mail inválido";
     }
     
-    if (($dados['banco'] ?? '') === 'outro' && empty($dados['bancoOutroNome'])) {
-        $errosValidacao[] = "Nome do banco obrigatório quando 'Outro'";
-    }
-    
     if (!empty($errosValidacao)) {
+        logError("❌ Validação falhou", $errosValidacao);
         http_response_code(400);
         echo json_encode([
             'status' => 'error',
@@ -209,7 +253,7 @@ try {
     }
     
     // =============================
-    // ✅ VERIFICA SE JÁ EXISTE PELO CPF DO AGREGADO
+    // VERIFICA SE JÁ EXISTE
     // =============================
     
     $cpfAgregado = $dados['cpf'];
@@ -225,20 +269,11 @@ try {
     $agregadoId = null;
     
     if ($agregadoExistente) {
-        // ✅ JÁ EXISTE - MODO UPDATE
         $isUpdate = true;
         $agregadoId = $agregadoExistente['id'];
-        logError("✓ Agregado JÁ EXISTE em Socios_Agregados", [
-            'id' => $agregadoId,
-            'nome' => $agregadoExistente['nome'],
-            'modo' => 'UPDATE'
-        ]);
+        logError("✓ Modo UPDATE - ID: " . $agregadoId);
     } else {
-        // ✅ NÃO EXISTE - MODO CREATE
-        logError("✓ Agregado NÃO EXISTE em Socios_Agregados", [
-            'cpf' => $cpfAgregado,
-            'modo' => 'CREATE'
-        ]);
+        logError("✓ Modo CREATE");
     }
     
     // =============================
@@ -277,9 +312,6 @@ try {
     // =============================
     
     if ($isUpdate) {
-        // ===== UPDATE =====
-        logError("🔄 EXECUTANDO UPDATE", ['id' => $agregadoId]);
-        
         $sql = "UPDATE Socios_Agregados SET 
             nome = :nome, data_nascimento = :data_nascimento,
             telefone = :telefone, celular = :celular, email = :email,
@@ -303,12 +335,9 @@ try {
             throw new Exception('Erro ao atualizar agregado');
         }
         
-        logError("✅ AGREGADO ATUALIZADO COM SUCESSO", ['id' => $agregadoId]);
+        logError("✅ Agregado atualizado - ID: " . $agregadoId);
         
     } else {
-        // ===== CREATE =====
-        logError("➕ EXECUTANDO INSERT (CRIANDO NOVO AGREGADO)");
-        
         $sql = "INSERT INTO Socios_Agregados (
             nome, data_nascimento, telefone, celular, email, cpf, documento,
             estado_civil, data_filiacao,
@@ -334,11 +363,7 @@ try {
         }
         
         $agregadoId = $db->lastInsertId();
-        logError("✅ AGREGADO CRIADO COM SUCESSO", [
-            'id' => $agregadoId,
-            'nome' => $dados['nome'],
-            'cpf' => $cpfAgregado
-        ]);
+        logError("✅ Agregado criado - ID: " . $agregadoId);
     }
     
     // =============================
@@ -353,7 +378,7 @@ try {
         $resultadoJson = $jsonManager->salvarAgregadoJson($dados, $agregadoId, $operacao);
         
         if ($resultadoJson['sucesso']) {
-            logError("✓ JSON salvo: " . $resultadoJson['arquivo_individual']);
+            logError("✓ JSON salvo");
         }
     } catch (Exception $e) {
         $resultadoJson = ['sucesso' => false, 'erro' => $e->getMessage()];
@@ -381,19 +406,64 @@ try {
     }
     
     // =============================
-    // BUSCA DADOS FINAIS
+    // 🆕 SALVA DOCUMENTO (FICHA)
     // =============================
     
-    $stmtConsulta = $db->prepare("
-        SELECT id, nome, cpf, telefone, celular, email,
-               socio_titular_nome, socio_titular_cpf, valor_contribuicao,
-               data_filiacao, situacao,
-               JSON_LENGTH(COALESCE(dependentes, '[]')) as total_dependentes
-        FROM Socios_Agregados 
-        WHERE id = ? AND ativo = 1
-    ");
-    $stmtConsulta->execute([$agregadoId]);
-    $dadosFinais = $stmtConsulta->fetch(PDO::FETCH_ASSOC);
+    $documentoId = null;
+    
+    if (isset($_FILES['ficha_assinada']) && $_FILES['ficha_assinada']['error'] === UPLOAD_ERR_OK) {
+        try {
+            logError("📄 Processando upload da ficha assinada");
+            
+            // Upload do arquivo
+            $uploadDir = '../uploads/fichas_agregados/';
+            if (!file_exists($uploadDir)) {
+                mkdir($uploadDir, 0755, true);
+            }
+            
+            $arquivo = $_FILES['ficha_assinada'];
+            $nomeArquivo = 'ficha_agregado_' . $agregadoId . '_' . time() . '_' . basename($arquivo['name']);
+            $caminhoCompleto = $uploadDir . $nomeArquivo;
+            
+            if (move_uploaded_file($arquivo['tmp_name'], $caminhoCompleto)) {
+                logError("✓ Arquivo salvo: " . $caminhoCompleto);
+                
+                // Insere no banco COM AGREGADO_ID
+                $stmtDoc = $db->prepare("
+                    INSERT INTO Documentos_Associado (
+                        agregado_id, tipo_documento, tipo_origem, caminho_arquivo,
+                        status_fluxo, departamento_atual, data_upload
+                    ) VALUES (?, 'FICHA_FILIACAO', 'FISICO', ?, 'AGUARDANDO_ASSINATURA', 2, NOW())
+                ");
+                
+                $stmtDoc->execute([
+                    $agregadoId,
+                    'uploads/fichas_agregados/' . $nomeArquivo
+                ]);
+                
+                $documentoId = $db->lastInsertId();
+                
+                logError("✅ Documento criado - ID: " . $documentoId);
+                
+                // Registra no histórico
+                $stmtHist = $db->prepare("
+                    INSERT INTO DocumentosFluxoHistorico (
+                        documento_id, status_anterior, status_novo,
+                        departamento_origem, departamento_destino,
+                        funcionario_id, observacao, data_acao
+                    ) VALUES (?, NULL, 'AGUARDANDO_ASSINATURA', 10, 2, 1, 'Ficha de agregado anexada', NOW())
+                ");
+                $stmtHist->execute([$documentoId]);
+                
+                logError("✓ Histórico registrado");
+            }
+            
+        } catch (Exception $e) {
+            logError("⚠ Erro ao salvar documento: " . $e->getMessage());
+        }
+    } else {
+        logError("⚠ Nenhuma ficha anexada");
+    }
     
     // =============================
     // RESPOSTA
@@ -408,28 +478,24 @@ try {
         'operacao' => $isUpdate ? 'UPDATE' : 'CREATE',
         'data' => [
             'id' => $agregadoId,
-            'nome' => $dadosFinais['nome'],
-            'cpf' => $dadosFinais['cpf'],
-            'telefone' => $dadosFinais['telefone'],
-            'celular' => $dadosFinais['celular'],
-            'email' => $dadosFinais['email'],
-            'socio_titular' => $dadosFinais['socio_titular_nome'],
-            'socio_titular_cpf' => $dadosFinais['socio_titular_cpf'],
-            'valor_contribuicao' => $dadosFinais['valor_contribuicao'],
-            'situacao' => $dadosFinais['situacao'],
-            'total_dependentes' => (int)$dadosFinais['total_dependentes']
+            'associado_id' => $agregadoId,
+            'nome' => $dados['nome'],
+            'cpf' => $dados['cpf'],
+            'documento_id' => $documentoId
         ],
         'json_export' => [
-            'salvo' => $resultadoJson['sucesso'],
-            'erro' => $resultadoJson['sucesso'] ? null : $resultadoJson['erro']
+            'salvo' => $resultadoJson['sucesso']
         ],
         'zapsign' => [
-            'enviado' => $resultadoZapSign['sucesso'],
-            'erro' => $resultadoZapSign['sucesso'] ? null : $resultadoZapSign['erro']
+            'enviado' => $resultadoZapSign['sucesso']
+        ],
+        'documento' => [
+            'criado' => $documentoId !== null,
+            'id' => $documentoId
         ]
     ], JSON_UNESCAPED_UNICODE);
     
-    logError("=== SUCESSO ===", ['modo' => $isUpdate ? 'UPDATE' : 'CREATE', 'id' => $agregadoId]);
+    logError("=== SUCESSO ===");
     
 } catch (Exception $e) {
     logError("❌ ERRO: " . $e->getMessage());

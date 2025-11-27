@@ -1,36 +1,47 @@
 /**
- * cadastroForm.js - JavaScript VERSÃO SEM CAMPOS OBRIGATÓRIOS
- * Todos os campos são opcionais
- * ATUALIZADO: Campos financeiros cinzas para Agregado + Maiúsculas em Dados Militares
+ * cadastroForm.js - JavaScript Completo do Formulário de Filiação
+ * Versão: 2.0 - Atualizado com correções para agregados
+ * Data: 26/11/2025
+ * 
+ * Funcionalidades:
+ * - Navegação multi-step
+ * - Salvamento individual por step
+ * - Validações robustas
+ * - Controle de serviço jurídico
+ * - Busca de agregados
+ * - Detecção automática de agregados
+ * - NOVO: Preenchimento automático de dados militares para agregados
+ * - NOVO: Desabilitação de campos financeiros para agregados
  */
 
 // Estado do formulário
 let currentStep = 1;
 const totalSteps = 6;
 let dependenteIndex = 0;
-
-// Dados da página
 const isEdit = window.pageData ? window.pageData.isEdit : false;
 const associadoId = window.pageData ? window.pageData.associadoId : null;
-const isSocioAgregado = window.pageData ? window.pageData.isSocioAgregado : false;
-
-// Dados carregados dos serviços
 let servicosCarregados = null;
-
-// VARIÁVEIS GLOBAIS PARA DADOS DOS SERVIÇOS
 let regrasContribuicao = [];
 let servicosData = [];
 let tiposAssociadoData = [];
 let dadosCarregados = false;
-
-// Estados de salvamento por step
 let stepsSalvos = new Set();
 let salvandoStep = false;
 
 // Inicialização
 document.addEventListener('DOMContentLoaded', function () {
-    console.log('=== INICIANDO FORMULÁRIO (TODOS CAMPOS OPCIONAIS) ===');
+    console.log('=== INICIANDO FORMULÁRIO DE FILIAÇÃO ===');
     console.log('Modo edição:', isEdit, 'ID:', associadoId);
+
+    // Verifica se é agregado (MODO EDIÇÃO)
+    if (isEdit && associadoId) {
+        setTimeout(() => {
+            verificarSeEhAgregadoECarregarDados();
+        }, 1500);
+    }
+
+    // Configura listeners para CPF do titular (AGREGADOS)
+    configurarListenersCpfTitular();
 
     // Atalho ESC para voltar ao dashboard
     document.addEventListener('keydown', function(e) {
@@ -45,44 +56,30 @@ document.addEventListener('DOMContentLoaded', function () {
     carregarDadosServicos()
         .then(() => {
             console.log('✓ Dados de serviços carregados');
-
-            // Máscaras
             aplicarMascaras();
-
-            // Select2
             inicializarSelect2();
-
-            // Preview de arquivos
             inicializarUploadPreviews();
-
-            // Event listeners dos serviços
+            setupRealtimeValidation();
             configurarListenersServicos();
 
-            // NOVO: Aplicar maiúsculas nos dados militares
-            aplicarMaiusculasDadosMilitares();
-
-            // Carrega dados dos serviços se estiver editando
             if (isEdit && associadoId) {
                 setTimeout(() => {
                     carregarServicosAssociado();
                 }, 1000);
             }
 
-            // Atualiza interface
             updateProgressBar();
             updateNavigationButtons();
             setTimeout(() => {
                 inicializarNavegacaoSteps();
             }, 1000);
 
-            // Se for modo edição e houver dependentes já carregados
             const dependentesExistentes = document.querySelectorAll('.dependente-card');
             if (dependentesExistentes.length > 0) {
                 dependenteIndex = dependentesExistentes.length;
             }
 
-            console.log('✓ Formulário inicializado com sucesso!');
-
+            console.log('✓ Formulário inicializado completamente!');
         })
         .catch(error => {
             console.error('Erro ao carregar dados de serviços:', error);
@@ -90,20 +87,528 @@ document.addEventListener('DOMContentLoaded', function () {
         });
 });
 
-// Aplicar máscaras
+// ===========================
+// AGREGADOS: FUNÇÕES PRINCIPAIS
+// ===========================
+
+function configurarListenersCpfTitular() {
+    console.log('🚀 Configurando listeners para CPF do titular');
+    
+    const cpfInput = document.getElementById('cpfTitular');
+    if (cpfInput) {
+        cpfInput.addEventListener('blur', buscarNomeTitularPorCpf);
+        cpfInput.addEventListener('keyup', function() {
+            const cpfLimpo = this.value.replace(/\D/g, '');
+            if (cpfLimpo.length === 11) {
+                buscarNomeTitularPorCpf();
+            } else {
+                const nomeInput = document.getElementById('nomeTitularInfo');
+                const erroSpan = document.getElementById('erroCpfTitular');
+                if (nomeInput) {
+                    nomeInput.value = '';
+                    nomeInput.style.background = '#f5f5f5';
+                    nomeInput.style.color = '#666';
+                }
+                if (erroSpan && cpfLimpo.length > 0) {
+                    erroSpan.style.display = 'block';
+                    erroSpan.textContent = 'Digite o CPF completo (11 dígitos)';
+                }
+            }
+        });
+        console.log('✅ Listeners do CPF titular configurados');
+    }
+}
+
+function buscarNomeTitularPorCpf() {
+    console.log('🔍 Buscando titular por CPF');
+    
+    const cpfInput = document.getElementById('cpfTitular');
+    const nomeInput = document.getElementById('nomeTitularInfo');
+    const erroSpan = document.getElementById('erroCpfTitular');
+    
+    if (!cpfInput || !nomeInput || !erroSpan) return;
+
+    const cpf = cpfInput.value.replace(/\D/g, '');
+    
+    if (cpf.length !== 11) {
+        nomeInput.value = '';
+        nomeInput.style.background = '#f5f5f5';
+        nomeInput.style.color = '#666';
+        erroSpan.style.display = 'block';
+        erroSpan.textContent = 'CPF deve ter 11 dígitos';
+        return;
+    }
+    
+    nomeInput.value = 'Buscando...';
+    nomeInput.style.background = '#fff3cd';
+    nomeInput.style.color = '#856404';
+    erroSpan.style.display = 'none';
+    
+    fetch(`../api/buscar_associado_por_cpf.php?cpf=${cpf}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success' && data.data) {
+                const titular = data.data;
+                let nome = titular.titular_nome || titular.nome || '';
+                let cpfFormatado = titular.titular_cpf || titular.cpf || '';
+                let situacao = titular.titular_situacao || titular.situacao || '';
+                
+                if (cpfFormatado && cpfFormatado.length === 11) {
+                    cpfFormatado = cpfFormatado.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+                }
+                
+                if (nome && cpfFormatado) {
+                    nomeInput.value = `${nome} - ${cpfFormatado}`;
+                } else if (nome) {
+                    nomeInput.value = nome;
+                } else {
+                    nomeInput.value = '';
+                }
+                
+                if (situacao && situacao !== 'Filiado') {
+                    nomeInput.style.background = '#f8d7da';
+                    nomeInput.style.color = '#721c24';
+                    erroSpan.style.display = 'block';
+                    erroSpan.textContent = `Titular está ${situacao}. Somente titulares FILIADOS podem ter agregados.`;
+                } else {
+                    nomeInput.style.background = '#d4edda';
+                    nomeInput.style.color = '#155724';
+                    erroSpan.style.display = 'none';
+                }
+            } else {
+                nomeInput.value = '';
+                nomeInput.style.background = '#f8d7da';
+                nomeInput.style.color = '#721c24';
+                erroSpan.style.display = 'block';
+                erroSpan.textContent = 'CPF não encontrado ou não é um associado filiado';
+            }
+        })
+        .catch(error => {
+            console.error('Erro ao buscar CPF:', error);
+            nomeInput.value = '';
+            nomeInput.style.background = '#f8d7da';
+            nomeInput.style.color = '#721c24';
+            erroSpan.style.display = 'block';
+            erroSpan.textContent = 'Erro ao buscar CPF. Tente novamente.';
+        });
+}
+
+function verificarSeEhAgregadoECarregarDados() {
+    console.log('🔍 Verificando se associado é um sócio agregado...');
+    
+    if (!isEdit || !associadoId) return;
+    
+    const cpfAtual = document.getElementById('cpf')?.value;
+    if (!cpfAtual) {
+        setTimeout(verificarSeEhAgregadoECarregarDados, 2000);
+        return;
+    }
+    
+    fetch(`../api/buscar_associado_por_cpf.php?cpf=${cpfAtual}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success' && data.data) {
+                if (data.data.agregado_id && data.data.agregado_nome) {
+                    console.log('✅ ASSOCIADO É UM SÓCIO AGREGADO!');
+                    ativarModoAgregadoAutomatico(data.data);
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Erro ao verificar se é agregado:', error);
+        });
+}
+
+function ativarModoAgregadoAutomatico(dadosResposta) {
+    console.log('🔄 Ativando modo agregado automaticamente');
+    
+    const checkboxAgregado = document.getElementById('isAgregado');
+    if (checkboxAgregado) {
+        checkboxAgregado.checked = true;
+    }
+    
+    const campoCpfTitular = document.getElementById('campoCpfTitular');
+    if (campoCpfTitular) {
+        campoCpfTitular.style.display = 'block';
+    }
+    
+    const cpfTitularInput = document.getElementById('cpfTitular');
+    let cpfTitular = dadosResposta.agregado_socio_titular_cpf || dadosResposta.titular_cpf;
+    
+    if (cpfTitularInput && cpfTitular) {
+        let cpfFormatado = cpfTitular;
+        if (cpfFormatado.length === 11) {
+            cpfFormatado = cpfFormatado.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+        }
+        cpfTitularInput.value = cpfFormatado;
+    }
+    
+    const nomeTitularInput = document.getElementById('nomeTitularInfo');
+    let nomeTitular = dadosResposta.agregado_socio_titular_nome || dadosResposta.titular_nome;
+    
+    if (nomeTitularInput && nomeTitular) {
+        let nomeCompleto = nomeTitular;
+        if (cpfTitular) {
+            let cpfFormatado = cpfTitular;
+            if (cpfFormatado.length === 11) {
+                cpfFormatado = cpfFormatado.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+            }
+            nomeCompleto += ` - ${cpfFormatado}`;
+        }
+        nomeTitularInput.value = nomeCompleto;
+        nomeTitularInput.style.background = '#d4edda';
+        nomeTitularInput.style.color = '#155724';
+    }
+    
+    const erroSpan = document.getElementById('erroCpfTitular');
+    if (erroSpan) {
+        erroSpan.style.display = 'none';
+    }
+    
+    if (cpfTitularInput) {
+        cpfTitularInput.required = true;
+    }
+    
+    console.log('🎉 Modo agregado ativado automaticamente!');
+}
+
+// ===========================
+// NOVO: PREENCHIMENTO AUTOMÁTICO DE DADOS MILITARES
+// ===========================
+
+function toggleAgregadoCampos() {
+    const isAgregado = document.getElementById('isAgregado')?.checked;
+    const campoCpfTitular = document.getElementById('campoCpfTitular');
+    const cpfTitularInput = document.getElementById('cpfTitular');
+    const nomeTitularInput = document.getElementById('nomeTitularInfo');
+    const erroSpan = document.getElementById('erroCpfTitular');
+    
+    if (isAgregado) {
+        if (campoCpfTitular) campoCpfTitular.style.display = 'block';
+        if (cpfTitularInput) cpfTitularInput.required = true;
+        
+        // NOVO: Preenche dados militares
+        setTimeout(() => {
+            preencherDadosMilitaresAgregado();
+        }, 100);
+        
+        console.log('✅ Modo agregado ATIVADO');
+    } else {
+        if (campoCpfTitular) campoCpfTitular.style.display = 'none';
+        if (cpfTitularInput) {
+            cpfTitularInput.required = false;
+            cpfTitularInput.value = '';
+        }
+        if (nomeTitularInput) {
+            nomeTitularInput.value = '';
+            nomeTitularInput.style.background = '#f5f5f5';
+            nomeTitularInput.style.color = '#666';
+        }
+        if (erroSpan) erroSpan.style.display = 'none';
+        
+        // NOVO: Limpa dados militares
+        limparDadosMilitares();
+        
+        console.log('❌ Modo agregado DESATIVADO');
+    }
+}
+
+function preencherDadosMilitaresAgregado() {
+    console.log('📋 Preenchendo dados militares com "AGREGADO"');
+    
+    // Corporação
+    const corporacaoSelect = $('#corporacao');
+    if (corporacaoSelect.length) {
+        if (corporacaoSelect.find('option[value="AGREGADO"]').length === 0) {
+            corporacaoSelect.append(new Option('AGREGADO', 'AGREGADO', true, true));
+        } else {
+            corporacaoSelect.val('AGREGADO');
+        }
+        corporacaoSelect.trigger('change');
+        console.log('  ✓ Corporação: AGREGADO');
+    }
+    
+    // Patente
+    const patenteSelect = $('#patente');
+    if (patenteSelect.length) {
+        if (patenteSelect.find('option[value="Nenhuma"]').length > 0) {
+            patenteSelect.val('Nenhuma');
+            console.log('  ✓ Patente: Nenhuma');
+        } else {
+            if (patenteSelect.find('option[value="AGREGADO"]').length === 0) {
+                patenteSelect.append(new Option('AGREGADO', 'AGREGADO', true, true));
+            } else {
+                patenteSelect.val('AGREGADO');
+            }
+            console.log('  ✓ Patente: AGREGADO');
+        }
+        patenteSelect.trigger('change');
+    }
+    
+    // Situação Funcional
+    const categoriaSelect = $('#categoria');
+    if (categoriaSelect.length) {
+        if (categoriaSelect.find('option[value="AGREGADO"]').length === 0) {
+            categoriaSelect.append(new Option('AGREGADO', 'AGREGADO', true, true));
+        } else {
+            categoriaSelect.val('AGREGADO');
+        }
+        categoriaSelect.trigger('change');
+        console.log('  ✓ Situação Funcional: AGREGADO');
+    }
+    
+    // Lotação
+    const lotacaoSelect = $('#lotacao');
+    if (lotacaoSelect.length) {
+        if (lotacaoSelect.find('option[value="AGREGADO"]').length === 0) {
+            lotacaoSelect.append(new Option('AGREGADO', 'AGREGADO', true, true));
+        } else {
+            lotacaoSelect.val('AGREGADO');
+        }
+        lotacaoSelect.trigger('change');
+        console.log('  ✓ Lotação: AGREGADO');
+    }
+    
+    // Unidade
+    const unidadeInput = document.getElementById('unidade');
+    if (unidadeInput) {
+        unidadeInput.value = 'AGREGADO';
+        console.log('  ✓ Unidade: AGREGADO');
+    }
+    
+    console.log('✅ Dados militares preenchidos com "AGREGADO"');
+}
+
+function limparDadosMilitares() {
+    console.log('🧹 Limpando dados militares');
+    
+    $('#corporacao').val('').trigger('change');
+    $('#patente').val('').trigger('change');
+    $('#categoria').val('').trigger('change');
+    $('#lotacao').val('').trigger('change');
+    
+    const unidadeInput = document.getElementById('unidade');
+    if (unidadeInput) {
+        unidadeInput.value = '';
+    }
+    
+    console.log('✅ Dados militares limpos');
+}
+
+// ===========================
+// NOVO: DESABILITAÇÃO DE CAMPOS FINANCEIROS
+// ===========================
+
+function controlarCamposFinanceirosAgregado() {
+    console.log('🔒 Controlando campos financeiros para agregado');
+    
+    const isAgregado = document.getElementById('isAgregado')?.checked;
+    
+    const camposFinanceiros = [
+        'vinculoServidor',
+        'localDebito',
+        'agencia',
+        'operacao',
+        'contaCorrente',
+        'doador'
+    ];
+    
+    if (isAgregado) {
+        console.log('🔒 Desabilitando campos financeiros');
+        
+        camposFinanceiros.forEach(campoId => {
+            const campo = document.getElementById(campoId);
+            if (campo) {
+                campo.disabled = true;
+                campo.required = false;
+                campo.style.background = '#e9ecef';
+                campo.style.color = '#6c757d';
+                campo.style.cursor = 'not-allowed';
+                campo.style.opacity = '0.6';
+                
+                if (campo.tagName === 'SELECT') {
+                    campo.value = '';
+                } else {
+                    campo.value = '';
+                }
+                
+                if (typeof $ !== 'undefined' && $(campo).hasClass('select2-hidden-accessible')) {
+                    $(campo).trigger('change');
+                }
+                
+                console.log(`  ✓ Campo ${campoId} desabilitado`);
+            }
+        });
+        
+        adicionarMensagemCamposFinanceirosAgregado();
+        
+    } else {
+        console.log('🔓 Habilitando campos financeiros');
+        
+        camposFinanceiros.forEach(campoId => {
+            const campo = document.getElementById(campoId);
+            if (campo) {
+                campo.disabled = false;
+                campo.style.background = '';
+                campo.style.color = '';
+                campo.style.cursor = '';
+                campo.style.opacity = '';
+                
+                console.log(`  ✓ Campo ${campoId} habilitado`);
+            }
+        });
+        
+        removerMensagemCamposFinanceirosAgregado();
+    }
+    
+    console.log(`✅ Campos financeiros ${isAgregado ? 'desabilitados' : 'habilitados'}`);
+}
+
+function adicionarMensagemCamposFinanceirosAgregado() {
+    removerMensagemCamposFinanceirosAgregado();
+    
+    const stepFinanceiro = document.querySelector('.section-card[data-step="4"]');
+    if (!stepFinanceiro) return;
+    
+    const mensagem = document.createElement('div');
+    mensagem.id = 'mensagem-campos-financeiros-agregado';
+    mensagem.style.cssText = `
+        background: linear-gradient(135deg, #fff3cd 0%, #ffeeba 100%);
+        color: #856404;
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 1.5rem;
+        border-left: 4px solid #ffc107;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        font-size: 0.95rem;
+        box-shadow: 0 2px 4px rgba(255, 193, 7, 0.2);
+    `;
+    
+    mensagem.innerHTML = `
+        <i class="fas fa-info-circle" style="font-size: 1.5rem;"></i>
+        <div>
+            <strong>Agregado detectado</strong><br>
+            <span style="font-size: 0.875rem;">
+                Os campos financeiros (banco, agência, conta) não são necessários para associados agregados.
+                Esses dados já estão vinculados ao sócio titular.
+            </span>
+        </div>
+    `;
+    
+    const formGrid = stepFinanceiro.querySelector('.form-grid');
+    if (formGrid) {
+        formGrid.parentNode.insertBefore(mensagem, formGrid);
+    }
+}
+
+function removerMensagemCamposFinanceirosAgregado() {
+    const mensagem = document.getElementById('mensagem-campos-financeiros-agregado');
+    if (mensagem) {
+        mensagem.remove();
+    }
+}
+
+// ===========================
+// INTEGRAÇÃO COM NAVEGAÇÃO DE STEPS
+// ===========================
+
+function aoEntrarStepMilitares() {
+    const isAgregado = document.getElementById('isAgregado')?.checked;
+    
+    if (isAgregado) {
+        console.log('📋 Step Militares + Modo Agregado - preenchendo');
+        setTimeout(() => {
+            preencherDadosMilitaresAgregado();
+        }, 200);
+    }
+}
+
+function aoEntrarStepFinanceiro() {
+    console.log('💰 Entrando no step Financeiro');
+    setTimeout(() => {
+        controlarCamposFinanceirosAgregado();
+    }, 200);
+}
+
+// Listener do checkbox agregado
+document.addEventListener('DOMContentLoaded', function() {
+    const checkboxAgregado = document.getElementById('isAgregado');
+    if (checkboxAgregado) {
+        checkboxAgregado.addEventListener('change', function() {
+            toggleAgregadoCampos();
+            
+            const stepAtivo = document.querySelector('.section-card.active');
+            if (stepAtivo && stepAtivo.getAttribute('data-step') === '4') {
+                setTimeout(() => {
+                    controlarCamposFinanceirosAgregado();
+                }, 100);
+            }
+        });
+    }
+    
+    if (checkboxAgregado?.checked) {
+        setTimeout(() => {
+            toggleAgregadoCampos();
+        }, 500);
+    }
+});
+
+// Validação ao submeter
+document.getElementById('formAssociado')?.addEventListener('submit', function(e) {
+    const isAgregado = document.getElementById('isAgregado')?.checked;
+    
+    if (isAgregado) {
+        const cpfTitular = document.getElementById('cpfTitular')?.value;
+        const nomeTitular = document.getElementById('nomeTitularInfo')?.value;
+        const erroVisivel = document.getElementById('erroCpfTitular')?.style.display !== 'none';
+        
+        if (!cpfTitular || !nomeTitular || erroVisivel) {
+            e.preventDefault();
+            alert('Por favor, preencha corretamente o CPF do titular e verifique se está filiado.');
+            document.getElementById('cpfTitular')?.focus();
+            return false;
+        }
+    }
+});
+
+// ===========================
+// MÁSCARAS
+// ===========================
+
 function aplicarMascaras() {
     console.log('Aplicando máscaras...');
     
-    $('#cpf').mask('000.000.000-00', { placeholder: '000.000.000-00' });
-    $('#cpfTitular').mask('000.000.000-00', { placeholder: '000.000.000-00' });
-    $('#telefone').mask('(00) 00000-0000', { placeholder: '(00) 00000-0000' });
-    $('#celular').mask('(00) 00000-0000', { placeholder: '(00) 00000-0000' });
-    $('#cep').mask('00000-000', { placeholder: '00000-000' });
+    $('#cpf').mask('000.000.000-00', {
+        placeholder: '000.000.000-00',
+        clearIfNotMatch: true
+    });
+    
+    $('#cpfTitular').mask('000.000.000-00', {
+        placeholder: '000.000.000-00',
+        clearIfNotMatch: true
+    });
+    
+    $('#telefone').mask('(00) 00000-0000', {
+        placeholder: '(00) 00000-0000'
+    });
+    
+    $('#celular').mask('(00) 00000-0000', {
+        placeholder: '(00) 00000-0000'
+    });
+    
+    $('#cep').mask('00000-000', {
+        placeholder: '00000-000'
+    });
     
     console.log('✓ Máscaras aplicadas');
 }
 
-// Inicializar Select2
+// ===========================
+// SELECT2
+// ===========================
+
 function inicializarSelect2() {
     console.log('Inicializando Select2...');
     
@@ -111,38 +616,73 @@ function inicializarSelect2() {
         language: 'pt-BR',
         theme: 'default',
         width: '100%',
-        allowClear: true,
         placeholder: function() {
             return $(this).attr('placeholder') || 'Selecione...';
         }
     });
     
-    // Select2 com digitação livre para campos militares
-    $('#corporacao, #patente, #categoria, #lotacao').each(function() {
-        $(this).select2({
-            language: 'pt-BR',
-            theme: 'default',
-            width: '100%',
-            allowClear: true,
-            tags: true,
-            placeholder: 'Selecione ou digite...',
-            createTag: function (params) {
-                var term = $.trim(params.term);
-                if (term === '') return null;
-                // Converter para maiúsculas ao criar tag
-                return { id: term.toUpperCase(), text: term.toUpperCase(), newTag: true };
-            }
-        });
+    $('#corporacao').select2({
+        language: 'pt-BR',
+        theme: 'default',
+        width: '100%',
+        placeholder: 'Selecione ou digite a corporação...',
+        allowClear: true,
+        tags: true,
+        createTag: function (params) {
+            var term = $.trim(params.term);
+            if (term === '') return null;
+            return { id: term, text: term, newTag: true }
+        }
+    });
+    
+    $('#patente').select2({
+        language: 'pt-BR',
+        theme: 'default',
+        width: '100%',
+        placeholder: 'Selecione ou digite a patente...',
+        allowClear: true,
+        tags: true,
+        dropdownParent: $('#patente').parent(),
+        createTag: function (params) {
+            var term = $.trim(params.term);
+            if (term === '') return null;
+            return { id: term, text: term, newTag: true }
+        }
+    });
+    
+    $('#categoria').select2({
+        language: 'pt-BR',
+        theme: 'default',
+        width: '100%',
+        placeholder: 'Selecione ou digite a situação...',
+        allowClear: true,
+        tags: true,
+        createTag: function (params) {
+            var term = $.trim(params.term);
+            if (term === '') return null;
+            return { id: term, text: term, newTag: true }
+        }
+    });
+    
+    $('#lotacao').select2({
+        language: 'pt-BR',
+        theme: 'default',
+        width: '100%',
+        placeholder: 'Selecione ou digite a lotação...',
+        allowClear: true,
+        tags: true
     });
     
     console.log('✓ Select2 inicializado');
 }
 
-// Inicializar uploads e previews
+// ===========================
+// UPLOADS E PREVIEWS
+// ===========================
+
 function inicializarUploadPreviews() {
     console.log('Configurando uploads...');
     
-    // Preview de foto
     const fotoInput = document.getElementById('foto');
     if (fotoInput) {
         fotoInput.addEventListener('change', function (e) {
@@ -164,7 +704,6 @@ function inicializarUploadPreviews() {
         });
     }
 
-    // Preview da ficha assinada
     const fichaInput = document.getElementById('ficha_assinada');
     if (fichaInput) {
         fichaInput.addEventListener('change', function (e) {
@@ -202,26 +741,33 @@ function inicializarUploadPreviews() {
     console.log('✓ Uploads configurados');
 }
 
-// Controlar serviço jurídico por tipo de associado
+// ===========================
+// CONTROLE SERVIÇO JURÍDICO
+// ===========================
+
 function controlarServicoJuridico() {
+    console.log('=== CONTROLANDO SERVIÇO JURÍDICO ===');
+    
     const tipoAssociado = document.getElementById('tipoAssociadoServico')?.value;
     const servicoJuridicoCheckbox = document.getElementById('servicoJuridico');
     const servicoJuridicoItem = document.getElementById('servicoJuridicoItem');
     const badgeJuridico = document.getElementById('badgeJuridico');
     const mensagemContainer = document.getElementById('mensagemRestricaoJuridico');
+    const infoTipoAssociado = document.getElementById('infoTipoAssociado');
+    const textoInfoTipo = document.getElementById('textoInfoTipo');
     
     const tiposSemJuridico = ['Benemérito', 'Benemerito', 'Agregado'];
     
-    // NOVO: Controlar campos financeiros para Agregado
-    controlarCamposFinanceiroAgregado(tipoAssociado === 'Agregado');
-    
     if (tiposSemJuridico.includes(tipoAssociado)) {
+        console.log('❌ Tipo não tem direito ao serviço jurídico');
+        
         if (servicoJuridicoCheckbox) {
             servicoJuridicoCheckbox.disabled = true;
             servicoJuridicoCheckbox.checked = false;
         }
         
         if (servicoJuridicoItem) {
+            servicoJuridicoItem.classList.add('desabilitado', 'servico-bloqueado');
             servicoJuridicoItem.style.opacity = '0.5';
             servicoJuridicoItem.style.pointerEvents = 'none';
         }
@@ -234,21 +780,41 @@ function controlarServicoJuridico() {
         if (mensagemContainer) {
             mensagemContainer.style.display = 'block';
             mensagemContainer.innerHTML = `
-                <div style="background: #f8d7da; color: #721c24; padding: 0.75rem; border-radius: 6px; font-size: 0.8rem; margin-top: 0.75rem; border-left: 4px solid #dc3545;">
+                <div class="mensagem-restricao" style="
+                    background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+                    color: #721c24;
+                    padding: 0.75rem;
+                    border-radius: 6px;
+                    font-size: 0.8rem;
+                    margin-top: 0.75rem;
+                    border-left: 4px solid #dc3545;
+                    display: flex;
+                    align-items: center;
+                    gap: 0.5rem;
+                ">
                     <i class="fas fa-exclamation-triangle"></i>
-                    Associados do tipo "${tipoAssociado}" não têm direito ao serviço jurídico.
+                    Associados do tipo "${tipoAssociado}" não têm direito ao serviço jurídico conforme regulamento da ASSEGO.
                 </div>
             `;
+        }
+        
+        if (infoTipoAssociado && textoInfoTipo) {
+            infoTipoAssociado.style.display = 'block';
+            textoInfoTipo.innerHTML = `Tipo "${tipoAssociado}" não tem direito ao serviço jurídico.`;
+            infoTipoAssociado.style.color = '#dc3545';
         }
         
         zerarValoresJuridico();
         
     } else {
+        console.log('✅ Tipo tem direito ao serviço jurídico');
+        
         if (servicoJuridicoCheckbox) {
             servicoJuridicoCheckbox.disabled = false;
         }
         
         if (servicoJuridicoItem) {
+            servicoJuridicoItem.classList.remove('desabilitado', 'servico-bloqueado');
             servicoJuridicoItem.style.opacity = '1';
             servicoJuridicoItem.style.pointerEvents = 'auto';
         }
@@ -262,133 +828,13 @@ function controlarServicoJuridico() {
             mensagemContainer.style.display = 'none';
             mensagemContainer.innerHTML = '';
         }
-    }
-}
-
-// NOVA FUNÇÃO: Controlar campos financeiros quando tipo é Agregado
-function controlarCamposFinanceiroAgregado(isAgregado) {
-    // Lista de IDs dos campos financeiros que devem ser desabilitados para agregados
-    const camposFinanceiros = [
-        'tipoAssociado',
-        'situacaoFinanceira', 
-        'vinculoServidor',
-        'localDebito',
-        'agencia',
-        'operacao',
-        'contaCorrente',
-        'doador'
-    ];
-    
-    camposFinanceiros.forEach(campoId => {
-        const elemento = document.getElementById(campoId);
-        if (elemento) {
-            if (isAgregado) {
-                elemento.disabled = true;
-                elemento.style.backgroundColor = '#e9ecef';
-                elemento.style.color = '#6c757d';
-                elemento.style.cursor = 'not-allowed';
-                elemento.style.opacity = '0.6';
-                
-                // Para Select2, precisa atualizar também
-                if (typeof $ !== 'undefined' && $(elemento).hasClass('select2-hidden-accessible')) {
-                    $(elemento).prop('disabled', true).trigger('change');
-                }
-            } else {
-                elemento.disabled = false;
-                elemento.style.backgroundColor = '';
-                elemento.style.color = '';
-                elemento.style.cursor = '';
-                elemento.style.opacity = '';
-                
-                // Para Select2
-                if (typeof $ !== 'undefined' && $(elemento).hasClass('select2-hidden-accessible')) {
-                    $(elemento).prop('disabled', false).trigger('change');
-                }
+        
+        if (textoInfoTipo && textoInfoTipo.textContent.includes('não tem direito')) {
+            if (infoTipoAssociado) {
+                infoTipoAssociado.style.display = 'none';
             }
         }
-    });
-    
-    // Atualiza o aviso de agregado
-    const avisoAgregado = document.getElementById('avisoAgregadoFinanceiro');
-    if (avisoAgregado) {
-        avisoAgregado.style.display = isAgregado ? 'block' : 'none';
-        if (isAgregado) {
-            avisoAgregado.innerHTML = `
-                <i class="fas fa-info-circle" style="color: #856404;"></i>
-                <span style="color: #856404; font-weight: 500;">
-                    Para sócios agregados, os dados financeiros são gerenciados pelo titular. 
-                    Os campos abaixo estão desabilitados.
-                </span>
-            `;
-        }
     }
-}
-
-// NOVA FUNÇÃO: Aplicar maiúsculas nos campos de Dados Militares
-function aplicarMaiusculasDadosMilitares() {
-    console.log('Aplicando maiúsculas nos dados militares...');
-    
-    // Campo de texto simples - Unidade
-    const campoUnidade = document.getElementById('unidade');
-    if (campoUnidade) {
-        // CSS para exibir em maiúsculas
-        campoUnidade.style.textTransform = 'uppercase';
-        
-        // Converter valor para maiúsculas ao digitar
-        campoUnidade.addEventListener('input', function() {
-            const start = this.selectionStart;
-            const end = this.selectionEnd;
-            this.value = this.value.toUpperCase();
-            this.setSelectionRange(start, end);
-        });
-        
-        // Converter ao perder foco também
-        campoUnidade.addEventListener('blur', function() {
-            this.value = this.value.toUpperCase();
-        });
-    }
-    
-    // Para campos Select2 com tags (permite digitação livre)
-    const camposSelect2Militares = ['corporacao', 'patente', 'categoria', 'lotacao'];
-    
-    camposSelect2Militares.forEach(campoId => {
-        const elemento = document.getElementById(campoId);
-        if (elemento && typeof $ !== 'undefined') {
-            // Interceptar quando uma tag é criada/selecionada
-            $(elemento).on('select2:select', function(e) {
-                if (e.params && e.params.data && e.params.data.newTag) {
-                    // É uma tag nova digitada pelo usuário - converter para maiúsculas
-                    const upperValue = e.params.data.text.toUpperCase();
-                    $(this).val(upperValue).trigger('change.select2');
-                }
-            });
-            
-            // Aplicar CSS para input do Select2 quando aberto
-            $(elemento).on('select2:open', function() {
-                setTimeout(() => {
-                    const searchField = document.querySelector('.select2-search__field');
-                    if (searchField) {
-                        searchField.style.textTransform = 'uppercase';
-                        
-                        // Handler para converter enquanto digita
-                        const inputHandler = function() {
-                            const start = this.selectionStart;
-                            const end = this.selectionEnd;
-                            this.value = this.value.toUpperCase();
-                            this.setSelectionRange(start, end);
-                        };
-                        
-                        // Remover handler antigo se existir e adicionar novo
-                        searchField.removeEventListener('input', searchField._upperHandler);
-                        searchField._upperHandler = inputHandler;
-                        searchField.addEventListener('input', inputHandler);
-                    }
-                }, 10);
-            });
-        }
-    });
-    
-    console.log('✓ Maiúsculas aplicadas nos dados militares');
 }
 
 function zerarValoresJuridico() {
@@ -398,8 +844,21 @@ function zerarValoresJuridico() {
     updateElementSafe('percentualJuridico', '0');
 }
 
-// Configurar listeners dos serviços
+function validarTipoEServicos() {
+    const tipoAssociado = document.getElementById('tipoAssociadoServico')?.value;
+    
+    if (!tipoAssociado) {
+        showAlert('Por favor, selecione o tipo de associado antes de prosseguir.', 'warning');
+        return false;
+    }
+    
+    controlarServicoJuridico();
+    return true;
+}
+
 function configurarListenersServicos() {
+    console.log('Configurando listeners dos serviços');
+    
     const tipoAssociadoEl = document.getElementById('tipoAssociadoServico');
     const servicoJuridicoEl = document.getElementById('servicoJuridico');
 
@@ -413,18 +872,37 @@ function configurarListenersServicos() {
     if (servicoJuridicoEl) {
         servicoJuridicoEl.addEventListener('change', calcularServicos);
     }
+    
+    console.log('✓ Listeners configurados');
 }
 
-// Carrega dados de serviços via AJAX
+// ===========================
+// CARREGAR DADOS DE SERVIÇOS
+// ===========================
+
 function carregarDadosServicos() {
+    console.log('=== CARREGANDO DADOS DE SERVIÇOS ===');
+
     return fetch('../api/buscar_dados_servicos.php')
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
             if (data.status === 'success') {
                 regrasContribuicao = data.regras || [];
                 servicosData = data.servicos || [];
                 tiposAssociadoData = data.tipos_associado || [];
                 dadosCarregados = true;
+
+                console.log('✓ Dados carregados:', {
+                    servicos: servicosData.length,
+                    regras: regrasContribuicao.length,
+                    tipos: tiposAssociadoData.length
+                });
+
                 preencherSelectTiposAssociado();
                 return true;
             } else {
@@ -432,7 +910,7 @@ function carregarDadosServicos() {
             }
         })
         .catch(error => {
-            console.error('Erro ao carregar dados de serviços:', error);
+            console.error('Erro ao carregar dados:', error);
             useHardcodedData();
             preencherSelectTiposAssociado();
             return true;
@@ -455,6 +933,8 @@ function preencherSelectTiposAssociado() {
         if (tiposSemJuridico.includes(tipo)) {
             option.textContent = `${tipo} (Sem serviço jurídico)`;
             option.setAttribute('data-restricao', 'sem-juridico');
+            option.style.background = '#fff3cd';
+            option.style.color = '#856404';
         } else {
             option.textContent = tipo;
         }
@@ -479,14 +959,10 @@ function useHardcodedData() {
         { tipo_associado: "Aluno", servico_id: "1", percentual_valor: "50.00" },
         { tipo_associado: "Aluno", servico_id: "2", percentual_valor: "100.00" },
         { tipo_associado: "Agregado", servico_id: "1", percentual_valor: "50.00" },
-        { tipo_associado: "Agregado", servico_id: "2", percentual_valor: "0.00" },
-        { tipo_associado: "Remido", servico_id: "1", percentual_valor: "0.00" },
-        { tipo_associado: "Remido", servico_id: "2", percentual_valor: "100.00" },
-        { tipo_associado: "Benemerito", servico_id: "1", percentual_valor: "0.00" },
-        { tipo_associado: "Benemerito", servico_id: "2", percentual_valor: "0.00" }
+        { tipo_associado: "Agregado", servico_id: "2", percentual_valor: "0.00" }
     ];
 
-    tiposAssociadoData = ["Contribuinte", "Aluno", "Soldado 2ª Classe", "Soldado 1ª Classe", "Agregado", "Remido 50%", "Remido", "Benemerito"];
+    tiposAssociadoData = ["Contribuinte", "Aluno", "Agregado", "Remido", "Benemerito"];
     dadosCarregados = true;
 }
 
@@ -520,6 +996,7 @@ function preencherDadosServicos(dadosServicos) {
         const selectElement = document.getElementById('tipoAssociadoServico');
         if (selectElement) {
             selectElement.value = dadosServicos.tipo_associado_servico;
+
             if (typeof $ !== 'undefined' && $('#tipoAssociadoServico').length) {
                 $('#tipoAssociadoServico').trigger('change');
             }
@@ -528,21 +1005,40 @@ function preencherDadosServicos(dadosServicos) {
 
     if (dadosServicos.servicos && dadosServicos.servicos.social) {
         const social = dadosServicos.servicos.social;
+
         updateElementSafe('valorSocial', social.valor_aplicado, 'value');
         updateElementSafe('percentualAplicadoSocial', social.percentual_aplicado, 'value');
         updateElementSafe('valorFinalSocial', parseFloat(social.valor_aplicado).toFixed(2).replace('.', ','));
         updateElementSafe('percentualSocial', parseFloat(social.percentual_aplicado).toFixed(0));
+
+        const servicoSocial = servicosData.find(s => s.id == 1);
+        if (servicoSocial) {
+            updateElementSafe('valorBaseSocial', parseFloat(servicoSocial.valor_base).toFixed(2).replace('.', ','));
+        }
     }
 
     if (dadosServicos.servicos && dadosServicos.servicos.juridico) {
         const juridico = dadosServicos.servicos.juridico;
+
         const juridicoCheckEl = document.getElementById('servicoJuridico');
-        if (juridicoCheckEl) juridicoCheckEl.checked = true;
+        if (juridicoCheckEl) {
+            juridicoCheckEl.checked = true;
+        }
 
         updateElementSafe('valorJuridico', juridico.valor_aplicado, 'value');
         updateElementSafe('percentualAplicadoJuridico', juridico.percentual_aplicado, 'value');
         updateElementSafe('valorFinalJuridico', parseFloat(juridico.valor_aplicado).toFixed(2).replace('.', ','));
         updateElementSafe('percentualJuridico', parseFloat(juridico.percentual_aplicado).toFixed(0));
+
+        const servicoJuridico = servicosData.find(s => s.id == 2);
+        if (servicoJuridico) {
+            updateElementSafe('valorBaseJuridico', parseFloat(servicoJuridico.valor_base).toFixed(2).replace('.', ','));
+        }
+    } else {
+        const juridicoCheckEl = document.getElementById('servicoJuridico');
+        if (juridicoCheckEl) {
+            juridicoCheckEl.checked = false;
+        }
     }
 
     const totalMensal = dadosServicos.valor_total_mensal || 0;
@@ -574,8 +1070,12 @@ function calcularServicos() {
         return;
     }
 
-    const regrasSocial = regrasContribuicao.filter(r => r.tipo_associado === tipoAssociado && r.servico_id == 1);
-    const regrasJuridico = regrasContribuicao.filter(r => r.tipo_associado === tipoAssociado && r.servico_id == 2);
+    const regrasSocial = regrasContribuicao.filter(r =>
+        r.tipo_associado === tipoAssociado && r.servico_id == 1
+    );
+    const regrasJuridico = regrasContribuicao.filter(r =>
+        r.tipo_associado === tipoAssociado && r.servico_id == 2
+    );
 
     let valorTotalGeral = 0;
 
@@ -652,23 +1152,31 @@ function updateElementSafe(elementId, value, property = 'textContent') {
     }
 }
 
-// ===== SALVAMENTO MULTI-STEP =====
+// ===========================
+// SALVAMENTO MULTI-STEP
+// ===========================
 
 function salvarStepAtual() {
     if (salvandoStep) return;
 
-    console.log(`=== SALVANDO STEP ${currentStep} ===`);
+    if (!validarStepAtual()) {
+        showAlert('Por favor, corrija os erros antes de salvar.', 'warning');
+        return;
+    }
 
-    const isAgregado = document.getElementById('isAgregado')?.checked || isSocioAgregado;
-
-    // Se for agregado em modo edição, usa salvarAssociado()
+    const isAgregado = document.getElementById('isAgregado')?.checked;
+    
     if (isAgregado && isEdit) {
         salvarAssociado();
         return;
     }
 
-    // Para novos cadastros, step 1 precisa criar o registro primeiro
-    if (!isEdit && !window.pageData.associadoId && currentStep === 1) {
+    if (isAgregado && !isEdit && !window.pageData.associadoId && currentStep === 1) {
+        salvarNovoAssociadoPrimeiroPasso();
+        return;
+    }
+
+    if (!isAgregado && !isEdit && !window.pageData.associadoId && currentStep === 1) {
         salvarNovoAssociadoPrimeiroPasso();
         return;
     }
@@ -734,7 +1242,6 @@ function salvarStepAtual() {
     .catch(error => {
         esconderEstadoSalvando();
         salvandoStep = false;
-        console.error('Erro na requisição:', error);
         showAlert('Erro de comunicação com o servidor!', 'error');
     });
 }
@@ -747,19 +1254,26 @@ function criarFormDataStep(step) {
         formData.append('id', isEdit ? associadoId : window.pageData.associadoId);
     }
 
-    // Campos básicos sempre enviados
-    const camposBasicos = ['nome', 'cpf', 'rg', 'telefone', 'situacao'];
-    camposBasicos.forEach(campo => {
+    const camposObrigatoriosBasicos = ['nome', 'cpf', 'rg', 'telefone', 'situacao'];
+    camposObrigatoriosBasicos.forEach(campo => {
         const element = form.elements[campo];
-        if (element && element.value) {
-            formData.append(campo, element.value);
+        if (element) {
+            if (element.type === 'radio') {
+                const checked = form.querySelector(`input[name="${campo}"]:checked`);
+                if (checked) formData.append(campo, checked.value);
+            } else {
+                formData.append(campo, element.value);
+            }
         }
     });
 
-    // Campos específicos por step
     switch(step) {
         case 1:
-            const camposStep1 = ['nome', 'nasc', 'sexo', 'estadoCivil', 'rg', 'cpf', 'telefone', 'email', 'escolaridade', 'indicacao', 'situacao', 'dataFiliacao'];
+            const camposStep1 = [
+                'nome', 'nasc', 'sexo', 'estadoCivil', 'rg', 'cpf', 
+                'telefone', 'email', 'escolaridade', 'indicacao', 
+                'situacao', 'dataFiliacao'
+            ];
             
             camposStep1.forEach(campo => {
                 const element = form.elements[campo];
@@ -767,7 +1281,7 @@ function criarFormDataStep(step) {
                     if (element.type === 'radio') {
                         const checked = form.querySelector(`input[name="${campo}"]:checked`);
                         if (checked) formData.append(campo, checked.value);
-                    } else if (element.value) {
+                    } else {
                         formData.append(campo, element.value);
                     }
                 }
@@ -784,7 +1298,9 @@ function criarFormDataStep(step) {
             }
 
             const fotoFile = document.getElementById('foto').files[0];
-            if (fotoFile) formData.append('foto', fotoFile);
+            if (fotoFile) {
+                formData.append('foto', fotoFile);
+            }
 
             const fichaFile = document.getElementById('ficha_assinada')?.files[0];
             if (fichaFile) {
@@ -797,9 +1313,8 @@ function criarFormDataStep(step) {
             const camposStep2 = ['corporacao', 'patente', 'categoria', 'lotacao', 'unidade'];
             camposStep2.forEach(campo => {
                 const element = form.elements[campo];
-                if (element && element.value) {
-                    // Garantir maiúsculas ao salvar
-                    formData.append(campo, element.value.toUpperCase());
+                if (element) {
+                    formData.append(campo, element.value);
                 }
             });
             break;
@@ -808,16 +1323,24 @@ function criarFormDataStep(step) {
             const camposStep3 = ['cep', 'endereco', 'numero', 'complemento', 'bairro', 'cidade'];
             camposStep3.forEach(campo => {
                 const element = form.elements[campo];
-                if (element && element.value) formData.append(campo, element.value);
+                if (element) {
+                    formData.append(campo, element.value);
+                }
             });
             break;
 
         case 4:
-            const camposStep4 = ['tipoAssociadoServico', 'tipoAssociado', 'situacaoFinanceira', 'vinculoServidor', 'localDebito', 'agencia', 'operacao', 'contaCorrente', 'doador'];
+            const camposStep4 = [
+                'tipoAssociadoServico', 'tipoAssociado', 'situacaoFinanceira', 
+                'vinculoServidor', 'localDebito', 'agencia', 'operacao', 
+                'contaCorrente', 'doador'
+            ];
             
             camposStep4.forEach(campo => {
                 const element = form.elements[campo];
-                if (element && element.value) formData.append(campo, element.value);
+                if (element) {
+                    formData.append(campo, element.value);
+                }
             });
 
             formData.append('servicoSocial', '1');
@@ -837,7 +1360,9 @@ function criarFormDataStep(step) {
             dependentesCards.forEach((card, index) => {
                 const inputs = card.querySelectorAll('input, select');
                 inputs.forEach(input => {
-                    if (input.value) formData.append(input.name, input.value);
+                    if (input.value) {
+                        formData.append(input.name, input.value);
+                    }
                 });
             });
             break;
@@ -847,6 +1372,11 @@ function criarFormDataStep(step) {
 }
 
 function salvarNovoAssociadoPrimeiroPasso() {
+    if (!validarStepAtual()) {
+        showAlert('Por favor, corrija os erros antes de salvar.', 'warning');
+        return;
+    }
+
     salvandoStep = true;
     mostrarEstadoSalvando();
 
@@ -895,7 +1425,6 @@ function salvarNovoAssociadoPrimeiroPasso() {
     .catch(error => {
         esconderEstadoSalvando();
         salvandoStep = false;
-        console.error('Erro na requisição:', error);
         showAlert('Erro de comunicação com o servidor!', 'error');
     });
 }
@@ -928,32 +1457,47 @@ function mostrarSucessoSalvamento() {
     
     if (indicator) {
         indicator.classList.add('show');
-        setTimeout(() => indicator.classList.remove('show'), 3000);
+        setTimeout(() => {
+            indicator.classList.remove('show');
+        }, 3000);
     }
     
     if (btn) {
         btn.classList.add('saved');
-        setTimeout(() => btn.classList.remove('saved'), 2000);
+        setTimeout(() => {
+            btn.classList.remove('saved');
+        }, 2000);
     }
 }
 
 function atualizarIndicadoresStep() {
     stepsSalvos.forEach(stepNum => {
         const stepElement = document.querySelector(`[data-step="${stepNum}"]`);
-        if (stepElement) stepElement.classList.add('saved');
+        if (stepElement) {
+            stepElement.classList.add('saved');
+        }
     });
 }
 
-// ===== NAVEGAÇÃO =====
+// ===========================
+// NAVEGAÇÃO
+// ===========================
 
 function proximoStep() {
-    // SEM VALIDAÇÃO OBRIGATÓRIA - apenas avança
-    if (currentStep < totalSteps) {
-        document.querySelector(`[data-step="${currentStep}"]`).classList.add('completed');
-        irParaStep(currentStep + 1);
-        
-        if (currentStep === totalSteps) {
-            preencherRevisao();
+    if (currentStep === 4) {
+        if (!validarTipoEServicos()) {
+            return;
+        }
+    }
+    
+    if (validarStepAtual()) {
+        if (currentStep < totalSteps) {
+            document.querySelector(`[data-step="${currentStep}"]`).classList.add('completed');
+            irParaStep(currentStep + 1);
+            
+            if (currentStep === totalSteps) {
+                preencherRevisao();
+            }
         }
     }
 }
@@ -964,6 +1508,17 @@ function voltarStep() {
     }
 }
 
+function irParaStep(numeroStep) {
+    if (numeroStep < 1 || numeroStep > totalSteps) return;
+    
+    if (numeroStep > currentStep && !validarStepAtual()) {
+        return;
+    }
+    
+    currentStep = numeroStep;
+    mostrarStep(currentStep);
+}
+
 function mostrarStep(step) {
     document.querySelectorAll('.section-card').forEach(card => {
         card.classList.remove('active');
@@ -971,9 +1526,19 @@ function mostrarStep(step) {
 
     document.querySelector(`.section-card[data-step="${step}"]`).classList.add('active');
 
+    // Executa lógicas específicas por step
+    if (step === 2) {
+        aoEntrarStepMilitares();
+    } else if (step === 4) {
+        aoEntrarStepFinanceiro();
+    }
+
     updateProgressBar();
     updateNavigationButtons();
-    setTimeout(() => inicializarNavegacaoSteps(), 1000);
+    
+    setTimeout(() => {
+        inicializarNavegacaoSteps();
+    }, 1000);
 
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -1014,7 +1579,11 @@ function updateNavigationButtons() {
             
             const saveText = btnSalvarStep.querySelector('.save-text');
             if (saveText) {
-                saveText.textContent = stepsSalvos.has(currentStep) ? 'Atualizar' : 'Salvar';
+                if (stepsSalvos.has(currentStep)) {
+                    saveText.textContent = 'Atualizar';
+                } else {
+                    saveText.textContent = 'Salvar';
+                }
             }
         } else {
             btnSalvarStep.style.display = 'none';
@@ -1030,12 +1599,6 @@ function updateNavigationButtons() {
     }
 }
 
-function irParaStep(numeroStep) {
-    if (numeroStep < 1 || numeroStep > totalSteps) return;
-    currentStep = numeroStep;
-    mostrarStep(currentStep);
-}
-
 function inicializarNavegacaoSteps() {
     document.querySelectorAll('.step').forEach(step => {
         step.style.cursor = 'pointer';
@@ -1045,8 +1608,11 @@ function inicializarNavegacaoSteps() {
             const numeroStep = parseInt(this.getAttribute('data-step'));
             if (numeroStep) {
                 irParaStep(numeroStep);
+                
                 this.style.transform = 'scale(0.95)';
-                setTimeout(() => this.style.transform = 'scale(1)', 150);
+                setTimeout(() => {
+                    this.style.transform = 'scale(1)';
+                }, 150);
             }
         });
         
@@ -1064,18 +1630,137 @@ function inicializarNavegacaoSteps() {
     });
 }
 
-// ===== FUNÇÕES AUXILIARES =====
+// ===========================
+// VALIDAÇÃO
+// ===========================
+
+function validarStepAtual() {
+    const stepCard = document.querySelector(`.section-card[data-step="${currentStep}"]`);
+    const requiredFields = stepCard.querySelectorAll('[required]');
+    let isValid = true;
+
+    stepCard.querySelectorAll('.form-input').forEach(field => {
+        field.classList.remove('error');
+    });
+
+    requiredFields.forEach(field => {
+        if (!field.value.trim()) {
+            field.classList.add('error');
+            isValid = false;
+        }
+    });
+
+    if (currentStep === 1) {
+        const isAgregado = document.getElementById('isAgregado')?.checked;
+        if (isAgregado) {
+            const cpfTitular = document.getElementById('cpfTitular')?.value;
+            const nomeTitular = document.getElementById('nomeTitularInfo')?.value;
+            const erroVisivel = document.getElementById('erroCpfTitular')?.style.display !== 'none';
+            
+            if (!cpfTitular || !nomeTitular || erroVisivel) {
+                showAlert('Por favor, preencha corretamente o CPF do titular e verifique se está filiado.', 'error');
+                document.getElementById('cpfTitular')?.classList.add('error');
+                isValid = false;
+            }
+        }
+        
+        const cpfField = document.getElementById('cpf');
+        if (cpfField && cpfField.value && !validarCPF(cpfField.value)) {
+            cpfField.classList.add('error');
+            isValid = false;
+            showAlert('CPF inválido!', 'error');
+        }
+
+        if (!isEdit) {
+            const fichaField = document.getElementById('ficha_assinada');
+            if (!fichaField.files || fichaField.files.length === 0) {
+                showAlert('Por favor, anexe a ficha de filiação assinada!', 'error');
+                isValid = false;
+            }
+        }
+
+        const emailField = document.getElementById('email');
+        if (emailField && emailField.value && !validarEmail(emailField.value)) {
+            emailField.classList.add('error');
+            isValid = false;
+            showAlert('E-mail inválido!', 'error');
+        }
+    }
+
+    if (currentStep === 4) {
+        const tipoAssociadoServico = document.getElementById('tipoAssociadoServico');
+        const tipoAssociado = document.getElementById('tipoAssociado');
+        const valorSocial = document.getElementById('valorSocial');
+
+        if (tipoAssociadoServico && !tipoAssociadoServico.value) {
+            tipoAssociadoServico.classList.add('error');
+            isValid = false;
+            showAlert('Por favor, selecione o tipo de associado para os serviços!', 'error');
+        }
+
+        if (tipoAssociado && !tipoAssociado.value) {
+            tipoAssociado.classList.add('error');
+            isValid = false;
+            showAlert('Por favor, selecione a categoria do associado!', 'error');
+        }
+
+        if (valorSocial && valorSocial.value === '') {
+            isValid = false;
+            showAlert('Erro no cálculo dos serviços. Verifique o tipo de associado selecionado!', 'error');
+        }
+    }
+
+    if (!isValid) {
+        showAlert('Por favor, preencha todos os campos obrigatórios!', 'warning');
+    }
+
+    return isValid;
+}
+
+function setupRealtimeValidation() {
+    document.querySelectorAll('.form-input').forEach(input => {
+        input.addEventListener('input', function () {
+            if (this.value.trim()) {
+                this.classList.remove('error');
+            }
+        });
+    });
+
+    const cpfField = document.getElementById('cpf');
+    if (cpfField) {
+        cpfField.addEventListener('blur', function () {
+            if (this.value && !validarCPF(this.value)) {
+                this.classList.add('error');
+                showAlert('CPF inválido!', 'error');
+            }
+        });
+    }
+
+    const emailField = document.getElementById('email');
+    if (emailField) {
+        emailField.addEventListener('blur', function () {
+            if (this.value && !validarEmail(this.value)) {
+                this.classList.add('error');
+                showAlert('E-mail inválido!', 'error');
+            }
+        });
+    }
+}
 
 function validarCPF(cpf) {
     cpf = cpf.replace(/[^\d]/g, '');
+
     if (cpf.length !== 11) return false;
     if (/^(\d)\1{10}$/.test(cpf)) return false;
 
     let soma = 0;
+    let resto;
+
     for (let i = 1; i <= 9; i++) {
         soma += parseInt(cpf.substring(i - 1, i)) * (11 - i);
     }
-    let resto = (soma * 10) % 11;
+
+    resto = (soma * 10) % 11;
     if (resto === 10 || resto === 11) resto = 0;
     if (resto !== parseInt(cpf.substring(9, 10))) return false;
 
@@ -1083,6 +1768,7 @@ function validarCPF(cpf) {
     for (let i = 1; i <= 10; i++) {
         soma += parseInt(cpf.substring(i - 1, i)) * (12 - i);
     }
+
     resto = (soma * 10) % 11;
     if (resto === 10 || resto === 11) resto = 0;
     if (resto !== parseInt(cpf.substring(10, 11))) return false;
@@ -1095,42 +1781,216 @@ function validarEmail(email) {
     return re.test(email);
 }
 
-function buscarCEP() {
-    const cepField = document.getElementById('cep');
-    if (!cepField) return;
+function validarFormularioCompleto() {
+    const form = document.getElementById('formAssociado');
+    if (!form) return false;
 
-    const cep = cepField.value.replace(/\D/g, '');
+    const requiredFields = form.querySelectorAll('[required]');
+    let isValid = true;
 
-    if (cep.length !== 8) {
-        showAlert('CEP inválido!', 'error');
-        return;
-    }
+    requiredFields.forEach(field => {
+        if (isEdit && field.name === 'foto') {
+            return;
+        }
 
-    showLoading();
+        if (!field.value.trim()) {
+            field.classList.add('error');
+            isValid = false;
+        }
+    });
 
-    fetch(`https://viacep.com.br/ws/${cep}/json/`)
-        .then(response => response.json())
-        .then(data => {
-            hideLoading();
-
-            if (data.erro) {
-                showAlert('CEP não encontrado!', 'error');
-                return;
-            }
-
-            if (document.getElementById('endereco')) document.getElementById('endereco').value = data.logradouro;
-            if (document.getElementById('bairro')) document.getElementById('bairro').value = data.bairro;
-            if (document.getElementById('cidade')) document.getElementById('cidade').value = data.localidade;
-            if (document.getElementById('numero')) document.getElementById('numero').focus();
-        })
-        .catch(error => {
-            hideLoading();
-            console.error('Erro ao buscar CEP:', error);
-            showAlert('Erro ao buscar CEP!', 'error');
-        });
+    return isValid;
 }
 
-// ===== DEPENDENTES =====
+// ===========================
+// SALVAR ASSOCIADO COMPLETO
+// ===========================
+
+function salvarAssociado() {
+    console.log('=== SALVANDO ASSOCIADO/AGREGADO ===');
+    
+    const isAgregado = document.getElementById('isAgregado')?.checked;
+    
+    if (isAgregado) {
+        const cpfTitular = document.getElementById('cpfTitular')?.value;
+        const nomeTitular = document.getElementById('nomeTitularInfo')?.value;
+        const erroVisivel = document.getElementById('erroCpfTitular')?.style.display !== 'none';
+        
+        if (!cpfTitular || !nomeTitular || erroVisivel) {
+            showAlert('Por favor, preencha corretamente o CPF do titular e verifique se está filiado.', 'error');
+            document.getElementById('cpfTitular')?.focus();
+            return;
+        }
+    }
+    
+    if (!validarFormularioCompleto()) {
+        showAlert('Por favor, verifique todos os campos obrigatórios!', 'error');
+        return;
+    }
+    
+    showLoading();
+    
+    const formulario = document.querySelector('form');
+    const formData = new FormData(formulario);
+    
+    // Campos manuais
+    const camposManuais = [
+        { id: 'nome', name: 'nome' },
+        { id: 'cpf', name: 'cpf' },
+        { id: 'rg', name: 'rg' },
+        { id: 'telefone', name: 'telefone' },
+        { id: 'celular', name: 'celular' },
+        { id: 'email', name: 'email' },
+        { id: 'endereco', name: 'endereco' },
+        { id: 'numero', name: 'numero' },
+        { id: 'complemento', name: 'complemento' },
+        { id: 'bairro', name: 'bairro' },
+        { id: 'cidade', name: 'cidade' },
+        { id: 'estado', name: 'estado' },
+        { id: 'cep', name: 'cep' },
+        { id: 'banco', name: 'banco' },
+        { id: 'agencia', name: 'agencia' },
+        { id: 'contaCorrente', name: 'contaCorrente' },
+        { id: 'estadoCivil', name: 'estadoCivil' },
+        { id: 'dataFiliacao', name: 'dataFiliacao' },
+        { id: 'situacao', name: 'situacao' },
+        { id: 'escolaridade', name: 'escolaridade' }
+    ];
+
+    camposManuais.forEach(campo => {
+        const elemento = document.getElementById(campo.id);
+        if (elemento && elemento.value && elemento.value.trim() !== '') {
+            formData.set(campo.name, elemento.value);
+        }
+    });
+    
+    // Data de nascimento
+    let campoNasc = document.getElementById('nasc');
+    if (campoNasc && campoNasc.value) {
+        formData.set('dataNascimento', campoNasc.value);
+        formData.set('nasc', campoNasc.value);
+        formData.set('data_nascimento', campoNasc.value);
+    }
+
+    // Celular
+    if (!formData.get('celular')) {
+        const telefone = document.getElementById('telefone');
+        if (telefone && telefone.value) {
+            formData.set('celular', telefone.value);
+        }
+    }
+
+    // Estado
+    if (!formData.get('estado')) {
+        formData.set('estado', 'GO');
+    }
+    
+    // Agregados
+    if (isAgregado) {
+        if (!formData.get('banco') || formData.get('banco') === '') {
+            formData.set('banco', 'Não informado');
+        }
+        if (!formData.get('agencia') || formData.get('agencia') === '') {
+            formData.set('agencia', '');
+        }
+        if (!formData.get('contaCorrente') || formData.get('contaCorrente') === '') {
+            formData.set('contaCorrente', '');
+        }
+        
+        const cpfTitular = document.getElementById('cpfTitular')?.value;
+        if (cpfTitular) {
+            formData.set('cpfTitular', cpfTitular);
+            formData.set('socioTitularCpf', cpfTitular);
+        }
+    }
+
+    // Select2
+    const camposSelect2 = [
+        'corporacao', 'patente', 'categoria', 'lotacao',
+        'tipoAssociadoServico', 'tipoAssociado', 'situacaoFinanceira'
+    ];
+    
+    camposSelect2.forEach(campo => {
+        const elemento = document.getElementById(campo);
+        if (elemento && elemento.value) {
+            formData.set(campo, elemento.value);
+        }
+    });
+
+    // Sexo
+    const sexoRadio = document.querySelector('input[name="sexo"]:checked');
+    if (sexoRadio) {
+        formData.set('sexo', sexoRadio.value);
+    }
+    
+    // Serviços
+    const servicoSocial = document.getElementById('valorSocial');
+    if (servicoSocial && servicoSocial.value) {
+        formData.set('servicoSocial', '1');
+        formData.set('valorSocial', servicoSocial.value);
+        formData.set('percentualAplicadoSocial', document.getElementById('percentualAplicadoSocial')?.value || '0');
+    }
+    
+    const servicoJuridico = document.getElementById('servicoJuridico');
+    if (servicoJuridico && servicoJuridico.checked && !servicoJuridico.disabled) {
+        formData.set('servicoJuridico', '2');
+        formData.set('valorJuridico', document.getElementById('valorJuridico')?.value || '0');
+        formData.set('percentualAplicadoJuridico', document.getElementById('percentualAplicadoJuridico')?.value || '0');
+    }
+    
+    // URL
+    const associadoId = document.getElementById('associadoId')?.value;
+    let url;
+    
+    if (isAgregado) {
+        url = '../api/criar_agregado.php';
+    } else {
+        url = associadoId ? 
+            `../api/atualizar_associado.php?id=${associadoId}` : 
+            '../api/criar_associado.php';
+    }
+    
+    fetch(url, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.text())
+    .then(text => {
+        let data;
+        try {
+            data = JSON.parse(text);
+        } catch (e) {
+            console.error('Erro no JSON:', e);
+            hideLoading();
+            showAlert('Erro: Resposta inválida do servidor.', 'error');
+            return;
+        }
+        
+        hideLoading();
+        
+        if (data.status === 'success') {
+            showAlert(data.message || 'Salvo com sucesso!', 'success');
+            setTimeout(() => {
+                window.location.reload();
+            }, 1500);
+        } else {
+            let erro = data.message || 'Erro ao salvar';
+            if (data.errors && Array.isArray(data.errors)) {
+                erro += ':\n• ' + data.errors.join('\n• ');
+            }
+            showAlert(erro, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Erro na requisição:', error);
+        hideLoading();
+        showAlert('Erro de comunicação: ' + error.message, 'error');
+    });
+}
+
+// ===========================
+// DEPENDENTES
+// ===========================
 
 function adicionarDependente() {
     const container = document.getElementById('dependentesContainer');
@@ -1149,7 +2009,8 @@ function adicionarDependente() {
             <div class="form-grid">
                 <div class="form-group full-width">
                     <label class="form-label">Nome Completo</label>
-                    <input type="text" class="form-input" name="dependentes[${novoIndex}][nome]" placeholder="Nome do dependente">
+                    <input type="text" class="form-input" name="dependentes[${novoIndex}][nome]" 
+                           placeholder="Nome do dependente">
                 </div>
                 <div class="form-group">
                     <label class="form-label">Data de Nascimento</label>
@@ -1198,151 +2059,16 @@ function removerDependente(button) {
         card.remove();
         document.querySelectorAll('.dependente-card').forEach((card, index) => {
             const numberEl = card.querySelector('.dependente-number');
-            if (numberEl) numberEl.textContent = `Dependente ${index + 1}`;
+            if (numberEl) {
+                numberEl.textContent = `Dependente ${index + 1}`;
+            }
         });
     }, 300);
 }
 
-// ===== SALVAR ASSOCIADO COMPLETO =====
-
-function salvarAssociado() {
-    console.log('=== SALVANDO ASSOCIADO COMPLETO ===');
-    
-    showLoading();
-    
-    const formulario = document.querySelector('form');
-    
-    if (!formulario) {
-        hideLoading();
-        showAlert('Erro: Formulário não encontrado!', 'error');
-        return;
-    }
-    
-    const formData = new FormData(formulario);
-    
-    // Adiciona campos manualmente
-    const camposManuais = [
-        'nome', 'cpf', 'rg', 'nasc', 'telefone', 'celular', 'email',
-        'endereco', 'numero', 'complemento', 'bairro', 'cidade', 'estado', 'cep',
-        'localDebito', 'agencia', 'contaCorrente', 'estadoCivil', 'dataFiliacao',
-        'situacao', 'escolaridade', 'operacao', 'indicacao'
-    ];
-
-    camposManuais.forEach(campo => {
-        const elemento = document.getElementById(campo);
-        if (elemento && elemento.value) {
-            formData.set(campo, elemento.value);
-        }
-    });
-
-    // Celular fallback
-    if (!formData.get('celular')) {
-        const telefone = document.getElementById('telefone');
-        if (telefone && telefone.value) {
-            formData.set('celular', telefone.value);
-        }
-    }
-
-    // Campos Select2 - garantir maiúsculas para campos militares
-    const camposSelect2 = ['corporacao', 'patente', 'categoria', 'lotacao', 'unidade', 'tipoAssociadoServico', 'tipoAssociado', 'situacaoFinanceira', 'vinculoServidor'];
-    const camposMilitaresUpper = ['corporacao', 'patente', 'categoria', 'lotacao', 'unidade'];
-    
-    camposSelect2.forEach(campo => {
-        const elemento = document.getElementById(campo);
-        if (elemento && elemento.value) {
-            // Aplicar maiúsculas apenas nos campos militares
-            if (camposMilitaresUpper.includes(campo)) {
-                formData.set(campo, elemento.value.toUpperCase());
-            } else {
-                formData.set(campo, elemento.value);
-            }
-        }
-    });
-
-    // Sexo
-    const sexoRadio = document.querySelector('input[name="sexo"]:checked');
-    if (sexoRadio) formData.set('sexo', sexoRadio.value);
-    
-    // Agregado
-    const isAgregado = document.getElementById('isAgregado')?.checked || isSocioAgregado;
-    if (isAgregado) {
-        const cpfTitular = document.getElementById('cpfTitular')?.value;
-        if (cpfTitular) {
-            formData.set('cpfTitular', cpfTitular);
-            formData.set('socioTitularCpf', cpfTitular);
-        }
-    }
-    
-    // Serviços
-    const servicoSocial = document.getElementById('valorSocial');
-    const servicoJuridico = document.getElementById('servicoJuridico');
-    
-    if (servicoSocial && servicoSocial.value) {
-        formData.set('servicoSocial', '1');
-        formData.set('valorSocial', servicoSocial.value);
-        formData.set('percentualAplicadoSocial', document.getElementById('percentualAplicadoSocial')?.value || '0');
-    }
-    
-    if (servicoJuridico && servicoJuridico.checked && !servicoJuridico.disabled) {
-        formData.set('servicoJuridico', '2');
-        formData.set('valorJuridico', document.getElementById('valorJuridico')?.value || '0');
-        formData.set('percentualAplicadoJuridico', document.getElementById('percentualAplicadoJuridico')?.value || '0');
-    }
-    
-    // Define URL
-    const associadoIdAtual = document.getElementById('associadoId')?.value || (isEdit ? associadoId : window.pageData.associadoId);
-    let url;
-    
-    if (isAgregado) {
-        url = '../api/criar_agregado.php';
-    } else {
-        url = associadoIdAtual ? 
-            `../api/atualizar_associado.php?id=${associadoIdAtual}` : 
-            '../api/criar_associado.php';
-    }
-    
-    console.log('📡 Enviando para:', url);
-    
-    fetch(url, {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => response.text())
-    .then(text => {
-        let data;
-        try {
-            data = JSON.parse(text);
-        } catch (e) {
-            console.error('Erro ao fazer parse JSON:', e);
-            hideLoading();
-            showAlert('Resposta inválida do servidor.', 'error');
-            return;
-        }
-        
-        hideLoading();
-        
-        if (data.status === 'success') {
-            showAlert(data.message || 'Salvo com sucesso!', 'success');
-            
-            setTimeout(() => {
-                window.location.reload();
-            }, 1500);
-        } else {
-            let erro = data.message || 'Erro ao salvar';
-            if (data.errors && Array.isArray(data.errors)) {
-                erro += ':\n• ' + data.errors.join('\n• ');
-            }
-            showAlert(erro, 'error');
-        }
-    })
-    .catch(error => {
-        console.error('Erro na requisição:', error);
-        hideLoading();
-        showAlert('Erro ao comunicar com o servidor: ' + error.message, 'error');
-    });
-}
-
-// ===== REVISÃO =====
+// ===========================
+// REVISÃO
+// ===========================
 
 function preencherRevisao() {
     const container = document.getElementById('revisaoContainer');
@@ -1371,21 +2097,54 @@ function preencherRevisao() {
 
     let html = `
         <div class="overview-card" style="background: var(--gray-100); padding: 2rem; border-radius: 16px; margin-bottom: 1.5rem;">
-            <h3 style="font-size: 1.25rem; font-weight: 700; color: var(--dark); margin-bottom: 1.5rem;">
-                <i class="fas fa-user"></i> Resumo da Filiação
-            </h3>
-            <div class="row">
-                <div class="col-md-6">
-                    <p><strong>Nome:</strong> ${dadosRevisao.nome}</p>
-                    <p><strong>CPF:</strong> ${dadosRevisao.cpf}</p>
-                    <p><strong>Telefone:</strong> ${dadosRevisao.telefone}</p>
-                    <p><strong>Corporação:</strong> ${dadosRevisao.corporacao}</p>
+            <div class="overview-card-header" style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 2px solid var(--gray-200);">
+                <div class="overview-card-icon" style="width: 48px; height: 48px; background: var(--primary-light); color: var(--primary); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                    <i class="fas fa-user"></i>
                 </div>
-                <div class="col-md-6">
-                    <p><strong>Patente:</strong> ${dadosRevisao.patente}</p>
-                    <p><strong>Tipo de Associado:</strong> ${dadosRevisao.tipoAssociadoServico}</p>
-                    <p><strong>Serviço Jurídico:</strong> ${statusJuridico}</p>
-                    <p><strong>Valor Total Mensal:</strong> <span style="color: var(--primary); font-weight: 700;">R$ ${dadosRevisao.valorTotal}</span></p>
+                <h3 class="overview-card-title" style="font-size: 1.25rem; font-weight: 700; color: var(--dark); margin: 0;">Resumo da Filiação</h3>
+            </div>
+            <div class="overview-card-content">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="overview-item" style="margin-bottom: 1rem;">
+                            <span class="overview-label" style="font-size: 0.875rem; color: var(--gray-600); font-weight: 600;">Nome:</span>
+                            <span class="overview-value" style="font-size: 1rem; color: var(--dark); font-weight: 500;">${dadosRevisao.nome}</span>
+                        </div>
+                        <div class="overview-item" style="margin-bottom: 1rem;">
+                            <span class="overview-label" style="font-size: 0.875rem; color: var(--gray-600); font-weight: 600;">CPF:</span>
+                            <span class="overview-value" style="font-size: 1rem; color: var(--dark); font-weight: 500;">${dadosRevisao.cpf}</span>
+                        </div>
+                        <div class="overview-item" style="margin-bottom: 1rem;">
+                            <span class="overview-label" style="font-size: 0.875rem; color: var(--gray-600); font-weight: 600;">Telefone:</span>
+                            <span class="overview-value" style="font-size: 1rem; color: var(--dark); font-weight: 500;">${dadosRevisao.telefone}</span>
+                        </div>
+                        <div class="overview-item" style="margin-bottom: 1rem;">
+                            <span class="overview-label" style="font-size: 0.875rem; color: var(--gray-600); font-weight: 600;">Corporação:</span>
+                            <span class="overview-value" style="font-size: 1rem; color: var(--dark); font-weight: 500;">${dadosRevisao.corporacao}</span>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="overview-item" style="margin-bottom: 1rem;">
+                            <span class="overview-label" style="font-size: 0.875rem; color: var(--gray-600); font-weight: 600;">Patente:</span>
+                            <span class="overview-value" style="font-size: 1rem; color: var(--dark); font-weight: 500;">${dadosRevisao.patente}</span>
+                        </div>
+                        <div class="overview-item" style="margin-bottom: 1rem;">
+                            <span class="overview-label" style="font-size: 0.875rem; color: var(--gray-600); font-weight: 600;">Tipo de Associado:</span>
+                            <span class="overview-value" style="font-size: 1rem; color: var(--dark); font-weight: 500;">${dadosRevisao.tipoAssociadoServico}</span>
+                        </div>
+                        <div class="overview-item" style="margin-bottom: 1rem;">
+                            <span class="overview-label" style="font-size: 0.875rem; color: var(--gray-600); font-weight: 600;">Categoria:</span>
+                            <span class="overview-value" style="font-size: 1rem; color: var(--dark); font-weight: 500;">${dadosRevisao.tipoAssociado}</span>
+                        </div>
+                        <div class="overview-item" style="margin-bottom: 1rem;">
+                            <span class="overview-label" style="font-size: 0.875rem; color: var(--gray-600); font-weight: 600;">Serviço Jurídico:</span>
+                            <span class="overview-value" style="font-size: 1rem; color: var(--dark); font-weight: 500;">${statusJuridico}</span>
+                        </div>
+                        <div class="overview-item" style="margin-bottom: 1rem;">
+                            <span class="overview-label" style="font-size: 0.875rem; color: var(--gray-600); font-weight: 600;">Valor Total Mensal:</span>
+                            <span class="overview-value" style="font-size: 1.25rem; color: var(--primary); font-weight: 700;">R$ ${dadosRevisao.valorTotal}</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1393,10 +2152,14 @@ function preencherRevisao() {
 
     if (stepsSalvos.size > 0) {
         html += `
-            <div style="background: #d1ecf1; border: 1px solid #b8daff; padding: 1rem; border-radius: 8px;">
-                <i class="fas fa-info-circle" style="color: #0c5460;"></i>
-                <strong style="color: #0c5460;">Steps já salvos:</strong>
-                <span style="color: #0c5460;">${Array.from(stepsSalvos).map(s => `Step ${s}`).join(', ')}</span>
+            <div class="alert-custom alert-info" style="background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%); color: #0c5460; border: 1px solid #b8daff;">
+                <i class="fas fa-info-circle"></i>
+                <div>
+                    <strong>Steps já salvos:</strong>
+                    <p style="margin: 0.25rem 0 0 0; font-size: 0.875rem;">
+                        ${Array.from(stepsSalvos).map(s => `Step ${s}`).join(', ')} foram salvos individualmente.
+                    </p>
+                </div>
             </div>
         `;
     }
@@ -1404,7 +2167,54 @@ function preencherRevisao() {
     container.innerHTML = html;
 }
 
-// ===== LOADING E ALERTS =====
+// ===========================
+// BUSCAR CEP
+// ===========================
+
+function buscarCEP() {
+    const cepField = document.getElementById('cep');
+    if (!cepField) return;
+
+    const cep = cepField.value.replace(/\D/g, '');
+
+    if (cep.length !== 8) {
+        showAlert('CEP inválido!', 'error');
+        return;
+    }
+
+    showLoading();
+
+    fetch(`https://viacep.com.br/ws/${cep}/json/`)
+        .then(response => response.json())
+        .then(data => {
+            hideLoading();
+
+            if (data.erro) {
+                showAlert('CEP não encontrado!', 'error');
+                return;
+            }
+
+            const enderecoField = document.getElementById('endereco');
+            const bairroField = document.getElementById('bairro');
+            const cidadeField = document.getElementById('cidade');
+            const numeroField = document.getElementById('numero');
+
+            if (enderecoField) enderecoField.value = data.logradouro;
+            if (bairroField) bairroField.value = data.bairro;
+            if (cidadeField) cidadeField.value = data.localidade;
+
+            if (numeroField) numeroField.focus();
+        })
+        .catch(error => {
+            hideLoading();
+            console.error('Erro ao buscar CEP:', error);
+            showAlert('Erro ao buscar CEP!', 'error');
+        });
+}
+
+// ===========================
+// UTILIDADES
+// ===========================
 
 function showLoading() {
     const overlay = document.getElementById('loadingOverlay');
@@ -1444,125 +2254,6 @@ function showAlert(message, type = 'info') {
     }, 5000);
 }
 
-// ===== AGREGADO =====
-
-function toggleAgregadoCampos() {
-    const isAgregado = document.getElementById('isAgregado').checked;
-    const campoCpfTitular = document.getElementById('campoCpfTitular');
-    const cpfTitularInput = document.getElementById('cpfTitular');
-    const nomeTitularInput = document.getElementById('nomeTitularInfo');
-    const erroSpan = document.getElementById('erroCpfTitular');
-    const avisoFinanceiro = document.getElementById('avisoAgregadoFinanceiro');
-    
-    if (isAgregado) {
-        if (campoCpfTitular) campoCpfTitular.style.display = 'block';
-        if (avisoFinanceiro) avisoFinanceiro.style.display = 'block';
-        
-        // Também atualizar os campos financeiros
-        controlarCamposFinanceiroAgregado(true);
-    } else {
-        if (campoCpfTitular) campoCpfTitular.style.display = 'none';
-        if (cpfTitularInput) cpfTitularInput.value = '';
-        if (nomeTitularInput) {
-            nomeTitularInput.value = '';
-            nomeTitularInput.style.background = '#f5f5f5';
-            nomeTitularInput.style.color = '#666';
-        }
-        if (erroSpan) erroSpan.style.display = 'none';
-        if (avisoFinanceiro) avisoFinanceiro.style.display = 'none';
-        
-        // Reativar campos financeiros
-        controlarCamposFinanceiroAgregado(false);
-    }
-}
-
-function buscarNomeTitularPorCpf() {
-    const cpfInput = document.getElementById('cpfTitular');
-    const nomeInput = document.getElementById('nomeTitularInfo');
-    const erroSpan = document.getElementById('erroCpfTitular');
-    
-    if (!cpfInput || !nomeInput || !erroSpan) return;
-
-    const cpf = cpfInput.value.replace(/\D/g, '');
-    
-    if (cpf.length !== 11) {
-        nomeInput.value = '';
-        nomeInput.style.background = '#f5f5f5';
-        nomeInput.style.color = '#666';
-        erroSpan.style.display = 'block';
-        erroSpan.textContent = 'CPF deve ter 11 dígitos';
-        return;
-    }
-    
-    nomeInput.value = 'Buscando...';
-    nomeInput.style.background = '#fff3cd';
-    nomeInput.style.color = '#856404';
-    erroSpan.style.display = 'none';
-    
-    fetch(`../api/buscar_associado_por_cpf.php?cpf=${cpf}`)
-        .then(response => response.json())
-        .then(data => {
-            if (data.status === 'success' && data.data) {
-                const titular = data.data;
-                let nome = titular.titular_nome || titular.nome || '';
-                let cpfFormatado = titular.titular_cpf || titular.cpf || '';
-                let situacao = titular.titular_situacao || titular.situacao || '';
-                
-                if (cpfFormatado && cpfFormatado.length === 11) {
-                    cpfFormatado = cpfFormatado.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
-                }
-                
-                if (nome && cpfFormatado) {
-                    nomeInput.value = `${nome} - ${cpfFormatado}`;
-                } else if (nome) {
-                    nomeInput.value = nome;
-                } else {
-                    nomeInput.value = '';
-                }
-                
-                if (situacao && situacao !== 'Filiado') {
-                    nomeInput.style.background = '#f8d7da';
-                    nomeInput.style.color = '#721c24';
-                    erroSpan.style.display = 'block';
-                    erroSpan.textContent = `Titular está ${situacao}. Somente titulares FILIADOS podem ter agregados.`;
-                } else {
-                    nomeInput.style.background = '#d4edda';
-                    nomeInput.style.color = '#155724';
-                    erroSpan.style.display = 'none';
-                }
-                
-            } else {
-                nomeInput.value = '';
-                nomeInput.style.background = '#f8d7da';
-                nomeInput.style.color = '#721c24';
-                erroSpan.style.display = 'block';
-                erroSpan.textContent = 'CPF não encontrado ou não é um associado filiado';
-            }
-        })
-        .catch(error => {
-            console.error('Erro na busca:', error);
-            nomeInput.value = '';
-            nomeInput.style.background = '#f8d7da';
-            nomeInput.style.color = '#721c24';
-            erroSpan.style.display = 'block';
-            erroSpan.textContent = 'Erro ao buscar CPF. Tente novamente.';
-        });
-}
-
-// Listener para CPF do titular
-document.addEventListener('DOMContentLoaded', function() {
-    const cpfInput = document.getElementById('cpfTitular');
-    if (cpfInput) {
-        cpfInput.addEventListener('blur', buscarNomeTitularPorCpf);
-        cpfInput.addEventListener('keyup', function() {
-            const cpfLimpo = this.value.replace(/\D/g, '');
-            if (cpfLimpo.length === 11) {
-                buscarNomeTitularPorCpf();
-            }
-        });
-    }
-});
-
 // Atalhos de teclado
 document.addEventListener('keydown', function(e) {
     if (!e.target.matches('input, textarea, select')) {
@@ -1589,4 +2280,4 @@ document.addEventListener('keydown', function(e) {
     }
 });
 
-console.log('✓ cadastroForm.js carregado - TODOS CAMPOS OPCIONAIS + AGREGADO CINZA + MAIÚSCULAS MILITARES');
+console.log('✅ cadastroForm.js v2.0 carregado completamente!');
