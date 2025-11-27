@@ -253,7 +253,7 @@ try {
     }
     
     // =============================
-    // VERIFICA SE JÁ EXISTE
+    // VERIFICA SE JÁ EXISTE SIM
     // =============================
     
     $cpfAgregado = $dados['cpf'];
