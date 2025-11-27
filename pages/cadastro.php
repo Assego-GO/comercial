@@ -58,8 +58,6 @@ if ($isEdit) {
 
     <!-- jQuery Mask -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.mask/1.14.16/jquery.mask.min.js"></script>
-
-    <link rel="stylesheet" href="estilizacao/autocomplete.css">
     
     <style>
         :root {
@@ -496,45 +494,6 @@ if ($isEdit) {
             }
         }
 
-        .autocomplete-container {
-            position: relative;
-        }
-
-        .autocomplete-suggestions {
-            position: absolute;
-            top: 100%;
-            left: 0;
-            right: 0;
-            background: var(--white);
-            border: 2px solid var(--gray-200);
-            border-top: none;
-            border-radius: 0 0 12px 12px;
-            max-height: 200px;
-            overflow-y: auto;
-            z-index: 1000;
-            display: none;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        }
-
-        .autocomplete-suggestion {
-            padding: 0.75rem 1rem;
-            cursor: pointer;
-            border-bottom: 1px solid var(--gray-100);
-        }
-
-        .autocomplete-suggestion:hover,
-        .autocomplete-suggestion.selected {
-            background: var(--primary-light);
-            color: var(--primary);
-        }
-
-        .autocomplete-loading,
-        .autocomplete-no-results {
-            padding: 0.75rem 1rem;
-            text-align: center;
-            color: var(--gray-500);
-        }
-
         .info-tooltip {
             color: var(--info);
             cursor: help;
@@ -715,8 +674,8 @@ if ($isEdit) {
     <header class="main-header">
         <div class="header-left">
             <div class="logo-section">
-                <div style="width: 40px; height: 40px; background: var(--primary); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white; font-weight: 800;">
-                    A
+                <div style="width: 50px; height: 50px; display: flex; align-items: center; justify-content: center;">
+                    <img src=img/logoassego.png alt="Logo ASSEGO" style="width: 100%; height: 100%; object-fit: contain;">
                 </div>
                 <div>
                     <h1 class="logo-text">ASSEGO</h1>
@@ -730,6 +689,9 @@ if ($isEdit) {
     <div class="content-area">
         <!-- Page Header -->
         <div class="page-header">
+            <div style="display: flex; justify-content: center; margin-bottom: 1.5rem;">
+                <img src="img/logoassego.png" alt="Logo ASSEGO" style="width: 120px; height: 120px; object-fit: contain;">
+            </div>
             <h1 class="page-title">
                 <i class="fas fa-user-plus"></i>
                 <?php echo $isEdit ? 'Editar Associado' : 'Cadastro online ASSEGO'; ?>
@@ -750,7 +712,7 @@ if ($isEdit) {
                 <input type="hidden" name="id" value="<?php echo $associadoId; ?>">
                 <?php endif; ?>
 
-                <!-- Dados Pessoais -->
+                <!-- SEÇÃO 1: DADOS PESSOAIS -->
                 <div class="section-card">
                     <div class="section-header">
                         <div class="section-icon">
@@ -857,32 +819,12 @@ if ($isEdit) {
 
                         <div class="form-group">
                             <label class="form-label">
-                                Escolaridade
-                            </label>
-                            <select class="form-input form-select" name="escolaridade" id="escolaridade">
-                                <option value="">Selecione...</option>
-                                <option value="Fundamental Incompleto" <?php echo (isset($associadoData['escolaridade']) && $associadoData['escolaridade'] == 'Fundamental Incompleto') ? 'selected' : ''; ?>>Fundamental Incompleto</option>
-                                <option value="Fundamental Completo" <?php echo (isset($associadoData['escolaridade']) && $associadoData['escolaridade'] == 'Fundamental Completo') ? 'selected' : ''; ?>>Fundamental Completo</option>
-                                <option value="Médio Incompleto" <?php echo (isset($associadoData['escolaridade']) && $associadoData['escolaridade'] == 'Médio Incompleto') ? 'selected' : ''; ?>>Médio Incompleto</option>
-                                <option value="Médio Completo" <?php echo (isset($associadoData['escolaridade']) && $associadoData['escolaridade'] == 'Médio Completo') ? 'selected' : ''; ?>>Médio Completo</option>
-                                <option value="Superior Incompleto" <?php echo (isset($associadoData['escolaridade']) && $associadoData['escolaridade'] == 'Superior Incompleto') ? 'selected' : ''; ?>>Superior Incompleto</option>
-                                <option value="Superior Completo" <?php echo (isset($associadoData['escolaridade']) && $associadoData['escolaridade'] == 'Superior Completo') ? 'selected' : ''; ?>>Superior Completo</option>
-                                <option value="Pós-graduação" <?php echo (isset($associadoData['escolaridade']) && $associadoData['escolaridade'] == 'Pós-graduação') ? 'selected' : ''; ?>>Pós-graduação</option>
-                            </select>
-                        </div>
-
-                        <div class="form-group">
-                            <label class="form-label">
                                 Indicado por
                                 <i class="fas fa-info-circle info-tooltip" title="Nome da pessoa que indicou o associado"></i>
                             </label>
-                            <div class="autocomplete-container" style="position: relative;">
-                                <input type="text" class="form-input" name="indicacao" id="indicacao"
-                                    value="<?php echo $associadoData['indicacao'] ?? ''; ?>"
-                                    placeholder="Digite o nome de quem indicou..."
-                                    autocomplete="off">
-                                <div id="indicacaoSuggestions" class="autocomplete-suggestions"></div>
-                            </div>
+                            <input type="text" class="form-input" name="indicacao" id="indicacao"
+                                value="<?php echo $associadoData['indicacao'] ?? ''; ?>"
+                                placeholder="Digite o nome de quem indicou...">
                         </div>
 
                         <div class="form-group">
@@ -894,17 +836,46 @@ if ($isEdit) {
                                 <option value="Desfiliado" <?php echo (isset($associadoData['situacao']) && $associadoData['situacao'] == 'Desfiliado') ? 'selected' : ''; ?>>Desfiliado</option>
                             </select>
                         </div>
+                    </div>
+                </div>
 
-                        <div class="form-group">
+                <!-- SEÇÃO 2: FOTO DO ASSOCIADO -->
+                <div class="section-card" style="border-top: 1px solid var(--gray-200); padding-top: 2rem;">
+                    <div class="form-grid">
+                        <div class="form-group full-width">
                             <label class="form-label">
-                                Data de Filiação <span class="required">*</span>
+                                Foto do Associado <span class="required">*</span>
                             </label>
-                            <input type="date" class="form-input" name="dataFiliacao" id="dataFiliacao" required
-                                   value="<?php echo $associadoData['data_filiacao'] ?? date('Y-m-d'); ?>">
-                            <span class="form-error">Por favor, insira a data de filiação</span>
+                            <div class="photo-upload-container">
+                                <div class="photo-preview" id="photoPreview">
+                                    <?php if (isset($associadoData['foto']) && $associadoData['foto']): ?>
+                                        <img src="<?php echo $associadoData['foto']; ?>" alt="Foto do associado">
+                                    <?php else: ?>
+                                        <div class="photo-preview-placeholder">
+                                            <i class="fas fa-camera"></i>
+                                            <p>Sem foto</p>
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
+                                <div>
+                                    <input type="file" name="foto" id="foto" accept="image/*" style="display: none;" required>
+                                    <button type="button" class="photo-upload-btn" onclick="document.getElementById('foto').click();">
+                                        <i class="fas fa-upload"></i>
+                                        Escolher Foto
+                                    </button>
+                                    <p class="text-muted mt-2" style="font-size: 0.75rem;">
+                                        Formatos aceitos: JPG, PNG, GIF<br>
+                                        Tamanho máximo: 5MB
+                                    </p>
+                                </div>
+                            </div>
                         </div>
+                    </div>
+                </div>
 
-                        <!-- Termos e Condições -->
+                <!-- SEÇÃO 3: TERMOS E CONDIÇÕES -->
+                <div class="section-card" style="border-top: 1px solid var(--gray-200); padding-top: 2rem;">
+                    <div class="form-grid">
                         <div class="form-group full-width">
                             <div class="terms-container">
                                 <h3 class="terms-title">
@@ -957,35 +928,6 @@ if ($isEdit) {
                                             <span class="required">*</span>
                                         </label>
                                     </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="form-group full-width">
-                            <label class="form-label">
-                                Foto do Associado <span class="required">*</span>
-                            </label>
-                            <div class="photo-upload-container">
-                                <div class="photo-preview" id="photoPreview">
-                                    <?php if (isset($associadoData['foto']) && $associadoData['foto']): ?>
-                                        <img src="<?php echo $associadoData['foto']; ?>" alt="Foto do associado">
-                                    <?php else: ?>
-                                        <div class="photo-preview-placeholder">
-                                            <i class="fas fa-camera"></i>
-                                            <p>Sem foto</p>
-                                        </div>
-                                    <?php endif; ?>
-                                </div>
-                                <div>
-                                    <input type="file" name="foto" id="foto" accept="image/*" style="display: none;" required>
-                                    <button type="button" class="photo-upload-btn" onclick="document.getElementById('foto').click();">
-                                        <i class="fas fa-upload"></i>
-                                        Escolher Foto
-                                    </button>
-                                    <p class="text-muted mt-2" style="font-size: 0.75rem;">
-                                        Formatos aceitos: JPG, PNG, GIF<br>
-                                        Tamanho máximo: 5MB
-                                    </p>
                                 </div>
                             </div>
                         </div>
@@ -1053,9 +995,6 @@ if ($isEdit) {
         
         // Validação em tempo real
         setupRealtimeValidation();
-        
-        // Inicializa autocomplete
-        setupIndicacaoAutocomplete();
 
         // Listener para checkbox dos termos
         const aceitoTermosCheckbox = document.getElementById('aceitoTermos');
@@ -1274,201 +1213,6 @@ if ($isEdit) {
             console.error('Erro de rede:', error);
             showAlert('Erro de comunicação com o servidor!', 'error');
         });
-    }
-
-    // Autocomplete para indicação
-    let indicacaoTimeout = null;
-    let currentSelectedIndex = -1;
-    let currentSuggestions = [];
-
-    function setupIndicacaoAutocomplete() {
-        const input = document.getElementById('indicacao');
-        const suggestionsContainer = document.getElementById('indicacaoSuggestions');
-        
-        if (!input || !suggestionsContainer) {
-            console.warn('Elementos do autocomplete não encontrados');
-            return;
-        }
-
-        // Event listener para digitação
-        input.addEventListener('input', function() {
-            const query = this.value.trim();
-            currentSelectedIndex = -1;
-            
-            if (query.length < 2) {
-                hideSuggestions();
-                return;
-            }
-            
-            // Debounce: aguarda 300ms após parar de digitar
-            clearTimeout(indicacaoTimeout);
-            indicacaoTimeout = setTimeout(() => {
-                buscarNomesAssociados(query);
-            }, 300);
-        });
-
-        // Navegação com teclado
-        input.addEventListener('keydown', function(e) {
-            const suggestionsVisible = suggestionsContainer.style.display !== 'none';
-            
-            if (!suggestionsVisible) return;
-            
-            switch(e.key) {
-                case 'ArrowDown':
-                    e.preventDefault();
-                    navigateSuggestions(1);
-                    break;
-                case 'ArrowUp':
-                    e.preventDefault();
-                    navigateSuggestions(-1);
-                    break;
-                case 'Enter':
-                    e.preventDefault();
-                    selectCurrentSuggestion();
-                    break;
-                case 'Escape':
-                    e.preventDefault();
-                    hideSuggestions();
-                    break;
-            }
-        });
-
-        // Esconde sugestões ao clicar fora
-        document.addEventListener('click', function(e) {
-            if (!input.contains(e.target) && !suggestionsContainer.contains(e.target)) {
-                hideSuggestions();
-            }
-        });
-
-        console.log('✓ Autocomplete de indicação inicializado');
-    }
-
-    function buscarNomesAssociados(query) {
-        const suggestionsContainer = document.getElementById('indicacaoSuggestions');
-        if (!suggestionsContainer) return;
-        
-        // Mostra loading
-        suggestionsContainer.innerHTML = '<div class="autocomplete-loading"><i class="fas fa-spinner fa-spin"></i> Buscando...</div>';
-        suggestionsContainer.style.display = 'block';
-        
-        console.log('Buscando nomes para:', query);
-        
-        fetch(`../api/buscar_nomes_associados.php?q=${encodeURIComponent(query)}`)
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                console.log('Resposta da busca:', data);
-                
-                if (data.status === 'success') {
-                    mostrarSuggestions(data.data);
-                } else {
-                    mostrarErro(data.message || 'Erro ao buscar nomes');
-                }
-            })
-            .catch(error => {
-                console.error('Erro na busca de nomes:', error);
-                mostrarErro('Erro de conexão. Tente novamente.');
-            });
-    }
-
-    function mostrarSuggestions(nomes) {
-        const suggestionsContainer = document.getElementById('indicacaoSuggestions');
-        if (!suggestionsContainer) return;
-        
-        currentSuggestions = nomes;
-        currentSelectedIndex = -1;
-        
-        if (nomes.length === 0) {
-            suggestionsContainer.innerHTML = '<div class="autocomplete-no-results">Nenhum nome encontrado</div>';
-            suggestionsContainer.style.display = 'block';
-            return;
-        }
-        
-        let html = '';
-        nomes.forEach((nome, index) => {
-            html += `
-                <div class="autocomplete-suggestion" data-index="${index}" onclick="selecionarNome('${nome.replace(/'/g, "\\'")}')">
-                    ${highlightMatch(nome, document.getElementById('indicacao').value)}
-                </div>
-            `;
-        });
-        
-        suggestionsContainer.innerHTML = html;
-        suggestionsContainer.style.display = 'block';
-        
-        console.log(`✓ ${nomes.length} sugestões exibidas`);
-    }
-
-    function mostrarErro(mensagem) {
-        const suggestionsContainer = document.getElementById('indicacaoSuggestions');
-        if (!suggestionsContainer) return;
-        
-        suggestionsContainer.innerHTML = `<div class="autocomplete-no-results" style="color: var(--danger);"><i class="fas fa-exclamation-triangle"></i> ${mensagem}</div>`;
-        suggestionsContainer.style.display = 'block';
-    }
-
-    function highlightMatch(text, query) {
-        if (!query) return text;
-        
-        const regex = new RegExp(`(${query})`, 'gi');
-        return text.replace(regex, '<strong style="color: var(--primary);">$1</strong>');
-    }
-
-    function navigateSuggestions(direction) {
-        const suggestions = document.querySelectorAll('.autocomplete-suggestion');
-        if (suggestions.length === 0) return;
-        
-        // Remove seleção atual
-        suggestions.forEach(s => s.classList.remove('selected'));
-        
-        // Calcula novo índice
-        currentSelectedIndex += direction;
-        
-        if (currentSelectedIndex < 0) {
-            currentSelectedIndex = suggestions.length - 1;
-        } else if (currentSelectedIndex >= suggestions.length) {
-            currentSelectedIndex = 0;
-        }
-        
-        // Adiciona seleção
-        suggestions[currentSelectedIndex].classList.add('selected');
-        
-        // Scroll se necessário
-        suggestions[currentSelectedIndex].scrollIntoView({
-            block: 'nearest'
-        });
-    }
-
-    function selectCurrentSuggestion() {
-        if (currentSelectedIndex >= 0 && currentSuggestions[currentSelectedIndex]) {
-            selecionarNome(currentSuggestions[currentSelectedIndex]);
-        }
-    }
-
-    function selecionarNome(nome) {
-        const input = document.getElementById('indicacao');
-        if (!input) return;
-        
-        input.value = nome;
-        hideSuggestions();
-        
-        // Remove classe de erro se houver
-        input.classList.remove('error');
-        
-        console.log('✓ Nome selecionado:', nome);
-    }
-
-    function hideSuggestions() {
-        const suggestionsContainer = document.getElementById('indicacaoSuggestions');
-        if (!suggestionsContainer) return;
-        
-        suggestionsContainer.style.display = 'none';
-        currentSelectedIndex = -1;
-        currentSuggestions = [];
     }
 
     // Funções auxiliares

@@ -1,6 +1,6 @@
 <?php
 header('Content-Type: application/json; charset=utf-8');
-
+//confirmar_recebimento.php
 // Função para resposta JSON
 function jsonResponse($status, $message, $data = null) {
     echo json_encode([
