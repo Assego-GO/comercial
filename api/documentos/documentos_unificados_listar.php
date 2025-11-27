@@ -3,7 +3,7 @@
  * API Unificada - Listar Documentos (Sócios e Agregados)
  * api/documentos/documentos_unificados_listar.php
  * 
- * VERSÃO 3.0 - Debug melhorado e busca corrigida
+ * VERSÃO 3.1 - CORREÇÃO: Agregados inativos não aparecem mais como pendentes
  */
 
 ini_set('display_errors', 0);
@@ -88,6 +88,9 @@ try {
     $status = strtoupper(trim($_GET['status'] ?? ''));
     $busca = trim($_GET['busca'] ?? '');
     $periodo = trim($_GET['periodo'] ?? '');
+    
+    // NOVO: Parâmetro para incluir inativos (desabilitado por padrão)
+    $incluirInativos = isset($_GET['incluir_inativos']) && $_GET['incluir_inativos'] === '1';
 
     // Conexão
     $dbName = defined('DB_NAME') ? DB_NAME : (defined('DB_DATABASE') ? DB_DATABASE : 'wwasse_cadastro');
@@ -154,19 +157,37 @@ try {
     }
 
     // ===== FUNÇÃO PARA MONTAR WHERE E PARAMS DE AGREGADOS =====
-    function montarFiltrosAgregados($status, $buscaLike, $buscaCpf, $periodo) {
+    // VERSÃO 3.2: Mostrar agregados INATIVOS como pendentes de assinatura
+    // A Presidência pode assinar para REATIVAR agregados inativos
+    function montarFiltrosAgregados($status, $buscaLike, $buscaCpf, $periodo, $incluirInativos = false) {
         $where = ["1=1"];
         $params = [];
         
+        // =====================================================
+        // LÓGICA DE FILTRO:
+        // - AGUARDANDO_ASSINATURA = pendente OU inativo (ambos precisam de assinatura)
+        // - ASSINADO/FINALIZADO = ativo (já foram aprovados)
+        // - Sem filtro = mostra pendentes E inativos (todos que precisam assinar)
+        // =====================================================
         if (!empty($status)) {
             if ($status === 'AGUARDANDO_ASSINATURA') {
-                $where[] = "sa.situacao = 'pendente'";
+                // Pendentes E Inativos precisam de assinatura
+                $where[] = "sa.situacao IN ('pendente', 'inativo')";
             } elseif ($status === 'ASSINADO' || $status === 'FINALIZADO') {
                 $where[] = "sa.situacao = 'ativo'";
             } elseif ($status === 'DIGITALIZADO') {
                 $where[] = "1=0"; // Agregados não têm esse status
+            } elseif ($status === 'INATIVO') {
+                $where[] = "sa.situacao = 'inativo'";
+            } elseif ($status === 'PENDENTE') {
+                $where[] = "sa.situacao = 'pendente'";
             }
+        } else {
+            // SEM FILTRO DE STATUS = mostrar pendentes E inativos
+            // Ambos precisam de assinatura da presidência
+            $where[] = "sa.situacao IN ('pendente', 'inativo')";
         }
+        // =====================================================
         
         if ($buscaLike !== null) {
             $where[] = "(sa.nome LIKE ? OR sa.cpf LIKE ? OR sa.socio_titular_nome LIKE ?)";
@@ -258,7 +279,8 @@ try {
 
     // ===== BUSCAR AGREGADOS =====
     if ($usarAgregados) {
-        $filtrosAgregados = montarFiltrosAgregados($status, $buscaLike, $buscaCpf, $periodo);
+        // CORREÇÃO v3.1: Passar o parâmetro $incluirInativos
+        $filtrosAgregados = montarFiltrosAgregados($status, $buscaLike, $buscaCpf, $periodo, $incluirInativos);
         
         // Contar
         $queryCountAgregados = "
@@ -288,14 +310,17 @@ try {
                     'Ficha de Sócio Agregado' as tipo_descricao,
                     CASE sa.situacao
                         WHEN 'pendente' THEN 'AGUARDANDO_ASSINATURA'
+                        WHEN 'inativo' THEN 'AGUARDANDO_ASSINATURA'
                         WHEN 'ativo' THEN 'FINALIZADO'
                         ELSE 'AGUARDANDO_ASSINATURA'
                     END as status_fluxo,
                     CASE sa.situacao
-                        WHEN 'pendente' THEN 'Na Presidência'
+                        WHEN 'pendente' THEN 'Na Presidência (Novo)'
+                        WHEN 'inativo' THEN 'Na Presidência (Reativar)'
                         WHEN 'ativo' THEN 'Finalizado'
                         ELSE 'Na Presidência'
                     END as status_descricao,
+                    sa.situacao as situacao_original,
                     sa.data_criacao as data_upload,
                     'VIRTUAL' as tipo_origem,
                     NULL as caminho_arquivo,
@@ -335,7 +360,8 @@ try {
         'pendentes_socios' => 0,
         'pendentes_agregados' => 0,
         'assinados_socios' => 0,
-        'assinados_agregados' => 0
+        'assinados_agregados' => 0,
+        'inativos_agregados' => 0  // NOVO: contar inativos também
     ];
 
     if ($tabelaSociosExiste) {
@@ -360,13 +386,15 @@ try {
                 SELECT 
                     COUNT(*) as total,
                     SUM(CASE WHEN situacao = 'pendente' THEN 1 ELSE 0 END) as pendentes,
-                    SUM(CASE WHEN situacao = 'ativo' THEN 1 ELSE 0 END) as assinados
+                    SUM(CASE WHEN situacao = 'ativo' THEN 1 ELSE 0 END) as assinados,
+                    SUM(CASE WHEN situacao = 'inativo' THEN 1 ELSE 0 END) as inativos
                 FROM Socios_Agregados
             ");
             $statsAgregados = $stmtStats->fetch(PDO::FETCH_ASSOC);
             $estatisticas['total_agregados'] = (int) ($statsAgregados['total'] ?? 0);
             $estatisticas['pendentes_agregados'] = (int) ($statsAgregados['pendentes'] ?? 0);
             $estatisticas['assinados_agregados'] = (int) ($statsAgregados['assinados'] ?? 0);
+            $estatisticas['inativos_agregados'] = (int) ($statsAgregados['inativos'] ?? 0);
         } catch (PDOException $e) {}
     }
 
@@ -384,7 +412,8 @@ try {
             'tipo' => $tipo ?: 'TODOS',
             'status' => $status ?: 'TODOS',
             'busca' => $busca,
-            'periodo' => $periodo
+            'periodo' => $periodo,
+            'incluir_inativos' => $incluirInativos
         ],
         'resultados_filtrados' => [
             'socios_encontrados' => $totalSocios,
@@ -394,7 +423,8 @@ try {
         'tabelas_disponiveis' => [
             'socios' => $tabelaSociosExiste,
             'agregados' => $tabelaAgregadosExiste
-        ]
+        ],
+        'versao_api' => '3.2'
     ]);
 
 } catch (PDOException $e) {
