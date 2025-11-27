@@ -3,7 +3,7 @@
  * API Unificada - Listar Documentos (Sócios e Agregados)
  * api/documentos/documentos_unificados_listar.php
  * 
- * VERSÃO 3.1 - CORREÇÃO: Agregados inativos não aparecem mais como pendentes
+ * VERSÃO 3.1 - Corrigido ID do documento de agregados
  */
 
 ini_set('display_errors', 0);
@@ -88,9 +88,6 @@ try {
     $status = strtoupper(trim($_GET['status'] ?? ''));
     $busca = trim($_GET['busca'] ?? '');
     $periodo = trim($_GET['periodo'] ?? '');
-    
-    // NOVO: Parâmetro para incluir inativos (desabilitado por padrão)
-    $incluirInativos = isset($_GET['incluir_inativos']) && $_GET['incluir_inativos'] === '1';
 
     // Conexão
     $dbName = defined('DB_NAME') ? DB_NAME : (defined('DB_DATABASE') ? DB_DATABASE : 'wwasse_cadastro');
@@ -100,6 +97,7 @@ try {
     // ===== VERIFICAR QUAIS TABELAS EXISTEM =====
     $tabelaSociosExiste = false;
     $tabelaAgregadosExiste = false;
+    $tabelaDocAgregadoExiste = false;
     
     try {
         $conn->query("SELECT 1 FROM Documentos_Associado LIMIT 1");
@@ -109,6 +107,11 @@ try {
     try {
         $conn->query("SELECT 1 FROM Socios_Agregados LIMIT 1");
         $tabelaAgregadosExiste = true;
+    } catch (PDOException $e) {}
+
+    try {
+        $conn->query("SELECT 1 FROM Documentos_Agregado LIMIT 1");
+        $tabelaDocAgregadoExiste = true;
     } catch (PDOException $e) {}
 
     if (!$tabelaSociosExiste && !$tabelaAgregadosExiste) {
@@ -157,37 +160,33 @@ try {
     }
 
     // ===== FUNÇÃO PARA MONTAR WHERE E PARAMS DE AGREGADOS =====
-    // VERSÃO 3.2: Mostrar agregados INATIVOS como pendentes de assinatura
-    // A Presidência pode assinar para REATIVAR agregados inativos
-    function montarFiltrosAgregados($status, $buscaLike, $buscaCpf, $periodo, $incluirInativos = false) {
+    function montarFiltrosAgregados($status, $buscaLike, $buscaCpf, $periodo, $tabelaDocAgregadoExiste) {
         $where = ["1=1"];
         $params = [];
         
-        // =====================================================
-        // LÓGICA DE FILTRO:
-        // - AGUARDANDO_ASSINATURA = pendente OU inativo (ambos precisam de assinatura)
-        // - ASSINADO/FINALIZADO = ativo (já foram aprovados)
-        // - Sem filtro = mostra pendentes E inativos (todos que precisam assinar)
-        // =====================================================
         if (!empty($status)) {
-            if ($status === 'AGUARDANDO_ASSINATURA') {
-                // Pendentes E Inativos precisam de assinatura
-                $where[] = "sa.situacao IN ('pendente', 'inativo')";
-            } elseif ($status === 'ASSINADO' || $status === 'FINALIZADO') {
-                $where[] = "sa.situacao = 'ativo'";
-            } elseif ($status === 'DIGITALIZADO') {
-                $where[] = "1=0"; // Agregados não têm esse status
-            } elseif ($status === 'INATIVO') {
-                $where[] = "sa.situacao = 'inativo'";
-            } elseif ($status === 'PENDENTE') {
-                $where[] = "sa.situacao = 'pendente'";
+            if ($tabelaDocAgregadoExiste) {
+                // Se tem tabela de documentos, usar o status_fluxo dela ou fallback para situacao
+                if ($status === 'AGUARDANDO_ASSINATURA') {
+                    $where[] = "(dag.status_fluxo = 'AGUARDANDO_ASSINATURA' OR (dag.id IS NULL AND sa.situacao = 'pendente'))";
+                } elseif ($status === 'ASSINADO') {
+                    $where[] = "dag.status_fluxo = 'ASSINADO'";
+                } elseif ($status === 'FINALIZADO') {
+                    $where[] = "(dag.status_fluxo = 'FINALIZADO' OR (dag.id IS NULL AND sa.situacao = 'ativo'))";
+                } elseif ($status === 'DIGITALIZADO') {
+                    $where[] = "dag.status_fluxo = 'DIGITALIZADO'";
+                }
+            } else {
+                // Sem tabela de documentos, usar situacao do agregado
+                if ($status === 'AGUARDANDO_ASSINATURA') {
+                    $where[] = "sa.situacao = 'pendente'";
+                } elseif ($status === 'ASSINADO' || $status === 'FINALIZADO') {
+                    $where[] = "sa.situacao = 'ativo'";
+                } elseif ($status === 'DIGITALIZADO') {
+                    $where[] = "1=0"; // Agregados não têm esse status sem tabela de docs
+                }
             }
-        } else {
-            // SEM FILTRO DE STATUS = mostrar pendentes E inativos
-            // Ambos precisam de assinatura da presidência
-            $where[] = "sa.situacao IN ('pendente', 'inativo')";
         }
-        // =====================================================
         
         if ($buscaLike !== null) {
             $where[] = "(sa.nome LIKE ? OR sa.cpf LIKE ? OR sa.socio_titular_nome LIKE ?)";
@@ -197,15 +196,16 @@ try {
         }
         
         if (!empty($periodo)) {
+            $campoData = $tabelaDocAgregadoExiste ? "COALESCE(dag.data_upload, sa.data_criacao)" : "sa.data_criacao";
             switch ($periodo) {
                 case 'hoje':
-                    $where[] = "DATE(sa.data_criacao) = CURDATE()";
+                    $where[] = "DATE({$campoData}) = CURDATE()";
                     break;
                 case 'semana':
-                    $where[] = "sa.data_criacao >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)";
+                    $where[] = "{$campoData} >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)";
                     break;
                 case 'mes':
-                    $where[] = "sa.data_criacao >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)";
+                    $where[] = "{$campoData} >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)";
                     break;
             }
         }
@@ -258,7 +258,7 @@ try {
                         ELSE da.status_fluxo
                     END as status_descricao,
                     da.data_upload,
-                    'VIRTUAL' as tipo_origem,
+                    COALESCE(da.tipo_origem, 'VIRTUAL') as tipo_origem,
                     da.caminho_arquivo,
                     da.nome_arquivo,
                     COALESCE(d.nome, 'Comercial') as departamento_atual_nome,
@@ -279,15 +279,23 @@ try {
 
     // ===== BUSCAR AGREGADOS =====
     if ($usarAgregados) {
-        // CORREÇÃO v3.1: Passar o parâmetro $incluirInativos
-        $filtrosAgregados = montarFiltrosAgregados($status, $buscaLike, $buscaCpf, $periodo, $incluirInativos);
+        $filtrosAgregados = montarFiltrosAgregados($status, $buscaLike, $buscaCpf, $periodo, $tabelaDocAgregadoExiste);
         
         // Contar
-        $queryCountAgregados = "
-            SELECT COUNT(*) as total
-            FROM Socios_Agregados sa
-            WHERE {$filtrosAgregados['where']}
-        ";
+        if ($tabelaDocAgregadoExiste) {
+            $queryCountAgregados = "
+                SELECT COUNT(*) as total
+                FROM Socios_Agregados sa
+                LEFT JOIN Documentos_Agregado dag ON dag.agregado_id = sa.id
+                WHERE {$filtrosAgregados['where']}
+            ";
+        } else {
+            $queryCountAgregados = "
+                SELECT COUNT(*) as total
+                FROM Socios_Agregados sa
+                WHERE {$filtrosAgregados['where']}
+            ";
+        }
         
         $stmtCount = $conn->prepare($queryCountAgregados);
         $stmtCount->execute($filtrosAgregados['params']);
@@ -295,42 +303,84 @@ try {
 
         // Buscar dados (se houver)
         if ($totalAgregados > 0) {
-            $queryAgregados = "
-                SELECT 
-                    sa.id,
-                    'AGREGADO' as tipo_documento,
-                    sa.id as pessoa_id,
-                    sa.nome,
-                    sa.cpf,
-                    sa.email,
-                    NULL as titular_id,
-                    sa.socio_titular_nome as titular_nome,
-                    sa.socio_titular_cpf as titular_cpf,
-                    'Dependente' as parentesco,
-                    'Ficha de Sócio Agregado' as tipo_descricao,
-                    CASE sa.situacao
-                        WHEN 'pendente' THEN 'AGUARDANDO_ASSINATURA'
-                        WHEN 'inativo' THEN 'AGUARDANDO_ASSINATURA'
-                        WHEN 'ativo' THEN 'FINALIZADO'
-                        ELSE 'AGUARDANDO_ASSINATURA'
-                    END as status_fluxo,
-                    CASE sa.situacao
-                        WHEN 'pendente' THEN 'Na Presidência (Novo)'
-                        WHEN 'inativo' THEN 'Na Presidência (Reativar)'
-                        WHEN 'ativo' THEN 'Finalizado'
-                        ELSE 'Na Presidência'
-                    END as status_descricao,
-                    sa.situacao as situacao_original,
-                    sa.data_criacao as data_upload,
-                    'VIRTUAL' as tipo_origem,
-                    NULL as caminho_arquivo,
-                    NULL as nome_arquivo,
-                    'Comercial' as departamento_atual_nome,
-                    DATEDIFF(CURDATE(), sa.data_criacao) as dias_em_processo
-                FROM Socios_Agregados sa
-                WHERE {$filtrosAgregados['where']}
-                ORDER BY sa.data_criacao DESC
-            ";
+            if ($tabelaDocAgregadoExiste) {
+                // Query com JOIN na tabela Documentos_Agregado para pegar o ID correto do documento
+                $queryAgregados = "
+                    SELECT 
+                        COALESCE(dag.id, sa.id) as id,
+                        'AGREGADO' as tipo_documento,
+                        sa.id as pessoa_id,
+                        sa.nome,
+                        sa.cpf,
+                        sa.email,
+                        NULL as titular_id,
+                        sa.socio_titular_nome as titular_nome,
+                        sa.socio_titular_cpf as titular_cpf,
+                        'Dependente' as parentesco,
+                        'Ficha de Sócio Agregado' as tipo_descricao,
+                        CASE 
+                            WHEN dag.status_fluxo IS NOT NULL THEN dag.status_fluxo
+                            WHEN sa.situacao = 'pendente' THEN 'AGUARDANDO_ASSINATURA'
+                            WHEN sa.situacao = 'ativo' THEN 'FINALIZADO'
+                            ELSE 'AGUARDANDO_ASSINATURA'
+                        END as status_fluxo,
+                        CASE 
+                            WHEN dag.status_fluxo = 'AGUARDANDO_ASSINATURA' THEN 'Na Presidência'
+                            WHEN dag.status_fluxo = 'ASSINADO' THEN 'Assinado'
+                            WHEN dag.status_fluxo = 'FINALIZADO' THEN 'Finalizado'
+                            WHEN dag.status_fluxo = 'DIGITALIZADO' THEN 'Aguardando Envio'
+                            WHEN sa.situacao = 'pendente' THEN 'Na Presidência'
+                            WHEN sa.situacao = 'ativo' THEN 'Finalizado'
+                            ELSE 'Na Presidência'
+                        END as status_descricao,
+                        COALESCE(dag.data_upload, sa.data_criacao) as data_upload,
+                        COALESCE(dag.tipo_origem, 'FISICO') as tipo_origem,
+                        dag.caminho_arquivo,
+                        NULL as nome_arquivo,
+                        COALESCE(dep.nome, 'Comercial') as departamento_atual_nome,
+                        DATEDIFF(CURDATE(), COALESCE(dag.data_upload, sa.data_criacao)) as dias_em_processo
+                    FROM Socios_Agregados sa
+                    LEFT JOIN Documentos_Agregado dag ON dag.agregado_id = sa.id
+                    LEFT JOIN Departamentos dep ON dag.departamento_atual = dep.id
+                    WHERE {$filtrosAgregados['where']}
+                    ORDER BY COALESCE(dag.data_upload, sa.data_criacao) DESC
+                ";
+            } else {
+                // Fallback: Query sem a tabela Documentos_Agregado
+                $queryAgregados = "
+                    SELECT 
+                        sa.id,
+                        'AGREGADO' as tipo_documento,
+                        sa.id as pessoa_id,
+                        sa.nome,
+                        sa.cpf,
+                        sa.email,
+                        NULL as titular_id,
+                        sa.socio_titular_nome as titular_nome,
+                        sa.socio_titular_cpf as titular_cpf,
+                        'Dependente' as parentesco,
+                        'Ficha de Sócio Agregado' as tipo_descricao,
+                        CASE sa.situacao
+                            WHEN 'pendente' THEN 'AGUARDANDO_ASSINATURA'
+                            WHEN 'ativo' THEN 'FINALIZADO'
+                            ELSE 'AGUARDANDO_ASSINATURA'
+                        END as status_fluxo,
+                        CASE sa.situacao
+                            WHEN 'pendente' THEN 'Na Presidência'
+                            WHEN 'ativo' THEN 'Finalizado'
+                            ELSE 'Na Presidência'
+                        END as status_descricao,
+                        sa.data_criacao as data_upload,
+                        'VIRTUAL' as tipo_origem,
+                        NULL as caminho_arquivo,
+                        NULL as nome_arquivo,
+                        'Comercial' as departamento_atual_nome,
+                        DATEDIFF(CURDATE(), sa.data_criacao) as dias_em_processo
+                    FROM Socios_Agregados sa
+                    WHERE {$filtrosAgregados['where']}
+                    ORDER BY sa.data_criacao DESC
+                ";
+            }
             
             $stmt = $conn->prepare($queryAgregados);
             $stmt->execute($filtrosAgregados['params']);
@@ -360,8 +410,7 @@ try {
         'pendentes_socios' => 0,
         'pendentes_agregados' => 0,
         'assinados_socios' => 0,
-        'assinados_agregados' => 0,
-        'inativos_agregados' => 0  // NOVO: contar inativos também
+        'assinados_agregados' => 0
     ];
 
     if ($tabelaSociosExiste) {
@@ -382,19 +431,29 @@ try {
 
     if ($tabelaAgregadosExiste) {
         try {
-            $stmtStats = $conn->query("
-                SELECT 
-                    COUNT(*) as total,
-                    SUM(CASE WHEN situacao = 'pendente' THEN 1 ELSE 0 END) as pendentes,
-                    SUM(CASE WHEN situacao = 'ativo' THEN 1 ELSE 0 END) as assinados,
-                    SUM(CASE WHEN situacao = 'inativo' THEN 1 ELSE 0 END) as inativos
-                FROM Socios_Agregados
-            ");
+            if ($tabelaDocAgregadoExiste) {
+                // Estatísticas baseadas na tabela Documentos_Agregado
+                $stmtStats = $conn->query("
+                    SELECT 
+                        COUNT(DISTINCT sa.id) as total,
+                        SUM(CASE WHEN dag.status_fluxo = 'AGUARDANDO_ASSINATURA' OR (dag.id IS NULL AND sa.situacao = 'pendente') THEN 1 ELSE 0 END) as pendentes,
+                        SUM(CASE WHEN dag.status_fluxo IN ('ASSINADO', 'FINALIZADO') OR (dag.id IS NULL AND sa.situacao = 'ativo') THEN 1 ELSE 0 END) as assinados
+                    FROM Socios_Agregados sa
+                    LEFT JOIN Documentos_Agregado dag ON dag.agregado_id = sa.id
+                ");
+            } else {
+                $stmtStats = $conn->query("
+                    SELECT 
+                        COUNT(*) as total,
+                        SUM(CASE WHEN situacao = 'pendente' THEN 1 ELSE 0 END) as pendentes,
+                        SUM(CASE WHEN situacao = 'ativo' THEN 1 ELSE 0 END) as assinados
+                    FROM Socios_Agregados
+                ");
+            }
             $statsAgregados = $stmtStats->fetch(PDO::FETCH_ASSOC);
             $estatisticas['total_agregados'] = (int) ($statsAgregados['total'] ?? 0);
             $estatisticas['pendentes_agregados'] = (int) ($statsAgregados['pendentes'] ?? 0);
             $estatisticas['assinados_agregados'] = (int) ($statsAgregados['assinados'] ?? 0);
-            $estatisticas['inativos_agregados'] = (int) ($statsAgregados['inativos'] ?? 0);
         } catch (PDOException $e) {}
     }
 
@@ -412,8 +471,7 @@ try {
             'tipo' => $tipo ?: 'TODOS',
             'status' => $status ?: 'TODOS',
             'busca' => $busca,
-            'periodo' => $periodo,
-            'incluir_inativos' => $incluirInativos
+            'periodo' => $periodo
         ],
         'resultados_filtrados' => [
             'socios_encontrados' => $totalSocios,
@@ -422,9 +480,9 @@ try {
         'estatisticas' => $estatisticas,
         'tabelas_disponiveis' => [
             'socios' => $tabelaSociosExiste,
-            'agregados' => $tabelaAgregadosExiste
-        ],
-        'versao_api' => '3.2'
+            'agregados' => $tabelaAgregadosExiste,
+            'documentos_agregado' => $tabelaDocAgregadoExiste
+        ]
     ]);
 
 } catch (PDOException $e) {

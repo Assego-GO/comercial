@@ -1,12 +1,14 @@
 <?php
 /**
- * API DE DOWNLOAD SIMPLIFICADA - SOLUÇÃO IMEDIATA
+ * API DE DOWNLOAD - DOCUMENTOS DE ASSOCIADOS E AGREGADOS
  * api/documentos/documentos_download.php
  * 
- * SUBSTITUA SEU ARQUIVO ATUAL POR ESTE CÓDIGO
+ * Uso:
+ *   Associado: ?id=123
+ *   Agregado:  ?id=456&tipo=agregado
  */
 
-// IMPORTANTE: Limpar qualquer output anterior
+// Limpar qualquer output anterior
 if (ob_get_level()) {
     ob_end_clean();
 }
@@ -23,7 +25,7 @@ try {
     }
 
     $documentoId = intval($_GET['id']);
-    $tipo = $_GET['tipo'] ?? 'normal';
+    $tipo = $_GET['tipo'] ?? 'normal'; // 'normal', 'presencial' ou 'agregado'
 
     // 2. CARREGAR CONFIGURAÇÕES
     require_once '../../config/config.php';
@@ -45,42 +47,83 @@ try {
     // 4. BUSCAR DOCUMENTO NO BANCO
     $db = Database::getInstance(DB_NAME_CADASTRO)->getConnection();
     
-    $sql = "SELECT * FROM Documentos_Associado WHERE id = ?";
-    $stmt = $db->prepare($sql);
-    $stmt->execute([$documentoId]);
-    $documento = $stmt->fetch(PDO::FETCH_ASSOC);
+    // =============================================
+    // AGREGADO - Busca na tabela Documentos_Agregado
+    // =============================================
+    if ($tipo === 'agregado') {
+        $sql = "SELECT 
+                    d.*,
+                    a.nome AS pessoa_nome,
+                    a.cpf AS pessoa_cpf,
+                    a.id AS pessoa_id
+                FROM Documentos_Agregado d
+                LEFT JOIN Socios_Agregados a ON d.agregado_id = a.id
+                WHERE d.id = ?";
+        
+        $stmt = $db->prepare($sql);
+        $stmt->execute([$documentoId]);
+        $documento = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if (!$documento) {
-        http_response_code(404);
-        die('Documento não encontrado');
+        if (!$documento) {
+            http_response_code(404);
+            die('Documento de agregado não encontrado');
+        }
+
+        // Montar nome do arquivo
+        $cpfLimpo = preg_replace('/[^0-9]/', '', $documento['pessoa_cpf'] ?? '');
+        $extensao = pathinfo($documento['caminho_arquivo'], PATHINFO_EXTENSION) ?: 'pdf';
+        $nomeDownload = "ficha_agregado_{$cpfLimpo}_" . date('Ymd') . ".{$extensao}";
+        
+        $caminhoRelativo = $documento['caminho_arquivo'];
+        
+        // Caminhos possíveis para agregado
+        $possiveisCaminhos = [
+            "../../" . $caminhoRelativo,
+            "../" . $caminhoRelativo,
+            $caminhoRelativo,
+            "../../uploads/documentos/agregados/" . $documento['pessoa_id'] . "/" . basename($caminhoRelativo),
+            "../../uploads/fichas_agregados/" . basename($caminhoRelativo)
+        ];
+    }
+    // =============================================
+    // ASSOCIADO - Busca na tabela Documentos_Associado
+    // =============================================
+    else {
+        $sql = "SELECT * FROM Documentos_Associado WHERE id = ?";
+        $stmt = $db->prepare($sql);
+        $stmt->execute([$documentoId]);
+        $documento = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$documento) {
+            http_response_code(404);
+            die('Documento não encontrado');
+        }
+
+        // Determinar arquivo e nome para download
+        if ($tipo === 'presencial' && $documento['tipo_origem'] === 'FISICO') {
+            $caminhoRelativo = $documento['caminho_arquivo'];
+            $extensao = pathinfo($documento['nome_arquivo'], PATHINFO_EXTENSION);
+            $nomeDownload = "ficha_presencial_" . $documento['associado_id'] . "_" . date('Ymd') . "." . $extensao;
+        } else if (!empty($documento['arquivo_assinado'])) {
+            $caminhoRelativo = $documento['arquivo_assinado'];
+            $nomeDownload = "ficha_assinada_" . $documento['associado_id'] . "_" . date('Ymd') . ".pdf";
+        } else {
+            $caminhoRelativo = $documento['caminho_arquivo'];
+            $extensao = pathinfo($documento['nome_arquivo'], PATHINFO_EXTENSION);
+            $nomeDownload = "ficha_" . $documento['associado_id'] . "_" . date('Ymd') . "." . $extensao;
+        }
+
+        // Caminhos possíveis para associado
+        $possiveisCaminhos = [
+            "../../" . $caminhoRelativo,
+            "../" . $caminhoRelativo,
+            $caminhoRelativo,
+            "./../../uploads/documentos/" . basename($caminhoRelativo),
+            "../../uploads/" . basename($caminhoRelativo)
+        ];
     }
 
-    // 5. DETERMINAR ARQUIVO PARA DOWNLOAD
-    $caminhoRelativo = '';
-    $nomeDownload = '';
-
-    if ($tipo === 'presencial' && $documento['tipo_origem'] === 'FISICO') {
-        $caminhoRelativo = $documento['caminho_arquivo'];
-        $extensao = pathinfo($documento['nome_arquivo'], PATHINFO_EXTENSION);
-        $nomeDownload = "ficha_presencial_" . $documento['associado_id'] . "_" . date('Ymd') . "." . $extensao;
-    } else if (!empty($documento['arquivo_assinado'])) {
-        $caminhoRelativo = $documento['arquivo_assinado'];
-        $nomeDownload = "ficha_assinada_" . $documento['associado_id'] . "_" . date('Ymd') . ".pdf";
-    } else {
-        $caminhoRelativo = $documento['caminho_arquivo'];
-        $extensao = pathinfo($documento['nome_arquivo'], PATHINFO_EXTENSION);
-        $nomeDownload = "ficha_" . $documento['associado_id'] . "_" . date('Ymd') . "." . $extensao;
-    }
-
-    // 6. PROCURAR ARQUIVO EM MÚLTIPLOS LOCAIS
-    $possiveisCaminhos = [
-        "../../" . $caminhoRelativo,
-        "../" . $caminhoRelativo,
-        $caminhoRelativo,
-        "./../../uploads/documentos/" . basename($caminhoRelativo),
-        "../../uploads/" . basename($caminhoRelativo)
-    ];
-
+    // 5. PROCURAR ARQUIVO EM MÚLTIPLOS LOCAIS
     $arquivoEncontrado = null;
     foreach ($possiveisCaminhos as $caminho) {
         if (file_exists($caminho) && is_readable($caminho)) {
@@ -89,41 +132,16 @@ try {
         }
     }
 
-    // 7. SE NÃO ENCONTROU, CRIAR ARQUIVO TEMPORÁRIO
+    // 6. SE NÃO ENCONTROU
     if (!$arquivoEncontrado) {
-        // Cria diretório se necessário
-        $dirTemp = "../../" . dirname($caminhoRelativo);
-        if (!is_dir($dirTemp)) {
-            mkdir($dirTemp, 0755, true);
-        }
+        error_log("Arquivo não encontrado - Tipo: {$tipo}, Doc ID: {$documentoId}");
+        error_log("Caminhos tentados: " . implode(", ", $possiveisCaminhos));
         
-        $arquivoTemp = "../../" . $caminhoRelativo;
-        $extensao = strtolower(pathinfo($documento['nome_arquivo'], PATHINFO_EXTENSION));
-        
-        if ($extensao === 'pdf') {
-            // Cria PDF simples
-            $conteudoPDF = criarPDFTeste($documento);
-            file_put_contents($arquivoTemp, $conteudoPDF);
-        } else {
-            // Cria arquivo de texto
-            $conteudo = "ARQUIVO DE TESTE TEMPORÁRIO\n";
-            $conteudo .= "==============================\n\n";
-            $conteudo .= "ID: {$documento['id']}\n";
-            $conteudo .= "Associado: {$documento['associado_id']}\n";
-            $conteudo .= "Nome: {$documento['nome_arquivo']}\n";
-            $conteudo .= "Tipo: {$documento['tipo_origem']}\n";
-            $conteudo .= "Data: " . date('Y-m-d H:i:s') . "\n\n";
-            $conteudo .= "Este é um arquivo de teste criado automaticamente.\n";
-            $conteudo .= "O arquivo original não foi encontrado no servidor.\n";
-            $conteudo .= "Entre em contato com o administrador para obter o arquivo real.\n";
-            
-            file_put_contents($arquivoTemp, $conteudo);
-        }
-        
-        $arquivoEncontrado = $arquivoTemp;
+        http_response_code(404);
+        die('Arquivo não encontrado no servidor');
     }
 
-    // 8. FAZER DOWNLOAD
+    // 7. FAZER DOWNLOAD
     $mimeType = 'application/octet-stream';
     $extensao = strtolower(pathinfo($arquivoEncontrado, PATHINFO_EXTENSION));
     
@@ -152,29 +170,8 @@ try {
     exit;
 
 } catch (Exception $e) {
-    // Log do erro
     error_log("Erro no download: " . $e->getMessage());
-    
-    // Resposta de erro
     http_response_code(500);
     die('Erro interno: ' . $e->getMessage());
-}
-
-/**
- * Função auxiliar para criar PDF de teste
- */
-function criarPDFTeste($documento) {
-    $pdf = "%PDF-1.4\n";
-    $pdf .= "1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj\n";
-    $pdf .= "2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj\n";
-    $pdf .= "3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> >> >> >> endobj\n";
-    
-    $texto = "BT /F1 16 Tf 50 700 Td (ARQUIVO DE TESTE) Tj 0 -30 Td /F1 12 Tf (ID: {$documento['id']}) Tj 0 -20 Td (Associado: {$documento['associado_id']}) Tj 0 -20 Td (Nome: {$documento['nome_arquivo']}) Tj 0 -20 Td (Tipo: {$documento['tipo_origem']}) Tj 0 -40 Td (Este e um arquivo PDF de teste temporario.) Tj 0 -20 Td (O arquivo original nao foi encontrado.) Tj 0 -20 Td (Entre em contato com o administrador.) Tj ET";
-    
-    $pdf .= "4 0 obj << /Length " . strlen($texto) . " >> stream\n" . $texto . "\nendstream endobj\n";
-    $pdf .= "xref\n0 5\n0000000000 65535 f \n0000000009 00000 n \n0000000058 00000 n \n0000000115 00000 n \n0000000306 00000 n \n";
-    $pdf .= "trailer << /Size 5 /Root 1 0 R >>\nstartxref\n" . (306 + strlen($texto) + 30) . "\n%%EOF";
-    
-    return $pdf;
 }
 ?>

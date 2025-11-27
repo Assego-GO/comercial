@@ -1324,6 +1324,333 @@ class Documentos
         }
     }
 
+
+    public function getHistoricoFluxoAgregado($documentoId)
+    {
+        try {
+            $historico = [];
+            
+            // 1. Primeiro, tentar buscar na tabela Historico_Fluxo_Agregado (se existir)
+            $tabelaHistoricoExiste = false;
+            try {
+                $this->db->query("SELECT 1 FROM Historico_Fluxo_Agregado LIMIT 1");
+                $tabelaHistoricoExiste = true;
+            } catch (PDOException $e) {
+                // Tabela não existe, continuar sem ela
+            }
+            
+            if ($tabelaHistoricoExiste) {
+                $stmt = $this->db->prepare("
+                    SELECT 
+                        h.*,
+                        f.nome as funcionario_nome,
+                        do.nome as dept_origem_nome,
+                        dd.nome as dept_destino_nome
+                    FROM Historico_Fluxo_Agregado h
+                    LEFT JOIN Funcionarios f ON h.funcionario_id = f.id
+                    LEFT JOIN Departamentos do ON h.departamento_origem = do.id
+                    LEFT JOIN Departamentos dd ON h.departamento_destino = dd.id
+                    WHERE h.documento_id = ?
+                    ORDER BY h.data_acao DESC
+                ");
+                $stmt->execute([$documentoId]);
+                $historico = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            }
+            
+            // 2. Se não encontrou histórico, tentar buscar da tabela Documentos_Agregado
+            if (empty($historico)) {
+                // Verificar se tabela Documentos_Agregado existe
+                $tabelaDocAgregadoExiste = false;
+                try {
+                    $this->db->query("SELECT 1 FROM Documentos_Agregado LIMIT 1");
+                    $tabelaDocAgregadoExiste = true;
+                } catch (PDOException $e) {
+                    // Tabela não existe
+                }
+                
+                if ($tabelaDocAgregadoExiste) {
+                    // Buscar documento - pode ser pelo id do documento ou pelo agregado_id
+                    $stmt = $this->db->prepare("
+                        SELECT 
+                            d.*,
+                            a.nome as agregado_nome,
+                            a.cpf as agregado_cpf,
+                            a.situacao as agregado_situacao,
+                            a.data_criacao as agregado_data_criacao,
+                            a.socio_titular_nome as titular_nome
+                        FROM Documentos_Agregado d
+                        LEFT JOIN Socios_Agregados a ON d.agregado_id = a.id
+                        WHERE d.id = ? OR d.agregado_id = ?
+                        ORDER BY d.id DESC
+                        LIMIT 1
+                    ");
+                    $stmt->execute([$documentoId, $documentoId]);
+                    $documento = $stmt->fetch(PDO::FETCH_ASSOC);
+                    
+                    if ($documento) {
+                        // Gerar histórico baseado nos dados do documento
+                        $historico = $this->gerarHistoricoAgregadoBaseadoEmDados($documento);
+                    }
+                }
+            }
+            
+            // 3. Se ainda não tem histórico, buscar direto da Socios_Agregados
+            if (empty($historico)) {
+                $stmt = $this->db->prepare("
+                    SELECT 
+                        id,
+                        nome,
+                        cpf,
+                        situacao,
+                        data_criacao,
+                        data_atualizacao,
+                        observacoes,
+                        socio_titular_nome
+                    FROM Socios_Agregados 
+                    WHERE id = ?
+                ");
+                $stmt->execute([$documentoId]);
+                $agregado = $stmt->fetch(PDO::FETCH_ASSOC);
+                
+                if ($agregado) {
+                    $historico = $this->gerarHistoricoAgregadoBasico($agregado, $documentoId);
+                }
+            }
+            
+            // Ordenar por data (mais recente primeiro)
+            usort($historico, function($a, $b) {
+                $dataA = strtotime($a['data_acao'] ?? '1970-01-01');
+                $dataB = strtotime($b['data_acao'] ?? '1970-01-01');
+                return $dataB - $dataA;
+            });
+            
+            return $historico;
+            
+        } catch (PDOException $e) {
+            error_log("Erro ao buscar histórico de agregado: " . $e->getMessage());
+            return [];
+        }
+    }
+    
+    /**
+     * Gerar histórico de agregado baseado nos dados do documento
+     * Método auxiliar privado
+     */
+    private function gerarHistoricoAgregadoBaseadoEmDados($documento)
+    {
+        $historico = [];
+        
+        // Evento 1: Upload/Criação do documento
+        $historico[] = [
+            'id' => 1,
+            'documento_id' => $documento['id'],
+            'status_anterior' => null,
+            'status_novo' => 'DIGITALIZADO',
+            'status_novo_desc' => 'Documento Digitalizado',
+            'observacao' => 'Ficha de agregado anexada ao cadastro de ' . ($documento['agregado_nome'] ?? 'N/A'),
+            'funcionario_nome' => 'Sistema',
+            'dept_origem_nome' => null,
+            'dept_destino_nome' => 'Comercial',
+            'data_acao' => $documento['data_upload'] ?? $documento['agregado_data_criacao']
+        ];
+        
+        // Evento 2: Se tem status_fluxo diferente, adicionar transições
+        $statusAtual = $documento['status_fluxo'] ?? null;
+        
+        if ($statusAtual && $statusAtual !== 'DIGITALIZADO') {
+            $statusDescricoes = [
+                'AGUARDANDO_ASSINATURA' => 'Aguardando Assinatura da Presidência',
+                'ASSINADO' => 'Documento Assinado pela Presidência',
+                'FINALIZADO' => 'Processo Finalizado - Agregado Ativo'
+            ];
+            
+            $departamentoDestino = [
+                'AGUARDANDO_ASSINATURA' => 'Presidência',
+                'ASSINADO' => 'Comercial',
+                'FINALIZADO' => 'Comercial'
+            ];
+            
+            // Adicionar transição para o status atual
+            if ($statusAtual === 'AGUARDANDO_ASSINATURA' || $statusAtual === 'ASSINADO' || $statusAtual === 'FINALIZADO') {
+                if ($statusAtual !== 'DIGITALIZADO') {
+                    $historico[] = [
+                        'id' => 2,
+                        'documento_id' => $documento['id'],
+                        'status_anterior' => 'DIGITALIZADO',
+                        'status_novo' => 'AGUARDANDO_ASSINATURA',
+                        'status_novo_desc' => $statusDescricoes['AGUARDANDO_ASSINATURA'],
+                        'observacao' => 'Documento enviado para assinatura',
+                        'funcionario_nome' => 'Sistema',
+                        'dept_origem_nome' => 'Comercial',
+                        'dept_destino_nome' => 'Presidência',
+                        'data_acao' => $documento['data_upload'] ?? $documento['agregado_data_criacao']
+                    ];
+                }
+            }
+            
+            if ($statusAtual === 'ASSINADO' || $statusAtual === 'FINALIZADO') {
+                $historico[] = [
+                    'id' => 3,
+                    'documento_id' => $documento['id'],
+                    'status_anterior' => 'AGUARDANDO_ASSINATURA',
+                    'status_novo' => 'ASSINADO',
+                    'status_novo_desc' => $statusDescricoes['ASSINADO'],
+                    'observacao' => 'Documento assinado pela presidência',
+                    'funcionario_nome' => 'Presidência',
+                    'dept_origem_nome' => 'Presidência',
+                    'dept_destino_nome' => 'Comercial',
+                    'data_acao' => $documento['data_upload'] ?? $documento['agregado_data_criacao']
+                ];
+            }
+            
+            if ($statusAtual === 'FINALIZADO') {
+                $historico[] = [
+                    'id' => 4,
+                    'documento_id' => $documento['id'],
+                    'status_anterior' => 'ASSINADO',
+                    'status_novo' => 'FINALIZADO',
+                    'status_novo_desc' => $statusDescricoes['FINALIZADO'],
+                    'observacao' => 'Processo finalizado - Agregado ativado no sistema',
+                    'funcionario_nome' => 'Sistema',
+                    'dept_origem_nome' => 'Comercial',
+                    'dept_destino_nome' => 'Comercial',
+                    'data_acao' => $documento['data_upload'] ?? $documento['agregado_data_criacao']
+                ];
+            }
+        }
+        
+        return $historico;
+    }
+    
+    /**
+     * Gerar histórico básico de agregado (quando não tem documento)
+     * Método auxiliar privado
+     */
+    private function gerarHistoricoAgregadoBasico($agregado, $documentoId)
+    {
+        $historico = [];
+        
+        // Evento 1: Cadastro
+        $historico[] = [
+            'id' => 1,
+            'documento_id' => $documentoId,
+            'status_anterior' => null,
+            'status_novo' => 'CADASTRADO',
+            'status_novo_desc' => 'Agregado Cadastrado',
+            'observacao' => 'Sócio agregado "' . ($agregado['nome'] ?? 'N/A') . '" cadastrado no sistema' . 
+                           ($agregado['socio_titular_nome'] ? ' - Titular: ' . $agregado['socio_titular_nome'] : ''),
+            'funcionario_nome' => 'Sistema',
+            'dept_origem_nome' => null,
+            'dept_destino_nome' => 'Comercial',
+            'data_acao' => $agregado['data_criacao']
+        ];
+        
+        // Evento 2: Status atual baseado na situação
+        $situacao = $agregado['situacao'] ?? 'pendente';
+        
+        $situacaoMap = [
+            'pendente' => [
+                'status' => 'AGUARDANDO_ASSINATURA',
+                'desc' => 'Aguardando Aprovação da Presidência',
+                'dept' => 'Presidência'
+            ],
+            'aguardando' => [
+                'status' => 'AGUARDANDO_ASSINATURA',
+                'desc' => 'Aguardando Aprovação da Presidência',
+                'dept' => 'Presidência'
+            ],
+            'assinado' => [
+                'status' => 'ASSINADO',
+                'desc' => 'Aprovado pela Presidência',
+                'dept' => 'Comercial'
+            ],
+            'ativo' => [
+                'status' => 'FINALIZADO',
+                'desc' => 'Agregado Ativo no Sistema',
+                'dept' => 'Comercial'
+            ],
+            'inativo' => [
+                'status' => 'INATIVO',
+                'desc' => 'Agregado Inativado',
+                'dept' => 'Comercial'
+            ]
+        ];
+        
+        if (isset($situacaoMap[$situacao])) {
+            $info = $situacaoMap[$situacao];
+            $historico[] = [
+                'id' => 2,
+                'documento_id' => $documentoId,
+                'status_anterior' => 'CADASTRADO',
+                'status_novo' => $info['status'],
+                'status_novo_desc' => $info['desc'],
+                'observacao' => 'Status atual do agregado: ' . $info['desc'],
+                'funcionario_nome' => 'Sistema',
+                'dept_origem_nome' => 'Comercial',
+                'dept_destino_nome' => $info['dept'],
+                'data_acao' => $agregado['data_atualizacao'] ?? $agregado['data_criacao']
+            ];
+        }
+        
+        return $historico;
+    }
+    
+    /**
+     * Registrar histórico do fluxo de AGREGADO
+     * Similar ao registrarHistoricoFluxo mas para agregados
+     */
+    public function registrarHistoricoFluxoAgregado($documentoId, $statusAnterior, $statusNovo, $deptOrigem, $deptDestino, $observacao)
+    {
+        try {
+            // Verificar se a tabela existe
+            try {
+                $this->db->query("SELECT 1 FROM Historico_Fluxo_Agregado LIMIT 1");
+            } catch (PDOException $e) {
+                // Tabela não existe, criar
+                $this->db->exec("
+                    CREATE TABLE IF NOT EXISTS Historico_Fluxo_Agregado (
+                        id INT AUTO_INCREMENT PRIMARY KEY,
+                        documento_id INT NOT NULL,
+                        status_anterior VARCHAR(50),
+                        status_novo VARCHAR(50),
+                        observacao TEXT,
+                        funcionario_id INT,
+                        departamento_origem INT,
+                        departamento_destino INT,
+                        data_acao DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        INDEX idx_documento (documento_id),
+                        INDEX idx_data (data_acao)
+                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+                ");
+            }
+            
+            $stmt = $this->db->prepare("
+                INSERT INTO Historico_Fluxo_Agregado (
+                    documento_id, status_anterior, status_novo,
+                    departamento_origem, departamento_destino,
+                    funcionario_id, observacao
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+            ");
+
+            $stmt->execute([
+                $documentoId,
+                $statusAnterior,
+                $statusNovo,
+                $deptOrigem,
+                $deptDestino,
+                $_SESSION['funcionario_id'] ?? 1,
+                $observacao
+            ]);
+            
+            return true;
+
+        } catch (PDOException $e) {
+            error_log("Erro ao registrar histórico de agregado: " . $e->getMessage());
+            return false;
+        }
+    }
+
+
     /**
      * Excluir documento com validação de status do fluxo
      */
