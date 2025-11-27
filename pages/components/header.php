@@ -262,6 +262,7 @@ class HeaderComponent
                 z-index: 1000;
                 transition: all var(--transition-base);
                 box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+                overflow: visible;
             }
 
             .header-container::before {
@@ -287,6 +288,7 @@ class HeaderComponent
                 display: flex;
                 align-items: center;
                 justify-content: space-between;
+                overflow: visible;
             }
 
             /* Seção Esquerda */
@@ -374,7 +376,7 @@ class HeaderComponent
 
             .logo-text {
                 color: var(--assego-blue);
-                font-size: 19px;
+                font-size: 17px;
                 font-weight: 800;
                 letter-spacing: -0.025em;
                 line-height: 1;
@@ -388,7 +390,7 @@ class HeaderComponent
 
             .logo-subtitle {
                 color: var(--gray-500);
-                font-size: 11px;
+                font-size: 10px;
                 font-weight: 500;
                 margin-top: 3px;
                 letter-spacing: 0.025em;
@@ -438,11 +440,11 @@ class HeaderComponent
             .nav-link {
                 display: flex;
                 align-items: center;
-                gap: 8px;
-                padding: 10px 14px;
+                gap: 6px;
+                padding: 8px 12px;
                 color: var(--gray-600);
                 text-decoration: none;
-                font-size: 14px;
+                font-size: 12.5px;
                 font-weight: 500;
                 border-radius: 10px;
                 transition: all var(--transition-base);
@@ -503,7 +505,7 @@ class HeaderComponent
             }
 
             .nav-link i {
-                font-size: 16px;
+                font-size: 14px;
                 transition: all var(--transition-base);
             }
 
@@ -517,6 +519,7 @@ class HeaderComponent
                 align-items: center;
                 gap: 12px;
                 flex-shrink: 0;
+                overflow: visible;
             }
 
             /* Botão de Notificações */
@@ -666,6 +669,7 @@ class HeaderComponent
             .user-menu-container {
                 position: relative;
                 flex-shrink: 0;
+                overflow: visible;
             }
 
             .user-menu-trigger {
@@ -679,7 +683,9 @@ class HeaderComponent
                 cursor: pointer;
                 transition: all var(--transition-base);
                 min-width: 0;
-                max-width: 280px;
+                max-width: 350px;
+                position: relative;
+                overflow: visible;
             }
 
             .user-info {
@@ -698,7 +704,7 @@ class HeaderComponent
                 white-space: nowrap;
                 overflow: hidden;
                 text-overflow: ellipsis;
-                max-width: 200px;
+                max-width: 280px;
             }
 
             .user-role {
@@ -709,7 +715,6 @@ class HeaderComponent
                 white-space: nowrap;
                 overflow: hidden;
                 text-overflow: ellipsis;
-                max-width: 200px;
             }
 
             .user-avatar {
@@ -753,13 +758,14 @@ class HeaderComponent
                 background: var(--white);
                 border-radius: 16px;
                 box-shadow: 0 10px 40px rgba(0, 60, 143, 0.15);
-                min-width: 260px;
+                min-width: 320px;
+                max-width: 400px;
                 padding: 8px;
                 opacity: 0;
                 visibility: hidden;
                 transform: translateY(-10px) scale(0.95);
                 transition: all var(--transition-slow);
-                z-index: 1001;
+                z-index: 10001;
                 border: 1px solid var(--gray-100);
                 border-top: 2px solid var(--assego-gold);
             }
@@ -782,12 +788,16 @@ class HeaderComponent
                 font-weight: 700;
                 color: var(--assego-blue);
                 font-size: 15px;
+                word-wrap: break-word;
+                overflow-wrap: break-word;
             }
 
             .user-dropdown-email {
                 font-size: 13px;
                 color: var(--gray-600);
                 margin-top: 2px;
+                word-wrap: break-word;
+                overflow-wrap: break-word;
             }
 
             .dropdown-item {
