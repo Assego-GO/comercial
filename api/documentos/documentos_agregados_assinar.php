@@ -144,7 +144,7 @@ try {
     // Determinar tipo de ação baseado na situação anterior
     $acao = ($situacaoAtual === 'inativo') ? 'REATIVAÇÃO' : 'APROVAÇÃO';
 
-    // Iniciar transação
+    // Iniciar transação testando
     $db->beginTransaction();
 
     try {
