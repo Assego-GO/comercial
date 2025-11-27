@@ -1,11 +1,20 @@
 <?php
 /**
- * API para aprovar/assinar sócio agregado
+ * API - Assinar Documento de Agregado (Aprovar/Reativar)
  * api/documentos/documentos_agregados_assinar.php
  * 
- * Atualiza diretamente a tabela Socios_Agregados
+ * VERSÃO 2.0 - Aceita agregados INATIVOS e muda para ATIVO
+ * 
+ * Fluxo:
+ * - Agregado com situação 'pendente' ou 'inativo' → muda para 'ativo'
+ * - Agregado já 'ativo' → erro (já está aprovado)
  */
 
+// Desabilitar exibição de erros para garantir JSON limpo
+ini_set('display_errors', 0);
+error_reporting(E_ALL);
+
+// Limpar qualquer saída anterior
 ob_start();
 
 header('Content-Type: application/json; charset=utf-8');
@@ -13,151 +22,232 @@ header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, X-Requested-With');
 
+// Função para resposta de erro
+function jsonError($message, $code = 500, $debug = null) {
+    ob_end_clean();
+    http_response_code($code);
+    $response = ['status' => 'error', 'message' => $message];
+    if ($debug !== null) {
+        $response['debug'] = $debug;
+    }
+    echo json_encode($response, JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+// Função para resposta de sucesso
+function jsonSuccess($message, $data = null) {
+    ob_end_clean();
+    http_response_code(200);
+    $response = ['status' => 'success', 'message' => $message];
+    if ($data !== null) {
+        $response['data'] = $data;
+    }
+    echo json_encode($response, JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+// Tratar requisição OPTIONS (CORS)
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    ob_end_clean();
     http_response_code(200);
     exit;
 }
 
+// Verificar método
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    http_response_code(405);
-    echo json_encode(['status' => 'error', 'message' => 'Método não permitido']);
-    exit;
+    jsonError('Método não permitido. Use POST.', 405);
 }
 
-error_reporting(E_ALL);
-ini_set('display_errors', 0);
-
-ob_clean();
-
-$response = ['status' => 'error', 'message' => 'Erro ao processar requisição'];
-
 try {
-    require_once '../../config/config.php';
-    require_once '../../config/database.php';
-    require_once '../../classes/Database.php';
-    require_once '../../classes/Auth.php';
-
-    if (session_status() === PHP_SESSION_NONE) {
-        session_start();
+    // Carregar configurações
+    $configPaths = [
+        __DIR__ . '/../../config/config.php',
+        __DIR__ . '/../../../config/config.php',
+        $_SERVER['DOCUMENT_ROOT'] . '/comercial/config/config.php'
+    ];
+    
+    $configLoaded = false;
+    foreach ($configPaths as $configPath) {
+        if (file_exists($configPath)) {
+            require_once $configPath;
+            require_once dirname($configPath) . '/database.php';
+            require_once dirname(dirname($configPath)) . '/classes/Database.php';
+            require_once dirname(dirname($configPath)) . '/classes/Auth.php';
+            $configLoaded = true;
+            break;
+        }
+    }
+    
+    if (!$configLoaded) {
+        jsonError('Arquivos de configuração não encontrados', 500);
     }
 
+    // Verificar autenticação
     $auth = new Auth();
     if (!$auth->isLoggedIn()) {
-        throw new Exception('Usuário não autenticado');
+        jsonError('Não autorizado. Faça login novamente.', 401);
     }
 
+    // Obter dados do funcionário logado
     $funcionarioId = $_SESSION['funcionario_id'] ?? null;
-    if (!$funcionarioId) {
-        throw new Exception('Funcionário não identificado');
-    }
-
-    // Ler dados JSON
-    $input = json_decode(file_get_contents('php://input'), true);
+    $funcionarioNome = $_SESSION['funcionario_nome'] ?? $_SESSION['usuario_nome'] ?? 'Sistema';
     
-    // Aceitar tanto documento_id quanto agregado_id
-    $agregadoId = isset($input['documento_id']) ? intval($input['documento_id']) : 0;
-    if ($agregadoId <= 0) {
-        $agregadoId = isset($input['agregado_id']) ? intval($input['agregado_id']) : 0;
-    }
-    $observacao = isset($input['observacao']) ? trim($input['observacao']) : '';
-
-    if ($agregadoId <= 0) {
-        throw new Exception('ID do agregado inválido');
+    if (!$funcionarioId) {
+        jsonError('ID do funcionário não encontrado na sessão', 401);
     }
 
-    Database::getInstance(DB_NAME_CADASTRO);
+    // Ler dados da requisição
+    $inputRaw = file_get_contents('php://input');
+    $input = json_decode($inputRaw, true);
+    
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        jsonError('JSON inválido: ' . json_last_error_msg(), 400);
+    }
+
+    // Validar documento_id
+    $documentoId = isset($input['documento_id']) ? intval($input['documento_id']) : 0;
+    if ($documentoId <= 0) {
+        jsonError('ID do documento/agregado inválido', 400);
+    }
+
+    // Observação (opcional)
+    $observacao = trim($input['observacao'] ?? '');
+
+    // Conectar ao banco de dados - usar getConnection()
+    $dbName = defined('DB_NAME_CADASTRO') ? DB_NAME_CADASTRO : (defined('DB_NAME') ? DB_NAME : 'wwasse_cadastro');
+    $db = Database::getInstance($dbName)->getConnection();
+
+    // Buscar o agregado
+    $stmt = $db->prepare("
+        SELECT id, nome, cpf, situacao, ativo, socio_titular_nome, socio_titular_cpf
+        FROM Socios_Agregados 
+        WHERE id = ?
+    ");
+    $stmt->execute([$documentoId]);
+    $agregado = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$agregado) {
+        jsonError('Agregado não encontrado', 400);
+    }
+
+    // Verificar situação atual
+    $situacaoAtual = strtolower(trim($agregado['situacao']));
+    
+    // Se já está ativo, não precisa assinar novamente
+    if ($situacaoAtual === 'ativo') {
+        jsonError('Este agregado já está ativo. Não é necessário assinar novamente.', 400);
+    }
+    
+    // PERMITIR: pendente, inativo, aguardando (qualquer coisa que não seja 'ativo')
+    // Isso permite que a presidência ative/reative agregados
+
+    // Determinar tipo de ação baseado na situação anterior
+    $acao = ($situacaoAtual === 'inativo') ? 'REATIVAÇÃO' : 'APROVAÇÃO';
+
+    // Iniciar transação
     $db->beginTransaction();
 
     try {
-        // Verificar se agregado existe
-        $stmt = $db->prepare("
-            SELECT id, nome, cpf, situacao 
-            FROM Socios_Agregados 
-            WHERE id = :id
-        ");
-        $stmt->execute([':id' => $agregadoId]);
-        $agregado = $stmt->fetch(PDO::FETCH_ASSOC);
+        // Montar observação
+        $dataHora = date('d/m/Y H:i:s');
+        $novaObservacao = "[{$acao} {$dataHora} - {$funcionarioNome}] ";
+        $novaObservacao .= !empty($observacao) ? $observacao : "Aprovado pela presidência";
 
-        if (!$agregado) {
-            throw new Exception('Agregado não encontrado');
+        // Verificar se a coluna observacoes existe
+        $colunaObservacoes = true;
+        try {
+            $db->query("SELECT observacoes FROM Socios_Agregados LIMIT 1");
+        } catch (PDOException $e) {
+            $colunaObservacoes = false;
         }
 
-        // Verificar se está pendente
-        if (!in_array($agregado['situacao'], ['pendente', 'aguardando'])) {
-            throw new Exception('Este agregado não está pendente de aprovação. Situação atual: ' . $agregado['situacao']);
+        // Verificar se a coluna data_atualizacao existe
+        $colunaDataAtualizacao = true;
+        try {
+            $db->query("SELECT data_atualizacao FROM Socios_Agregados LIMIT 1");
+        } catch (PDOException $e) {
+            $colunaDataAtualizacao = false;
         }
 
-        // Atualizar situação para 'ativo' (aprovado)
-        $novaObservacao = $observacao ?: 'Aprovado pela presidência';
-        $observacaoCompleta = "[APROVAÇÃO " . date('d/m/Y H:i') . " - Func.ID: $funcionarioId] " . $novaObservacao;
-        
-        $stmt = $db->prepare("
-            UPDATE Socios_Agregados 
-            SET situacao = 'ativo',
-                ativo = 1,
-                observacoes = CONCAT(IFNULL(observacoes, ''), '\n', :observacao),
-                data_atualizacao = NOW()
-            WHERE id = :id
-        ");
-        $stmt->execute([
-            ':id' => $agregadoId,
-            ':observacao' => $observacaoCompleta
-        ]);
+        // Montar SQL de update dinamicamente
+        $sqlUpdate = "UPDATE Socios_Agregados SET situacao = 'ativo', ativo = 1";
+        $params = [];
 
-        // Registrar na auditoria se existir a tabela
-        $stmt = $db->query("SHOW TABLES LIKE 'Auditoria'");
-        if ($stmt->rowCount() > 0) {
-            $stmt = $db->prepare("
-                INSERT INTO Auditoria (tabela, acao, registro_id, funcionario_id, alteracoes, data_hora)
-                VALUES ('Socios_Agregados', 'APROVACAO', :registro_id, :funcionario_id, :alteracoes, NOW())
+        if ($colunaObservacoes) {
+            $sqlUpdate .= ", observacoes = CONCAT(COALESCE(observacoes, ''), '\n', ?)";
+            $params[] = $novaObservacao;
+        }
+
+        if ($colunaDataAtualizacao) {
+            $sqlUpdate .= ", data_atualizacao = NOW()";
+        }
+
+        $sqlUpdate .= " WHERE id = ?";
+        $params[] = $documentoId;
+
+        $stmtUpdate = $db->prepare($sqlUpdate);
+        $resultado = $stmtUpdate->execute($params);
+
+        if (!$resultado) {
+            throw new Exception('Falha ao atualizar o agregado');
+        }
+
+        // Tentar registrar na tabela de auditoria (não falha se não existir)
+        try {
+            $stmtAudit = $db->prepare("
+                INSERT INTO Auditoria (tabela, registro_id, acao, funcionario_id, data_acao, detalhes)
+                VALUES ('Socios_Agregados', ?, ?, ?, NOW(), ?)
             ");
-            $stmt->execute([
-                ':registro_id' => $agregadoId,
-                ':funcionario_id' => $funcionarioId,
-                ':alteracoes' => json_encode([
+            $stmtAudit->execute([
+                $documentoId,
+                $acao . '_AGREGADO',
+                $funcionarioId,
+                json_encode([
                     'situacao_anterior' => $agregado['situacao'],
                     'situacao_nova' => 'ativo',
                     'observacao' => $novaObservacao
                 ])
             ]);
+        } catch (PDOException $e) {
+            // Tabela de auditoria pode não existir - não é erro crítico
+            error_log("Aviso: Não foi possível registrar auditoria: " . $e->getMessage());
         }
 
+        // Commit da transação
         $db->commit();
 
-        $response = [
-            'status' => 'success',
-            'message' => 'Agregado aprovado com sucesso!',
-            'data' => [
-                'agregado_id' => $agregadoId,
-                'nome' => $agregado['nome'],
-                'cpf' => $agregado['cpf'],
-                'situacao_anterior' => $agregado['situacao'],
-                'situacao_nova' => 'ativo',
-                'data_aprovacao' => date('Y-m-d H:i:s')
-            ]
-        ];
+        // Mensagem de sucesso
+        $mensagem = ($acao === 'REATIVAÇÃO') 
+            ? 'Agregado reativado com sucesso!' 
+            : 'Agregado aprovado com sucesso!';
+
+        // Log de sucesso
+        error_log("[AGREGADO] {$acao} - ID: {$documentoId}, Nome: {$agregado['nome']}, Por: {$funcionarioNome}");
+
+        // Resposta de sucesso
+        jsonSuccess($mensagem, [
+            'agregado_id' => $documentoId,
+            'nome' => $agregado['nome'],
+            'cpf' => $agregado['cpf'],
+            'titular_nome' => $agregado['socio_titular_nome'],
+            'titular_cpf' => $agregado['socio_titular_cpf'],
+            'situacao_anterior' => $agregado['situacao'],
+            'situacao_nova' => 'ativo',
+            'acao' => $acao,
+            'data_aprovacao' => date('Y-m-d H:i:s'),
+            'aprovado_por' => $funcionarioNome
+        ]);
 
     } catch (Exception $e) {
+        // Rollback em caso de erro
         $db->rollBack();
         throw $e;
     }
 
 } catch (PDOException $e) {
-    error_log("Erro PDO em documentos_agregados_assinar: " . $e->getMessage());
-    $response = [
-        'status' => 'error',
-        'message' => 'Erro de banco de dados: ' . $e->getMessage()
-    ];
-    http_response_code(500);
+    error_log("Erro de banco ao assinar agregado: " . $e->getMessage());
+    jsonError('Erro de banco de dados: ' . $e->getMessage(), 500);
 } catch (Exception $e) {
-    error_log("Erro em documentos_agregados_assinar: " . $e->getMessage());
-    $response = [
-        'status' => 'error',
-        'message' => $e->getMessage()
-    ];
-    http_response_code(400);
+    error_log("Erro ao assinar agregado: " . $e->getMessage());
+    jsonError('Erro ao processar assinatura: ' . $e->getMessage(), 500);
 }
-
-ob_end_clean();
-echo json_encode($response, JSON_UNESCAPED_UNICODE);
-exit;
