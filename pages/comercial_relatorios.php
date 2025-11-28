@@ -578,16 +578,17 @@ if (empty($patentesDB)) {
         }
 
         table.dataTable thead th {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white !important;
-            font-weight: 600;
+            background: #000000 !important;
+            color: #ffffff !important;
+            font-weight: 700 !important;
             text-transform: uppercase;
-            font-size: 0.85rem;
-            letter-spacing: 0.8px;
-            padding: 1.25rem 1rem;
-            border: none;
+            font-size: 0.95rem !important;
+            letter-spacing: 1px;
+            padding: 1.5rem 1rem !important;
+            border: none !important;
             white-space: nowrap;
             position: relative;
+            text-align: center;
         }
 
         table.dataTable thead th::after {
@@ -596,8 +597,8 @@ if (empty($patentesDB)) {
             bottom: 0;
             left: 0;
             right: 0;
-            height: 2px;
-            background: rgba(255, 255, 255, 0.3);
+            height: 3px;
+            background: rgba(255, 255, 255, 0.2);
         }
 
         table.dataTable tbody td {
@@ -824,20 +825,22 @@ if (empty($patentesDB)) {
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
         }
 
-        /* Header da tabela - visual mais moderno */
+        /* Header da tabela - PRETO com texto branco e bem visível */
         #reportTable thead {
-            background: linear-gradient(135deg, #0056d2 0%, #4A90E2 100%);
+            background: #000000 !important;
         }
 
         #reportTable thead th {
-            color: white !important;
-            font-weight: 600 !important;
-            font-size: 13px !important;
+            background: #000000 !important;
+            color: #ffffff !important;
+            font-weight: 700 !important;
+            font-size: 14px !important;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
-            padding: 16px 12px !important;
+            letter-spacing: 1px;
+            padding: 18px 14px !important;
             border: none !important;
-            text-align: left;
+            text-align: center !important;
+            vertical-align: middle !important;
         }
 
         /* Primeira coluna (número) com destaque */
@@ -1094,21 +1097,22 @@ if (empty($patentesDB)) {
                 font-size: 11px !important;        /* ✅ FONTE MAIOR */
             }
             
-            /* Header da tabela - cinza claro profissional (SEM ROXO!) */
+            /* Header da tabela - PRETO com texto branco */
             #reportTable thead {
-                background: #f5f5f5 !important;
-                border-bottom: 2px solid #333 !important;
+                background: #000000 !important;
+                border-bottom: 3px solid #000 !important;
             }
             
             #reportTable thead th {
-                background: #f5f5f5 !important;
-                color: #000000 !important;         /* ✅ PRETO */
-                font-weight: 600 !important;
-                font-size: 12px !important;        /* ✅ FONTE MAIOR */
-                padding: 10px 8px !important;
-                border: 1px solid #ddd !important;
-                text-align: left !important;
+                background: #000000 !important;
+                color: #ffffff !important;
+                font-weight: 700 !important;
+                font-size: 13px !important;
+                padding: 12px 10px !important;
+                border: 1px solid #000 !important;
+                text-align: center !important;
                 text-transform: uppercase;
+                letter-spacing: 0.5px;
             }
             
             /* Linhas da tabela */
@@ -1406,10 +1410,6 @@ if (empty($patentesDB)) {
                         <button class="btn-export btn-export-excel" onclick="exportarRelatorio('excel')">
                             <i class="fas fa-file-excel"></i>
                             Excel
-                        </button>
-                        <button class="btn-export btn-export-pdf" onclick="exportarRelatorio('pdf')">
-                            <i class="fas fa-file-pdf"></i>
-                            PDF
                         </button>
                         <button class="btn-export btn-export-print" onclick="imprimirRelatorio()">
                             <i class="fas fa-print"></i>
@@ -1750,143 +1750,6 @@ if (empty($patentesDB)) {
                         title: `Relatório_${currentReportType}_${new Date().toISOString().split('T')[0]}`
                     },
                     {
-                        extend: 'pdf',
-                        text: '<i class="fas fa-file-pdf"></i> PDF',
-                        className: 'btn btn-sm btn-danger',
-                        title: '', // Removido para usar messageTop
-                        messageTop: function() {
-                            // Título bonito e formatado
-                            const tipoRelatorio = document.getElementById('tipoRelatorio').value;
-                            const tipoTexto = {
-                                'desfiliacoes': 'Desfiliações',
-                                'aniversariantes': 'Aniversariantes',
-                                'novos_cadastros': 'Novos Cadastros',
-                                'indicacoes': 'Indicações'
-                            };
-                            const dataAtual = new Date().toLocaleDateString('pt-BR');
-                            return `Relatório de ${tipoTexto[tipoRelatorio] || 'Relatório'}\n${dataAtual}`;
-                        },
-                        orientation: 'landscape',
-                        pageSize: 'A4',
-                        customize: function(doc) {
-                            // ✅ CUSTOMIZAÇÃO DO PDF - VISUAL PROFISSIONAL, LIMPO E BONITO
-                            
-                            // ✅ Título do documento - AZUL e bonito
-                            doc.content[0].text = doc.content[0].text;
-                            doc.content[0].alignment = 'center';
-                            doc.content[0].fontSize = 18;
-                            doc.content[0].bold = true;
-                            doc.content[0].margin = [0, 0, 0, 20];
-                            doc.content[0].color = '#0056d2'; // ✅ AZUL
-                            
-                            // Configurar a tabela
-                            if (doc.content[1] && doc.content[1].table) {
-                                const table = doc.content[1].table;
-                                
-                                // ✅ Estilo do header - CINZA CLARO (SEM ROXO), TEXTO PRETO, FONTE MAIOR
-                                if (table.body && table.body[0]) {
-                                    table.body[0].forEach(cell => {
-                                        cell.fillColor = '#f5f5f5';  // ✅ Cinza claro
-                                        cell.color = '#000000';      // ✅ PRETO
-                                        cell.bold = true;
-                                        cell.fontSize = 11;          // ✅ FONTE MAIOR
-                                        cell.alignment = 'left';
-                                    });
-                                    
-                                    // Primeira coluna (#) centralizada
-                                    if (table.body[0][0]) {
-                                        table.body[0][0].alignment = 'center';
-                                    }
-                                }
-                                
-                                // ✅ Estilo das linhas - alternância suave, FONTES MAIORES
-                                for (let i = 1; i < table.body.length; i++) {
-                                    const row = table.body[i];
-                                    
-                                    // Alternância de cores nas linhas
-                                    if (i % 2 === 0) {
-                                        row.forEach(cell => {
-                                            cell.fillColor = '#fafafa';  // Cinza muito claro
-                                        });
-                                    } else {
-                                        row.forEach(cell => {
-                                            cell.fillColor = '#ffffff';  // Branco
-                                        });
-                                    }
-                                    
-                                    // ✅ Estilo do texto - PRETO e FONTE MAIOR
-                                    row.forEach((cell, index) => {
-                                        cell.fontSize = 10;      // ✅ FONTE MAIOR (era 8)
-                                        cell.color = '#000000';  // ✅ PRETO
-                                        
-                                        // Primeira coluna centralizada
-                                        if (index === 0) {
-                                            cell.alignment = 'center';
-                                            cell.bold = true;
-                                        }
-                                        
-                                        // ✅ CPF em PRETO e FONTE MAIOR
-                                        if (index === 2) { // Coluna CPF
-                                            cell.color = '#000000';  // ✅ PRETO
-                                            cell.fontSize = 10;      // ✅ FONTE MAIOR
-                                        }
-                                    });
-                                }
-                                
-                                // Larguras das colunas
-                                table.widths = Array(table.body[0].length).fill('auto');
-                                
-                                // Bordas da tabela
-                                doc.content[1].layout = {
-                                    hLineWidth: function(i, node) {
-                                        if (i === 0 || i === 1) return 2;
-                                        return 0.5;
-                                    },
-                                    vLineWidth: function(i) {
-                                        return 0.5;
-                                    },
-                                    hLineColor: function(i, node) {
-                                        if (i === 0 || i === 1) return '#333333';
-                                        return '#e0e0e0';
-                                    },
-                                    vLineColor: function(i) {
-                                        return '#e0e0e0';
-                                    },
-                                    paddingLeft: function(i) { return 6; },
-                                    paddingRight: function(i) { return 6; },
-                                    paddingTop: function(i) { return 5; },
-                                    paddingBottom: function(i) { return 5; }
-                                };
-                            }
-                            
-                            // Configurações da página
-                            doc.pageMargins = [30, 50, 30, 40];
-                            doc.defaultStyle.fontSize = 10; // ✅ FONTE PADRÃO MAIOR
-                            
-                            // Rodapé com data de geração
-                            doc.footer = function(currentPage, pageCount) {
-                                return {
-                                    columns: [
-                                        {
-                                            text: `Gerado em: ${new Date().toLocaleString('pt-BR')}`,
-                                            alignment: 'left',
-                                            fontSize: 9,
-                                            color: '#666666',
-                                            margin: [30, 0]
-                                        },
-                                        {
-                                            text: `Página ${currentPage} de ${pageCount}`,
-                                            alignment: 'right',
-                                            fontSize: 9,
-                                            color: '#666666',
-                                            margin: [0, 0, 30, 0]
-                                        }
-                                    ]
-                                };
-                            };
-                        }
-                    },
-                    {
                         extend: 'print',
                         text: '<i class="fas fa-print"></i> Imprimir',
                         className: 'btn btn-sm btn-info',
@@ -1927,23 +1790,24 @@ if (empty($patentesDB)) {
                                     'margin-top': '20px'
                                 });
                             
-                            // ✅ Header da tabela - CINZA CLARO (SEM ROXO!), PRETO, FONTE MAIOR
+                            // ✅ Header da tabela - PRETO com texto branco
                             $(win.document.body).find('table thead tr')
                                 .css({
-                                    'background': '#f5f5f5',
-                                    'border-bottom': '2px solid #333'
+                                    'background': '#000000',
+                                    'border-bottom': '3px solid #000'
                                 });
                             
                             $(win.document.body).find('table thead th')
                                 .css({
-                                    'background': '#f5f5f5',
-                                    'color': '#000000',      // ✅ PRETO
-                                    'font-weight': '600',
-                                    'font-size': '12px',     // ✅ FONTE MAIOR
-                                    'padding': '10px 8px',
-                                    'border': '1px solid #ddd',
-                                    'text-align': 'left',
-                                    'text-transform': 'uppercase'
+                                    'background': '#000000',
+                                    'color': '#ffffff',
+                                    'font-weight': '700',
+                                    'font-size': '13px',
+                                    'padding': '12px 10px',
+                                    'border': '1px solid #000',
+                                    'text-align': 'center',
+                                    'text-transform': 'uppercase',
+                                    'letter-spacing': '0.5px'
                                 });
                             
                             // ✅ Linhas da tabela - alternância suave
@@ -2136,9 +2000,6 @@ if (empty($patentesDB)) {
                 switch(formato) {
                     case 'excel':
                         dataTable.button('.buttons-excel').trigger();
-                        break;
-                    case 'pdf':
-                        dataTable.button('.buttons-pdf').trigger();
                         break;
                 }
                 showToast(`Exportando para ${formato.toUpperCase()}...`, 'success');
