@@ -2813,10 +2813,14 @@ $headerComponent = HeaderComponent::create([
             let buttons = '';
             const isSocio = doc.tipo_documento === 'SOCIO';
             const btnClass = isSocio ? 'primary' : 'purple';
+            
+            // IMPORTANTE: O ID pode ser numérico ou string (ex: "AGR_14" para agregados sem documento)
+            // Sempre usar como string para evitar erros de JavaScript
+            const docIdStr = String(doc.id);
 
             // Botão download
             buttons += `
-        <button class="btn-action ${btnClass}" onclick="downloadDocumentoUnificado(${doc.id}, '${doc.tipo_documento}')" title="Download">
+        <button class="btn-action ${btnClass}" onclick="downloadDocumentoUnificado('${docIdStr}', '${doc.tipo_documento}')" title="Download">
             <i class="fas fa-download"></i>
             <span class="btn-text">Baixar</span>
         </button>
@@ -2826,7 +2830,7 @@ $headerComponent = HeaderComponent::create([
             switch (doc.status_fluxo) {
                 case 'AGUARDANDO_ASSINATURA':
                     buttons += `
-                <button class="btn-action success" onclick="abrirModalAssinaturaUnificado(${doc.id}, '${doc.tipo_documento}')" title="Assinar Documento">
+                <button class="btn-action success" onclick="abrirModalAssinaturaUnificado('${docIdStr}', '${doc.tipo_documento}')" title="Assinar Documento">
                     <i class="fas fa-signature"></i>
                     <span class="btn-text">Assinar</span>
                 </button>
@@ -2835,7 +2839,7 @@ $headerComponent = HeaderComponent::create([
 
                 case 'ASSINADO':
                     buttons += `
-                <button class="btn-action warning" onclick="finalizarProcessoUnificado(${doc.id}, '${doc.tipo_documento}')" title="Finalizar Processo">
+                <button class="btn-action warning" onclick="finalizarProcessoUnificado('${docIdStr}', '${doc.tipo_documento}')" title="Finalizar Processo">
                     <i class="fas fa-flag-checkered"></i>
                     <span class="btn-text">Finalizar</span>
                 </button>
@@ -2845,7 +2849,7 @@ $headerComponent = HeaderComponent::create([
 
             // Histórico
             buttons += `
-        <button class="btn-action secondary" onclick="verHistoricoUnificado(${doc.id}, '${doc.tipo_documento}')" title="Ver Histórico">
+        <button class="btn-action secondary" onclick="verHistoricoUnificado('${docIdStr}', '${doc.tipo_documento}')" title="Ver Histórico">
             <i class="fas fa-history"></i>
             <span class="btn-text">Histórico</span>
         </button>
@@ -3050,25 +3054,43 @@ $headerComponent = HeaderComponent::create([
         // ===== AÇÕES UNIFICADAS =====
      function downloadDocumentoUnificado(documentoId, tipo) {
     console.log('Download documento:', documentoId, tipo);
+    
+    // Extrair o ID numérico se for um agregado com prefixo AGR_
+    let idNumerico = documentoId;
+    if (typeof documentoId === 'string' && documentoId.startsWith('AGR_')) {
+        idNumerico = documentoId.replace('AGR_', '');
+    }
+    
     const tipoParam = tipo === 'AGREGADO' ? '&tipo=agregado' : '';
     
     notifications.show('Preparando download...', 'info', 2000);
-    window.open(`../api/documentos/documentos_download.php?id=${documentoId}${tipoParam}`, '_blank');
+    window.open(`../api/documentos/documentos_download.php?id=${idNumerico}${tipoParam}`, '_blank');
 }
 
         function abrirModalAssinaturaUnificado(documentoId, tipo) {
-            const documento = documentosUnificados.find(doc => doc.id === documentoId && doc.tipo_documento === tipo);
+            // Converter para string para comparação consistente
+            const docIdStr = String(documentoId);
+            
+            const documento = documentosUnificados.find(doc => String(doc.id) === docIdStr && doc.tipo_documento === tipo);
 
             if (!documento) {
+                console.error('Documento não encontrado:', documentoId, tipo);
+                console.log('Documentos disponíveis:', documentosUnificados.map(d => ({id: d.id, tipo: d.tipo_documento})));
                 notifications.show('Documento não encontrado', 'error');
                 return;
             }
 
             documentoSelecionado = documento;
+            
+            // Extrair ID numérico para agregados com prefixo AGR_
+            let idParaEnviar = documento.id;
+            if (typeof documento.id === 'string' && documento.id.startsWith('AGR_')) {
+                idParaEnviar = documento.pessoa_id || documento.id.replace('AGR_', '');
+            }
 
             if (tipo === 'SOCIO') {
                 // Usar modal de sócio
-                document.getElementById('documentoId').value = documentoId;
+                document.getElementById('documentoId').value = idParaEnviar;
                 document.getElementById('previewAssociado').textContent = documento.nome;
                 document.getElementById('previewCPF').textContent = formatarCPF(documento.cpf);
                 document.getElementById('previewData').textContent = formatarData(documento.data_upload);
@@ -3081,8 +3103,9 @@ $headerComponent = HeaderComponent::create([
 
                 new bootstrap.Modal(document.getElementById('assinaturaModal')).show();
             } else {
-                // Usar modal de agregado
-                document.getElementById('documentoAgregadoId').value = documentoId;
+                // Usar modal de agregado - IMPORTANTE: usar pessoa_id para agregados
+                const agregadoId = documento.pessoa_id || (documento.id.toString().replace('AGR_', ''));
+                document.getElementById('documentoAgregadoId').value = agregadoId;
                 document.getElementById('previewAgregadoNome').textContent = documento.nome || '-';
                 document.getElementById('previewAgregadoCPF').textContent = formatarCPF(documento.cpf);
                 document.getElementById('previewTitularNome').textContent = documento.titular_nome || '-';
@@ -3094,7 +3117,10 @@ $headerComponent = HeaderComponent::create([
         }
 
         function finalizarProcessoUnificado(documentoId, tipo) {
-            const documento = documentosUnificados.find(doc => doc.id === documentoId && doc.tipo_documento === tipo);
+            // Converter para string para comparação consistente
+            const docIdStr = String(documentoId);
+            
+            const documento = documentosUnificados.find(doc => String(doc.id) === docIdStr && doc.tipo_documento === tipo);
 
             if (!documento) {
                 notifications.show('Documento não encontrado', 'error');
@@ -3106,6 +3132,12 @@ $headerComponent = HeaderComponent::create([
             if (!confirm(`Deseja finalizar o processo do ${tipoLabel} "${documento.nome}"?\n\nIsso irá concluir o fluxo de aprovação.`)) {
                 return;
             }
+            
+            // Extrair ID numérico para agregados com prefixo AGR_
+            let idParaEnviar = documento.id;
+            if (typeof documento.id === 'string' && documento.id.startsWith('AGR_')) {
+                idParaEnviar = documento.pessoa_id || documento.id.replace('AGR_', '');
+            }
 
             const endpoint = tipo === 'SOCIO' 
                 ? '../api/documentos/documentos_finalizar.php' 
@@ -3115,7 +3147,7 @@ $headerComponent = HeaderComponent::create([
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    documento_id: documentoId,
+                    documento_id: idParaEnviar,
                     observacao: `Processo finalizado - ${tipo === 'SOCIO' ? 'Sócio aprovado' : 'Agregado ativado'}`
                 })
             })
@@ -3135,11 +3167,20 @@ $headerComponent = HeaderComponent::create([
         }
 
         function verHistoricoUnificado(documentoId, tipo) {
+            // Extrair ID numérico para agregados com prefixo AGR_
+            let idParaEnviar = documentoId;
+            if (typeof documentoId === 'string' && documentoId.startsWith('AGR_')) {
+                // Para agregados, buscar o pessoa_id do documento
+                const docIdStr = String(documentoId);
+                const documento = documentosUnificados.find(doc => String(doc.id) === docIdStr && doc.tipo_documento === tipo);
+                idParaEnviar = documento?.pessoa_id || documentoId.replace('AGR_', '');
+            }
+            
             const endpoint = tipo === 'SOCIO' 
                 ? '../api/documentos/documentos_historico_fluxo.php' 
                 : '../api/documentos/documentos_agregados_historico.php';
 
-            fetch(`${endpoint}?documento_id=${documentoId}`)
+            fetch(`${endpoint}?documento_id=${idParaEnviar}`)
                 .then(response => response.json())
                 .then(result => {
                     if (result.status === 'success') {
@@ -5263,9 +5304,13 @@ $headerComponent = HeaderComponent::create([
         // Botões de ação para agregados
         function getActionButtonsAgregado(doc) {
             let buttons = '';
+            
+            // IMPORTANTE: O ID pode ser numérico ou string (ex: "AGR_14" para agregados sem documento)
+            // Sempre usar como string para evitar erros de JavaScript
+            const docIdStr = String(doc.id);
 
             buttons += `
-                <button class="btn-action purple" onclick="downloadDocumentoAgregado(${doc.id})" title="Download">
+                <button class="btn-action purple" onclick="downloadDocumentoAgregado('${docIdStr}')" title="Download">
                     <i class="fas fa-download"></i>
                     <span class="btn-text">Baixar</span>
                 </button>
@@ -5274,7 +5319,7 @@ $headerComponent = HeaderComponent::create([
             switch (doc.status_fluxo) {
                 case 'AGUARDANDO_ASSINATURA':
                     buttons += `
-                        <button class="btn-action success" onclick="abrirModalAssinaturaAgregado(${doc.id})" title="Assinar Documento">
+                        <button class="btn-action success" onclick="abrirModalAssinaturaAgregado('${docIdStr}')" title="Assinar Documento">
                             <i class="fas fa-signature"></i>
                             <span class="btn-text">Assinar</span>
                         </button>
@@ -5283,7 +5328,7 @@ $headerComponent = HeaderComponent::create([
 
                 case 'ASSINADO':
                     buttons += `
-                        <button class="btn-action warning" onclick="finalizarProcessoAgregado(${doc.id})" title="Finalizar Processo">
+                        <button class="btn-action warning" onclick="finalizarProcessoAgregado('${docIdStr}')" title="Finalizar Processo">
                             <i class="fas fa-flag-checkered"></i>
                             <span class="btn-text">Finalizar</span>
                         </button>
@@ -5292,7 +5337,7 @@ $headerComponent = HeaderComponent::create([
             }
 
             buttons += `
-                <button class="btn-action secondary" onclick="verHistoricoAgregado(${doc.id})" title="Ver Histórico">
+                <button class="btn-action secondary" onclick="verHistoricoAgregado('${docIdStr}')" title="Ver Histórico">
                     <i class="fas fa-history"></i>
                     <span class="btn-text">Histórico</span>
                 </button>
@@ -5305,13 +5350,20 @@ $headerComponent = HeaderComponent::create([
     
 
         function downloadDocumentoAgregado(documentoId) {
-        notifications.show('Preparando download da ficha de agregado...', 'info', 2000);
-        window.open('../api/documentos/documentos_download.php?id=' + documentoId + '&tipo=agregado', '_blank');
+            // Extrair ID numérico para agregados com prefixo AGR_
+            let idNumerico = documentoId;
+            if (typeof documentoId === 'string' && documentoId.startsWith('AGR_')) {
+                idNumerico = documentoId.replace('AGR_', '');
+            }
+            notifications.show('Preparando download da ficha de agregado...', 'info', 2000);
+            window.open('../api/documentos/documentos_download.php?id=' + idNumerico + '&tipo=agregado', '_blank');
         }
 
         // Abrir modal de assinatura de agregado
         function abrirModalAssinaturaAgregado(documentoId) {
-            const documento = documentosAgregados.find(doc => doc.id === documentoId);
+            // Converter para string para comparação consistente
+            const docIdStr = String(documentoId);
+            const documento = documentosAgregados.find(doc => String(doc.id) === docIdStr);
 
             if (!documento) {
                 notifications.show('Documento não encontrado', 'error');
@@ -5319,10 +5371,16 @@ $headerComponent = HeaderComponent::create([
             }
 
             documentoAgregadoSelecionado = documento;
+            
+            // Extrair ID numérico para agregados com prefixo AGR_
+            let idNumerico = documentoId;
+            if (typeof documentoId === 'string' && documentoId.startsWith('AGR_')) {
+                idNumerico = documento.pessoa_id || documentoId.replace('AGR_', '');
+            }
 
-            document.getElementById('documentoAgregadoId').value = documentoId;
-            document.getElementById('previewAgregadoNome').textContent = documento.agregado_nome || '-';
-            document.getElementById('previewAgregadoCPF').textContent = formatarCPF(documento.agregado_cpf);
+            document.getElementById('documentoAgregadoId').value = idNumerico;
+            document.getElementById('previewAgregadoNome').textContent = documento.agregado_nome || documento.nome || '-';
+            document.getElementById('previewAgregadoCPF').textContent = formatarCPF(documento.agregado_cpf || documento.cpf);
             document.getElementById('previewTitularNome').textContent = documento.titular_nome || '-';
             document.getElementById('previewAgregadoData').textContent = formatarData(documento.data_upload);
             document.getElementById('observacoesAgregado').value = '';
@@ -5339,6 +5397,14 @@ $headerComponent = HeaderComponent::create([
                 notifications.show('ID do documento não encontrado', 'error');
                 return;
             }
+            
+            // Garantir que o ID seja numérico (remover prefixo AGR_ se existir)
+            let idNumerico = documentoId;
+            if (typeof documentoId === 'string' && documentoId.startsWith('AGR_')) {
+                idNumerico = documentoId.replace('AGR_', '');
+            }
+            
+            console.log('Assinando agregado - ID original:', documentoId, '- ID numérico:', idNumerico);
 
             const btnAssinar = event.target;
             const originalContent = btnAssinar.innerHTML;
@@ -5352,7 +5418,7 @@ $headerComponent = HeaderComponent::create([
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    documento_id: documentoId,
+                    documento_id: parseInt(idNumerico),
                     observacao: observacoes || 'Ficha de agregado assinada pela presidência'
                 })
             })
@@ -5361,7 +5427,7 @@ $headerComponent = HeaderComponent::create([
                 if (result.status === 'success') {
                     bootstrap.Modal.getInstance(document.getElementById('assinaturaAgregadoModal')).hide();
                     notifications.show('Ficha de agregado assinada com sucesso!', 'success');
-                    carregarDocumentosAgregados(true);
+                    carregarDocumentosUnificados(true);
                 } else {
                     throw new Error(result.message || 'Erro desconhecido');
                 }
@@ -5378,14 +5444,22 @@ $headerComponent = HeaderComponent::create([
 
         // Finalizar processo de agregado
         function finalizarProcessoAgregado(documentoId) {
-            const documento = documentosAgregados.find(doc => doc.id === documentoId);
+            // Converter para string para comparação consistente
+            const docIdStr = String(documentoId);
+            const documento = documentosAgregados.find(doc => String(doc.id) === docIdStr);
 
             if (!documento) {
                 notifications.show('Documento não encontrado', 'error');
                 return;
             }
+            
+            // Extrair ID numérico para agregados com prefixo AGR_
+            let idNumerico = documentoId;
+            if (typeof documentoId === 'string' && documentoId.startsWith('AGR_')) {
+                idNumerico = documento.pessoa_id || documentoId.replace('AGR_', '');
+            }
 
-            if (!confirm(`Deseja finalizar o processo do agregado "${documento.agregado_nome}"?\n\nIsso irá ativar o agregado no sistema.`)) {
+            if (!confirm(`Deseja finalizar o processo do agregado "${documento.agregado_nome || documento.nome}"?\n\nIsso irá ativar o agregado no sistema.`)) {
                 return;
             }
 
@@ -5395,7 +5469,7 @@ $headerComponent = HeaderComponent::create([
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    documento_id: documentoId,
+                    documento_id: parseInt(idNumerico),
                     observacao: 'Processo finalizado - Agregado ativado'
                 })
             })
@@ -5403,7 +5477,7 @@ $headerComponent = HeaderComponent::create([
             .then(result => {
                 if (result.status === 'success') {
                     notifications.show('Processo do agregado finalizado com sucesso! Agregado ativado.', 'success');
-                    carregarDocumentosAgregados(true);
+                    carregarDocumentosUnificados(true);
                 } else {
                     throw new Error(result.message || 'Erro desconhecido');
                 }
@@ -5416,7 +5490,13 @@ $headerComponent = HeaderComponent::create([
 
         // Ver histórico de agregado
         function verHistoricoAgregado(documentoId) {
-            fetch('../api/documentos/documentos_agregados_historico.php?documento_id=' + documentoId)
+            // Extrair ID numérico para agregados com prefixo AGR_
+            let idNumerico = documentoId;
+            if (typeof documentoId === 'string' && documentoId.startsWith('AGR_')) {
+                idNumerico = documentoId.replace('AGR_', '');
+            }
+            
+            fetch('../api/documentos/documentos_agregados_historico.php?documento_id=' + idNumerico)
                 .then(response => response.json())
                 .then(result => {
                     if (result.status === 'success') {
