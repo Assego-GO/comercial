@@ -168,10 +168,13 @@ try {
             if ($tabelaDocAgregadoExiste) {
                 // Se tem tabela de documentos, usar o status_fluxo dela ou fallback para situacao
                 if ($status === 'AGUARDANDO_ASSINATURA') {
+                    // Apenas documentos aguardando assinatura OU agregados sem documento e pendentes
                     $where[] = "(dag.status_fluxo = 'AGUARDANDO_ASSINATURA' OR (dag.id IS NULL AND sa.situacao = 'pendente'))";
                 } elseif ($status === 'ASSINADO') {
+                    // Documentos assinados aguardando finalização
                     $where[] = "dag.status_fluxo = 'ASSINADO'";
                 } elseif ($status === 'FINALIZADO') {
+                    // Documentos finalizados OU agregados ativos
                     $where[] = "(dag.status_fluxo = 'FINALIZADO' OR (dag.id IS NULL AND sa.situacao = 'ativo'))";
                 } elseif ($status === 'DIGITALIZADO') {
                     $where[] = "dag.status_fluxo = 'DIGITALIZADO'";
@@ -180,7 +183,10 @@ try {
                 // Sem tabela de documentos, usar situacao do agregado
                 if ($status === 'AGUARDANDO_ASSINATURA') {
                     $where[] = "sa.situacao = 'pendente'";
-                } elseif ($status === 'ASSINADO' || $status === 'FINALIZADO') {
+                } elseif ($status === 'ASSINADO') {
+                    // Agregados não têm status intermediário sem tabela de docs
+                    $where[] = "1=0";
+                } elseif ($status === 'FINALIZADO') {
                     $where[] = "sa.situacao = 'ativo'";
                 } elseif ($status === 'DIGITALIZADO') {
                     $where[] = "1=0"; // Agregados não têm esse status sem tabela de docs
@@ -304,10 +310,14 @@ try {
         // Buscar dados (se houver)
         if ($totalAgregados > 0) {
             if ($tabelaDocAgregadoExiste) {
-                // Query com JOIN na tabela Documentos_Agregado para pegar o ID correto do documento
+                // Query com LEFT JOIN para incluir todos os agregados
+                // Usar o ID do documento se existir, senão usar um ID prefixado
                 $queryAgregados = "
                     SELECT 
-                        COALESCE(dag.id, sa.id) as id,
+                        CASE 
+                            WHEN dag.id IS NOT NULL THEN CAST(dag.id AS CHAR)
+                            ELSE CONCAT('AGR_', sa.id)
+                        END as id,
                         'AGREGADO' as tipo_documento,
                         sa.id as pessoa_id,
                         sa.nome,
@@ -325,10 +335,10 @@ try {
                             ELSE 'AGUARDANDO_ASSINATURA'
                         END as status_fluxo,
                         CASE 
-                            WHEN dag.status_fluxo = 'AGUARDANDO_ASSINATURA' THEN 'Na Presidência'
-                            WHEN dag.status_fluxo = 'ASSINADO' THEN 'Assinado'
-                            WHEN dag.status_fluxo = 'FINALIZADO' THEN 'Finalizado'
                             WHEN dag.status_fluxo = 'DIGITALIZADO' THEN 'Aguardando Envio'
+                            WHEN dag.status_fluxo = 'AGUARDANDO_ASSINATURA' THEN 'Na Presidência'
+                            WHEN dag.status_fluxo = 'ASSINADO' THEN 'Assinado - Aguardando Finalização'
+                            WHEN dag.status_fluxo = 'FINALIZADO' THEN 'Finalizado'
                             WHEN sa.situacao = 'pendente' THEN 'Na Presidência'
                             WHEN sa.situacao = 'ativo' THEN 'Finalizado'
                             ELSE 'Na Presidência'
@@ -338,7 +348,8 @@ try {
                         dag.caminho_arquivo,
                         NULL as nome_arquivo,
                         COALESCE(dep.nome, 'Comercial') as departamento_atual_nome,
-                        DATEDIFF(CURDATE(), COALESCE(dag.data_upload, sa.data_criacao)) as dias_em_processo
+                        DATEDIFF(CURDATE(), COALESCE(dag.data_upload, sa.data_criacao)) as dias_em_processo,
+                        CASE WHEN dag.id IS NOT NULL THEN 1 ELSE 0 END as tem_documento
                     FROM Socios_Agregados sa
                     LEFT JOIN Documentos_Agregado dag ON dag.agregado_id = sa.id
                     LEFT JOIN Departamentos dep ON dag.departamento_atual = dep.id
@@ -349,7 +360,7 @@ try {
                 // Fallback: Query sem a tabela Documentos_Agregado
                 $queryAgregados = "
                     SELECT 
-                        sa.id,
+                        CONCAT('AGR_', sa.id) as id,
                         'AGREGADO' as tipo_documento,
                         sa.id as pessoa_id,
                         sa.nome,
@@ -375,7 +386,8 @@ try {
                         NULL as caminho_arquivo,
                         NULL as nome_arquivo,
                         'Comercial' as departamento_atual_nome,
-                        DATEDIFF(CURDATE(), sa.data_criacao) as dias_em_processo
+                        DATEDIFF(CURDATE(), sa.data_criacao) as dias_em_processo,
+                        0 as tem_documento
                     FROM Socios_Agregados sa
                     WHERE {$filtrosAgregados['where']}
                     ORDER BY sa.data_criacao DESC
@@ -436,8 +448,20 @@ try {
                 $stmtStats = $conn->query("
                     SELECT 
                         COUNT(DISTINCT sa.id) as total,
-                        SUM(CASE WHEN dag.status_fluxo = 'AGUARDANDO_ASSINATURA' OR (dag.id IS NULL AND sa.situacao = 'pendente') THEN 1 ELSE 0 END) as pendentes,
-                        SUM(CASE WHEN dag.status_fluxo IN ('ASSINADO', 'FINALIZADO') OR (dag.id IS NULL AND sa.situacao = 'ativo') THEN 1 ELSE 0 END) as assinados
+                        SUM(CASE 
+                            WHEN dag.status_fluxo = 'AGUARDANDO_ASSINATURA' THEN 1
+                            WHEN dag.id IS NULL AND sa.situacao = 'pendente' THEN 1
+                            ELSE 0 
+                        END) as pendentes,
+                        SUM(CASE 
+                            WHEN dag.status_fluxo = 'ASSINADO' THEN 1
+                            ELSE 0 
+                        END) as assinados,
+                        SUM(CASE 
+                            WHEN dag.status_fluxo = 'FINALIZADO' THEN 1
+                            WHEN dag.id IS NULL AND sa.situacao = 'ativo' THEN 1
+                            ELSE 0 
+                        END) as finalizados
                     FROM Socios_Agregados sa
                     LEFT JOIN Documentos_Agregado dag ON dag.agregado_id = sa.id
                 ");
@@ -446,7 +470,8 @@ try {
                     SELECT 
                         COUNT(*) as total,
                         SUM(CASE WHEN situacao = 'pendente' THEN 1 ELSE 0 END) as pendentes,
-                        SUM(CASE WHEN situacao = 'ativo' THEN 1 ELSE 0 END) as assinados
+                        0 as assinados,
+                        SUM(CASE WHEN situacao = 'ativo' THEN 1 ELSE 0 END) as finalizados
                     FROM Socios_Agregados
                 ");
             }
@@ -454,6 +479,7 @@ try {
             $estatisticas['total_agregados'] = (int) ($statsAgregados['total'] ?? 0);
             $estatisticas['pendentes_agregados'] = (int) ($statsAgregados['pendentes'] ?? 0);
             $estatisticas['assinados_agregados'] = (int) ($statsAgregados['assinados'] ?? 0);
+            $estatisticas['finalizados_agregados'] = (int) ($statsAgregados['finalizados'] ?? 0);
         } catch (PDOException $e) {}
     }
 
