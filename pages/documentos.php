@@ -1988,7 +1988,7 @@ body {
             if (confirm('Deseja finalizar o processo deste documento?')) {
                 // Escolher endpoint baseado no tipo
                 const endpoint = tipo === 'AGREGADO' 
-                    ? '../api/documentos/agregados_finalizar.php'
+                    ? '../api/documentos/documentos_agregados_finalizar.php'
                     : '../api/documentos/documentos_finalizar.php';
 
                 $.ajax({
