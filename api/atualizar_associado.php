@@ -159,6 +159,16 @@ try {
     $mudouSituacao = $situacaoAtual !== $novaSituacao;
     $ficouDesfiliado = $novaSituacao === 'DESFILIADO';
     $saiuDeDesfiliado = $situacaoAtual === 'DESFILIADO' && $novaSituacao !== 'DESFILIADO';
+    $estaDesfiliado = $novaSituacao === 'DESFILIADO'; // Novo: verifica se está desfiliado (mudou ou já estava)
+    
+    error_log("=== DEBUG SITUAÇÃO ===");
+    error_log("Situação Atual: '$situacaoAtual'");
+    error_log("Nova Situação: '$novaSituacao'");
+    error_log("Mudou: " . ($mudouSituacao ? 'SIM' : 'NÃO'));
+    error_log("Ficou Desfiliado: " . ($ficouDesfiliado ? 'SIM' : 'NÃO'));
+    error_log("Está Desfiliado: " . ($estaDesfiliado ? 'SIM' : 'NÃO'));
+    error_log("Saiu de Desfiliado: " . ($saiuDeDesfiliado ? 'SIM' : 'NÃO'));
+    error_log("==================");
 
     // Determina a data de desfiliação
     $dataDesfiliacao = null;
@@ -273,12 +283,78 @@ try {
             }
         }
 
-        if ($ficouDesfiliado && $mudouSituacao){
+        // ====================================================================
+        // DESFILIAÇÃO AUTOMÁTICA DE AGREGADOS
+        // Regra de negócio: Agregado só pode estar Filiado se o titular estiver Filiado
+        // Executa quando:
+        // 1. Titular acabou de ser desfiliado (mudança de status), OU
+        // 2. Titular está sendo salvo e já está desfiliado (garante consistência)
+        // ====================================================================
+        if ($estaDesfiliado) {
             $cpfTitular = $dados['cpf'];
-            $associados->desfiliarDependentes($cpfTitular, $funcionarioId, "Desfiliação automática via edição do titular");
-            $stmt = $db->prepare("UPDATE Associados SET situacao = 'DESFILIADO', data_desfiliacao = NOW() WHERE cpf = ? AND id != ?");
-            $stmt->execute([$cpfTitular, $associadoId]);
-            error_log("✓ Dependentes também desfilidados automaticamente");
+            
+            // Buscar agregados que ainda estão filiados
+            $stmtAgregados = $db->prepare("
+                SELECT a.id, a.nome, a.situacao
+                FROM Associados a
+                INNER JOIN Militar m ON a.id = m.associado_id
+                WHERE m.corporacao = 'Agregados' 
+                AND a.associado_titular_id = ?
+                AND UPPER(a.situacao) != 'DESFILIADO'
+            ");
+            $stmtAgregados->execute([$associadoId]);
+            $agregados = $stmtAgregados->fetchAll(PDO::FETCH_ASSOC);
+            
+            if (!empty($agregados)) {
+                $stmtDesfiliarAgregado = $db->prepare("
+                    UPDATE Associados 
+                    SET situacao = 'DESFILIADO', 
+                        data_desfiliacao = NOW() 
+                    WHERE id = ?
+                ");
+                
+                foreach ($agregados as $agregado) {
+                    $stmtDesfiliarAgregado->execute([$agregado['id']]);
+                    error_log("✓ AGREGADO DESFILIADO: '{$agregado['nome']}' (ID: {$agregado['id']}) - estava: {$agregado['situacao']}");
+                }
+                
+                error_log("✅ TOTAL: " . count($agregados) . " agregado(s) desfiliado(s) automaticamente (titular: {$dados['nome']})");
+            } else {
+                error_log("ℹ️ Nenhum agregado filiado encontrado para o titular '{$dados['nome']}' (ID: $associadoId)");
+            }
+        }
+        
+        // Reativar agregados se o titular for reativado (saiu de DESFILIADO)
+        if ($saiuDeDesfiliado && $mudouSituacao){
+            error_log("=== REATIVANDO AGREGADOS DO TITULAR ===");
+            
+            // Buscar agregados desfiliados deste titular
+            $stmtAgregadosInativos = $db->prepare("
+                SELECT a.id, a.nome 
+                FROM Associados a
+                INNER JOIN Militar m ON a.id = m.associado_id
+                WHERE m.corporacao = 'Agregados' 
+                AND a.associado_titular_id = ?
+                AND a.situacao = 'DESFILIADO'
+            ");
+            $stmtAgregadosInativos->execute([$associadoId]);
+            $agregadosInativos = $stmtAgregadosInativos->fetchAll(PDO::FETCH_ASSOC);
+            
+            if (!empty($agregadosInativos)) {
+                $stmtReativarAgregado = $db->prepare("
+                    UPDATE Associados 
+                    SET situacao = 'Filiado', 
+                        data_desfiliacao = NULL 
+                    WHERE id = ?
+                ");
+                
+                foreach ($agregadosInativos as $agregado) {
+                    $stmtReativarAgregado->execute([$agregado['id']]);
+                    error_log("✓ Agregado '{$agregado['nome']}' (ID: {$agregado['id']}) reativado automaticamente");
+                }
+                
+                error_log("✅ Total de " . count($agregadosInativos) . " agregado(s) reativado(s) automaticamente");
+            }
         }
 
         error_log("✓ Dados básicos atualizados pelo usuário: " . $usuarioLogado['nome']);
