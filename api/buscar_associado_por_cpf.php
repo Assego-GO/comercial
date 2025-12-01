@@ -18,66 +18,40 @@ $cpfBusca = ltrim($cpf, '0');
 
 $db = Database::getInstance(DB_NAME_CADASTRO)->getConnection();
 
-// CORREÇÃO: Busca titular e agregado relacionado (se houver)
-// Uso da função TRIM(LEADING '0' FROM ...) ao invés de ltrim com 2 parâmetros
+// Busca associado por CPF (inclui agregados)
+// Agregados estão na mesma tabela, mas com corporacao = 'Agregados'
 $sql = "SELECT 
-    t.id as titular_id,
-    t.nome as titular_nome,
-    t.cpf as titular_cpf,
-    t.rg as titular_rg,
-    t.email as titular_email,
-    t.telefone as titular_telefone,
-    t.situacao as titular_situacao,
-    a.id as agregado_id,
-    a.nome as agregado_nome,
-    a.cpf as agregado_cpf,
-    a.socio_titular_cpf as agregado_socio_titular_cpf,
-    a.socio_titular_nome as agregado_socio_titular_nome,
-    a.socio_titular_email as agregado_socio_titular_email,
-    a.socio_titular_fone as agregado_socio_titular_fone
-FROM Associados t
-LEFT JOIN Socios_Agregados a
-  ON TRIM(LEADING '0' FROM REPLACE(REPLACE(REPLACE(a.socio_titular_cpf, '.', ''), '-', ''), ' ', '')) = 
-     TRIM(LEADING '0' FROM REPLACE(REPLACE(REPLACE(t.cpf, '.', ''), '-', ''), ' ', ''))
-WHERE TRIM(LEADING '0' FROM REPLACE(REPLACE(REPLACE(t.cpf, '.', ''), '-', ''), ' ', '')) = ?
-   OR REPLACE(REPLACE(REPLACE(t.cpf, '.', ''), '-', ''), ' ', '') = ?
-   OR t.cpf = ?
+    a.id as titular_id,
+    a.nome as titular_nome,
+    a.cpf as titular_cpf,
+    a.rg as titular_rg,
+    a.email as titular_email,
+    a.telefone as titular_telefone,
+    a.situacao as titular_situacao,
+    m.corporacao,
+    m.patente,
+    titular.id as vinculo_titular_id,
+    titular.nome as vinculo_titular_nome,
+    titular.cpf as vinculo_titular_cpf,
+    CASE 
+        WHEN m.corporacao = 'Agregados' THEN 1
+        ELSE 0
+    END as eh_agregado
+FROM Associados a
+LEFT JOIN Militar m ON a.id = m.associado_id
+LEFT JOIN Associados titular ON a.associado_titular_id = titular.id
+WHERE TRIM(LEADING '0' FROM REPLACE(REPLACE(REPLACE(a.cpf, '.', ''), '-', ''), ' ', '')) = ?
+   OR REPLACE(REPLACE(REPLACE(a.cpf, '.', ''), '-', ''), ' ', '') = ?
+   OR a.cpf = ?
+   OR a.cpf = LPAD(?, 11, '0')
 LIMIT 1";
 
 $stmt = $db->prepare($sql);
-$stmt->execute([$cpfBusca, $cpf, $cpf]);
+$stmt->execute([$cpfBusca, $cpf, $cpf, $cpfBusca]);
 $data = $stmt->fetch(PDO::FETCH_ASSOC);
 
 if ($data && !empty($data['titular_nome'])) {
     echo json_encode(['status' => 'success', 'data' => $data]);
-    exit;
-}
-
-// CORREÇÃO: Busca reversa também corrigida
-$sql2 = "SELECT 
-    id as titular_id,
-    nome as titular_nome,
-    cpf as titular_cpf,
-    rg as titular_rg,
-    email as titular_email,
-    telefone as titular_telefone,
-    situacao as titular_situacao
-FROM Associados
-WHERE TRIM(LEADING '0' FROM REPLACE(REPLACE(REPLACE(cpf, '.', ''), '-', ''), ' ', '')) = ?
-   OR REPLACE(REPLACE(REPLACE(cpf, '.', ''), '-', ''), ' ', '') = ?
-   OR cpf = ?
-   OR cpf = LPAD(?, 11, '0')
-LIMIT 1";
-
-$stmt2 = $db->prepare($sql2);
-$stmt2->execute([$cpfBusca, $cpf, $cpf, $cpfBusca]);
-$data2 = $stmt2->fetch(PDO::FETCH_ASSOC);
-
-if ($data2 && !empty($data2['titular_nome'])) {
-    echo json_encode(['status' => 'success', 'data' => $data2]);
-} elseif ($data2 && !empty($data2['titular_id'])) {
-    // Garante compatibilidade com o frontend
-    echo json_encode(['status' => 'success', 'data' => $data2]);
 } else {
     echo json_encode(['status' => 'not_found']);
 }

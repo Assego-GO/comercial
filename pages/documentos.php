@@ -1862,18 +1862,27 @@ body {
                     acoes = `
                         <button class="btn-modern btn-warning-premium btn-sm" onclick="enviarParaAssinatura(${doc.id}, '${tipo}')">
                             <i class="fas fa-paper-plane me-1"></i>
-                            Enviar
+                            Enviar para Presidência
                         </button>
                     `;
                     break;
 
                 case 'AGUARDANDO_ASSINATURA':
-                    <?php if ($auth->isDiretor() || $usuarioLogado['departamento_id'] == 2): ?>
+                    // Botão "Assinar" só aparece na aba Presidência (departamento_id == 1)
+                    // Na aba Documentos, apenas mostra o status sem ação
+                    <?php if ($usuarioLogado['departamento_id'] == 1): ?>
                         acoes = `
                         <button class="btn-modern btn-success-premium btn-sm" onclick="abrirModalAssinatura(${doc.id}, '${tipo}')">
                             <i class="fas fa-signature me-1"></i>
                             Assinar
                         </button>
+                    `;
+                    <?php else: ?>
+                        acoes = `
+                        <span class="badge bg-warning text-dark">
+                            <i class="fas fa-clock me-1"></i>
+                            Aguardando Presidência
+                        </span>
                     `;
                     <?php endif; ?>
                     break;

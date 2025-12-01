@@ -1,13 +1,15 @@
 <?php
 /**
- * API para finalizar processo de sócio agregado
+ * API para finalizar processo de sócio agregado - VERSÃO UNIFICADA
  * api/documentos/documentos_agregados_finalizar.php
  * 
- * ATUALIZA DUAS TABELAS:
- * 1. Documentos_Agregado -> status_fluxo = 'FINALIZADO'
- * 2. Socios_Agregados -> situacao = 'ativo'
+ * Atualiza:
+ * 1. Documentos_Associado -> status_fluxo = 'FINALIZADO'
+ * 2. Associados -> situacao permanece como está (já é 'Filiado')
  */
 
+ini_set('display_errors', 0);
+error_reporting(E_ALL);
 ob_start();
 
 header('Content-Type: application/json; charset=utf-8');
@@ -15,49 +17,45 @@ header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, X-Requested-With');
 
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+function jsonError($message, $code = 400) {
+    ob_end_clean();
+    http_response_code($code);
+    echo json_encode(['status' => 'error', 'message' => $message], JSON_UNESCAPED_UNICODE);
+    error_log("[FINALIZAR_AGREGADO_ERROR] $message");
+    exit;
+}
+
+function jsonSuccess($message, $data = []) {
+    ob_end_clean();
     http_response_code(200);
+    echo json_encode(['status' => 'success', 'message' => $message, 'data' => $data], JSON_UNESCAPED_UNICODE);
     exit;
 }
-
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    http_response_code(405);
-    echo json_encode(['status' => 'error', 'message' => 'Método não permitido']);
-    exit;
-}
-
-error_reporting(E_ALL);
-ini_set('display_errors', 0);
-
-ob_clean();
-
-$response = ['status' => 'error', 'message' => 'Erro ao processar requisição'];
 
 try {
+    if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+        exit(0);
+    }
+
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        jsonError('Método não permitido. Use POST.');
+    }
+
     require_once '../../config/config.php';
     require_once '../../config/database.php';
     require_once '../../classes/Database.php';
-    require_once '../../classes/Auth.php';
 
-    if (session_status() === PHP_SESSION_NONE) {
-        session_start();
-    }
-
-    $auth = new Auth();
-    if (!$auth->isLoggedIn()) {
-        throw new Exception('Usuário não autenticado');
-    }
+    session_start();
 
     $funcionarioId = $_SESSION['funcionario_id'] ?? null;
     $funcionarioNome = $_SESSION['funcionario_nome'] ?? $_SESSION['usuario_nome'] ?? 'Sistema';
     
     if (!$funcionarioId) {
-        throw new Exception('Funcionário não identificado');
+        jsonError('Funcionário não identificado');
     }
 
     $input = json_decode(file_get_contents('php://input'), true);
     
-    // Aceitar documento_id ou agregado_id
     $documentoId = isset($input['documento_id']) ? $input['documento_id'] : null;
     $agregadoId = isset($input['agregado_id']) ? intval($input['agregado_id']) : 0;
     $observacao = isset($input['observacao']) ? trim($input['observacao']) : '';
@@ -65,254 +63,119 @@ try {
     // Se documento_id for string com prefixo AGR_, extrair o número
     if (is_string($documentoId) && strpos($documentoId, 'AGR_') === 0) {
         $agregadoId = intval(str_replace('AGR_', '', $documentoId));
-        $documentoId = null;
-    } elseif (is_numeric($documentoId)) {
-        $documentoId = intval($documentoId);
+    } elseif (is_numeric($documentoId) && $agregadoId <= 0) {
+        $agregadoId = intval($documentoId);
     }
 
-    if ($agregadoId <= 0 && $documentoId <= 0) {
-        throw new Exception('ID do agregado ou documento inválido');
+    if ($agregadoId <= 0) {
+        jsonError('ID do agregado inválido');
     }
 
-    // Conectar ao banco
-    $dbName = defined('DB_NAME_CADASTRO') ? DB_NAME_CADASTRO : (defined('DB_NAME') ? DB_NAME : 'wwasse_cadastro');
-    $dbInstance = Database::getInstance($dbName);
-    $db = $dbInstance->getConnection();
-    
-    // Verificar se tabela Documentos_Agregado existe
-    $tabelaDocAgregadoExiste = false;
-    try {
-        $db->query("SELECT 1 FROM Documentos_Agregado LIMIT 1");
-        $tabelaDocAgregadoExiste = true;
-    } catch (PDOException $e) {
-        $tabelaDocAgregadoExiste = false;
-    }
-
+    $db = Database::getInstance(DB_NAME_CADASTRO)->getConnection();
     $db->beginTransaction();
 
     try {
-        $agregado = null;
-        $documento = null;
-
-        // CASO 1: Temos o ID do documento (da tabela Documentos_Agregado)
-        if ($documentoId > 0 && $tabelaDocAgregadoExiste) {
-            $stmt = $db->prepare("
-                SELECT da.id as documento_id, da.agregado_id, da.status_fluxo,
-                       sa.id, sa.nome, sa.cpf, sa.situacao, sa.socio_titular_nome, sa.socio_titular_cpf
-                FROM Documentos_Agregado da
-                INNER JOIN Socios_Agregados sa ON da.agregado_id = sa.id
-                WHERE da.id = :id
-            ");
-            $stmt->execute([':id' => $documentoId]);
-            $resultado = $stmt->fetch(PDO::FETCH_ASSOC);
-            
-            if ($resultado) {
-                $documento = [
-                    'id' => $resultado['documento_id'],
-                    'agregado_id' => $resultado['agregado_id'],
-                    'status_fluxo' => $resultado['status_fluxo']
-                ];
-                $agregado = [
-                    'id' => $resultado['agregado_id'],
-                    'nome' => $resultado['nome'],
-                    'cpf' => $resultado['cpf'],
-                    'situacao' => $resultado['situacao'],
-                    'socio_titular_nome' => $resultado['socio_titular_nome'],
-                    'socio_titular_cpf' => $resultado['socio_titular_cpf']
-                ];
-                $agregadoId = $resultado['agregado_id'];
-            }
-        }
-
-        // CASO 2: Temos apenas o ID do agregado
-        if (!$agregado && $agregadoId > 0) {
-            // Buscar agregado
-            $stmt = $db->prepare("
-                SELECT id, nome, cpf, situacao, socio_titular_nome, socio_titular_cpf
-                FROM Socios_Agregados 
-                WHERE id = :id
-            ");
-            $stmt->execute([':id' => $agregadoId]);
-            $agregado = $stmt->fetch(PDO::FETCH_ASSOC);
-
-            // Buscar documento associado (se existir)
-            if ($agregado && $tabelaDocAgregadoExiste) {
-                $stmt = $db->prepare("
-                    SELECT id, agregado_id, status_fluxo
-                    FROM Documentos_Agregado 
-                    WHERE agregado_id = :agregado_id
-                    ORDER BY id DESC
-                    LIMIT 1
-                ");
-                $stmt->execute([':agregado_id' => $agregadoId]);
-                $documento = $stmt->fetch(PDO::FETCH_ASSOC);
-            }
-        }
+        // =====================================================
+        // 1. BUSCAR AGREGADO (ESTRUTURA UNIFICADA)
+        // =====================================================
+        $stmt = $db->prepare("
+            SELECT 
+                a.id,
+                a.nome,
+                a.cpf,
+                a.situacao,
+                a.associado_titular_id,
+                m.corporacao,
+                titular.nome as titular_nome
+            FROM Associados a
+            LEFT JOIN Militar m ON a.id = m.associado_id
+            LEFT JOIN Associados titular ON a.associado_titular_id = titular.id
+            WHERE a.id = ?
+            AND m.corporacao = 'Agregados'
+        ");
+        $stmt->execute([$agregadoId]);
+        $agregado = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if (!$agregado) {
-            throw new Exception('Agregado não encontrado com ID: ' . $agregadoId);
+            jsonError('Agregado não encontrado com ID: ' . $agregadoId, 404);
         }
 
-        // Verificar se já está finalizado
-        $jaFinalizado = ($agregado['situacao'] === 'ativo');
-        if ($documento) {
-            $jaFinalizado = $jaFinalizado && ($documento['status_fluxo'] === 'FINALIZADO');
-        }
-
-        if ($jaFinalizado) {
-            $response = [
-                'status' => 'success',
-                'message' => 'Agregado já está finalizado e ativo',
-                'data' => [
-                    'agregado_id' => $agregadoId,
-                    'nome' => $agregado['nome'],
-                    'situacao' => 'ativo',
-                    'status_fluxo' => 'FINALIZADO'
-                ]
-            ];
-            $db->commit();
-            ob_end_clean();
-            echo json_encode($response, JSON_UNESCAPED_UNICODE);
-            exit;
-        }
-
-        // Preparar observação
-        $novaObservacao = $observacao ?: 'Processo finalizado pela presidência';
-        $observacaoCompleta = "[FINALIZAÇÃO " . date('d/m/Y H:i') . " - {$funcionarioNome}] " . $novaObservacao;
+        error_log("[FINALIZAR_AGREGADO] Agregado encontrado: {$agregado['nome']} (ID: {$agregadoId})");
 
         // =====================================================
-        // 1. ATUALIZAR TABELA Documentos_Agregado (se existir)
+        // 2. BUSCAR DOCUMENTO
         // =====================================================
-        if ($tabelaDocAgregadoExiste && $documento) {
-            // CORREÇÃO: Usar apenas colunas que existem na tabela
-            // Colunas existentes: id, agregado_id, tipo_documento, tipo_origem, 
-            //                     caminho_arquivo, status_fluxo, departamento_atual, data_upload
-            $stmt = $db->prepare("
-                UPDATE Documentos_Agregado 
-                SET status_fluxo = 'FINALIZADO'
-                WHERE id = :id
-            ");
-            $stmt->execute([':id' => $documento['id']]);
-            
-            error_log("[DOCUMENTO_AGREGADO] Atualizado para FINALIZADO - Doc ID: {$documento['id']}, Agregado ID: {$agregadoId}");
+        $stmt = $db->prepare("
+            SELECT id, associado_id, status_fluxo
+            FROM Documentos_Associado 
+            WHERE associado_id = ?
+            ORDER BY id DESC
+            LIMIT 1
+        ");
+        $stmt->execute([$agregadoId]);
+        $documento = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$documento) {
+            jsonError('Documento não encontrado para este agregado', 404);
         }
 
-        // =====================================================
-        // 2. ATUALIZAR TABELA Socios_Agregados
-        // =====================================================
-        // Verificar quais colunas existem
-        $colunas = [];
-        try {
-            $stmt = $db->query("DESCRIBE Socios_Agregados");
-            while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-                $colunas[] = $row['Field'];
-            }
-        } catch (PDOException $e) {
-            $colunas = ['id', 'situacao', 'ativo'];
+        $statusAnterior = $documento['status_fluxo'];
+
+        // Validar se documento está ASSINADO
+        if ($statusAnterior !== 'ASSINADO') {
+            jsonError("Documento precisa estar ASSINADO para ser finalizado. Status atual: {$statusAnterior}", 400);
         }
 
-        // Montar SQL dinamicamente
-        $sql = "UPDATE Socios_Agregados SET situacao = 'ativo'";
-        $params = [':id' => $agregadoId];
-
-        if (in_array('ativo', $colunas)) {
-            $sql .= ", ativo = 1";
-        }
-
-        if (in_array('observacoes', $colunas)) {
-            $sql .= ", observacoes = CONCAT(IFNULL(observacoes, ''), '\n', :observacao)";
-            $params[':observacao'] = $observacaoCompleta;
-        }
-
-        if (in_array('data_atualizacao', $colunas)) {
-            $sql .= ", data_atualizacao = NOW()";
-        }
-
-        if (in_array('data_ativacao', $colunas)) {
-            $sql .= ", data_ativacao = NOW()";
-        }
-
-        $sql .= " WHERE id = :id";
-
-        $stmt = $db->prepare($sql);
-        $stmt->execute($params);
-
-        error_log("[SOCIOS_AGREGADOS] Atualizado para ativo - ID: {$agregadoId}, Nome: {$agregado['nome']}");
+        error_log("[FINALIZAR_AGREGADO] Status atual: {$statusAnterior}");
 
         // =====================================================
-        // 3. REGISTRAR HISTÓRICO DO FLUXO (se tabela existir)
+        // 3. ATUALIZAR DOCUMENTO PARA FINALIZADO
         // =====================================================
-        try {
-            $stmt = $db->query("SHOW TABLES LIKE 'Historico_Fluxo_Agregado'");
-            if ($stmt->rowCount() > 0) {
-                $stmt = $db->prepare("
-                    INSERT INTO Historico_Fluxo_Agregado 
-                    (documento_id, agregado_id, status_anterior, status_novo, funcionario_id, observacao, data_acao)
-                    VALUES (:documento_id, :agregado_id, :status_anterior, 'FINALIZADO', :funcionario_id, :observacao, NOW())
-                ");
-                $stmt->execute([
-                    ':documento_id' => $documento ? $documento['id'] : null,
-                    ':agregado_id' => $agregadoId,
-                    ':status_anterior' => $documento ? $documento['status_fluxo'] : 'ASSINADO',
-                    ':funcionario_id' => $funcionarioId,
-                    ':observacao' => $novaObservacao
-                ]);
-            }
-        } catch (PDOException $e) {
-            // Tabela não existe - ignorar
-        }
+        $dataHora = date('d/m/Y H:i:s');
+        $novaObservacao = "[FINALIZAÇÃO {$dataHora} - {$funcionarioNome}] ";
+        $novaObservacao .= !empty($observacao) ? $observacao : "Processo finalizado - Agregado ativo";
+
+        $stmt = $db->prepare("
+            UPDATE Documentos_Associado 
+            SET status_fluxo = 'FINALIZADO',
+                data_finalizacao = NOW(),
+                observacoes_fluxo = CONCAT(COALESCE(observacoes_fluxo, ''), ?)
+            WHERE id = ?
+        ");
+        $stmt->execute([$novaObservacao . "\n", $documento['id']]);
+
+        error_log("[FINALIZAR_AGREGADO] Documento atualizado para FINALIZADO - Doc ID: {$documento['id']}");
 
         // =====================================================
-        // 4. REGISTRAR NA AUDITORIA (opcional)
+        // 3.5. ATUALIZAR PRE_CADASTRO NA TABELA ASSOCIADOS
         // =====================================================
-        try {
-            $stmt = $db->query("SHOW TABLES LIKE 'Auditoria'");
-            if ($stmt->rowCount() > 0) {
-                $stmt = $db->prepare("
-                    INSERT INTO Auditoria (tabela, acao, registro_id, funcionario_id, alteracoes, data_hora)
-                    VALUES ('Socios_Agregados', 'FINALIZACAO', :registro_id, :funcionario_id, :alteracoes, NOW())
-                ");
-                $stmt->execute([
-                    ':registro_id' => $agregadoId,
-                    ':funcionario_id' => $funcionarioId,
-                    ':alteracoes' => json_encode([
-                        'documento_id' => $documento ? $documento['id'] : null,
-                        'situacao_anterior' => $agregado['situacao'],
-                        'situacao_nova' => 'ativo',
-                        'status_fluxo_anterior' => $documento ? $documento['status_fluxo'] : null,
-                        'status_fluxo_novo' => 'FINALIZADO',
-                        'observacao' => $novaObservacao,
-                        'finalizado_por' => $funcionarioNome
-                    ])
-                ]);
-            }
-        } catch (PDOException $e) {
-            // Erro de auditoria - ignorar
-        }
+        $stmt = $db->prepare("
+            UPDATE Associados 
+            SET pre_cadastro = 0 
+            WHERE id = ?
+        ");
+        $stmt->execute([$agregadoId]);
 
+        error_log("[FINALIZAR_AGREGADO] pre_cadastro alterado de 1 para 0 - Agregado ID: {$agregadoId}");
+
+        // =====================================================
+        // 4. COMMIT
+        // =====================================================
         $db->commit();
 
-        // Log de sucesso
-        error_log("[AGREGADO] FINALIZAÇÃO COMPLETA - ID: {$agregadoId}, Nome: {$agregado['nome']}, Por: {$funcionarioNome}");
+        error_log("[AGREGADO] FINALIZAÇÃO CONCLUÍDA - ID: {$agregadoId}, Nome: {$agregado['nome']}, Por: {$funcionarioNome}");
 
-        $response = [
-            'status' => 'success',
-            'message' => 'Processo do agregado finalizado com sucesso! Agregado ativado.',
-            'data' => [
-                'agregado_id' => $agregadoId,
-                'documento_id' => $documento ? $documento['id'] : null,
-                'nome' => $agregado['nome'],
-                'cpf' => $agregado['cpf'],
-                'titular_nome' => $agregado['socio_titular_nome'] ?? null,
-                'titular_cpf' => $agregado['socio_titular_cpf'] ?? null,
-                'situacao_anterior' => $agregado['situacao'],
-                'situacao_nova' => 'ativo',
-                'status_fluxo_anterior' => $documento ? $documento['status_fluxo'] : null,
-                'status_fluxo_novo' => 'FINALIZADO',
-                'agregado_ativado' => true,
-                'finalizado_por' => $funcionarioNome
-            ]
-        ];
+        jsonSuccess('Processo finalizado com sucesso! O agregado está ativo no sistema.', [
+            'agregado_id' => $agregadoId,
+            'documento_id' => $documento['id'],
+            'nome' => $agregado['nome'],
+            'cpf' => $agregado['cpf'],
+            'titular_nome' => $agregado['titular_nome'] ?? '',
+            'status_anterior' => $statusAnterior,
+            'status_novo' => 'FINALIZADO',
+            'situacao' => $agregado['situacao'],
+            'data_finalizacao' => date('Y-m-d H:i:s')
+        ]);
 
     } catch (Exception $e) {
         $db->rollBack();
@@ -320,21 +183,9 @@ try {
     }
 
 } catch (PDOException $e) {
-    error_log("Erro PDO em documentos_agregados_finalizar: " . $e->getMessage());
-    $response = [
-        'status' => 'error',
-        'message' => 'Erro de banco de dados: ' . $e->getMessage()
-    ];
-    http_response_code(500);
+    error_log("Erro PDO em finalizar agregado: " . $e->getMessage());
+    jsonError('Erro no banco de dados: ' . $e->getMessage(), 500);
 } catch (Exception $e) {
-    error_log("Erro em documentos_agregados_finalizar: " . $e->getMessage());
-    $response = [
-        'status' => 'error',
-        'message' => $e->getMessage()
-    ];
-    http_response_code(400);
+    error_log("Erro em finalizar agregado: " . $e->getMessage());
+    jsonError($e->getMessage(), 500);
 }
-
-ob_end_clean();
-echo json_encode($response, JSON_UNESCAPED_UNICODE);
-exit;
