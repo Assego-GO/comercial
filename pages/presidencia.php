@@ -3133,23 +3133,32 @@ $headerComponent = HeaderComponent::create([
                 return;
             }
             
-            // Extrair ID numérico para agregados com prefixo AGR_
-            let idParaEnviar = documento.id;
-            if (typeof documento.id === 'string' && documento.id.startsWith('AGR_')) {
-                idParaEnviar = documento.pessoa_id || documento.id.replace('AGR_', '');
+            // Para agregados, enviar o pessoa_id (ID do agregado na tabela Associados)
+            // Para sócios, enviar o documento_id
+            let idParaEnviar;
+            if (tipo === 'AGREGADO') {
+                // Usar pessoa_id que é o ID do agregado em Associados
+                idParaEnviar = documento.pessoa_id || documento.id;
+                console.log('Finalizando agregado - pessoa_id:', idParaEnviar, 'documento.id:', documento.id);
+            } else {
+                // Para sócios, usa o ID do documento
+                idParaEnviar = documento.id;
             }
+
+            const payload = tipo === 'AGREGADO' 
+                ? { agregado_id: idParaEnviar, observacao: 'Agregado ativado' }
+                : { documento_id: idParaEnviar, observacao: 'Sócio aprovado' };
 
             const endpoint = tipo === 'SOCIO' 
                 ? '../api/documentos/documentos_finalizar.php' 
                 : '../api/documentos/documentos_agregados_finalizar.php';
 
+            console.log('Enviando para:', endpoint, 'Payload:', payload);
+
             fetch(endpoint, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    documento_id: idParaEnviar,
-                    observacao: `Processo finalizado - ${tipo === 'SOCIO' ? 'Sócio aprovado' : 'Agregado ativado'}`
-                })
+                body: JSON.stringify(payload)
             })
             .then(response => response.json())
             .then(result => {

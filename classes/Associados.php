@@ -223,8 +223,9 @@ class Associados
             INSERT INTO Associados (
                 nome, nasc, sexo, rg, cpf, email, situacao, 
                 escolaridade, estadoCivil, telefone, foto, indicacao,
+                associado_titular_id,
                 pre_cadastro, data_pre_cadastro
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, NOW())
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, NOW())
         ");
 
             $stmt->execute([
@@ -239,7 +240,8 @@ class Associados
                 $dados['estadoCivil'] ?? null,
                 $dados['telefone'] ?? null,
                 $dados['foto'] ?? null,
-                $dados['indicacao'] ?? null
+                $dados['indicacao'] ?? null,
+                $dados['associado_titular_id'] ?? null
             ]);
 
             $associadoId = $this->db->lastInsertId();
@@ -362,6 +364,36 @@ class Associados
                         $this->adicionarDependente($associadoId, $dep);
                     }
                 }
+            }
+
+            // ========================================
+            // CRIAR DOCUMENTO COM STATUS CORRETO
+            // ========================================
+            $ehAgregado = isset($dados['tipoAssociado']) && $dados['tipoAssociado'] === 'Agregado';
+            $statusFluxo = $ehAgregado ? 'AGUARDANDO_ASSINATURA' : 'DIGITALIZADO';
+            $tipoDocumento = $ehAgregado ? 'FICHA_AGREGADO' : 'FICHA_ASSOCIADO';
+            $observacaoDoc = $ehAgregado ? 'Agregado - Aguardando assinatura da presidência' : 'Associado - Documento digitalizado';
+            
+            try {
+                $stmt = $this->db->prepare("
+                    INSERT INTO Documentos_Associado (
+                        associado_id, tipo_documento, tipo_origem, nome_arquivo,
+                        caminho_arquivo, data_upload, observacao, status_fluxo, verificado
+                    ) VALUES (?, ?, 'VIRTUAL', 'documento_virtual.pdf', '', NOW(), ?, ?, 0)
+                ");
+                
+                $stmt->execute([
+                    $associadoId,
+                    $tipoDocumento,
+                    $observacaoDoc,
+                    $statusFluxo
+                ]);
+                
+                error_log("✅ Documento criado - Status: {$statusFluxo} - Tipo: {$tipoDocumento}");
+                
+            } catch (Exception $e) {
+                error_log("⚠ Erro ao criar documento: " . $e->getMessage());
+                // Não lança exceção para não interromper o cadastro
             }
 
             // Registrar na auditoria
