@@ -1938,31 +1938,53 @@ function salvarAssociado() {
         formData.set('percentualAplicadoJuridico', document.getElementById('percentualAplicadoJuridico')?.value || '0');
     }
     
-    // URL
+    // URL - Determinar endpoint correto
     const associadoId = document.getElementById('associadoId')?.value;
     let url;
     
-    if (isAgregado) {
-        url = '../api/criar_agregado.php';
+    if (associadoId) {
+        // MODO EDIÇÃO - sempre usa atualizar_associado.php
+        url = `../api/atualizar_associado.php?id=${associadoId}`;
+        console.log('Modo EDIÇÃO - ID:', associadoId);
     } else {
-        url = associadoId ? 
-            `../api/atualizar_associado.php?id=${associadoId}` : 
-            '../api/criar_associado.php';
+        // MODO CRIAÇÃO - verifica se é agregado ou associado
+        if (isAgregado) {
+            url = '../api/criar_agregado.php';
+            console.log('Modo CRIAÇÃO - Agregado');
+        } else {
+            url = '../api/criar_associado.php';
+            console.log('Modo CRIAÇÃO - Associado');
+        }
     }
+    
+    console.log('Enviando para URL:', url);
+    console.log('Modo:', associadoId ? 'EDIÇÃO' : 'CRIAÇÃO');
     
     fetch(url, {
         method: 'POST',
         body: formData
     })
-    .then(response => response.text())
+    .then(response => {
+        console.log('Status da resposta:', response.status);
+        console.log('Response OK:', response.ok);
+        
+        if (!response.ok) {
+            throw new Error(`Erro HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        return response.text();
+    })
     .then(text => {
+        console.log('Resposta recebida (primeiros 500 chars):', text.substring(0, 500));
+        
         let data;
         try {
             data = JSON.parse(text);
         } catch (e) {
-            console.error('Erro no JSON:', e);
+            console.error('Erro ao fazer parse do JSON:', e);
+            console.error('Resposta completa:', text);
             hideLoading();
-            showAlert('Erro: Resposta inválida do servidor.', 'error');
+            showAlert('Erro: Resposta inválida do servidor. Verifique o console para mais detalhes.', 'error');
             return;
         }
         
@@ -1978,13 +2000,15 @@ function salvarAssociado() {
             if (data.errors && Array.isArray(data.errors)) {
                 erro += ':\n• ' + data.errors.join('\n• ');
             }
+            console.error('Erro retornado pela API:', data);
             showAlert(erro, 'error');
         }
     })
     .catch(error => {
         console.error('Erro na requisição:', error);
+        console.error('Stack trace:', error.stack);
         hideLoading();
-        showAlert('Erro de comunicação: ' + error.message, 'error');
+        showAlert('Erro de comunicação com o servidor: ' + error.message + '\nVerifique sua conexão ou tente novamente.', 'error');
     });
 }
 

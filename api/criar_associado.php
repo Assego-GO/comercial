@@ -89,6 +89,47 @@ try {
         }
     }
 
+    // ✅ CAPTURA DADOS DE AGREGADO
+    $tipoAssociado = trim($_POST['tipoAssociado'] ?? '');
+    $associadoTitularId = null;
+    $ehAgregado = ($tipoAssociado === 'Agregado');
+    
+    if ($ehAgregado) {
+        $associadoTitularId = !empty($_POST['associadoTitular']) ? intval($_POST['associadoTitular']) : null;
+        
+        if (!$associadoTitularId) {
+            throw new Exception('Associado titular é obrigatório para agregados');
+        }
+        
+        error_log("📌 Agregado detectado - Titular ID: $associadoTitularId");
+        
+        // Verifica se o titular existe e está ativo
+        $dbCheck = Database::getInstance(DB_NAME_CADASTRO)->getConnection();
+        $stmtVerif = $dbCheck->prepare("
+            SELECT a.id, a.nome, m.corporacao 
+            FROM Associados a
+            LEFT JOIN Militar m ON a.id = m.associado_id
+            WHERE a.id = ? AND a.situacao = 'Filiado'
+        ");
+        $stmtVerif->execute([$associadoTitularId]);
+        $titular = $stmtVerif->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$titular) {
+            throw new Exception('Associado titular não encontrado ou inativo');
+        }
+        
+        if (!empty($titular['corporacao']) && $titular['corporacao'] === 'Agregados') {
+            throw new Exception('O associado titular não pode ser um agregado');
+        }
+        
+        // Forçar corporação como Agregados
+        $_POST['corporacao'] = 'Agregados';
+        $_POST['patente'] = 'Agregado';
+        $_POST['categoria'] = 'Agregado';
+        
+        error_log("✓ Titular validado: " . $titular['nome']);
+    }
+
     // Função auxiliar para limpar campos de data
     function limparCamposData(&$dados) {
         $camposData = ['nasc', 'dataFiliacao', 'dataDesfiliacao'];
@@ -147,6 +188,7 @@ try {
         'indicacao' => $indicacaoNome, // Mantém na tabela Associados para compatibilidade
         'dataFiliacao' => !empty($_POST['dataFiliacao']) ? $_POST['dataFiliacao'] : null,
         'dataDesfiliacao' => !empty($_POST['dataDesfiliacao']) ? $_POST['dataDesfiliacao'] : null,
+        'associado_titular_id' => $associadoTitularId, // ✅ NOVO: Vínculo com titular (para agregados)
         // Dados militares
         'corporacao' => $_POST['corporacao'] ?? null,
         'patente' => $_POST['patente'] ?? null,
