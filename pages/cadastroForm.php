@@ -271,7 +271,7 @@ if ($isEdit) {
 }
 
 // ============================================
-// VERIFICAÇÃO AGREGADO - VERSÃO UNIFICADA
+// VERIFICAÇÃO SÓCIO AGREGADO - VERSÃO COMPLETA
 // ============================================
 $isSocioAgregado = false;
 $nomeResponsavelAgregado = '';
@@ -285,43 +285,38 @@ if ($isEdit && !empty($associadoData['cpf'])) {
     error_log("🔍 Verificando se é agregado - CPF: " . $cpfAgregado);
     
     try {
-        // Busca se o associado é agregado e seus dados do titular
-        // Agregados são identificados por Militar.corporacao = 'Agregados'
+        // Busca dados completos do agregado e do titular
         $stmt = $db->prepare('
             SELECT 
-                a.id,
-                a.nome,
-                a.cpf,
-                a.associado_titular_id,
-                m.corporacao,
-                m.patente,
-                titular.id as titular_id,
-                titular.nome as titular_nome,
-                titular.cpf as titular_cpf,
-                titular.situacao as titular_situacao,
-                titular.telefone as titular_telefone
-            FROM Associados a
-            LEFT JOIN Militar m ON a.id = m.associado_id
-            LEFT JOIN Associados titular ON a.associado_titular_id = titular.id
-            WHERE REPLACE(REPLACE(REPLACE(a.cpf, ".", ""), "-", ""), " ", "") = ?
-            AND m.corporacao = "Agregados"
+                sa.*,
+                sa.socio_titular_nome as titular_nome_original,
+                sa.socio_titular_cpf as cpf_titular_vinculo,
+                t.nome as titular_nome,
+                t.cpf as titular_cpf,
+                t.situacao as titular_situacao,
+                t.telefone as titular_telefone
+            FROM Socios_Agregados sa
+            LEFT JOIN associados t ON REPLACE(REPLACE(REPLACE(t.cpf, ".", ""), "-", ""), " ", "") = REPLACE(REPLACE(REPLACE(sa.socio_titular_cpf, ".", ""), "-", ""), " ", "")
+            WHERE REPLACE(REPLACE(REPLACE(sa.cpf, ".", ""), "-", ""), " ", "") = ?
             LIMIT 1
         ');
         
         $stmt->execute([$cpfAgregado]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         
-        if ($row && !empty($row['associado_titular_id'])) {
+        if ($row) {
             $isSocioAgregado = true;
             $relacionamentoAgregado = $row;
             
             // Nome do responsável
             $nomeResponsavelAgregado = !empty($row['titular_nome']) ? 
-                $row['titular_nome'] : 'Titular não identificado';
+                $row['titular_nome'] : 
+                (!empty($row['titular_nome_original']) ? $row['titular_nome_original'] : 'Não identificado');
             
             // CPF do titular
             $cpfTitular = !empty($row['titular_cpf']) ? 
-                preg_replace('/\D/', '', $row['titular_cpf']) : '';
+                preg_replace('/\D/', '', $row['titular_cpf']) : 
+                (!empty($row['cpf_titular_vinculo']) ? preg_replace('/\D/', '', $row['cpf_titular_vinculo']) : '');
             
             // Formata CPF do titular
             if ($cpfTitular && strlen($cpfTitular) === 11) {
@@ -335,7 +330,6 @@ if ($isEdit && !empty($associadoData['cpf'])) {
             
             // Monta array com dados do titular
             $dadosTitular = [
-                'id' => $row['titular_id'],
                 'nome' => $nomeResponsavelAgregado,
                 'cpf' => $cpfTitular,
                 'cpf_formatado' => $cpfTitularFormatado,
@@ -1120,7 +1114,6 @@ $headerComponent = HeaderComponent::create([
                                 placeholder="000.000.000-00" 
                                 maxlength="14" 
                                 autocomplete="off">
-                            <input type="hidden" id="associadoTitular" name="associadoTitular" value="">
                         </div>
                         <div style="flex: 2 1 320px; min-width: 220px;">
                             <label class="form-label">Nome do Sócio Titular</label>
@@ -2172,17 +2165,7 @@ $headerComponent = HeaderComponent::create([
         if (!isAgregado) {
             document.getElementById('cpfTitular').value = '';
             document.getElementById('nomeTitularInfo').value = '';
-            document.getElementById('associadoTitular').value = '';
             document.getElementById('erroCpfTitular').style.display = 'none';
-        }
-        
-        // Atualizar tipoAssociado para Agregado quando checkbox está marcado
-        if (isAgregado) {
-            const tipoSelect = document.getElementById('tipoAssociado');
-            if (tipoSelect) {
-                tipoSelect.value = 'Agregado';
-                tipoSelect.dispatchEvent(new Event('change'));
-            }
         }
     }
 
@@ -2194,18 +2177,9 @@ $headerComponent = HeaderComponent::create([
                     if (resp.status === 'success' && resp.data) {
                         let nome = resp.data.titular_nome || resp.data.nome || '';
                         let cpfFormatado = resp.data.titular_cpf || resp.data.cpf || '';
-                        let titularId = resp.data.titular_id || resp.data.id || '';
-                        
                         if (cpfFormatado.length === 11) {
                             cpfFormatado = cpfFormatado.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
                         }
-                        
-                        // Preencher ID do titular (essencial para o backend)
-                        if (titularId) {
-                            $('#associadoTitular').val(titularId);
-                            console.log('✅ ID do titular preenchido:', titularId);
-                        }
-                        
                         if (nome && cpfFormatado) {
                             $('#nomeTitularInfo').val(nome + ' - ' + cpfFormatado);
                         } else if (nome) {
@@ -2213,38 +2187,20 @@ $headerComponent = HeaderComponent::create([
                         } else {
                             $('#nomeTitularInfo').val('');
                         }
-                        
                         let situacao = resp.data.titular_situacao || resp.data.situacao || '';
-                        let corporacao = resp.data.corporacao || '';
-                        
-                        // Validar: titular não pode ser agregado
-                        if (corporacao === 'Agregados') {
-                            $('#nomeTitularInfo').val('');
-                            $('#associadoTitular').val('');
-                            $('#erroCpfTitular').text('Titular não pode ser um agregado').show();
-                            return;
-                        }
-                        
-                        // Validar: titular deve estar filiado
                         if (situacao && situacao !== 'Filiado') {
-                            $('#erroCpfTitular').text('Titular não está com situação Filiado').show();
+                            $('#erroCpfTitular').show();
                         } else {
                             $('#erroCpfTitular').hide();
                         }
                     } else {
                         $('#nomeTitularInfo').val('');
-                        $('#associadoTitular').val('');
-                        $('#erroCpfTitular').text('CPF não encontrado ou inválido').show();
+                        $('#erroCpfTitular').show();
                     }
-                }, 'json').fail(function() {
-                    $('#nomeTitularInfo').val('');
-                    $('#associadoTitular').val('');
-                    $('#erroCpfTitular').text('Erro ao buscar titular').show();
-                });
+                }, 'json');
             } else {
                 $('#nomeTitularInfo').val('');
-                $('#associadoTitular').val('');
-                $('#erroCpfTitular').text('CPF incompleto').show();
+                $('#erroCpfTitular').show();
             }
         }
 
@@ -2260,24 +2216,12 @@ $headerComponent = HeaderComponent::create([
 
         $('#formAssociado').on('submit', function(e) {
             if ($('#isAgregado').is(':checked')) {
-                const cpfTitular = $('#cpfTitular').val();
-                const associadoTitularId = $('#associadoTitular').val();
-                const erroVisivel = $('#erroCpfTitular').is(':visible');
-                
-                if (!cpfTitular || !associadoTitularId || erroVisivel) {
-                    e.preventDefault();
+                if (!$('#cpfTitular').val() || $('#erroCpfTitular').is(':visible')) {
                     alert('Preencha corretamente o CPF do titular e verifique se está filiado.');
                     $('#cpfTitular').focus();
+                    e.preventDefault();
                     return false;
                 }
-                
-                // Garantir que tipoAssociado seja Agregado
-                const tipoSelect = $('#tipoAssociado');
-                if (tipoSelect.val() !== 'Agregado') {
-                    tipoSelect.val('Agregado');
-                }
-                
-                console.log('✅ Submetendo agregado com titular ID:', associadoTitularId);
             }
         });
     });
