@@ -2907,28 +2907,6 @@ function salvarContatoEditado() {
     });
 }
 
-async function buscarNoServidor(termo) {
-    try {
-        const response = await fetch(`../api/buscar_associados.php?termo=${encodeURIComponent(termo)}`);
-        const resultado = await response.json();
-
-        if (resultado.status === 'success') {
-            associadosFiltrados = resultado.dados;
-            paginaAtual = 1;
-            calcularPaginacao();
-            renderizarPagina();
-        }
-    } catch (error) {
-        console.error('Search error:', error);
-        // Fallback to local search
-        aplicarFiltros();
-    }
-}
-
-// ========================================
-// ADD THESE FUNCTIONS TO YOUR dashboard.js
-// ========================================
-
 let searchTimeout;
 
 // New search input handler
@@ -2965,7 +2943,7 @@ async function buscarNoServidor(termo) {
     mostrarIndicadorBusca(true);
 
     try {
-        const response = await fetch(`../api/buscar_associados.php?termo=${encodeURIComponent(termo)}&limit=200`);
+        const response = await fetch(`../api/buscar_associados.php?termo=${encodeURIComponent(termo)}&limit=10000`);
 
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}`);

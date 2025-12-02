@@ -64,26 +64,34 @@ function gerarVariacoesCPF($termo) {
     // 1. Como foi digitado (apenas números)
     $variacoes[] = $termoNumerico;
     
-    // 2. Se tem menos de 11 dígitos, adiciona com padding de zeros à esquerda
+    // 2. Remove zeros à esquerda (CPFs podem estar sem zeros no banco)
+    $semZeros = ltrim($termoNumerico, '0');
+    if (!empty($semZeros) && $semZeros !== $termoNumerico) {  // Usa !== para comparação estrita
+        $variacoes[] = $semZeros;
+    }
+    
+    // 3. Com padding de zeros à esquerda até 11 dígitos
     if (strlen($termoNumerico) < 11) {
         $variacoes[] = str_pad($termoNumerico, 11, '0', STR_PAD_LEFT);
     }
-    
-    // 3. Remove zeros à esquerda e adiciona novamente com padding
-    $semZeros = ltrim($termoNumerico, '0');
-    if (!empty($semZeros) && $semZeros != $termoNumerico) {
-        $variacoes[] = $semZeros;
+    if (!empty($semZeros) && strlen($semZeros) < 11 && $semZeros !== $termoNumerico) {
         $variacoes[] = str_pad($semZeros, 11, '0', STR_PAD_LEFT);
     }
     
-    // 4. Se digitou 10 dígitos, tenta com '0' e '1' no final
-    if (strlen($termoNumerico) == 10) {
-        $variacoes[] = $termoNumerico . '0';
-        $variacoes[] = $termoNumerico . '1';
+    // 4. Com padding de zeros até 10 dígitos (alguns CPFs no banco têm 10 dígitos)
+    if (strlen($termoNumerico) < 10) {
+        $variacoes[] = str_pad($termoNumerico, 10, '0', STR_PAD_LEFT);
+    }
+    if (!empty($semZeros) && strlen($semZeros) < 10 && $semZeros !== $termoNumerico) {
+        $variacoes[] = str_pad($semZeros, 10, '0', STR_PAD_LEFT);
     }
     
-    // Remove duplicatas
-    return array_unique($variacoes);
+    // Remove duplicatas e valores vazios
+    $variacoes = array_filter(array_unique($variacoes), function($v) {
+        return !empty($v);
+    });
+    
+    return array_values($variacoes);
 }
 
 try {
@@ -100,33 +108,25 @@ try {
     );
 
     $termo = $_GET['termo'] ?? '';
-    $limit = min(500, max(10, intval($_GET['limit'] ?? 200)));
+    $limit = min(10000, max(10, intval($_GET['limit'] ?? 500)));
     
-    if (strlen($termo) < 2) {
-        echo json_encode([
-            'status' => 'error',
-            'message' => 'Termo deve ter pelo menos 2 caracteres'
-        ]);
-        exit;
-    }
-
+    // Se não há termo, retorna TODOS os filiados (sem limite de 40 páginas)
+    $temTermo = !empty(trim($termo)) && strlen(trim($termo)) >= 2;
+    
     // Normalização do termo
     $termoNumerico = preg_replace('/\D/', '', $termo);
     $ehNumero = !empty($termoNumerico) && strlen($termoNumerico) >= 2;
     
     // Se é um número, gera variações de CPF
-    $variacoesCPF = $ehNumero ? gerarVariacoesCPF($termo) : [];
+    $variacoesCPF = ($ehNumero && $temTermo) ? gerarVariacoesCPF($termo) : [];
     
     $resultados = [];
     
     // ============================================
-    // ESTRATÉGIA 1: Se é número, busca por CPF/RG
+    // SE NÃO TEM TERMO: Retorna TODOS os FILIADOS
     // ============================================
-    if ($ehNumero && !empty($variacoesCPF)) {
-        // Monta placeholders para as variações
-        $placeholders = implode(',', array_fill(0, count($variacoesCPF), '?'));
-        
-        $sqlNumerico = "
+    if (!$temTermo) {
+        $sqlTodos = "
         SELECT DISTINCT
             a.id, a.nome, a.cpf, a.rg, a.telefone, a.foto,
             COALESCE(a.situacao, 'Desfiliado') as situacao,
@@ -136,69 +136,102 @@ try {
         LEFT JOIN Militar m ON a.id = m.associado_id
         LEFT JOIN Contrato c ON a.id = c.associado_id
         WHERE a.pre_cadastro = 0 
-        AND (
-            -- Busca exata por CPF (todas as variações)
-            REPLACE(REPLACE(REPLACE(a.cpf, '.', ''), '-', ''), ' ', '') IN ($placeholders)
-            OR
-            -- Busca exata por RG
-            REPLACE(REPLACE(a.rg, '.', ''), '-', '') = ?
-            OR
-            a.rg = ?
-        )
-        LIMIT ?
+        AND a.situacao = 'Filiado'
+        ORDER BY a.nome
+        LIMIT " . intval($limit) . "
         ";
         
-        $stmtNumerico = $pdo->prepare($sqlNumerico);
-        
-        // Bind das variações de CPF
-        $paramIndex = 1;
-        foreach ($variacoesCPF as $variacao) {
-            $stmtNumerico->bindValue($paramIndex++, $variacao, PDO::PARAM_STR);
+        $stmtTodos = $pdo->prepare($sqlTodos);
+        $stmtTodos->execute();
+        $resultados = $stmtTodos->fetchAll();
+    } 
+    // ============================================
+    // SE TEM TERMO: Busca por CPF/RG ou nome (APENAS FILIADOS)
+    // ============================================
+    else {
+        // ESTRATÉGIA 1: Se é número, busca por CPF/RG
+        if ($ehNumero && !empty($variacoesCPF)) {
+            // Constrói condições LIKE para CPF (busca por prefixo)
+            $cpfConditions = [];
+            foreach ($variacoesCPF as $variacao) {
+                $cpfConditions[] = "REPLACE(REPLACE(REPLACE(a.cpf, '.', ''), '-', ''), ' ', '') LIKE ?";
+            }
+            $cpfLikeClause = implode(' OR ', $cpfConditions);
+            
+            $sqlNumerico = "
+            SELECT DISTINCT
+                a.id, a.nome, a.cpf, a.rg, a.telefone, a.foto,
+                COALESCE(a.situacao, 'Desfiliado') as situacao,
+                m.corporacao, m.patente, c.dataFiliacao as data_filiacao,
+                1 as prioridade
+            FROM Associados a
+            LEFT JOIN Militar m ON a.id = m.associado_id
+            LEFT JOIN Contrato c ON a.id = c.associado_id
+            WHERE a.pre_cadastro = 0 
+            AND a.situacao = 'Filiado'
+            AND (
+                -- Busca por prefixo do CPF
+                ($cpfLikeClause)
+                OR
+                -- Busca por prefixo do RG
+                REPLACE(REPLACE(a.rg, '.', ''), '-', '') LIKE ?
+                OR
+                a.rg LIKE ?
+            )
+            LIMIT " . intval($limit) . "
+            ";
+            
+            $stmtNumerico = $pdo->prepare($sqlNumerico);
+            
+            // Bind das variações de CPF (com % no final para LIKE)
+            $paramIndex = 1;
+            foreach ($variacoesCPF as $variacao) {
+                $stmtNumerico->bindValue($paramIndex++, $variacao . '%', PDO::PARAM_STR);
+            }
+            
+            // Bind do RG
+            $stmtNumerico->bindValue($paramIndex++, $termoNumerico . '%', PDO::PARAM_STR);
+            $stmtNumerico->bindValue($paramIndex++, $termo . '%', PDO::PARAM_STR);
+            
+            $stmtNumerico->execute();
+            $resultados = $stmtNumerico->fetchAll();
         }
         
-        // Bind do RG
-        $stmtNumerico->bindValue($paramIndex++, $termoNumerico, PDO::PARAM_STR);
-        $stmtNumerico->bindValue($paramIndex++, $termo, PDO::PARAM_STR);
-        $stmtNumerico->bindValue($paramIndex++, $limit, PDO::PARAM_INT);
-        
-        $stmtNumerico->execute();
-        $resultados = $stmtNumerico->fetchAll();
-    }
-    
-    // ============================================
-    // ESTRATÉGIA 2: Se não achou ou é texto, busca por nome
-    // ============================================
-    if (count($resultados) < 5) {
-        $termoLike = '%' . $termo . '%';
-        
-        $sqlNome = "
-        SELECT DISTINCT
-            a.id, a.nome, a.cpf, a.rg, a.telefone, a.foto,
-            COALESCE(a.situacao, 'Desfiliado') as situacao,
-            m.corporacao, m.patente, c.dataFiliacao as data_filiacao,
-            CASE
-                WHEN a.nome LIKE CONCAT(?, '%') THEN 2
-                ELSE 3
-            END as prioridade
-        FROM Associados a
-        LEFT JOIN Militar m ON a.id = m.associado_id
-        LEFT JOIN Contrato c ON a.id = c.associado_id
-        WHERE a.pre_cadastro = 0 
-        AND a.nome LIKE ?
-        ORDER BY prioridade, a.nome
-        LIMIT ?
-        ";
-        
-        $stmtNome = $pdo->prepare($sqlNome);
-        $stmtNome->execute([$termo, $termoLike, $limit]);
-        
-        $resultadosNome = $stmtNome->fetchAll();
-        
-        // Mescla resultados (evita duplicatas)
-        $idsExistentes = array_column($resultados, 'id');
-        foreach ($resultadosNome as $row) {
-            if (!in_array($row['id'], $idsExistentes)) {
-                $resultados[] = $row;
+        // ESTRATÉGIA 2: Se não encontrou pelo número OU é texto, busca por nome (APENAS FILIADOS)
+        if (count($resultados) < $limit) {
+            $termoLike = '%' . $termo . '%';
+            
+            $sqlNome = "
+            SELECT DISTINCT
+                a.id, a.nome, a.cpf, a.rg, a.telefone, a.foto,
+                COALESCE(a.situacao, 'Desfiliado') as situacao,
+                m.corporacao, m.patente, c.dataFiliacao as data_filiacao,
+                CASE
+                    WHEN a.nome LIKE CONCAT(?, '%') THEN 2
+                    ELSE 3
+                END as prioridade
+            FROM Associados a
+            LEFT JOIN Militar m ON a.id = m.associado_id
+            LEFT JOIN Contrato c ON a.id = c.associado_id
+            WHERE a.pre_cadastro = 0 
+            AND a.situacao = 'Filiado'
+            AND a.nome LIKE ?
+            ORDER BY prioridade, a.nome
+            LIMIT " . intval($limit) . "
+            ";
+            
+            $stmtNome = $pdo->prepare($sqlNome);
+            $termoInicio = $termo . '%';
+            $stmtNome->execute([$termoInicio, $termoLike]);
+            
+            $resultadosNome = $stmtNome->fetchAll();
+            
+            // Mescla resultados (evita duplicatas)
+            $idsExistentes = array_column($resultados, 'id');
+            foreach ($resultadosNome as $row) {
+                if (!in_array($row['id'], $idsExistentes)) {
+                    $resultados[] = $row;
+                }
             }
         }
     }
@@ -208,7 +241,7 @@ try {
     // ============================================
     $dados = [];
     foreach ($resultados as $row) {
-        $dados[] = [
+        $item = [
             'id' => intval($row['id']),
             'nome' => $row['nome'] ?? '',
             'cpf' => $row['cpf'] ?? '',
@@ -221,6 +254,16 @@ try {
             'foto' => $row['foto'] ?? '',
             'detalhes_carregados' => false
         ];
+        
+        // Se for agregado, adiciona info do associado titular
+        if ($row['situacao'] === 'Agregado' && isset($row['associado_id'])) {
+            $item['agregado_de'] = [
+                'id' => $row['associado_id'],
+                'nome' => $row['associado_nome'] ?? ''
+            ];
+        }
+        
+        $dados[] = $item;
     }
 
     echo json_encode([
