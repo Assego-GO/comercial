@@ -698,12 +698,22 @@ body {
     justify-content: space-between;
     position: relative;
     z-index: 2;
+    gap: 1rem;
 }
 
 .modal-header-info {
     display: flex;
     align-items: center;
     gap: 1.5rem;
+    flex: 1;
+}
+
+/* Estilos para botões de ação no header do modal */
+.modal-header-actions {
+    display: flex;
+    gap: 0.5rem;
+    z-index: 3;
+    flex-shrink: 0;
 }
 
 .modal-avatar-header {
