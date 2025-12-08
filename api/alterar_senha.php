@@ -34,17 +34,38 @@ if (!$dados || !isset($dados['senha_atual']) || !isset($dados['nova_senha'])) {
 try {
     $db = Database::getInstance(DB_NAME_CADASTRO)->getConnection();
     
-    // Buscar senha atual do banco
-    $stmt = $db->prepare("SELECT senha FROM Funcionarios WHERE id = ?");
-    $stmt->execute([$usuarioLogado['id']]);
-    $funcionario = $stmt->fetch();
+    // Determinar tipo de usuário (funcionário ou associado)
+    $tipoUsuario = $usuarioLogado['tipo_usuario'] ?? 'funcionario';
+    $tabela = ($tipoUsuario === 'associado') ? 'Associados' : 'Funcionarios';
     
-    if (!$funcionario) {
-        throw new Exception('Funcionário não encontrado');
+    // Buscar senha atual do banco
+    $stmt = $db->prepare("SELECT senha FROM {$tabela} WHERE id = ?");
+    $stmt->execute([$usuarioLogado['id']]);
+    $usuario = $stmt->fetch();
+    
+    if (!$usuario) {
+        throw new Exception('Usuário não encontrado');
     }
     
     // Verificar senha atual
-    if (!password_verify($dados['senha_atual'], $funcionario['senha'])) {
+    // Verifica se a senha está com hash ou em texto plano (MD5/SHA1)
+    $senha_correta = false;
+    
+    if (password_verify($dados['senha_atual'], $usuario['senha'])) {
+        // Senha com hash password_hash()
+        $senha_correta = true;
+    } elseif ($usuario['senha'] === md5($dados['senha_atual'])) {
+        // Senha com MD5
+        $senha_correta = true;
+    } elseif ($usuario['senha'] === sha1($dados['senha_atual'])) {
+        // Senha com SHA1
+        $senha_correta = true;
+    } elseif ($usuario['senha'] === $dados['senha_atual']) {
+        // Senha em texto plano
+        $senha_correta = true;
+    }
+    
+    if (!$senha_correta) {
         throw new Exception('Senha atual incorreta');
     }
     
@@ -58,7 +79,7 @@ try {
     
     // Atualizar senha
     $stmt = $db->prepare("
-        UPDATE Funcionarios 
+        UPDATE {$tabela} 
         SET senha = ?, senha_alterada_em = NOW() 
         WHERE id = ?
     ");
@@ -76,9 +97,9 @@ try {
             browser_info,
             data_hora
         ) VALUES (
-            'Funcionarios',
+            :tabela,
             'UPDATE',
-            :funcionario_id,
+            :registro_id,
             :funcionario_id,
             :alteracoes,
             :ip,
@@ -89,10 +110,13 @@ try {
     
     $alteracoes = json_encode([
         'campo' => 'senha',
-        'motivo' => 'Alteração de senha pelo próprio usuário'
+        'motivo' => 'Alteração de senha pelo próprio usuário',
+        'tipo_usuario' => $tipoUsuario
     ]);
     
     $stmt->execute([
+        'tabela' => $tabela,
+        'registro_id' => $usuarioLogado['id'],
         'funcionario_id' => $usuarioLogado['id'],
         'alteracoes' => $alteracoes,
         'ip' => $_SERVER['REMOTE_ADDR'] ?? 'Unknown',
