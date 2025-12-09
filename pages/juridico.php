@@ -36,26 +36,29 @@ $page_title = 'Serviços Jurídicos - ASSEGO';
 // ===== SISTEMA DE PERMISSÕES RBAC/ACL =====
 $permissoes = Permissoes::getInstance();
 
-// Verificar permissão geral para o módulo jurídico
-$temPermissaoJuridico = $permissoes->hasPermission('JURIDICO_DASHBOARD', 'VIEW');
-
 // Verificar se é do departamento jurídico (ID 3)
 $departamentoJuridico = 3;
 $isJuridico = ($usuarioLogado['departamento_id'] == $departamentoJuridico);
-
-// Verificar permissões específicas para cada recurso
-$permissoesDetalhadas = [
-    'dashboard' => $permissoes->hasPermission('JURIDICO_DASHBOARD', 'VIEW'),
-    'desfiliacao' => [
-        'visualizar' => $permissoes->hasPermission('JURIDICO_DESFILIACAO', 'VIEW') || $isJuridico,
-        'aprovar' => $permissoes->hasPermission('JURIDICO_DESFILIACAO_APROVAR', 'APPROVE') || $isJuridico
-    ]
-];
 
 // Níveis de acesso
 $isPresidencia = $permissoes->hasRole('PRESIDENTE') || $permissoes->hasRole('SUPER_ADMIN');
 $isDiretor = $permissoes->isDiretor();
 $departamentoUsuario = $usuarioLogado['departamento_id'] ?? null;
+
+// Verificar permissão geral para o módulo jurídico (RBAC OU departamento OU diretor/presidência)
+$temPermissaoJuridico = $permissoes->hasPermission('JURIDICO_DASHBOARD', 'VIEW')
+    || $isJuridico
+    || $isDiretor
+    || $isPresidencia;
+
+// Verificar permissões específicas para cada recurso
+$permissoesDetalhadas = [
+    'dashboard' => $temPermissaoJuridico,
+    'desfiliacao' => [
+        'visualizar' => $permissoes->hasPermission('JURIDICO_DESFILIACAO', 'VIEW') || $isJuridico || $isDiretor || $isPresidencia,
+        'aprovar' => $permissoes->hasPermission('JURIDICO_DESFILIACAO_APROVAR', 'APPROVE') || $isJuridico || $isDiretor || $isPresidencia
+    ]
+];
 
 // Log de debug das permissões
 error_log("=== DEBUG PERMISSÕES JURÍDICAS RBAC/ACL ===");
