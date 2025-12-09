@@ -1,7 +1,12 @@
 <?php
 /**
+ * ==================== CADASTRO ONLINE - PÁGINA DE GERENCIAMENTO ====================
  * Página de Gerenciamento de Cadastros Online - Sistema ASSEGO
  * pages/cadastros_online.php
+ * 
+ * Esta página exibe e gerencia todos os cadastros realizados online (pré-cadastros)
+ * pelos usuários através do formulário público de cadastro.
+ * ==================== CADASTRO ONLINE ====================
  */
 
 error_reporting(E_ALL);

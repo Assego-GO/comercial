@@ -1030,9 +1030,9 @@ $headerComponent = HeaderComponent::create([
                         </div>
                     </div>
 
-                    <!-- Solicitação de Desfiliação 
+                    <!-- Desfiliação -->
                     <div class="action-card <?php echo !$temPermissaoDesfiliacao ? 'disabled' : ''; ?>"
-                        onclick="<?php echo $temPermissaoDesfiliacao ? 'abrirModalDesfiliacao()' : 'semPermissao()'; ?>">
+                        onclick="<?php echo $temPermissaoDesfiliacao ? 'irParaDesfiliacao()' : 'semPermissao()'; ?>">
                         <?php if (!$temPermissaoDesfiliacao): ?>
                             <div class="no-permission-overlay">Sem permissão</div>
                         <?php endif; ?>
@@ -1040,10 +1040,10 @@ $headerComponent = HeaderComponent::create([
                             <i class="fas fa-user-times"></i>
                         </div>
                         <div class="action-content">
-                            <h5>Solicitação de Desfiliação</h5>
-                            <p>Gerar ficha oficial de desfiliação</p>
+                            <h5>Desfiliação</h5>
+                            <p>Upload e envio para aprovação dos departamentos</p>
                         </div>
-                    </div>-->
+                    </div>
 
                     <!-- Dependentes 18+ -->
                     <div class="action-card <?php echo !$temPermissaoDependentes ? 'disabled' : ''; ?>"
@@ -1075,6 +1075,8 @@ $headerComponent = HeaderComponent::create([
                         </div>
                     </div>
 
+                    <!-- ==================== CADASTRO ONLINE - INÍCIO ==================== -->
+                    <!-- Este é o botão que redireciona para a página de gerenciamento de cadastros online -->
                     <div class="action-card" onclick="cadastrosOnline()">
                         <div class="action-icon warning">
                             <i class="fas fa-laptop"></i>
@@ -1084,6 +1086,7 @@ $headerComponent = HeaderComponent::create([
                             <p>Gerenciar cadastros realizados online</p>
                         </div>
                     </div>
+                    <!-- ==================== CADASTRO ONLINE - FIM ==================== -->
 
                     <!-- Anexos / Documentos -->
                     <div class="action-card" onclick="abrirDashboardDocumentos()">
@@ -2330,6 +2333,13 @@ $headerComponent = HeaderComponent::create([
                     }, 500);
                 }
 
+                function irParaDesfiliacao() {
+                    showToast('Abrindo fluxo de desfiliação...', 'info');
+                    setTimeout(() => {
+                        window.location.href = '../pages/comercial_desfiliacao.php';
+                    }, 500);
+                }
+
                 function consultarDependentes18() {
                     showToast('Carregando dependentes...', 'info');
                     setTimeout(() => {
@@ -2752,12 +2762,15 @@ $headerComponent = HeaderComponent::create([
                 }
 
 
+                // ==================== CADASTRO ONLINE - INÍCIO ====================
+                // Esta função redireciona para a página de gerenciamento de cadastros online
                 function cadastrosOnline() {
                     showToast('Carregando cadastros online...', 'info');
                     setTimeout(() => {
                         window.location.href = '../pages/cadastros_online.php';
                     }, 500);
                 }
+                // ==================== CADASTRO ONLINE - FIM ====================
 
                 function formatarTelefone(telefone) {
                     if (!telefone) return '';
