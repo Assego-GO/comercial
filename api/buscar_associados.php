@@ -10,13 +10,22 @@
  * - Performance sem depender de índices
  */
 
-error_reporting(0);
-ini_set('display_errors', '0');
+// Habilita logs temporariamente para debug
+error_reporting(E_ALL);
+ini_set('display_errors', '1');
+ini_set('log_errors', '1');
+ini_set('error_log', '/tmp/buscar_associados_debug.log');
+
 header('Content-Type: application/json; charset=utf-8');
 
 @session_start();
 
+error_log("=== BUSCAR ASSOCIADOS INICIADO ===");
+error_log("Termo recebido: " . ($_GET['termo'] ?? 'VAZIO'));
+error_log("Session funcionario_id: " . ($_SESSION['funcionario_id'] ?? 'NÃO LOGADO'));
+
 if (!isset($_SESSION['funcionario_id'])) {
+    error_log("ERRO: Usuário não autenticado");
     echo json_encode(['status' => 'error', 'message' => 'Não autorizado']);
     exit;
 }
@@ -87,6 +96,7 @@ function gerarVariacoesCPF($termo) {
 }
 
 try {
+    error_log("Tentando conectar ao banco de dados...");
     @include_once '../config/database.php';
 
     $pdo = new PDO(
@@ -98,11 +108,16 @@ try {
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
         ]
     );
+    
+    error_log("Conexão com banco estabelecida com sucesso");
 
     $termo = $_GET['termo'] ?? '';
     $limit = min(500, max(10, intval($_GET['limit'] ?? 200)));
     
+    error_log("Termo normalizado: '$termo', Limit: $limit");
+    
     if (strlen($termo) < 2) {
+        error_log("ERRO: Termo muito curto");
         echo json_encode([
             'status' => 'error',
             'message' => 'Termo deve ter pelo menos 2 caracteres'
@@ -114,8 +129,12 @@ try {
     $termoNumerico = preg_replace('/\D/', '', $termo);
     $ehNumero = !empty($termoNumerico) && strlen($termoNumerico) >= 2;
     
+    error_log("Termo numérico: '$termoNumerico', É número: " . ($ehNumero ? 'SIM' : 'NÃO'));
+    
     // Se é um número, gera variações de CPF
     $variacoesCPF = $ehNumero ? gerarVariacoesCPF($termo) : [];
+    
+    error_log("Variações de CPF geradas: " . json_encode($variacoesCPF));
     
     $resultados = [];
     
@@ -123,6 +142,8 @@ try {
     // ESTRATÉGIA 1: Se é número, busca por CPF/RG
     // ============================================
     if ($ehNumero && !empty($variacoesCPF)) {
+        error_log("Iniciando busca numérica (CPF/RG)...");
+        
         // Monta placeholders para as variações
         $placeholders = implode(',', array_fill(0, count($variacoesCPF), '?'));
         
@@ -145,24 +166,31 @@ try {
             OR
             a.rg = ?
         )
-        LIMIT ?
+        LIMIT $limit
         ";
+        
+        error_log("SQL montado: " . $sqlNumerico);
         
         $stmtNumerico = $pdo->prepare($sqlNumerico);
         
         // Bind das variações de CPF
         $paramIndex = 1;
         foreach ($variacoesCPF as $variacao) {
+            error_log("Binding CPF variação #$paramIndex: $variacao");
             $stmtNumerico->bindValue($paramIndex++, $variacao, PDO::PARAM_STR);
         }
         
         // Bind do RG
+        error_log("Binding RG #$paramIndex: $termoNumerico");
         $stmtNumerico->bindValue($paramIndex++, $termoNumerico, PDO::PARAM_STR);
+        error_log("Binding RG #$paramIndex: $termo");
         $stmtNumerico->bindValue($paramIndex++, $termo, PDO::PARAM_STR);
-        $stmtNumerico->bindValue($paramIndex++, $limit, PDO::PARAM_INT);
+        // REMOVIDO: Não faz bind do LIMIT, já está na query
         
+        error_log("Executando query numérica...");
         $stmtNumerico->execute();
         $resultados = $stmtNumerico->fetchAll();
+        error_log("Resultados encontrados na busca numérica: " . count($resultados));
     }
     
     // ============================================
@@ -186,11 +214,11 @@ try {
         WHERE a.pre_cadastro = 0 
         AND a.nome LIKE ?
         ORDER BY prioridade, a.nome
-        LIMIT ?
+        LIMIT $limit
         ";
         
         $stmtNome = $pdo->prepare($sqlNome);
-        $stmtNome->execute([$termo, $termoLike, $limit]);
+        $stmtNome->execute([$termo, $termoLike]);
         
         $resultadosNome = $stmtNome->fetchAll();
         
@@ -223,6 +251,9 @@ try {
         ];
     }
 
+    error_log("Total de resultados processados: " . count($dados));
+    error_log("Primeiros dados: " . json_encode(array_slice($dados, 0, 2)));
+
     echo json_encode([
         'status' => 'success',
         'dados' => $dados,
@@ -233,12 +264,16 @@ try {
         'eh_numero' => $ehNumero,
         'timestamp' => date('Y-m-d H:i:s')
     ]);
+    
+    error_log("=== BUSCAR ASSOCIADOS FINALIZADO COM SUCESSO ===");
 
 } catch (Exception $e) {
-    error_log("Search error: " . $e->getMessage());
+    error_log("!!! ERRO CRÍTICO: " . $e->getMessage());
+    error_log("Stack trace: " . $e->getTraceAsString());
     echo json_encode([
         'status' => 'error',
         'message' => 'Erro na busca: ' . $e->getMessage(),
+        'trace' => $e->getTraceAsString(),
         'dados' => []
     ]);
 }
