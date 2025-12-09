@@ -515,8 +515,8 @@ $headerComponent = HeaderComponent::create([
                     <div class="filter-group">
                         <label class="filter-label">Situação</label>
                         <select class="filter-select" id="filterSituacao">
-                            <!-- <option value="">Todos</option> -->
-                            <option value="Filiado">Filiado</option>
+                            <option value="">Todos</option>
+                            <option value="Filiado" selected>Filiado</option>
                             <option value="Desfiliado">Desfiliado</option>
                         </select>
                     </div>
