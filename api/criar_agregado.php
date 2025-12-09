@@ -274,7 +274,7 @@ try {
         'estadoCivil' => $dados['estadoCivil'],
         'telefone' => preg_replace('/\D/', '', $dados['telefone']),
         'dataFiliacao' => converterDataParaMySQL($dados['dataFiliacao']),
-        'associado_titular_id' => $titularId, // ✅ Vínculo com titular
+        // Nota: associado_titular_id ainda não existe no banco
         
         // Endereço
         'cep' => preg_replace('/\D/', '', $dados['cep'] ?? '') ?: null,
@@ -308,10 +308,10 @@ try {
     try {
         if ($isUpdate) {
             // UPDATE em Associados (sem campos de endereço)
+            // Nota: associado_titular_id ainda não existe no banco
             $sql = "UPDATE Associados SET 
                 nome = :nome, nasc = :nasc, sexo = :sexo, rg = :rg,
-                email = :email, estadoCivil = :estadoCivil, telefone = :telefone,
-                associado_titular_id = :associado_titular_id
+                email = :email, estadoCivil = :estadoCivil, telefone = :telefone
             WHERE id = :id";
             
             $stmt = $db->prepare($sql);
@@ -323,7 +323,6 @@ try {
                 ':email' => $dadosAssociado['email'],
                 ':estadoCivil' => $dadosAssociado['estadoCivil'],
                 ':telefone' => $dadosAssociado['telefone'],
-                ':associado_titular_id' => $titularId,
                 ':id' => $agregadoId
             ]);
             
@@ -367,12 +366,13 @@ try {
             
         } else {
             // INSERT em Associados (sem campos de endereço - vão em Endereco)
+            // Nota: associado_titular_id ainda não existe no banco
             $sql = "INSERT INTO Associados (
                 nome, nasc, sexo, rg, cpf, email, situacao, escolaridade,
-                estadoCivil, telefone, associado_titular_id
+                estadoCivil, telefone
             ) VALUES (
                 :nome, :nasc, :sexo, :rg, :cpf, :email, :situacao, :escolaridade,
-                :estadoCivil, :telefone, :associado_titular_id
+                :estadoCivil, :telefone
             )";
             
             $stmt = $db->prepare($sql);
@@ -386,8 +386,7 @@ try {
                 ':situacao' => $dadosAssociado['situacao'],
                 ':escolaridade' => $dadosAssociado['escolaridade'],
                 ':estadoCivil' => $dadosAssociado['estadoCivil'],
-                ':telefone' => $dadosAssociado['telefone'],
-                ':associado_titular_id' => $titularId
+                ':telefone' => $dadosAssociado['telefone']
             ]);
             
             $agregadoId = $db->lastInsertId();

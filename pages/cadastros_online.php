@@ -639,7 +639,7 @@ $headerComponent = HeaderComponent::create([
                                     </span>
                                 </td>
                                 <td class="text-center">
-                                    <a href="http://172.16.253.44/victor/comercial/pages/cadastroForm.php?id=<?php echo $pre['id']; ?>" 
+                                    <a href="cadastroForm.php?id=<?php echo $pre['id']; ?>" 
                                        class="btn-action btn-complete" 
                                        title="Completar Cadastro"
                                        target="_blank">
