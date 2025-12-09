@@ -286,75 +286,16 @@ try {
         // ====================================================================
         // DESFILIAÇÃO AUTOMÁTICA DE AGREGADOS
         // Regra de negócio: Agregado só pode estar Filiado se o titular estiver Filiado
-        // Executa quando:
-        // 1. Titular acabou de ser desfiliado (mudança de status), OU
-        // 2. Titular está sendo salvo e já está desfiliado (garante consistência)
+        // NOTA: Funcionalidade desabilitada - coluna associado_titular_id não existe ainda
+        // Quando a coluna for criada, descomentar o código abaixo
         // ====================================================================
         if ($estaDesfiliado) {
-            $cpfTitular = $dados['cpf'];
-            
-            // Buscar agregados que ainda estão filiados
-            $stmtAgregados = $db->prepare("
-                SELECT a.id, a.nome, a.situacao
-                FROM Associados a
-                INNER JOIN Militar m ON a.id = m.associado_id
-                WHERE m.corporacao = 'Agregados' 
-                AND a.associado_titular_id = ?
-                AND UPPER(a.situacao) != 'DESFILIADO'
-            ");
-            $stmtAgregados->execute([$associadoId]);
-            $agregados = $stmtAgregados->fetchAll(PDO::FETCH_ASSOC);
-            
-            if (!empty($agregados)) {
-                $stmtDesfiliarAgregado = $db->prepare("
-                    UPDATE Associados 
-                    SET situacao = 'DESFILIADO', 
-                        data_desfiliacao = NOW() 
-                    WHERE id = ?
-                ");
-                
-                foreach ($agregados as $agregado) {
-                    $stmtDesfiliarAgregado->execute([$agregado['id']]);
-                    error_log("✓ AGREGADO DESFILIADO: '{$agregado['nome']}' (ID: {$agregado['id']}) - estava: {$agregado['situacao']}");
-                }
-                
-                error_log("✅ TOTAL: " . count($agregados) . " agregado(s) desfiliado(s) automaticamente (titular: {$dados['nome']})");
-            } else {
-                error_log("ℹ️ Nenhum agregado filiado encontrado para o titular '{$dados['nome']}' (ID: $associadoId)");
-            }
+            error_log("ℹ️ Desfiliação automática de agregados desabilitada - coluna associado_titular_id não existe");
         }
         
         // Reativar agregados se o titular for reativado (saiu de DESFILIADO)
         if ($saiuDeDesfiliado && $mudouSituacao){
-            error_log("=== REATIVANDO AGREGADOS DO TITULAR ===");
-            
-            // Buscar agregados desfiliados deste titular
-            $stmtAgregadosInativos = $db->prepare("
-                SELECT a.id, a.nome 
-                FROM Associados a
-                INNER JOIN Militar m ON a.id = m.associado_id
-                WHERE m.corporacao = 'Agregados' 
-                AND a.associado_titular_id = ?
-                AND a.situacao = 'DESFILIADO'
-            ");
-            $stmtAgregadosInativos->execute([$associadoId]);
-            $agregadosInativos = $stmtAgregadosInativos->fetchAll(PDO::FETCH_ASSOC);
-            
-            if (!empty($agregadosInativos)) {
-                $stmtReativarAgregado = $db->prepare("
-                    UPDATE Associados 
-                    SET situacao = 'Filiado', 
-                        data_desfiliacao = NULL 
-                    WHERE id = ?
-                ");
-                
-                foreach ($agregadosInativos as $agregado) {
-                    $stmtReativarAgregado->execute([$agregado['id']]);
-                    error_log("✓ Agregado '{$agregado['nome']}' (ID: {$agregado['id']}) reativado automaticamente");
-                }
-                
-                error_log("✅ Total de " . count($agregadosInativos) . " agregado(s) reativado(s) automaticamente");
-            }
+            error_log("ℹ️ Reativação automática de agregados desabilitada - coluna associado_titular_id não existe");
         }
 
         error_log("✓ Dados básicos atualizados pelo usuário: " . $usuarioLogado['nome']);
