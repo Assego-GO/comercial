@@ -2449,8 +2449,10 @@ class HeaderComponent
             ];
         }
 
-        // JURÍDICO - Verifica permissão
-        if ($this->permissoes->hasPermission('JURIDICO_DASHBOARD', 'VIEW')) {
+        // JURÍDICO - Verifica permissão ou departamento 3 (Jurídico)
+        if (($this->permissoes && $this->permissoes->hasPermission('JURIDICO_DASHBOARD', 'VIEW'))
+            || $this->departamento_id == 3
+            || $this->isDiretor) {
             $items[] = [
                 'id' => 'juridico',
                 'label' => 'Jurídico',
