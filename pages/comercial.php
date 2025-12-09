@@ -500,9 +500,9 @@ $headerComponent = HeaderComponent::create([
         }
 
         .action-icon.info {
-            background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
             color: white;
-            box-shadow: 0 4px 14px rgba(139, 92, 246, 0.4);
+            box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4);
         }
 
         .action-content {
@@ -1087,7 +1087,7 @@ $headerComponent = HeaderComponent::create([
 
                     <!-- Anexos / Documentos -->
                     <div class="action-card" onclick="abrirDashboardDocumentos()">
-                        <div class="action-icon" style="background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); color: white; box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4);">
+                        <div class="action-icon" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4);">
                             <i class="fas fa-paperclip"></i>
                         </div>
                         <div class="action-content">
@@ -1321,9 +1321,9 @@ $headerComponent = HeaderComponent::create([
             <!-- Modal Dashboard de Documentos -->
             <div class="modal fade" id="modalDashboardDocumentos" tabindex="-1" aria-hidden="true">
                 <div class="modal-dialog modal-fullscreen">
-                    <div class="modal-content" style="background: linear-gradient(135deg, #f0f4ff 0%, #fafbff 50%, #f5f0ff 100%);">
+                    <div class="modal-content" style="background: linear-gradient(135deg, #f0f4ff 0%, #fafbff 50%, #f5f7fa 100%);">
                         <!-- Header Premium -->
-                        <div class="modal-header border-0" style="background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 50%, #6366f1 100%); padding: 0;">
+                        <div class="modal-header border-0" style="background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); padding: 0;">
                             <div style="width: 100%; padding: 1.5rem 2.5rem; position: relative; overflow: hidden;">
                                 <!-- Decorative Elements -->
                                 <div style="position: absolute; top: -50px; right: -50px; width: 200px; height: 200px; background: rgba(255,255,255,0.1); border-radius: 50%;"></div>
@@ -1411,15 +1411,15 @@ $headerComponent = HeaderComponent::create([
                                     </div>
                                 </div>
                                 <div class="col-lg-3 col-md-6">
-                                    <div class="card border-0 h-100" style="border-radius: 20px; background: white; box-shadow: 0 10px 40px rgba(139, 92, 246, 0.15); overflow: hidden; transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);" onmouseover="this.style.transform='translateY(-8px)';this.style.boxShadow='0 20px 60px rgba(139, 92, 246, 0.25)'" onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 10px 40px rgba(139, 92, 246, 0.15)'">
-                                        <div style="height: 4px; background: linear-gradient(90deg, #8b5cf6, #7c3aed);"></div>
+                                    <div class="card border-0 h-100" style="border-radius: 20px; background: white; box-shadow: 0 10px 40px rgba(239, 68, 68, 0.15); overflow: hidden; transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);" onmouseover="this.style.transform='translateY(-8px)';this.style.boxShadow='0 20px 60px rgba(239, 68, 68, 0.25)'" onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 10px 40px rgba(239, 68, 68, 0.15)'">
+                                        <div style="height: 4px; background: linear-gradient(90deg, #ef4444, #dc2626);"></div>
                                         <div class="card-body p-4">
                                             <div class="d-flex align-items-center justify-content-between mb-3">
-                                                <div style="width: 56px; height: 56px; background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); border-radius: 16px; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 25px rgba(139, 92, 246, 0.4);">
+                                                <div style="width: 56px; height: 56px; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); border-radius: 16px; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 25px rgba(239, 68, 68, 0.4);">
                                                     <i class="fas fa-hourglass-half" style="font-size: 1.5rem; color: white;"></i>
                                                 </div>
                                                 <div class="text-end">
-                                                    <span style="font-size: 0.75rem; color: #8b5cf6; background: rgba(139, 92, 246, 0.1); padding: 4px 10px; border-radius: 20px; font-weight: 600;">
+                                                    <span style="font-size: 0.75rem; color: #ef4444; background: rgba(239, 68, 68, 0.1); padding: 4px 10px; border-radius: 20px; font-weight: 600;">
                                                         <i class="fas fa-signature me-1"></i>PENDENTES
                                                     </span>
                                                 </div>
@@ -1437,12 +1437,12 @@ $headerComponent = HeaderComponent::create([
                                     <div class="row g-3 align-items-end">
                                         <div class="col-lg-3 col-md-6">
                                             <label class="form-label" style="font-weight: 700; color: #374151; font-size: 0.875rem; margin-bottom: 0.5rem;">
-                                                <i class="fas fa-search me-2" style="color: #6366f1;"></i>Buscar Associado
+                                                <i class="fas fa-search me-2" style="color: #3b82f6;"></i>Buscar Associado
                                             </label>
                                             <div class="position-relative">
                                                 <input type="text" class="form-control" id="filtroDocBusca" placeholder="Nome, CPF ou RG..." 
                                                     style="border: 2px solid #e5e7eb; border-radius: 12px; padding: 0.75rem 1rem 0.75rem 3rem; font-size: 0.95rem; transition: all 0.3s; background: #f9fafb;"
-                                                    onfocus="this.style.borderColor='#6366f1';this.style.boxShadow='0 0 0 4px rgba(99, 102, 241, 0.1)';this.style.background='white'"
+                                                    onfocus="this.style.borderColor='#3b82f6';this.style.boxShadow='0 0 0 4px rgba(59, 130, 246, 0.1)';this.style.background='white'"
                                                     onblur="this.style.borderColor='#e5e7eb';this.style.boxShadow='none';this.style.background='#f9fafb'"
                                                     onkeypress="if(event.key==='Enter') carregarDocumentosDashboard(1)">
                                                 <i class="fas fa-search position-absolute" style="left: 1rem; top: 50%; transform: translateY(-50%); color: #9ca3af;"></i>
@@ -1487,9 +1487,9 @@ $headerComponent = HeaderComponent::create([
                                         <div class="col-lg-3 col-md-12">
                                             <div class="d-flex gap-2">
                                                 <button class="btn flex-grow-1" onclick="carregarDocumentosDashboard(1)" 
-                                                    style="background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); color: white; border: none; border-radius: 12px; padding: 0.75rem 1rem; font-weight: 600; font-size: 0.9rem; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4); transition: all 0.3s;"
-                                                    onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 25px rgba(99, 102, 241, 0.5)'"
-                                                    onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 4px 15px rgba(99, 102, 241, 0.4)'">
+                                                    style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; border: none; border-radius: 12px; padding: 0.75rem 1rem; font-weight: 600; font-size: 0.9rem; box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4); transition: all 0.3s;"
+                                                    onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 25px rgba(59, 130, 246, 0.5)'"
+                                                    onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 4px 15px rgba(59, 130, 246, 0.4)'">
                                                     <i class="fas fa-search me-2"></i>Buscar
                                                 </button>
                                                 <button class="btn" onclick="limparFiltrosDocumentos()" 
@@ -1519,7 +1519,7 @@ $headerComponent = HeaderComponent::create([
                                 <div class="card-header border-0 py-4 px-4" style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);">
                                     <div class="d-flex justify-content-between align-items-center">
                                         <div class="d-flex align-items-center gap-3">
-                                            <div style="width: 45px; height: 45px; background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                                            <div style="width: 45px; height: 45px; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
                                                 <i class="fas fa-list" style="color: white; font-size: 1.1rem;"></i>
                                             </div>
                                             <div>
@@ -1527,7 +1527,7 @@ $headerComponent = HeaderComponent::create([
                                                 <small style="color: #64748b;">Todos os anexos cadastrados no sistema</small>
                                             </div>
                                         </div>
-                                        <span id="countDocumentos" style="background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); color: white; padding: 8px 16px; border-radius: 30px; font-weight: 700; font-size: 0.875rem; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);">
+                                        <span id="countDocumentos" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; padding: 8px 16px; border-radius: 30px; font-weight: 700; font-size: 0.875rem; box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);">
                                             0 documentos
                                         </span>
                                     </div>
@@ -1578,7 +1578,7 @@ $headerComponent = HeaderComponent::create([
                                 <div class="card-footer border-0 py-4 px-4" style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);">
                                     <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
                                         <div id="infoPaginacao" style="color: #64748b; font-weight: 500; background: white; padding: 10px 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
-                                            <i class="fas fa-info-circle me-2" style="color: #6366f1;"></i>
+                                            <i class="fas fa-info-circle me-2" style="color: #3b82f6;"></i>
                                             Mostrando 0 de 0 registros
                                         </div>
                                         <nav>
@@ -3106,12 +3106,12 @@ $headerComponent = HeaderComponent::create([
                         
                         // Gerar cor do avatar baseada no nome
                         const cores = [
-                            'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
                             'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                            'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)',
                             'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
                             'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
                             'linear-gradient(135deg, #ec4899 0%, #db2777 100%)',
-                            'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
+                            'linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%)',
                             'linear-gradient(135deg, #14b8a6 0%, #0d9488 100%)'
                         ];
                         const corIndex = doc.nome ? doc.nome.charCodeAt(0) % cores.length : 0;
@@ -3137,7 +3137,7 @@ $headerComponent = HeaderComponent::create([
                             <tr style="transition: all 0.2s; border-bottom: 1px solid #f1f5f9;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">
                                 <td class="px-4 py-3">
                                     <div class="d-flex align-items-center">
-                                        <div style="width: 45px; height: 45px; background: ${corAvatar}; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: white; margin-right: 14px; font-weight: 700; font-size: 1.1rem; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);">
+                                        <div style="width: 45px; height: 45px; background: ${corAvatar}; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: white; margin-right: 14px; font-weight: 700; font-size: 1.1rem; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);">
                                             ${doc.nome ? doc.nome.charAt(0).toUpperCase() : '?'}
                                         </div>
                                         <div>
@@ -3222,7 +3222,7 @@ $headerComponent = HeaderComponent::create([
                     const fim = Math.min(pagina_atual * por_pagina, total_registros);
                     
                     document.getElementById('infoPaginacao').innerHTML = `
-                        <i class="fas fa-info-circle me-2" style="color: #6366f1;"></i>
+                        <i class="fas fa-info-circle me-2" style="color: #3b82f6;"></i>
                         Mostrando <strong>${inicio}</strong> a <strong>${fim}</strong> de <strong>${total_registros.toLocaleString('pt-BR')}</strong> registros
                     `;
                     
@@ -3232,7 +3232,7 @@ $headerComponent = HeaderComponent::create([
                     paginacaoHtml += `
                         <li class="page-item ${pagina_atual === 1 ? 'disabled' : ''}">
                             <a class="page-link" href="#" onclick="carregarDocumentosDashboard(${pagina_atual - 1}); return false;"
-                               style="border: none; border-radius: 10px; margin: 0 3px; padding: 10px 15px; color: ${pagina_atual === 1 ? '#cbd5e1' : '#6366f1'}; background: ${pagina_atual === 1 ? '#f1f5f9' : 'white'}; font-weight: 600; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                               style="border: none; border-radius: 10px; margin: 0 3px; padding: 10px 15px; color: ${pagina_atual === 1 ? '#cbd5e1' : '#3b82f6'}; background: ${pagina_atual === 1 ? '#f1f5f9' : 'white'}; font-weight: 600; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
                                 <i class="fas fa-chevron-left"></i>
                             </a>
                         </li>
@@ -3254,8 +3254,8 @@ $headerComponent = HeaderComponent::create([
                                 <a class="page-link" href="#" onclick="carregarDocumentosDashboard(${i}); return false;"
                                    style="border: none; border-radius: 10px; margin: 0 3px; padding: 10px 15px; min-width: 45px; text-align: center; font-weight: 700; 
                                           ${isActive 
-                                            ? 'background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); color: white; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);' 
-                                            : 'background: white; color: #6366f1; box-shadow: 0 2px 8px rgba(0,0,0,0.05);'}">${i}</a>
+                                            ? 'background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);' 
+                                            : 'background: white; color: #3b82f6; box-shadow: 0 2px 8px rgba(0,0,0,0.05);'}">${i}</a>
                             </li>
                         `;
                     }
@@ -3264,7 +3264,7 @@ $headerComponent = HeaderComponent::create([
                     paginacaoHtml += `
                         <li class="page-item ${pagina_atual === total_paginas || total_paginas === 0 ? 'disabled' : ''}">
                             <a class="page-link" href="#" onclick="carregarDocumentosDashboard(${pagina_atual + 1}); return false;"
-                               style="border: none; border-radius: 10px; margin: 0 3px; padding: 10px 15px; color: ${pagina_atual === total_paginas || total_paginas === 0 ? '#cbd5e1' : '#6366f1'}; background: ${pagina_atual === total_paginas || total_paginas === 0 ? '#f1f5f9' : 'white'}; font-weight: 600; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                               style="border: none; border-radius: 10px; margin: 0 3px; padding: 10px 15px; color: ${pagina_atual === total_paginas || total_paginas === 0 ? '#cbd5e1' : '#3b82f6'}; background: ${pagina_atual === total_paginas || total_paginas === 0 ? '#f1f5f9' : 'white'}; font-weight: 600; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
                                 <i class="fas fa-chevron-right"></i>
                             </a>
                         </li>
@@ -3301,7 +3301,7 @@ $headerComponent = HeaderComponent::create([
                     const filtros = [];
                     
                     if (busca) {
-                        filtros.push(`<span style="background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 600;"><i class="fas fa-search me-1"></i>"${busca}"</span>`);
+                        filtros.push(`<span style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 600;"><i class="fas fa-search me-1"></i>"${busca}"</span>`);
                     }
                     if (tipo) {
                         const tipoLabel = tipo === 'SOCIO' ? '🔵 Sócios' : '🟠 Agregados';
