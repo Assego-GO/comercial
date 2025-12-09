@@ -2449,6 +2449,17 @@ class HeaderComponent
             ];
         }
 
+        // JURÍDICO - Verifica permissão
+        if ($this->permissoes->hasPermission('JURIDICO_DASHBOARD', 'VIEW')) {
+            $items[] = [
+                'id' => 'juridico',
+                'label' => 'Jurídico',
+                'icon' => 'fas fa-balance-scale',
+                'href' => 'juridico.php',
+                'badge' => null
+            ];
+        }
+
         // DOCUMENTOS - Verifica permissão
         if ($this->permissoes->hasPermission('DOCUMENTOS_DASHBOARD', 'VIEW')) {
             $items[] = [

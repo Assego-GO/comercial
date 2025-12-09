@@ -1030,9 +1030,9 @@ $headerComponent = HeaderComponent::create([
                         </div>
                     </div>
 
-                    <!-- Solicitação de Desfiliação 
+                    <!-- Desfiliação -->
                     <div class="action-card <?php echo !$temPermissaoDesfiliacao ? 'disabled' : ''; ?>"
-                        onclick="<?php echo $temPermissaoDesfiliacao ? 'abrirModalDesfiliacao()' : 'semPermissao()'; ?>">
+                        onclick="<?php echo $temPermissaoDesfiliacao ? 'irParaDesfiliacao()' : 'semPermissao()'; ?>">
                         <?php if (!$temPermissaoDesfiliacao): ?>
                             <div class="no-permission-overlay">Sem permissão</div>
                         <?php endif; ?>
@@ -1040,10 +1040,10 @@ $headerComponent = HeaderComponent::create([
                             <i class="fas fa-user-times"></i>
                         </div>
                         <div class="action-content">
-                            <h5>Solicitação de Desfiliação</h5>
-                            <p>Gerar ficha oficial de desfiliação</p>
+                            <h5>Desfiliação</h5>
+                            <p>Upload e envio para aprovação dos departamentos</p>
                         </div>
-                    </div>-->
+                    </div>
 
                     <!-- Dependentes 18+ -->
                     <div class="action-card <?php echo !$temPermissaoDependentes ? 'disabled' : ''; ?>"
@@ -2327,6 +2327,13 @@ $headerComponent = HeaderComponent::create([
                     showToast('Abrindo consulta de associados...', 'info');
                     setTimeout(() => {
                         window.location.href = '../pages/dashboard.php';
+                    }, 500);
+                }
+
+                function irParaDesfiliacao() {
+                    showToast('Abrindo fluxo de desfiliação...', 'info');
+                    setTimeout(() => {
+                        window.location.href = '../pages/comercial_desfiliacao.php';
                     }, 500);
                 }
 
