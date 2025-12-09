@@ -518,17 +518,20 @@ function irParaPagina(pagina) {
 
 // Renderiza tabela
 function renderizarTabela(dados) {
-    console.log(`Renderizando ${dados.length} registros...`);
+    console.log(`📊 Renderizando ${dados.length} registros...`);
+    console.log('📋 Primeiros dados a renderizar:', dados.slice(0, 2));
+    
     const tbody = document.getElementById('tableBody');
 
     if (!tbody) {
-        console.error('Elemento tableBody não encontrado!');
+        console.error('❌ Elemento tableBody não encontrado!');
         return;
     }
 
     tbody.innerHTML = '';
 
     if (dados.length === 0) {
+        console.log('⚠️ Nenhum dado para renderizar');
         tbody.innerHTML = `
             <tr>
                 <td colspan="10" class="text-center py-5">
@@ -613,6 +616,8 @@ function renderizarTabela(dados) {
         `;
         tbody.appendChild(row);
     });
+    
+    console.log(`✅ Renderização concluída: ${dados.length} linhas adicionadas à tabela`);
 }
 
 // Função UNIFICADA para aplicar filtros (incluindo busca local)
@@ -625,23 +630,14 @@ function aplicarFiltros() {
     const filterCorporacao = document.getElementById('filterCorporacao').value;
     const filterPatente = document.getElementById('filterPatente').value;
 
-    // Define o conjunto de dados base
-    // Se há termo de busca e já temos resultados filtrados do servidor, usa eles
-    // Caso contrário, usa todosAssociados
-    let dadosBase = todosAssociados;
+    // Define base de dados: se tem resultados do servidor, usa eles. Senão, usa todosAssociados
+    let dadosBase = resultadosServidor && resultadosServidor.length > 0 ? resultadosServidor : todosAssociados;
     
-    // Se NÃO tem busca de texto, sempre usa todosAssociados
-    if (!searchTerm) {
-        dadosBase = todosAssociados;
-    } else if (associadosFiltrados.length > 0 && searchTerm.length >= 3) {
-        // Se tem busca >= 3 chars e já tem resultados filtrados, mantém eles
-        // (provavelmente vieram do servidor)
-        dadosBase = associadosFiltrados;
-    }
+    console.log(`📊 Base de dados: ${dadosBase.length} registros (${resultadosServidor ? 'servidor' : 'local'})`);
 
     associadosFiltrados = dadosBase.filter(associado => {
-        // Filtro de busca LOCAL (só aplica se termo for < 3 chars ou como complemento)
-        const matchSearch = !searchTerm ||
+        // Filtro de busca LOCAL (só aplica se não veio do servidor)
+        const matchSearch = !searchTerm || resultadosServidor ||
             (associado.nome && associado.nome.toLowerCase().includes(searchTerm)) ||
             (associado.cpf && associado.cpf.replace(/\D/g, '').includes(searchTerm.replace(/\D/g, ''))) ||
             (associado.rg && associado.rg.includes(searchTerm)) ||
@@ -657,6 +653,7 @@ function aplicarFiltros() {
     });
 
     console.log(`✅ Filtros aplicados: ${associadosFiltrados.length} de ${dadosBase.length} registros`);
+    console.log(`📋 Primeiros resultados:`, associadosFiltrados.slice(0, 3));
 
     paginaAtual = 1;
     calcularPaginacao();
@@ -2999,10 +2996,14 @@ function salvarContatoEditado() {
 // Variável global para timeout de busca e controle
 let searchTimeout;
 let ultimaBuscaServidor = '';
+let resultadosServidor = null; // Armazena resultados da busca do servidor
+let todosAssociadosOriginal = []; // Backup dos dados originais
 
 // Handler para input de busca (com debounce)
 function handleSearchInput(e) {
     const termo = e.target.value.trim();
+    
+    console.log('🔍 handleSearchInput chamado, termo:', termo);
 
     // Limpa timeout anterior
     clearTimeout(searchTimeout);
@@ -3011,7 +3012,7 @@ function handleSearchInput(e) {
     if (!termo) {
         console.log('🔄 Busca limpa, mostrando todos os dados');
         ultimaBuscaServidor = '';
-        associadosFiltrados = [...todosAssociados];
+        resultadosServidor = null; // Limpa resultados do servidor
         aplicarFiltros(); // Reaplica outros filtros
         return;
     }
@@ -3019,6 +3020,7 @@ function handleSearchInput(e) {
     // Se muito curto (menos de 3 chars), apenas busca local imediata
     if (termo.length < 3) {
         console.log('💻 Busca local (termo curto):', termo);
+        resultadosServidor = null; // Limpa resultados do servidor para usar busca local
         aplicarFiltros(); // Usa a busca local integrada
         return;
     }
@@ -3035,17 +3037,25 @@ function handleSearchInput(e) {
 // Busca no servidor (busca em TODOS os registros do banco)
 async function buscarNoServidor(termo) {
     console.log('🌐 Buscando no servidor:', termo);
+    console.log('📍 URL da API:', `../api/buscar_associados.php?termo=${encodeURIComponent(termo)}&limit=500`);
     
     ultimaBuscaServidor = termo;
 
     try {
-        const response = await fetch(`../api/buscar_associados.php?termo=${encodeURIComponent(termo)}&limit=500`);
+        const url = `../api/buscar_associados.php?termo=${encodeURIComponent(termo)}&limit=500`;
+        console.log('🔗 Fazendo fetch para:', url);
+        
+        const response = await fetch(url);
+        
+        console.log('📡 Response status:', response.status);
+        console.log('📡 Response ok:', response.ok);
 
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}`);
         }
 
         const resultado = await response.json();
+        console.log('📦 Resposta do servidor:', resultado);
 
         // Verifica se o usuário ainda está buscando pelo mesmo termo
         const termoAtual = document.getElementById('searchInput').value.trim();
@@ -3056,9 +3066,10 @@ async function buscarNoServidor(termo) {
 
         if (resultado.status === 'success') {
             console.log(`✅ Encontrados ${resultado.dados.length} resultados no servidor`);
+            console.log('📋 Primeiros dados recebidos:', resultado.dados.slice(0, 2));
 
-            // Atualiza dados filtrados com resultados do servidor
-            associadosFiltrados = resultado.dados;
+            // Armazena resultados do servidor
+            resultadosServidor = resultado.dados;
             
             // Aplica outros filtros (situação, corporação, etc) nos resultados do servidor
             aplicarFiltros();
@@ -3069,12 +3080,14 @@ async function buscarNoServidor(termo) {
 
         } else {
             console.warn('⚠️ Erro na busca do servidor:', resultado.message);
+            resultadosServidor = null;
             // Fallback para busca local
             aplicarFiltros();
         }
 
     } catch (error) {
         console.error('❌ Erro na busca do servidor:', error);
+        resultadosServidor = null;
         // Fallback para busca local
         aplicarFiltros();
     } finally {
@@ -3098,24 +3111,42 @@ function mostrarIndicadorBusca(mostrar) {
 
 // Event listeners - INICIALIZAÇÃO ÚNICA
 document.addEventListener('DOMContentLoaded', function () {
+    console.log('📋 Inicializando event listeners da busca...');
+    
     // Adiciona listeners aos filtros
     const searchInput = document.getElementById('searchInput');
     const filterSituacao = document.getElementById('filterSituacao');
-    const filterTipoAssociado = document.getElementById('filterTipoAssociado'); // NOVO
+    const filterTipoAssociado = document.getElementById('filterTipoAssociado');
     const filterCorporacao = document.getElementById('filterCorporacao');
     const filterPatente = document.getElementById('filterPatente');
 
-
     if (searchInput) {
+        console.log('✅ Campo de busca encontrado, registrando listener');
         // Remove old listener first
         searchInput.removeEventListener('input', aplicarFiltros);
         // Add new server search listener
         searchInput.addEventListener('input', handleSearchInput);
+        console.log('✅ Listener handleSearchInput registrado');
+    } else {
+        console.error('❌ Campo searchInput não encontrado!');
     }
-    if (filterSituacao) filterSituacao.addEventListener('change', aplicarFiltros);
-    if (filterTipoAssociado) filterTipoAssociado.addEventListener('change', aplicarFiltros); // NOVO
-    if (filterCorporacao) filterCorporacao.addEventListener('change', aplicarFiltros);
-    if (filterPatente) filterPatente.addEventListener('change', aplicarFiltros);
+    
+    if (filterSituacao) {
+        filterSituacao.addEventListener('change', aplicarFiltros);
+        console.log('✅ Listener filterSituacao registrado');
+    }
+    if (filterTipoAssociado) {
+        filterTipoAssociado.addEventListener('change', aplicarFiltros);
+        console.log('✅ Listener filterTipoAssociado registrado');
+    }
+    if (filterCorporacao) {
+        filterCorporacao.addEventListener('change', aplicarFiltros);
+        console.log('✅ Listener filterCorporacao registrado');
+    }
+    if (filterPatente) {
+        filterPatente.addEventListener('change', aplicarFiltros);
+        console.log('✅ Listener filterPatente registrado');
+    }
 
     // Paginação
     const perPageSelect = document.getElementById('perPageSelect');
