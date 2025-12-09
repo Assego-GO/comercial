@@ -57,12 +57,24 @@ try {
     try {
         $db = Database::getInstance(DB_NAME_CADASTRO)->getConnection();
         
-        // Tentar buscar pelo documento primeiro
+        // Buscar da estrutura unificada: Associados + Militar
+        // Nota: associado_titular_id ainda não existe no banco
         $stmt = $db->prepare("
-            SELECT a.* 
-            FROM Socios_Agregados a
-            LEFT JOIN Documentos_Agregado d ON d.agregado_id = a.id
-            WHERE d.id = ? OR d.agregado_id = ? OR a.id = ?
+            SELECT 
+                a.id,
+                a.nome,
+                a.cpf,
+                a.situacao,
+                a.data_cadastro,
+                m.corporacao,
+                m.patente,
+                NULL as socio_titular_nome,
+                NULL as titular_cpf
+            FROM Associados a
+            LEFT JOIN Militar m ON a.id = m.associado_id
+            LEFT JOIN Documentos_Associado d ON d.associado_id = a.id
+            WHERE m.corporacao = 'Agregados'
+            AND (d.id = ? OR d.associado_id = ? OR a.id = ?)
             LIMIT 1
         ");
         $stmt->execute([$documentoId, $documentoId, $documentoId]);

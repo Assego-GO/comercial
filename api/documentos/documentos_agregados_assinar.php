@@ -96,11 +96,24 @@ try {
     $dbName = defined('DB_NAME_CADASTRO') ? DB_NAME_CADASTRO : (defined('DB_NAME') ? DB_NAME : 'wwasse_cadastro');
     $db = Database::getInstance($dbName)->getConnection();
 
-    // Buscar o agregado
+    // =====================================================
+    // BUSCAR AGREGADO NA ESTRUTURA UNIFICADA (Associados)
+    // Nota: associado_titular_id ainda não existe no banco
+    // =====================================================
     $stmt = $db->prepare("
-        SELECT id, nome, cpf, situacao, ativo, socio_titular_nome, socio_titular_cpf
-        FROM Socios_Agregados 
-        WHERE id = ?
+        SELECT 
+            a.id,
+            a.nome,
+            a.cpf,
+            a.situacao,
+            m.corporacao,
+            m.patente,
+            NULL as titular_nome,
+            NULL as titular_cpf
+        FROM Associados a
+        LEFT JOIN Militar m ON a.id = m.associado_id
+        WHERE a.id = ?
+        AND m.corporacao = 'Agregados'
     ");
     $stmt->execute([$agregadoId]);
     $agregado = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -109,11 +122,15 @@ try {
         jsonError('Agregado não encontrado com ID: ' . $agregadoId, 404);
     }
 
-    // Buscar documento existente
+    error_log("[ASSINAR_AGREGADO] Agregado encontrado: {$agregado['nome']} (ID: {$agregadoId})");
+
+    // =====================================================
+    // BUSCAR DOCUMENTO NA ESTRUTURA UNIFICADA
+    // =====================================================
     $stmt = $db->prepare("
-        SELECT id, agregado_id, status_fluxo
-        FROM Documentos_Agregado 
-        WHERE agregado_id = ?
+        SELECT id, associado_id, status_fluxo, tipo_documento
+        FROM Documentos_Associado 
+        WHERE associado_id = ?
         ORDER BY id DESC
         LIMIT 1
     ");
@@ -122,6 +139,8 @@ try {
 
     // Verificar status atual
     $statusFluxoAtual = $documento ? $documento['status_fluxo'] : null;
+
+    error_log("[ASSINAR_AGREGADO] Status atual do documento: " . ($statusFluxoAtual ?? 'SEM_DOCUMENTO'));
 
     // Se documento existe e já está ASSINADO ou FINALIZADO
     if ($documento) {
@@ -148,9 +167,9 @@ try {
             error_log("[DOCUMENTO_AGREGADO] Criando novo documento para agregado ID: {$agregadoId}");
             
             $stmt = $db->prepare("
-                INSERT INTO Documentos_Agregado 
-                (agregado_id, tipo_documento, tipo_origem, status_fluxo, departamento_atual, data_upload)
-                VALUES (?, 'FICHA_AGREGADO', 'VIRTUAL', 'ASSINADO', 1, NOW())
+                INSERT INTO Documentos_Associado 
+                (associado_id, tipo_documento, tipo_origem, status_fluxo, nome_arquivo, caminho_arquivo, verificado, data_upload)
+                VALUES (?, 'FICHA_AGREGADO', 'VIRTUAL', 'ASSINADO', 'ficha_virtual.pdf', '', 1, NOW())
             ");
             $stmt->execute([$agregadoId]);
             
@@ -158,7 +177,7 @@ try {
             
             $documento = [
                 'id' => $documentoIdNovo,
-                'agregado_id' => $agregadoId,
+                'associado_id' => $agregadoId,
                 'status_fluxo' => 'ASSINADO'
             ];
             
@@ -168,41 +187,32 @@ try {
             // 2. SE EXISTE, ATUALIZAR STATUS PARA ASSINADO
             // =====================================================
             $stmt = $db->prepare("
-                UPDATE Documentos_Agregado 
-                SET status_fluxo = 'ASSINADO'
+                UPDATE Documentos_Associado 
+                SET status_fluxo = 'ASSINADO',
+                    data_assinatura = NOW(),
+                    verificado = 1,
+                    observacoes_fluxo = CONCAT(COALESCE(observacoes_fluxo, ''), ?)
                 WHERE id = ?
             ");
-            $stmt->execute([$documento['id']]);
+            $stmt->execute([$novaObservacao . "\n", $documento['id']]);
             
             error_log("[DOCUMENTO_AGREGADO] Atualizado para ASSINADO - Doc ID: {$documento['id']}");
         }
 
         // =====================================================
-        // 3. ATUALIZAR OBSERVAÇÕES NO AGREGADO (se coluna existir)
+        // 4. COMMIT DA TRANSAÇÃO
         // =====================================================
-        try {
-            $stmt = $db->prepare("
-                UPDATE Socios_Agregados 
-                SET observacoes = CONCAT(COALESCE(observacoes, ''), '\n', ?)
-                WHERE id = ?
-            ");
-            $stmt->execute([$novaObservacao, $agregadoId]);
-        } catch (PDOException $e) {
-            // Coluna observacoes pode não existir - ignorar
-            error_log("Aviso: Coluna observacoes não existe em Socios_Agregados");
-        }
-
         $db->commit();
 
-        error_log("[AGREGADO] ASSINATURA - ID: {$agregadoId}, Nome: {$agregado['nome']}, Por: {$funcionarioNome}");
+        error_log("[AGREGADO] ASSINATURA CONCLUÍDA - ID: {$agregadoId}, Nome: {$agregado['nome']}, Por: {$funcionarioNome}");
 
         jsonSuccess('Documento assinado com sucesso! Clique em "Finalizar" para ativar o agregado.', [
             'agregado_id' => $agregadoId,
             'documento_id' => $documento['id'],
             'nome' => $agregado['nome'],
             'cpf' => $agregado['cpf'],
-            'titular_nome' => $agregado['socio_titular_nome'],
-            'titular_cpf' => $agregado['socio_titular_cpf'],
+            'titular_nome' => $agregado['titular_nome'] ?? '',
+            'titular_cpf' => $agregado['titular_cpf'] ?? '',
             'status_fluxo_anterior' => $statusFluxoAtual ?? 'NOVO',
             'status_fluxo_novo' => 'ASSINADO',
             'data_assinatura' => date('Y-m-d H:i:s'),
