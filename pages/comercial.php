@@ -1075,6 +1075,8 @@ $headerComponent = HeaderComponent::create([
                         </div>
                     </div>
 
+                    <!-- ==================== CADASTRO ONLINE - INÍCIO ==================== -->
+                    <!-- Este é o botão que redireciona para a página de gerenciamento de cadastros online -->
                     <div class="action-card" onclick="cadastrosOnline()">
                         <div class="action-icon warning">
                             <i class="fas fa-laptop"></i>
@@ -1084,6 +1086,7 @@ $headerComponent = HeaderComponent::create([
                             <p>Gerenciar cadastros realizados online</p>
                         </div>
                     </div>
+                    <!-- ==================== CADASTRO ONLINE - FIM ==================== -->
 
                     <!-- Anexos / Documentos -->
                     <div class="action-card" onclick="abrirDashboardDocumentos()">
@@ -2759,12 +2762,15 @@ $headerComponent = HeaderComponent::create([
                 }
 
 
+                // ==================== CADASTRO ONLINE - INÍCIO ====================
+                // Esta função redireciona para a página de gerenciamento de cadastros online
                 function cadastrosOnline() {
                     showToast('Carregando cadastros online...', 'info');
                     setTimeout(() => {
                         window.location.href = '../pages/cadastros_online.php';
                     }, 500);
                 }
+                // ==================== CADASTRO ONLINE - FIM ====================
 
                 function formatarTelefone(telefone) {
                     if (!telefone) return '';
