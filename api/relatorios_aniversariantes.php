@@ -23,6 +23,7 @@ function gerarRelatorioAniversariantes($parametros) {
                 m.patente,
                 m.categoria,
                 m.unidade,
+                e.cidade,
                 -- Calcular dias até o próximo aniversário
                 CASE 
                     WHEN DATE_FORMAT(a.nasc, '%m-%d') = DATE_FORMAT(CURDATE(), '%m-%d') THEN 0
@@ -40,6 +41,7 @@ function gerarRelatorioAniversariantes($parametros) {
                 END as proximo_aniversario
             FROM Associados a
             LEFT JOIN Militar m ON a.id = m.associado_id
+            LEFT JOIN Endereco e ON a.id = e.associado_id
             WHERE a.situacao = 'Filiado' 
             AND a.nasc IS NOT NULL
         ";
@@ -84,6 +86,12 @@ function gerarRelatorioAniversariantes($parametros) {
         if (!empty($parametros['corporacao'])) {
             $conditions[] = "m.corporacao = ?";
             $params[] = $parametros['corporacao'];
+        }
+        
+        // Filtro por cidade
+        if (!empty($parametros['cidade'])) {
+            $conditions[] = "e.cidade = ?";
+            $params[] = $parametros['cidade'];
         }
         
         // Filtro por situação (sempre ativo por padrão, mas permite override)
