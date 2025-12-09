@@ -114,7 +114,7 @@ try {
         $sqlBase .= "
             UNION ALL
             
-            SELECT 
+            SELECT DISTINCT
                 da.id,
                 da.associado_id,
                 da.tipo_documento,
@@ -164,6 +164,7 @@ try {
                     )
                     FROM Aprovacoes_Desfiliacao ad2 
                     WHERE ad2.documento_id = da.id
+                    ORDER BY ad2.ordem_aprovacao
                 ) AS aprovacoes_json
                 
             FROM Documentos_Associado da

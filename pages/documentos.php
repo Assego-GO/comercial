@@ -1712,8 +1712,18 @@ body {
                 if (response.status === 'success') {
                     const documentos = response.data.documentos || response.data || [];
                     
-                    // Processar documentos para identificar desfiliações
+                    // Dedupicação: remover documentos duplicados por ID
+                    const documentosUnicos = [];
+                    const idsVistos = new Set();
+                    
+                    // Processar documentos para identificar desfiliações e deduplicar
                     documentos.forEach(doc => {
+                        // Pular se já vimos este ID
+                        if (idsVistos.has(doc.id)) {
+                            return;
+                        }
+                        idsVistos.add(doc.id);
+                        
                         if (doc.origem_tabela === 'DESFILIACAO' || doc.tipo_documento === 'ficha_desfiliacao') {
                             // Processar aprovações JSON
                             if (doc.aprovacoes_json) {
@@ -1728,9 +1738,11 @@ body {
                                 }
                             }
                         }
+                        
+                        documentosUnicos.push(doc);
                     });
                     
-                    renderizarDocumentosFluxo(documentos);
+                    renderizarDocumentosFluxo(documentosUnicos);
                     
                     // NOVO: Atualizar paginação
                     if (response.paginacao) {
