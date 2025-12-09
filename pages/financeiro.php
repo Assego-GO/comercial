@@ -76,6 +76,10 @@ $permissoesDetalhadas = [
         'visualizar' => $permissoes->hasPermission('FINANCEIRO_PAGAMENTOS', 'VIEW'),
         'registrar' => $permissoes->hasPermission('FINANCEIRO_PAGAMENTOS_REGISTRAR', 'CREATE'),
         'estornar' => $permissoes->hasPermission('FINANCEIRO_PAGAMENTOS_ESTORNAR', 'DELETE')
+    ],
+    'desfiliacao' => [
+        'visualizar' => $permissoes->hasPermission('FINANCEIRO_DESFILIACAO', 'VIEW') || $isFinanceiro,
+        'aprovar' => $permissoes->hasPermission('FINANCEIRO_DESFILIACAO_APROVAR', 'APPROVE') || $isFinanceiro
     ]
 ];
 
@@ -626,6 +630,17 @@ $headerComponent = HeaderComponent::create([
             font-weight: 900;
         }
 
+        /* NEW: Desfiliações Icon */
+        .financial-nav-tabs .nav-tab .nav-tab-btn[data-target="desfiliacao-pendentes"] .nav-tab-icon {
+            background: #9333ea !important;
+        }
+
+        .financial-nav-tabs .nav-tab .nav-tab-btn[data-target="desfiliacao-pendentes"] .nav-tab-icon::before {
+            content: "\f15b";
+            font-family: "Font Awesome 6 Pro", "Font Awesome 6 Free";
+            font-weight: 900;
+        }
+
         /* Content Area */
         .financial-content {
             padding: 0 !important;
@@ -1043,6 +1058,19 @@ $headerComponent = HeaderComponent::create([
                                 </button>
                             </li>
                         <?php endif; ?>
+
+                        <!-- NEW: Desfiliações Tab -->
+                        <?php if ($permissoesDetalhadas['desfiliacao']['visualizar']): ?>
+                            <li class="nav-tab">
+                                <button class="nav-tab-btn" data-target="desfiliacao-pendentes">
+                                    <div class="nav-tab-icon"></div>
+                                    <span class="nav-tab-label">
+                                        Desfiliações
+                                        <span id="desfiliacao-badge" class="badge bg-danger" style="display: none; margin-left: 0.5rem;">0</span>
+                                    </span>
+                                </button>
+                            </li>
+                        <?php endif; ?>
                     </ul>
                 </div>
 
@@ -1094,6 +1122,16 @@ $headerComponent = HeaderComponent::create([
                             <div class="loading-spinner">
                                 <div class="spinner"></div>
                                 <p class="text-muted">Carregando verificador de associados...</p>
+                            </div>
+                        </div>
+                    <?php endif; ?>
+
+                    <!-- NEW: Desfiliações -->
+                    <?php if ($permissoesDetalhadas['desfiliacao']['visualizar']): ?>
+                        <div id="desfiliacao-pendentes" class="content-panel">
+                            <div class="loading-spinner">
+                                <div class="spinner"></div>
+                                <p class="text-muted">Carregando desfiliações pendentes...</p>
                             </div>
                         </div>
                     <?php endif; ?>
@@ -1169,7 +1207,8 @@ $headerComponent = HeaderComponent::create([
             'lista-inadimplentes': './rend/js/lista_inadimplentes.js?v=' + Date.now(),
             'neoconsig': './rend/js/neoconsig.js?v=' + Date.now(),
             'importar-asaas': './rend/js/importar_asaas.js?v=' + Date.now(),
-            'verificar-associados': './rend/js/verificar_associados.js?v=' + Date.now()
+            'verificar-associados': './rend/js/verificar_associados.js?v=' + Date.now(),
+            'desfiliacao-pendentes': './rend/js/desfiliacao_financeiro.js?v=' + Date.now()
         };
 
         // ===== HELPER PARA CARREGAR SCRIPTS =====
@@ -1255,7 +1294,8 @@ $headerComponent = HeaderComponent::create([
                     'neoconsig': permissoesUsuario.neoconsig?.visualizar,
                     'importar-asaas': permissoesUsuario.asaas?.visualizar,
                     'gestao-peculio': permissoesUsuario.peculio?.visualizar,
-                    'verificar-associados': permissoesUsuario.verificador?.visualizar // NEW
+                    'verificar-associados': permissoesUsuario.verificador?.visualizar, // NEW
+                    'desfiliacao-pendentes': permissoesUsuario.desfiliacao?.visualizar // NEW
                 };
 
                 if (!tabPermissions[tabId]) {
@@ -1306,7 +1346,8 @@ $headerComponent = HeaderComponent::create([
                     'neoconsig': 'NeoConsig',
                     'importar-asaas': 'Importar ASAAS',
                     'gestao-peculio': 'Gestão de Pecúlio',
-                    'verificar-associados': 'Verificador de Associados' // NEW
+                    'verificar-associados': 'Verificador de Associados', // NEW
+                    'desfiliacao-pendentes': 'Desfiliações Pendentes' // NEW
                 };
                 return names[tabId] || tabId;
             }
@@ -1322,6 +1363,30 @@ $headerComponent = HeaderComponent::create([
 
                 try {
                     console.log(`Carregando conteúdo da aba: ${tabId}`);
+
+                    // Tratamento especial para desfiliacao-pendentes
+                    if (tabId === 'desfiliacao-pendentes') {
+                        console.log('Carregando componente HTML de desfiliações...');
+                        const response = await fetch('/victor/comercial/components/desfiliacao_financeiro.html');
+                        if (!response.ok) {
+                            throw new Error(`HTTP ${response.status} - ${response.statusText}`);
+                        }
+                        const htmlContent = await response.text();
+                        if (spinner) spinner.style.display = 'none';
+                        panel.innerHTML = htmlContent;
+                        
+                        // Carregar o script JavaScript
+                        await loadScriptOnce(TAB_SCRIPTS[tabId]);
+                        
+                        // Executar função após script carregar
+                        if (typeof carregarDesfiliaçõesFinanceiro === 'function') {
+                            console.log('Executando carregarDesfiliaçõesFinanceiro()');
+                            carregarDesfiliaçõesFinanceiro();
+                        } else {
+                            console.warn('Função carregarDesfiliaçõesFinanceiro não encontrada');
+                        }
+                        return; // Sai da função, não precisa executar o resto
+                    }
 
                     const partialUrl = tabId === 'gestao-peculio'
                         ? '../pages/rend/gestao_peculio_content.php'
