@@ -8,440 +8,8 @@ require_once '../config/database.php';
 require_once '../classes/Database.php';
 require_once '../classes/Auth.php';
 
-/**
- * Classe para gerenciar Rate Limiting de tentativas de login
- */
-class LoginRateLimit {
-    private $maxAttempts = 100;
-    private $lockoutTime = 9; 
-    private $globalMaxAttempts = 500; 
-    private $globalLockoutTime = 18; 
-    private $minTimeBetweenAttempts = 0.5; 
-    private $dataFile;
-    private $globalFile;
-    
-    public function __construct() {
-        $dataDir = '../data/rate_limit';
-        if (!is_dir($dataDir)) {
-            mkdir($dataDir, 0755, true);
-        }
-        $this->dataFile = $dataDir . '/login_attempts.json';
-        $this->globalFile = $dataDir . '/global_attempts.json';
-    }
-    
-    private function loadAttempts() {
-        if (!file_exists($this->dataFile)) {
-            return [];
-        }
-        
-        $data = file_get_contents($this->dataFile);
-        $attempts = json_decode($data, true);
-        
-        return is_array($attempts) ? $attempts : [];
-    }
-    
-    private function saveAttempts($attempts) {
-        file_put_contents($this->dataFile, json_encode($attempts, JSON_PRETTY_PRINT));
-    }
-    
-    private function loadGlobalAttempts() {
-        if (!file_exists($this->globalFile)) {
-            return ['attempts' => 0, 'last_attempt' => 0, 'ips' => []];
-        }
-        
-        $data = file_get_contents($this->globalFile);
-        $attempts = json_decode($data, true);
-        
-        return is_array($attempts) ? $attempts : ['attempts' => 0, 'last_attempt' => 0, 'ips' => []];
-    }
-    
-    private function saveGlobalAttempts($attempts) {
-        file_put_contents($this->globalFile, json_encode($attempts, JSON_PRETTY_PRINT));
-    }
-    
-    private function recordGlobalAttempt($ip) {
-        $globalData = $this->loadGlobalAttempts();
-        $currentTime = time();
-        
-        $globalData['attempts']++;
-        $globalData['last_attempt'] = $currentTime;
-        
-        if (!in_array($ip, $globalData['ips'])) {
-            $globalData['ips'][] = $ip;
-        }
-        
-        $this->saveGlobalAttempts($globalData);
-        
-        return $globalData;
-    }
-    
-    public function isGloballyBlocked() {
-        $globalData = $this->loadGlobalAttempts();
-        $currentTime = time();
-        
-        if (($currentTime - $globalData['last_attempt']) >= $this->globalLockoutTime) {
-            if ($globalData['attempts'] >= $this->globalMaxAttempts) {
-                $globalData = ['attempts' => 0, 'last_attempt' => 0, 'ips' => []];
-                $this->saveGlobalAttempts($globalData);
-            }
-            return false;
-        }
-        
-        if ($globalData['attempts'] >= $this->globalMaxAttempts) {
-            return [
-                'blocked' => true,
-                'attempts' => $globalData['attempts'],
-                'time_remaining' => $this->globalLockoutTime - ($currentTime - $globalData['last_attempt']),
-                'unique_ips' => count($globalData['ips'])
-            ];
-        }
-        
-        return false;
-    }
-    
-    public function isTooFast($email, $ip) {
-        $attempts = $this->loadAttempts();
-        $key = $this->generateKey($email, $ip);
-        $currentTime = microtime(true);
-        
-        if (isset($attempts[$key])) {
-            $lastAttemptTime = $attempts[$key]['last_attempt_precise'] ?? $attempts[$key]['last_attempt'];
-            $timeDiff = $currentTime - $lastAttemptTime;
-            
-            if ($timeDiff < $this->minTimeBetweenAttempts) {
-                return [
-                    'too_fast' => true,
-                    'time_diff' => $timeDiff,
-                    'required_wait' => $this->minTimeBetweenAttempts - $timeDiff
-                ];
-            }
-        }
-        
-        return false;
-    }
-    
-    private function cleanExpiredAttempts($attempts) {
-        $currentTime = time();
-        $cleaned = [];
-        
-        foreach ($attempts as $key => $data) {
-            if (($currentTime - $data['last_attempt']) < $this->lockoutTime) {
-                $cleaned[$key] = $data;
-            }
-        }
-        
-        return $cleaned;
-    }
-    
-    private function generateKey($email, $ip) {
-        return md5($email . '|' . $ip);
-    }
-    
-    public function isBlocked($email, $ip) {
-        $attempts = $this->loadAttempts();
-        $attempts = $this->cleanExpiredAttempts($attempts);
-        
-        $key = $this->generateKey($email, $ip);
-        
-        if (!isset($attempts[$key])) {
-            return false;
-        }
-        
-        $userData = $attempts[$key];
-        $currentTime = time();
-        
-        if (($currentTime - $userData['last_attempt']) >= $this->lockoutTime) {
-            unset($attempts[$key]);
-            $this->saveAttempts($attempts);
-            return false;
-        }
-        
-        if ($userData['attempts'] >= $this->maxAttempts) {
-            return [
-                'blocked' => true,
-                'attempts' => $userData['attempts'],
-                'last_attempt' => $userData['last_attempt'],
-                'time_remaining' => $this->lockoutTime - ($currentTime - $userData['last_attempt'])
-            ];
-        }
-        
-        return false;
-    }
-    
-    public function recordFailedAttempt($email, $ip) {
-        $globalData = $this->recordGlobalAttempt($ip);
-        
-        $attempts = $this->loadAttempts();
-        $attempts = $this->cleanExpiredAttempts($attempts);
-        
-        $key = $this->generateKey($email, $ip);
-        $currentTime = time();
-        $preciseTime = microtime(true);
-        
-        if (!isset($attempts[$key])) {
-            $attempts[$key] = [
-                'email' => $email,
-                'ip' => $ip,
-                'attempts' => 0,
-                'first_attempt' => $currentTime,
-                'last_attempt' => $currentTime,
-                'last_attempt_precise' => $preciseTime
-            ];
-        }
-        
-        $attempts[$key]['attempts']++;
-        $attempts[$key]['last_attempt'] = $currentTime;
-        $attempts[$key]['last_attempt_precise'] = $preciseTime;
-        
-        $this->saveAttempts($attempts);
-        
-        return [
-            'attempts' => $attempts[$key]['attempts'],
-            'max_attempts' => $this->maxAttempts,
-            'remaining' => max(0, $this->maxAttempts - $attempts[$key]['attempts']),
-            'global_attempts' => $globalData['attempts'],
-            'global_max' => $this->globalMaxAttempts
-        ];
-    }
-    
-    public function clearAttempts($email, $ip) {
-        $attempts = $this->loadAttempts();
-        $key = $this->generateKey($email, $ip);
-        
-        if (isset($attempts[$key])) {
-            unset($attempts[$key]);
-            $this->saveAttempts($attempts);
-        }
-    }
-    
-    public function getAttemptInfo($email, $ip) {
-        $attempts = $this->loadAttempts();
-        $attempts = $this->cleanExpiredAttempts($attempts);
-        
-        $key = $this->generateKey($email, $ip);
-        
-        if (!isset($attempts[$key])) {
-            return [
-                'attempts' => 0,
-                'max_attempts' => $this->maxAttempts,
-                'remaining' => $this->maxAttempts
-            ];
-        }
-        
-        $userData = $attempts[$key];
-        return [
-            'attempts' => $userData['attempts'],
-            'max_attempts' => $this->maxAttempts,
-            'remaining' => max(0, $this->maxAttempts - $userData['attempts']),
-            'last_attempt' => $userData['last_attempt']
-        ];
-    }
-    
-    public static function formatTimeRemaining($seconds) {
-        if ($seconds <= 0) return '0 segundos';
-        
-        $minutes = floor($seconds / 60);
-        $remainingSeconds = $seconds % 60;
-        
-        if ($minutes > 0) {
-            return $minutes . ' minuto' . ($minutes != 1 ? 's' : '') . 
-                ($remainingSeconds > 0 ? ' e ' . $remainingSeconds . ' segundo' . ($remainingSeconds != 1 ? 's' : '') : '');
-        } else {
-            return $remainingSeconds . ' segundo' . ($remainingSeconds != 1 ? 's' : '');
-        }
-    }
-}
-
-/**
- * Classe para validação de campos honeypot (proteção contra bots)
- */
-class HoneypotValidator {
-    
-    public static function validate($postData) {
-        $errors = [];
-        
-        $honeypotFields = [
-            'username',
-            'phone',
-            'website',
-            'company',
-            'address'
-        ];
-        
-        foreach ($honeypotFields as $field) {
-            if (!empty($postData[$field])) {
-                $errors[] = "Campo {$field} foi preenchido (possível bot)";
-            }
-        }
-        
-        $formTime = $postData['form_time'] ?? '';
-        if (empty($formTime)) {
-            $errors[] = "Campo de tempo não encontrado";
-        } else {
-            $submitTime = time();
-            $timeDiff = $submitTime - (int)$formTime;
-            
-            if ($timeDiff < 3) {
-                $errors[] = "Formulário preenchido muito rapidamente ({$timeDiff}s)";
-            }
-            
-            if ($timeDiff > 3600) {
-                $errors[] = "Formulário expirado (mais de 1 hora)";
-            }
-        }
-        
-        $jsEnabled = $postData['js_enabled'] ?? '';
-        if ($jsEnabled !== '1') {
-            $errors[] = "JavaScript não está habilitado ou campo não foi preenchido";
-        }
-        
-        return [
-            'valid' => empty($errors),
-            'errors' => $errors,
-            'is_bot' => !empty($errors)
-        ];
-    }
-    
-    public static function generateToken() {
-        return bin2hex(random_bytes(16));
-    }
-    
-    public static function validateToken($token, $sessionToken) {
-        return !empty($token) && !empty($sessionToken) && hash_equals($sessionToken, $token);
-    }
-}
-
-class TurnstileValidator {
-    
-    private $secretKey;
-    private $verifyUrl = 'https://challenges.cloudflare.com/turnstile/v0/siteverify';
-    
-    public function __construct($secretKey = null) {
-        $this->secretKey = $secretKey ?: CLOUDFLARE_TURNSTILE_SECRET_KEY;
-    }
-    
-    public function verify($token, $remoteIp = null) {
-        if (empty($token)) {
-            return [
-                'success' => false,
-                'message' => 'Token do Turnstile não fornecido.',
-                'error_codes' => ['missing-input-response']
-            ];
-        }
-        
-        $postData = [
-            'secret' => $this->secretKey,
-            'response' => $token,
-        ];
-        
-        if ($remoteIp) {
-            $postData['remoteip'] = $remoteIp;
-        }
-        
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $this->verifyUrl);
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($postData));
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, [
-            'Content-Type: application/x-www-form-urlencoded'
-        ]);
-        
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $curlError = curl_error($ch);
-        curl_close($ch);
-        
-        if ($curlError) {
-            return [
-                'success' => false,
-                'message' => 'Erro na comunicação com o Turnstile: ' . $curlError,
-                'error_codes' => ['curl-error']
-            ];
-        }
-        
-        if ($httpCode !== 200) {
-            return [
-                'success' => false,
-                'message' => 'Erro HTTP na verificação do Turnstile: ' . $httpCode,
-                'error_codes' => ['http-error-' . $httpCode]
-            ];
-        }
-        
-        $result = json_decode($response, true);
-        
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            return [
-                'success' => false,
-                'message' => 'Resposta inválida do Turnstile.',
-                'error_codes' => ['invalid-json']
-            ];
-        }
-        
-        if ($result['success']) {
-            return [
-                'success' => true,
-                'message' => 'Verificação do Turnstile bem-sucedida.',
-                'challenge_ts' => $result['challenge_ts'] ?? null,
-                'hostname' => $result['hostname'] ?? null
-            ];
-        } else {
-            $errorCodes = $result['error-codes'] ?? ['unknown-error'];
-            $errorMessage = $this->getErrorMessage($errorCodes);
-            
-            return [
-                'success' => false,
-                'message' => $errorMessage,
-                'error_codes' => $errorCodes
-            ];
-        }
-    }
-    
-    private function getErrorMessage($errorCodes) {
-        $messages = [
-            'missing-input-secret' => 'Chave secreta não configurada.',
-            'invalid-input-secret' => 'Chave secreta inválida.',
-            'missing-input-response' => 'Token de verificação não fornecido.',
-            'invalid-input-response' => 'Token de verificação inválido.',
-            'bad-request' => 'Requisição mal formada.',
-            'timeout-or-duplicate' => 'Token expirado ou já utilizado.',
-            'internal-error' => 'Erro interno do Turnstile.',
-            'unknown-error' => 'Erro desconhecido na verificação.'
-        ];
-        
-        $userMessages = [];
-        foreach ($errorCodes as $code) {
-            $userMessages[] = $messages[$code] ?? 'Erro de verificação: ' . $code;
-        }
-        
-        return implode(' ', $userMessages);
-    }
-    
-    public static function isConfigured() {
-        return !empty(CLOUDFLARE_TURNSTILE_SITE_KEY) && 
-            !empty(CLOUDFLARE_TURNSTILE_SECRET_KEY) &&
-            CLOUDFLARE_TURNSTILE_SITE_KEY !== 'your_site_key_here' &&
-            CLOUDFLARE_TURNSTILE_SECRET_KEY !== 'your_secret_key_here';
-    }
-}
-
 // Inicializar classes
 $auth = new Auth();
-$rateLimit = new LoginRateLimit();
-
-// Inicializar sessão para honeypot
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
-
-// Gerar token para honeypot se não existir
-if (!isset($_SESSION['honeypot_token'])) {
-    $_SESSION['honeypot_token'] = HoneypotValidator::generateToken();
-}
-
-// Se já estiver logado, redirecionar
 if ($auth->isLoggedIn()) {
     header('Location: ' . BASE_URL . '/pages/dashboard.php');
     exit;
@@ -480,94 +48,25 @@ if (isset($_GET['mensagem']) && isset($_GET['tipo'])) {
 // Processar login
 $erro = '';
 $sucesso = '';
-$userIP = $_SERVER['REMOTE_ADDR'];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = filter_input(INPUT_POST, 'email', FILTER_SANITIZE_EMAIL);
     $senha = $_POST['senha'] ?? '';
     $lembrar = isset($_POST['lembrar']);
-    $turnstileToken = $_POST['cf-turnstile-response'] ?? '';
-    $honeypotToken = $_POST['honeypot_token'] ?? '';
     
     if (empty($email) || empty($senha)) {
         $erro = 'Por favor, preencha todos os campos.';
     } else {
-        // Validar honeypot primeiro
-        $honeypotResult = HoneypotValidator::validate($_POST);
+        $resultado = $auth->login($email, $senha);
         
-        if (!$honeypotResult['valid']) {
-            error_log("Possível bot detectado no login - IP: {$userIP}, Email: {$email}, Erros: " . implode(', ', $honeypotResult['errors']));
-            
-            $attemptInfo = $rateLimit->recordFailedAttempt($email, $userIP);
-            
-            $erro = 'Erro na validação do formulário. Tente novamente.';
-            
-            if (count($honeypotResult['errors']) > 2) {
-                $bannedIpsFile = '../data/rate_limit/banned_ips.json';
-                $bannedIps = [];
-                if (file_exists($bannedIpsFile)) {
-                    $bannedIps = json_decode(file_get_contents($bannedIpsFile), true) ?: [];
-                }
-                
-                $bannedIps[$userIP] = [
-                    'banned_at' => time(),
-                    'reason' => 'Honeypot detection',
-                    'errors' => $honeypotResult['errors']
-                ];
-                
-                file_put_contents($bannedIpsFile, json_encode($bannedIps, JSON_PRETTY_PRINT));
-            }
+        if ($resultado['success']) {
+            $redirect = $_GET['redirect'] ?? BASE_URL . '/pages/dashboard.php';
+            header('Location: ' . $redirect);
+            exit;
         } else {
-            if (!HoneypotValidator::validateToken($honeypotToken, $_SESSION['honeypot_token'])) {
-                $erro = 'Token de segurança inválido. Recarregue a página.';
-            } else {
-                $blockStatus = $rateLimit->isBlocked($email, $userIP);
-                
-                if ($blockStatus && $blockStatus['blocked']) {
-                    $timeRemaining = LoginRateLimit::formatTimeRemaining($blockStatus['time_remaining']);
-                    $erro = "Muitas tentativas de login falhadas. Tente novamente em {$timeRemaining}. " .
-                        "({$blockStatus['attempts']} tentativas registradas)";
-                } else {
-                    $turnstileValidator = new TurnstileValidator();
-                    $turnstileResult = $turnstileValidator->verify($turnstileToken, $userIP);
-                    
-                    if (!$turnstileResult['success']) {
-                        $erro = 'Verificação de segurança falhou: ' . $turnstileResult['message'];
-                        
-                        $attemptInfo = $rateLimit->recordFailedAttempt($email, $userIP);
-                        if ($attemptInfo['remaining'] > 0) {
-                            $erro .= " (Restam {$attemptInfo['remaining']} tentativas)";
-                        }
-                    } else {
-                        $resultado = $auth->login($email, $senha);
-                        
-                        if ($resultado['success']) {
-                            $rateLimit->clearAttempts($email, $userIP);
-                            $_SESSION['honeypot_token'] = HoneypotValidator::generateToken();
-                            
-                            $redirect = $_GET['redirect'] ?? BASE_URL . '/pages/dashboard.php';
-                            header('Location: ' . $redirect);
-                            exit;
-                        } else {
-                            $attemptInfo = $rateLimit->recordFailedAttempt($email, $userIP);
-                            
-                            if ($attemptInfo['remaining'] > 0) {
-                                $erro = $resultado['message'] . " (Restam {$attemptInfo['remaining']} tentativas)";
-                            } else {
-                                $erro = "Credenciais inválidas. Você atingiu o limite de tentativas e foi temporariamente bloqueado por 15 minutos.";
-                            }
-                        }
-                    }
-                }
-            }
+            $erro = $resultado['message'];
         }
     }
-}
-
-// Obter informações atuais de tentativas para exibir aviso se necessário
-$currentAttempts = null;
-if (!empty($_POST['email'])) {
-    $currentAttempts = $rateLimit->getAttemptInfo($_POST['email'], $userIP);
 }
 ?>
 <!DOCTYPE html>
@@ -591,17 +90,6 @@ if (!empty($_POST['email'])) {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-        }
-
-        /* Honeypot - campos ocultos */
-        .honeypot {
-            position: absolute !important;
-            left: -9999px !important;
-            top: -9999px !important;
-            visibility: hidden !important;
-            opacity: 0 !important;
-            width: 0 !important;
-            height: 0 !important;
         }
 
         html, body {
@@ -869,17 +357,6 @@ if (!empty($_POST['email'])) {
             color: #6b7280;
         }
 
-        /* Turnstile */
-        .turnstile-container {
-            background: #f9fafb;
-            border: 1px solid #e5e7eb;
-            border-radius: 8px;
-            padding: 1rem;
-            display: flex;
-            justify-content: center;
-            margin-bottom: 1.25rem;
-        }
-
         /* Opções do formulário */
         .form-options {
             display: flex;
@@ -1122,32 +599,7 @@ if (!empty($_POST['email'])) {
                 </div>
             <?php endif; ?>
             
-            <?php if ($currentAttempts && $currentAttempts['attempts'] > 0 && !$erro): ?>
-                <div class="alert alert-warning" role="alert">
-                    <svg fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
-                    </svg>
-                    <span>
-                        Atenção: <?php echo $currentAttempts['attempts']; ?> tentativa(s) de login registrada(s). 
-                        Restam <?php echo $currentAttempts['remaining']; ?> tentativa(s) antes do bloqueio temporário.
-                    </span>
-                </div>
-            <?php endif; ?>
-            
             <form method="POST" action="" id="loginForm">
-                <!-- Campos Honeypot -->
-                <div class="honeypot">
-                    <input type="text" name="username" tabindex="-1" autocomplete="off">
-                    <input type="tel" name="phone" tabindex="-1" autocomplete="off">
-                    <input type="url" name="website" tabindex="-1" autocomplete="off">
-                    <input type="text" name="company" tabindex="-1" autocomplete="off">
-                    <input type="text" name="address" tabindex="-1" autocomplete="off">
-                </div>
-                
-                <input type="hidden" name="form_time" value="<?php echo time(); ?>">
-                <input type="hidden" name="js_enabled" id="js_enabled" value="0">
-                <input type="hidden" name="honeypot_token" value="<?php echo $_SESSION['honeypot_token']; ?>">
-                
                 <!-- Email -->
                 <div class="form-group">
                     <div class="input-wrapper">
@@ -1179,20 +631,6 @@ if (!empty($_POST['email'])) {
                     </div>
                 </div>
                 
-                <!-- Turnstile -->
-                <div class="form-group">
-                    <div class="turnstile-container">
-                        <div class="cf-turnstile" 
-                            data-sitekey="<?php echo CLOUDFLARE_TURNSTILE_SITE_KEY; ?>"
-                            data-theme="light"
-                            data-size="normal"
-                            data-callback="onTurnstileSuccess"
-                            data-error-callback="onTurnstileError"
-                            data-expired-callback="onTurnstileExpired">
-                        </div>
-                    </div>
-                </div>
-                
                 <!-- Opções -->
                 <div class="form-options">
                     <div class="checkbox-wrapper">
@@ -1205,7 +643,7 @@ if (!empty($_POST['email'])) {
                 </div>
                 
                 <!-- Botão -->
-                <button type="submit" id="submitBtn" class="submit-btn" disabled>
+                <button type="submit" id="submitBtn" class="submit-btn">
                     Entrar
                 </button>
             </form>
@@ -1231,7 +669,6 @@ if (!empty($_POST['email'])) {
     </div>
     
     <script>
-        let turnstileVerified = false;
         let backgroundTransitionInterval = null;
         
         // Função para alternar as imagens de fundo - CORRIGIDA
@@ -1411,11 +848,6 @@ if (!empty($_POST['email'])) {
             }
         }
 
-        // JavaScript habilitado
-        document.addEventListener('DOMContentLoaded', function() {
-            document.getElementById('js_enabled').value = '1';
-        });
-        
         // Controle único de loading e inicialização - CORRIGIDO
         window.addEventListener('load', () => {
             setTimeout(() => {
@@ -1427,30 +859,8 @@ if (!empty($_POST['email'])) {
             }, 3000);
         });
         
-        // Callbacks do Turnstile
-        function onTurnstileSuccess(token) {
-            turnstileVerified = true;
-            document.getElementById('submitBtn').disabled = false;
-        }
-        
-        function onTurnstileError(error) {
-            turnstileVerified = false;
-            document.getElementById('submitBtn').disabled = true;
-        }
-        
-        function onTurnstileExpired() {
-            turnstileVerified = false;
-            document.getElementById('submitBtn').disabled = true;
-        }
-        
         // Validação do formulário
         document.getElementById('loginForm').addEventListener('submit', function(e) {
-            if (!turnstileVerified) {
-                e.preventDefault();
-                alert('Complete a verificação de segurança');
-                return false;
-            }
-            
             document.getElementById('loadingOverlay').classList.add('active');
             document.getElementById('submitBtn').classList.add('loading');
         });
