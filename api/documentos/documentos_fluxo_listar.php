@@ -172,19 +172,20 @@ try {
             AND da.deletado = 0";
     }
     
-    $sql = $sqlBase;
+    // Envolver UNION em subquery para permitir filtros
+    $sql = "SELECT * FROM (" . $sqlBase . ") AS todos_documentos WHERE 1=1";
 
     $params = [];
 
     // Filtro por status
     if (!empty($status)) {
-        $sql .= " AND df.status_fluxo = :status";
+        $sql .= " AND status_fluxo = :status";
         $params[':status'] = $status;
     }
 
     // Filtro por busca (nome ou CPF)
     if (!empty($busca)) {
-        $sql .= " AND (a.nome LIKE :busca OR a.cpf LIKE :busca_cpf)";
+        $sql .= " AND (associado_nome LIKE :busca OR associado_cpf LIKE :busca_cpf)";
         $params[':busca'] = '%' . $busca . '%';
         $params[':busca_cpf'] = '%' . preg_replace('/\D/', '', $busca) . '%';
     }
@@ -193,19 +194,19 @@ try {
     if (!empty($periodo)) {
         switch ($periodo) {
             case 'hoje':
-                $sql .= " AND DATE(df.data_upload) = CURDATE()";
+                $sql .= " AND DATE(data_upload) = CURDATE()";
                 break;
             case 'semana':
-                $sql .= " AND df.data_upload >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)";
+                $sql .= " AND data_upload >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)";
                 break;
             case 'mes':
-                $sql .= " AND df.data_upload >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)";
+                $sql .= " AND data_upload >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)";
                 break;
         }
     }
 
     // Ordenação e paginação
-    $sql .= " ORDER BY df.data_upload DESC";
+    $sql .= " ORDER BY data_upload DESC";
     $sql .= " LIMIT " . intval($limit) . " OFFSET " . intval($offset);
 
     // Executar query
@@ -213,13 +214,17 @@ try {
     $stmt->execute($params);
     $documentos = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Contar total
-    $sqlCount = "SELECT COUNT(*) as total FROM DocumentosFluxo";
+    // Contar total (incluindo desfiliações)
+    $sqlCountBase = "SELECT COUNT(*) as total FROM DocumentosFluxo";
+    if ($tipoDocumento !== 'FILIACAO') {
+        $sqlCountBase .= " UNION ALL SELECT COUNT(*) as total FROM Documentos_Associado WHERE tipo_documento = 'ficha_desfiliacao' AND deletado = 0";
+    }
+    $sqlCount = "SELECT SUM(total) as total FROM (" . $sqlCountBase . ") AS counts";
     $stmtCount = $db->query($sqlCount);
     $totalRow = $stmtCount->fetch(PDO::FETCH_ASSOC);
     $total = $totalRow['total'] ?? 0;
 
-    // Estatísticas por status
+    // Estatísticas por status (só filiações por enquanto)
     $sqlStats = "SELECT status_fluxo, COUNT(*) as total FROM DocumentosFluxo GROUP BY status_fluxo";
     $stmtStats = $db->query($sqlStats);
     $estatisticas = $stmtStats->fetchAll(PDO::FETCH_ASSOC);
