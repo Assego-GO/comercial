@@ -636,7 +636,10 @@ body {
 
 /* Modal Container */
 .modal-custom {
-    display: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
     position: fixed;
     top: 0;
     left: 0;
@@ -645,14 +648,16 @@ body {
     background: rgba(0, 0, 0, 0.5);
     z-index: 1050;
     overflow-y: auto;
-    animation: fadeIn 0.3s ease;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+    pointer-events: none;
 }
 
 .modal-custom.show {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 2rem;
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
 }
 
 .modal-content-custom {
@@ -663,7 +668,8 @@ body {
     max-height: 90vh;
     overflow: hidden;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
-    animation: slideUp 0.3s ease;
+    transform: translateY(0);
+    transition: transform 0.3s ease, opacity 0.3s ease;
     display: flex;
     flex-direction: column;
     position: relative;
