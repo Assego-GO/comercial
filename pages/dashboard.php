@@ -672,7 +672,7 @@ $headerComponent = HeaderComponent::create([
                             <span>Cancelar</span>
                         </button>
                     </div>
-                    <button class="modal-close-custom" onclick="fecharModal()">
+                    <button class="modal-close-custom" onclick="event.stopPropagation(); fecharModal();">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
