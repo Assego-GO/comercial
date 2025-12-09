@@ -252,6 +252,64 @@ class Documentos
             // Log da aprovação automática
             error_log("✅ Associado ID {$documento['associado_id']} aprovado automaticamente pela assinatura da presidência");
 
+            // ✅ SE FOR DESFILIAÇÃO, REGISTRAR APROVAÇÃO FINAL
+            error_log("DEBUG - Tipo documento: " . ($documento['tipo_documento'] ?? 'NULL'));
+            
+            if (isset($documento['tipo_documento']) && $documento['tipo_documento'] === 'ficha_desfiliacao') {
+                error_log("✅ DETECTADO documento de desfiliação - ID: $documentoId");
+                
+                // Verificar se existe registro em Aprovacoes_Desfiliacao para Presidência
+                $stmtCheck = $this->db->prepare("
+                    SELECT id FROM Aprovacoes_Desfiliacao 
+                    WHERE documento_id = ? AND departamento_id = 1
+                ");
+                $stmtCheck->execute([$documentoId]);
+                $aprovacaoExiste = $stmtCheck->fetch();
+
+                $funcionarioId = $_SESSION['funcionario_id'] ?? $_SESSION['user_id'] ?? null;
+
+                if ($aprovacaoExiste) {
+                    // UPDATE do registro existente
+                    error_log("✅ Atualizando aprovação existente ID {$aprovacaoExiste['id']} para documento $documentoId");
+                    
+                    $stmtUpdate = $this->db->prepare("
+                        UPDATE Aprovacoes_Desfiliacao 
+                        SET status_aprovacao = 'APROVADO',
+                            funcionario_id = ?,
+                            data_acao = NOW(),
+                            observacao = ?
+                        WHERE id = ?
+                    ");
+                    
+                    $stmtUpdate->execute([
+                        $funcionarioId,
+                        "Desfiliação aprovada e assinada pela Presidência",
+                        $aprovacaoExiste['id']
+                    ]);
+                    
+                    error_log("✅ Desfiliação documento $documentoId ATUALIZADA para APROVADO");
+                } else {
+                    // INSERT novo registro
+                    error_log("✅ Criando nova aprovação de presidência para documento $documentoId");
+                    
+                    $stmtAprovacao = $this->db->prepare("
+                        INSERT INTO Aprovacoes_Desfiliacao 
+                        (documento_id, departamento_id, ordem_aprovacao, status_aprovacao, funcionario_id, data_acao, observacao)
+                        VALUES (?, 1, 3, 'APROVADO', ?, NOW(), ?)
+                    ");
+                    
+                    $stmtAprovacao->execute([
+                        $documentoId,
+                        $funcionarioId,
+                        "Desfiliação aprovada e assinada pela Presidência"
+                    ]);
+                    
+                    error_log("✅ Desfiliação documento $documentoId INSERIDA como APROVADO");
+                }
+            } else {
+                error_log("ℹ️ Documento $documentoId NÃO é desfiliação");
+            }
+
             // Registrar no histórico
             $this->registrarHistoricoFluxo(
                 $documentoId,
