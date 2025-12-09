@@ -1367,7 +1367,7 @@ $headerComponent = HeaderComponent::create([
                     // Tratamento especial para desfiliacao-pendentes
                     if (tabId === 'desfiliacao-pendentes') {
                         console.log('Carregando componente HTML de desfiliações...');
-                        const response = await fetch('/victor/comercial/components/desfiliacao_financeiro.html');
+                        const response = await fetch('./rend/desfiliacao_financeiro_content.php');
                         if (!response.ok) {
                             throw new Error(`HTTP ${response.status} - ${response.statusText}`);
                         }
