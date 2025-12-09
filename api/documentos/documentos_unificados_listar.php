@@ -154,6 +154,7 @@ try {
     $query = "
         SELECT 
             da.id,
+            da.tipo_documento as tipo_documento_real,
             CASE 
                 WHEN m.corporacao = 'Agregados' THEN 'AGREGADO'
                 ELSE 'SOCIO'
@@ -170,6 +171,7 @@ try {
                 ELSE NULL
             END as parentesco,
             CASE 
+                WHEN da.tipo_documento = 'ficha_desfiliacao' THEN 'Ficha de Desfiliação'
                 WHEN m.corporacao = 'Agregados' THEN 'Ficha de Sócio Agregado'
                 ELSE 'Ficha de Filiação'
             END as tipo_descricao,
