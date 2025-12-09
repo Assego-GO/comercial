@@ -164,7 +164,6 @@ try {
         FROM DocumentosFluxo df
         INNER JOIN Associados a ON df.associado_id = a.id
         LEFT JOIN Militar m ON a.id = m.associado_id
-        LEFT JOIN Associados titular ON a.associado_titular_id = titular.id
         WHERE $whereClause
     ";
     
@@ -195,9 +194,9 @@ try {
             a.email,
             a.situacao,
             a.rg,
-            a.associado_titular_id as titular_id,
-            titular.nome as titular_nome,
-            titular.cpf as titular_cpf,
+            NULL as titular_id,
+            NULL as titular_nome,
+            NULL as titular_cpf,
             CASE 
                 WHEN m.corporacao = 'Agregados' THEN 'Agregado'
                 ELSE NULL
@@ -224,7 +223,6 @@ try {
         FROM DocumentosFluxo df
         INNER JOIN Associados a ON df.associado_id = a.id
         LEFT JOIN Militar m ON a.id = m.associado_id
-        LEFT JOIN Associados titular ON a.associado_titular_id = titular.id
         LEFT JOIN Departamentos dept ON df.departamento_atual = dept.id
         LEFT JOIN Funcionarios f ON df.funcionario_upload = f.id
         WHERE $whereClause
