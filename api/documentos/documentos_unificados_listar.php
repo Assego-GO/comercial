@@ -1,9 +1,8 @@
 <?php
 /**
- * API Unificada - Listar Documentos (Sócios e Agregados)
- * api/documentos/documentos_unificados_listar.php
- * 
- * VERSÃO 3.1 - Corrigido ID do documento de agregados
+ * API Unificada - Listar Documentos de Associados
+ * VERSÃO 5.0 - Usa DocumentosFluxo (igual ao dashboard principal)
+ * Agregados identificados por Militar.corporacao = 'Agregados'
  */
 
 ini_set('display_errors', 0);
@@ -15,7 +14,6 @@ header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, X-Requested-With');
 
-// Flag de debug - mude para true para ver detalhes dos erros
 $DEBUG = false;
 
 function jsonError($message, $code = 500, $debug = null) {
@@ -88,334 +86,183 @@ try {
     $status = strtoupper(trim($_GET['status'] ?? ''));
     $busca = trim($_GET['busca'] ?? '');
     $periodo = trim($_GET['periodo'] ?? '');
+    
+    // Debug - log dos parâmetros recebidos
+    error_log("API Documentos - Busca: '$busca', Tipo: '$tipo', Status: '$status', Periodo: '$periodo'");
 
     // Conexão
-    $dbName = defined('DB_NAME') ? DB_NAME : (defined('DB_DATABASE') ? DB_DATABASE : 'wwasse_cadastro');
+    $dbName = defined('DB_NAME') ? constant('DB_NAME') : (defined('DB_DATABASE') ? constant('DB_DATABASE') : 'wwasse_cadastro');
     $db = Database::getInstance($dbName);
     $conn = $db->getConnection();
 
-    // ===== VERIFICAR QUAIS TABELAS EXISTEM =====
-    $tabelaSociosExiste = false;
-    $tabelaAgregadosExiste = false;
-    $tabelaDocAgregadoExiste = false;
+    // ===== MONTAR FILTROS COM NAMED PARAMETERS =====
+    $where = ["1=1"];
+    $params = [];
+
+    // Filtro por tipo (Agregado vs Sócio)
+    if ($tipo === 'AGREGADO') {
+        $where[] = "m.corporacao = 'Agregados'";
+    } elseif ($tipo === 'SOCIO') {
+        $where[] = "(m.corporacao IS NULL OR m.corporacao != 'Agregados')";
+    }
+
+    // Filtro por status
+    if (!empty($status)) {
+        $where[] = "df.status_fluxo = :status";
+        $params[':status'] = $status;
+    }
+
+    // Filtro por busca (nome ou CPF ou RG) - USANDO NAMED PARAMS
+    if (!empty($busca)) {
+        $buscaLike = "%" . $busca . "%";
+        $buscaNumeros = preg_replace('/\D/', '', $busca);
+        
+        // Montar condições de busca dinamicamente
+        $buscaConditions = ["a.nome LIKE :busca_nome"];
+        $params[':busca_nome'] = $buscaLike;
+        
+        // Só buscar por CPF se tiver números na busca
+        if (!empty($buscaNumeros)) {
+            $buscaConditions[] = "a.cpf LIKE :busca_cpf";
+            $params[':busca_cpf'] = "%" . $buscaNumeros . "%";
+        }
+        
+        // RG pode ter letras, então sempre busca
+        $buscaConditions[] = "a.rg LIKE :busca_rg";
+        $params[':busca_rg'] = $buscaLike;
+        
+        $where[] = "(" . implode(" OR ", $buscaConditions) . ")";
+        error_log("BUSCA APLICADA: '$busca' -> condições: " . implode(", ", $buscaConditions));
+    } else {
+        error_log("BUSCA VAZIA - busca='$busca', empty=" . (empty($busca) ? 'true' : 'false'));
+    }
+
+    // Filtro por período
+    if (!empty($periodo)) {
+        switch ($periodo) {
+            case 'hoje':
+                $where[] = "DATE(df.data_upload) = CURDATE()";
+                break;
+            case 'semana':
+                $where[] = "df.data_upload >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)";
+                break;
+            case 'mes':
+                $where[] = "df.data_upload >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)";
+                break;
+        }
+    }
+
+    $whereClause = implode(" AND ", $where);
     
-    try {
-        $conn->query("SELECT 1 FROM Documentos_Associado LIMIT 1");
-        $tabelaSociosExiste = true;
-    } catch (PDOException $e) {}
+    // Debug: mostrar query e params
+    error_log("WHERE: $whereClause");
+    error_log("PARAMS: " . json_encode($params));
+
+    // ===== CONTAR TOTAL - USANDO bindValue EXPLÍCITO =====
+    $queryCount = "
+        SELECT COUNT(*) as total
+        FROM DocumentosFluxo df
+        INNER JOIN Associados a ON df.associado_id = a.id
+        LEFT JOIN Militar m ON a.id = m.associado_id
+        LEFT JOIN Associados titular ON a.associado_titular_id = titular.id
+        WHERE $whereClause
+    ";
     
-    try {
-        $conn->query("SELECT 1 FROM Socios_Agregados LIMIT 1");
-        $tabelaAgregadosExiste = true;
-    } catch (PDOException $e) {}
-
-    try {
-        $conn->query("SELECT 1 FROM Documentos_Agregado LIMIT 1");
-        $tabelaDocAgregadoExiste = true;
-    } catch (PDOException $e) {}
-
-    if (!$tabelaSociosExiste && !$tabelaAgregadosExiste) {
-        jsonError('Nenhuma tabela de documentos encontrada', 500);
+    $stmtCount = $conn->prepare($queryCount);
+    
+    // Bind cada parâmetro explicitamente
+    foreach ($params as $key => $value) {
+        $stmtCount->bindValue($key, $value, PDO::PARAM_STR);
     }
+    
+    $stmtCount->execute();
+    $totalRegistros = (int) $stmtCount->fetch(PDO::FETCH_ASSOC)['total'];
+    
+    // Debug total
+    $debugTotal = $totalRegistros;
 
-    // ===== DECIDIR QUAL QUERY USAR =====
-    $usarSocios = $tabelaSociosExiste && ($tipo === '' || $tipo === 'SOCIO');
-    $usarAgregados = $tabelaAgregadosExiste && ($tipo === '' || $tipo === 'AGREGADO');
-
-    // Preparar valores de busca uma vez só
-    $buscaLike = !empty($busca) ? "%" . $busca . "%" : null;
-    $buscaCpf = !empty($busca) ? "%" . preg_replace('/\D/', '', $busca) . "%" : null;
-
-    // ===== FUNÇÃO PARA MONTAR WHERE E PARAMS DE SÓCIOS =====
-    function montarFiltrosSocios($status, $buscaLike, $buscaCpf, $periodo) {
-        $where = ["1=1"];
-        $params = [];
-        
-        if (!empty($status)) {
-            $where[] = "da.status_fluxo = ?";
-            $params[] = $status;
-        }
-        
-        if ($buscaLike !== null) {
-            $where[] = "(a.nome LIKE ? OR a.cpf LIKE ?)";
-            $params[] = $buscaLike;
-            $params[] = $buscaCpf;
-        }
-        
-        if (!empty($periodo)) {
-            switch ($periodo) {
-                case 'hoje':
-                    $where[] = "DATE(da.data_upload) = CURDATE()";
-                    break;
-                case 'semana':
-                    $where[] = "da.data_upload >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)";
-                    break;
-                case 'mes':
-                    $where[] = "da.data_upload >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)";
-                    break;
-            }
-        }
-        
-        return ['where' => implode(" AND ", $where), 'params' => $params];
+    // ===== BUSCAR DOCUMENTOS PAGINADOS =====
+    $query = "
+        SELECT 
+            df.id,
+            CASE 
+                WHEN m.corporacao = 'Agregados' THEN 'AGREGADO'
+                ELSE 'SOCIO'
+            END as tipo_documento,
+            a.id as pessoa_id,
+            a.nome,
+            a.cpf,
+            a.email,
+            a.situacao,
+            a.rg,
+            a.associado_titular_id as titular_id,
+            titular.nome as titular_nome,
+            titular.cpf as titular_cpf,
+            CASE 
+                WHEN m.corporacao = 'Agregados' THEN 'Agregado'
+                ELSE NULL
+            END as parentesco,
+            df.tipo_descricao,
+            df.status_fluxo,
+            CASE df.status_fluxo
+                WHEN 'DIGITALIZADO' THEN 'Aguardando Envio'
+                WHEN 'AGUARDANDO_ASSINATURA' THEN 'Na Presidência'
+                WHEN 'ASSINADO' THEN 'Assinado - Aguardando Finalização'
+                WHEN 'FINALIZADO' THEN 'Finalizado'
+                ELSE df.status_fluxo
+            END as status_descricao,
+            df.data_upload,
+            df.caminho_arquivo,
+            df.nome_arquivo,
+            df.tipo_mime,
+            df.tamanho_arquivo,
+            COALESCE(dept.nome, 'Comercial') as departamento_atual_nome,
+            DATEDIFF(CURDATE(), df.data_upload) as dias_em_processo,
+            m.corporacao,
+            m.patente,
+            f.nome as funcionario_upload
+        FROM DocumentosFluxo df
+        INNER JOIN Associados a ON df.associado_id = a.id
+        LEFT JOIN Militar m ON a.id = m.associado_id
+        LEFT JOIN Associados titular ON a.associado_titular_id = titular.id
+        LEFT JOIN Departamentos dept ON df.departamento_atual = dept.id
+        LEFT JOIN Funcionarios f ON df.funcionario_upload = f.id
+        WHERE $whereClause
+        ORDER BY df.data_upload DESC
+        LIMIT $porPagina OFFSET $offset
+    ";
+    
+    $stmt = $conn->prepare($query);
+    
+    // Bind cada parâmetro explicitamente (igual ao count)
+    foreach ($params as $key => $value) {
+        $stmt->bindValue($key, $value, PDO::PARAM_STR);
     }
+    
+    $stmt->execute();
+    $documentos = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // ===== FUNÇÃO PARA MONTAR WHERE E PARAMS DE AGREGADOS =====
-    function montarFiltrosAgregados($status, $buscaLike, $buscaCpf, $periodo, $tabelaDocAgregadoExiste) {
-        $where = ["1=1"];
-        $params = [];
-        
-        if (!empty($status)) {
-            if ($tabelaDocAgregadoExiste) {
-                // Se tem tabela de documentos, usar o status_fluxo dela ou fallback para situacao
-                if ($status === 'AGUARDANDO_ASSINATURA') {
-                    // Apenas documentos aguardando assinatura OU agregados sem documento e pendentes
-                    $where[] = "(dag.status_fluxo = 'AGUARDANDO_ASSINATURA' OR (dag.id IS NULL AND sa.situacao = 'pendente'))";
-                } elseif ($status === 'ASSINADO') {
-                    // Documentos assinados aguardando finalização
-                    $where[] = "dag.status_fluxo = 'ASSINADO'";
-                } elseif ($status === 'FINALIZADO') {
-                    // Documentos finalizados OU agregados ativos
-                    $where[] = "(dag.status_fluxo = 'FINALIZADO' OR (dag.id IS NULL AND sa.situacao = 'ativo'))";
-                } elseif ($status === 'DIGITALIZADO') {
-                    $where[] = "dag.status_fluxo = 'DIGITALIZADO'";
-                }
-            } else {
-                // Sem tabela de documentos, usar situacao do agregado
-                if ($status === 'AGUARDANDO_ASSINATURA') {
-                    $where[] = "sa.situacao = 'pendente'";
-                } elseif ($status === 'ASSINADO') {
-                    // Agregados não têm status intermediário sem tabela de docs
-                    $where[] = "1=0";
-                } elseif ($status === 'FINALIZADO') {
-                    $where[] = "sa.situacao = 'ativo'";
-                } elseif ($status === 'DIGITALIZADO') {
-                    $where[] = "1=0"; // Agregados não têm esse status sem tabela de docs
-                }
-            }
-        }
-        
-        if ($buscaLike !== null) {
-            $where[] = "(sa.nome LIKE ? OR sa.cpf LIKE ? OR sa.socio_titular_nome LIKE ?)";
-            $params[] = $buscaLike;
-            $params[] = $buscaCpf;
-            $params[] = $buscaLike;
-        }
-        
-        if (!empty($periodo)) {
-            $campoData = $tabelaDocAgregadoExiste ? "COALESCE(dag.data_upload, sa.data_criacao)" : "sa.data_criacao";
-            switch ($periodo) {
-                case 'hoje':
-                    $where[] = "DATE({$campoData}) = CURDATE()";
-                    break;
-                case 'semana':
-                    $where[] = "{$campoData} >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)";
-                    break;
-                case 'mes':
-                    $where[] = "{$campoData} >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)";
-                    break;
-            }
-        }
-        
-        return ['where' => implode(" AND ", $where), 'params' => $params];
-    }
-
-    // ===== ARRAYS PARA RESULTADO =====
-    $todosDocumentos = [];
-    $totalSocios = 0;
-    $totalAgregados = 0;
-
-    // ===== BUSCAR SÓCIOS =====
-    if ($usarSocios) {
-        $filtrosSocios = montarFiltrosSocios($status, $buscaLike, $buscaCpf, $periodo);
-        
-        // Contar
-        $queryCountSocios = "
-            SELECT COUNT(*) as total
-            FROM Documentos_Associado da
-            LEFT JOIN Associados a ON da.associado_id = a.id
-            WHERE {$filtrosSocios['where']}
-        ";
-        
-        $stmtCount = $conn->prepare($queryCountSocios);
-        $stmtCount->execute($filtrosSocios['params']);
-        $totalSocios = (int) $stmtCount->fetch(PDO::FETCH_ASSOC)['total'];
-
-        // Buscar dados (se houver)
-        if ($totalSocios > 0) {
-            $querySocios = "
-                SELECT 
-                    da.id,
-                    'SOCIO' as tipo_documento,
-                    a.id as pessoa_id,
-                    a.nome,
-                    a.cpf,
-                    a.email,
-                    NULL as titular_id,
-                    NULL as titular_nome,
-                    NULL as titular_cpf,
-                    NULL as parentesco,
-                    'Ficha de Filiação' as tipo_descricao,
-                    da.status_fluxo,
-                    CASE da.status_fluxo
-                        WHEN 'DIGITALIZADO' THEN 'Aguardando Envio'
-                        WHEN 'AGUARDANDO_ASSINATURA' THEN 'Na Presidência'
-                        WHEN 'ASSINADO' THEN 'Assinado'
-                        WHEN 'FINALIZADO' THEN 'Finalizado'
-                        ELSE da.status_fluxo
-                    END as status_descricao,
-                    da.data_upload,
-                    COALESCE(da.tipo_origem, 'VIRTUAL') as tipo_origem,
-                    da.caminho_arquivo,
-                    da.nome_arquivo,
-                    COALESCE(d.nome, 'Comercial') as departamento_atual_nome,
-                    DATEDIFF(CURDATE(), da.data_upload) as dias_em_processo
-                FROM Documentos_Associado da
-                LEFT JOIN Associados a ON da.associado_id = a.id
-                LEFT JOIN Departamentos d ON da.departamento_atual = d.id
-                WHERE {$filtrosSocios['where']}
-                ORDER BY da.data_upload DESC
-            ";
-            
-            $stmt = $conn->prepare($querySocios);
-            $stmt->execute($filtrosSocios['params']);
-            $documentosSocios = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            $todosDocumentos = array_merge($todosDocumentos, $documentosSocios);
-        }
-    }
-
-    // ===== BUSCAR AGREGADOS =====
-    if ($usarAgregados) {
-        $filtrosAgregados = montarFiltrosAgregados($status, $buscaLike, $buscaCpf, $periodo, $tabelaDocAgregadoExiste);
-        
-        // Contar
-        if ($tabelaDocAgregadoExiste) {
-            $queryCountAgregados = "
-                SELECT COUNT(*) as total
-                FROM Socios_Agregados sa
-                LEFT JOIN Documentos_Agregado dag ON dag.agregado_id = sa.id
-                WHERE {$filtrosAgregados['where']}
-            ";
+    // Adiciona informações extras (igual upload_documentos_listar.php)
+    foreach ($documentos as &$doc) {
+        // Formata tamanho
+        $bytes = $doc['tamanho_arquivo'] ?? 0;
+        if ($bytes == 0) {
+            $doc['tamanho_formatado'] = '0 B';
         } else {
-            $queryCountAgregados = "
-                SELECT COUNT(*) as total
-                FROM Socios_Agregados sa
-                WHERE {$filtrosAgregados['where']}
-            ";
+            $k = 1024;
+            $sizes = ['B', 'KB', 'MB', 'GB'];
+            $i = floor(log($bytes) / log($k));
+            $doc['tamanho_formatado'] = round($bytes / pow($k, $i), 2) . ' ' . $sizes[$i];
         }
-        
-        $stmtCount = $conn->prepare($queryCountAgregados);
-        $stmtCount->execute($filtrosAgregados['params']);
-        $totalAgregados = (int) $stmtCount->fetch(PDO::FETCH_ASSOC)['total'];
 
-        // Buscar dados (se houver)
-        if ($totalAgregados > 0) {
-            if ($tabelaDocAgregadoExiste) {
-                // Query com LEFT JOIN para incluir todos os agregados
-                // Usar o ID do documento se existir, senão usar um ID prefixado
-                $queryAgregados = "
-                    SELECT 
-                        CASE 
-                            WHEN dag.id IS NOT NULL THEN CAST(dag.id AS CHAR)
-                            ELSE CONCAT('AGR_', sa.id)
-                        END as id,
-                        'AGREGADO' as tipo_documento,
-                        sa.id as pessoa_id,
-                        sa.nome,
-                        sa.cpf,
-                        sa.email,
-                        NULL as titular_id,
-                        sa.socio_titular_nome as titular_nome,
-                        sa.socio_titular_cpf as titular_cpf,
-                        'Dependente' as parentesco,
-                        'Ficha de Sócio Agregado' as tipo_descricao,
-                        CASE 
-                            WHEN dag.status_fluxo IS NOT NULL THEN dag.status_fluxo
-                            WHEN sa.situacao = 'pendente' THEN 'AGUARDANDO_ASSINATURA'
-                            WHEN sa.situacao = 'ativo' THEN 'FINALIZADO'
-                            ELSE 'AGUARDANDO_ASSINATURA'
-                        END as status_fluxo,
-                        CASE 
-                            WHEN dag.status_fluxo = 'DIGITALIZADO' THEN 'Aguardando Envio'
-                            WHEN dag.status_fluxo = 'AGUARDANDO_ASSINATURA' THEN 'Na Presidência'
-                            WHEN dag.status_fluxo = 'ASSINADO' THEN 'Assinado - Aguardando Finalização'
-                            WHEN dag.status_fluxo = 'FINALIZADO' THEN 'Finalizado'
-                            WHEN sa.situacao = 'pendente' THEN 'Na Presidência'
-                            WHEN sa.situacao = 'ativo' THEN 'Finalizado'
-                            ELSE 'Na Presidência'
-                        END as status_descricao,
-                        COALESCE(dag.data_upload, sa.data_criacao) as data_upload,
-                        COALESCE(dag.tipo_origem, 'FISICO') as tipo_origem,
-                        dag.caminho_arquivo,
-                        NULL as nome_arquivo,
-                        COALESCE(dep.nome, 'Comercial') as departamento_atual_nome,
-                        DATEDIFF(CURDATE(), COALESCE(dag.data_upload, sa.data_criacao)) as dias_em_processo,
-                        CASE WHEN dag.id IS NOT NULL THEN 1 ELSE 0 END as tem_documento
-                    FROM Socios_Agregados sa
-                    LEFT JOIN Documentos_Agregado dag ON dag.agregado_id = sa.id
-                    LEFT JOIN Departamentos dep ON dag.departamento_atual = dep.id
-                    WHERE {$filtrosAgregados['where']}
-                    ORDER BY COALESCE(dag.data_upload, sa.data_criacao) DESC
-                ";
-            } else {
-                // Fallback: Query sem a tabela Documentos_Agregado
-                $queryAgregados = "
-                    SELECT 
-                        CONCAT('AGR_', sa.id) as id,
-                        'AGREGADO' as tipo_documento,
-                        sa.id as pessoa_id,
-                        sa.nome,
-                        sa.cpf,
-                        sa.email,
-                        NULL as titular_id,
-                        sa.socio_titular_nome as titular_nome,
-                        sa.socio_titular_cpf as titular_cpf,
-                        'Dependente' as parentesco,
-                        'Ficha de Sócio Agregado' as tipo_descricao,
-                        CASE sa.situacao
-                            WHEN 'pendente' THEN 'AGUARDANDO_ASSINATURA'
-                            WHEN 'ativo' THEN 'FINALIZADO'
-                            ELSE 'AGUARDANDO_ASSINATURA'
-                        END as status_fluxo,
-                        CASE sa.situacao
-                            WHEN 'pendente' THEN 'Na Presidência'
-                            WHEN 'ativo' THEN 'Finalizado'
-                            ELSE 'Na Presidência'
-                        END as status_descricao,
-                        sa.data_criacao as data_upload,
-                        'VIRTUAL' as tipo_origem,
-                        NULL as caminho_arquivo,
-                        NULL as nome_arquivo,
-                        'Comercial' as departamento_atual_nome,
-                        DATEDIFF(CURDATE(), sa.data_criacao) as dias_em_processo,
-                        0 as tem_documento
-                    FROM Socios_Agregados sa
-                    WHERE {$filtrosAgregados['where']}
-                    ORDER BY sa.data_criacao DESC
-                ";
-            }
-            
-            $stmt = $conn->prepare($queryAgregados);
-            $stmt->execute($filtrosAgregados['params']);
-            $documentosAgregados = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            $todosDocumentos = array_merge($todosDocumentos, $documentosAgregados);
-        }
+        // Verifica se arquivo existe
+        $doc['arquivo_existe'] = file_exists('../../' . $doc['caminho_arquivo']);
+        
+        // Formata datas
+        $doc['data_upload_formatada'] = date('d/m/Y H:i', strtotime($doc['data_upload']));
     }
 
-    // ===== CALCULAR PAGINAÇÃO TOTAL =====
-    $totalRegistros = $totalSocios + $totalAgregados;
-    $totalPaginas = $totalRegistros > 0 ? ceil($totalRegistros / $porPagina) : 1;
-
-    // ===== ORDENAR E PAGINAR EM PHP =====
-    usort($todosDocumentos, function($a, $b) {
-        $dataA = strtotime($a['data_upload'] ?? '1970-01-01');
-        $dataB = strtotime($b['data_upload'] ?? '1970-01-01');
-        return $dataB - $dataA; // DESC
-    });
-
-    // Aplicar paginação
-    $documentosPaginados = array_slice($todosDocumentos, $offset, $porPagina);
-
-    // ===== ESTATÍSTICAS GERAIS (sem filtros) =====
+    // ===== ESTATÍSTICAS GERAIS =====
     $estatisticas = [
         'total_socios' => 0,
         'total_agregados' => 0,
@@ -425,66 +272,38 @@ try {
         'assinados_agregados' => 0
     ];
 
-    if ($tabelaSociosExiste) {
-        try {
-            $stmtStats = $conn->query("
-                SELECT 
-                    COUNT(*) as total,
-                    SUM(CASE WHEN status_fluxo = 'AGUARDANDO_ASSINATURA' THEN 1 ELSE 0 END) as pendentes,
-                    SUM(CASE WHEN status_fluxo IN ('ASSINADO', 'FINALIZADO') THEN 1 ELSE 0 END) as assinados
-                FROM Documentos_Associado
-            ");
-            $statsSocios = $stmtStats->fetch(PDO::FETCH_ASSOC);
-            $estatisticas['total_socios'] = (int) ($statsSocios['total'] ?? 0);
-            $estatisticas['pendentes_socios'] = (int) ($statsSocios['pendentes'] ?? 0);
-            $estatisticas['assinados_socios'] = (int) ($statsSocios['assinados'] ?? 0);
-        } catch (PDOException $e) {}
+    try {
+        $stmtStats = $conn->query("
+            SELECT 
+                COUNT(*) as total,
+                SUM(CASE WHEN m.corporacao = 'Agregados' THEN 1 ELSE 0 END) as total_agregados,
+                SUM(CASE WHEN (m.corporacao IS NULL OR m.corporacao != 'Agregados') THEN 1 ELSE 0 END) as total_socios,
+                SUM(CASE WHEN df.status_fluxo = 'AGUARDANDO_ASSINATURA' AND m.corporacao = 'Agregados' THEN 1 ELSE 0 END) as pendentes_agregados,
+                SUM(CASE WHEN df.status_fluxo = 'AGUARDANDO_ASSINATURA' AND (m.corporacao IS NULL OR m.corporacao != 'Agregados') THEN 1 ELSE 0 END) as pendentes_socios,
+                SUM(CASE WHEN df.status_fluxo IN ('ASSINADO', 'FINALIZADO') AND m.corporacao = 'Agregados' THEN 1 ELSE 0 END) as assinados_agregados,
+                SUM(CASE WHEN df.status_fluxo IN ('ASSINADO', 'FINALIZADO') AND (m.corporacao IS NULL OR m.corporacao != 'Agregados') THEN 1 ELSE 0 END) as assinados_socios
+            FROM DocumentosFluxo df
+            INNER JOIN Associados a ON df.associado_id = a.id
+            LEFT JOIN Militar m ON a.id = m.associado_id
+        ");
+        $stats = $stmtStats->fetch(PDO::FETCH_ASSOC);
+        $estatisticas = [
+            'total_socios' => (int) ($stats['total_socios'] ?? 0),
+            'total_agregados' => (int) ($stats['total_agregados'] ?? 0),
+            'pendentes_socios' => (int) ($stats['pendentes_socios'] ?? 0),
+            'pendentes_agregados' => (int) ($stats['pendentes_agregados'] ?? 0),
+            'assinados_socios' => (int) ($stats['assinados_socios'] ?? 0),
+            'assinados_agregados' => (int) ($stats['assinados_agregados'] ?? 0)
+        ];
+    } catch (PDOException $e) {
+        error_log("Erro ao buscar estatísticas: " . $e->getMessage());
     }
 
-    if ($tabelaAgregadosExiste) {
-        try {
-            if ($tabelaDocAgregadoExiste) {
-                // Estatísticas baseadas na tabela Documentos_Agregado
-                $stmtStats = $conn->query("
-                    SELECT 
-                        COUNT(DISTINCT sa.id) as total,
-                        SUM(CASE 
-                            WHEN dag.status_fluxo = 'AGUARDANDO_ASSINATURA' THEN 1
-                            WHEN dag.id IS NULL AND sa.situacao = 'pendente' THEN 1
-                            ELSE 0 
-                        END) as pendentes,
-                        SUM(CASE 
-                            WHEN dag.status_fluxo = 'ASSINADO' THEN 1
-                            ELSE 0 
-                        END) as assinados,
-                        SUM(CASE 
-                            WHEN dag.status_fluxo = 'FINALIZADO' THEN 1
-                            WHEN dag.id IS NULL AND sa.situacao = 'ativo' THEN 1
-                            ELSE 0 
-                        END) as finalizados
-                    FROM Socios_Agregados sa
-                    LEFT JOIN Documentos_Agregado dag ON dag.agregado_id = sa.id
-                ");
-            } else {
-                $stmtStats = $conn->query("
-                    SELECT 
-                        COUNT(*) as total,
-                        SUM(CASE WHEN situacao = 'pendente' THEN 1 ELSE 0 END) as pendentes,
-                        0 as assinados,
-                        SUM(CASE WHEN situacao = 'ativo' THEN 1 ELSE 0 END) as finalizados
-                    FROM Socios_Agregados
-                ");
-            }
-            $statsAgregados = $stmtStats->fetch(PDO::FETCH_ASSOC);
-            $estatisticas['total_agregados'] = (int) ($statsAgregados['total'] ?? 0);
-            $estatisticas['pendentes_agregados'] = (int) ($statsAgregados['pendentes'] ?? 0);
-            $estatisticas['assinados_agregados'] = (int) ($statsAgregados['assinados'] ?? 0);
-            $estatisticas['finalizados_agregados'] = (int) ($statsAgregados['finalizados'] ?? 0);
-        } catch (PDOException $e) {}
-    }
+    // Cálculo de paginação
+    $totalPaginas = $totalRegistros > 0 ? ceil($totalRegistros / $porPagina) : 1;
 
-    // ===== RESPOSTA =====
-    jsonSuccess($documentosPaginados, [
+    // Resposta
+    jsonSuccess($documentos, [
         'paginacao' => [
             'pagina_atual' => $pagina,
             'por_pagina' => $porPagina,
@@ -499,29 +318,23 @@ try {
             'busca' => $busca,
             'periodo' => $periodo
         ],
-        'resultados_filtrados' => [
-            'socios_encontrados' => $totalSocios,
-            'agregados_encontrados' => $totalAgregados
+        'debug' => [
+            'where_clause' => $whereClause,
+            'params_count' => count($params),
+            'params_values' => $params,
+            'busca_vazia' => empty($busca),
+            'busca_raw' => $_GET['busca'] ?? 'NAO_RECEBIDO',
+            'query_count' => $queryCount ?? '',
+            'total_encontrado' => $totalRegistros,
+            'debug_total_direto' => $debugTotal ?? 0
         ],
-        'estatisticas' => $estatisticas,
-        'tabelas_disponiveis' => [
-            'socios' => $tabelaSociosExiste,
-            'agregados' => $tabelaAgregadosExiste,
-            'documentos_agregado' => $tabelaDocAgregadoExiste
-        ]
+        'estatisticas' => $estatisticas
     ]);
 
 } catch (PDOException $e) {
     error_log("Erro de banco na API unificada: " . $e->getMessage());
-    jsonError('Erro de banco de dados: ' . $e->getMessage(), 500, [
-        'tipo' => 'PDOException',
-        'query_params' => $_GET
-    ]);
+    jsonError('Erro de banco de dados: ' . $e->getMessage(), 500);
 } catch (Exception $e) {
-    error_log("Erro geral na API unificada: " . $e->getMessage() . " em " . $e->getFile() . ":" . $e->getLine());
-    jsonError('Erro interno: ' . $e->getMessage(), 500, [
-        'tipo' => get_class($e),
-        'linha' => $e->getLine(),
-        'arquivo' => basename($e->getFile())
-    ]);
+    error_log("Erro geral na API unificada: " . $e->getMessage());
+    jsonError('Erro interno: ' . $e->getMessage(), 500);
 }

@@ -20,6 +20,12 @@ let imagensCarregadas = new Set();
 // Variável global para armazenar o associado atual
 let associadoAtual = null;
 
+// Variável para controlar se os event listeners do modal já foram adicionados
+let modalEventListenersAdded = false;
+
+// Flag para prevenir múltiplas execuções de fecharModal
+let modalFechando = false;
+
 // Variáveis de paginação
 let paginaAtual = 1;
 let registrosPorPagina = 25;
@@ -609,40 +615,48 @@ function renderizarTabela(dados) {
     });
 }
 
-// Aplica filtros
+// Função UNIFICADA para aplicar filtros (incluindo busca local)
 function aplicarFiltros() {
-    console.log('Aplicando filtros...');
+    console.log('🔍 Aplicando filtros...');
 
-    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+    const searchTerm = document.getElementById('searchInput').value.trim().toLowerCase();
     const filterSituacao = document.getElementById('filterSituacao').value;
-    const filterTipoAssociado = document.getElementById('filterTipoAssociado')?.value || ''; // NOVO
+    const filterTipoAssociado = document.getElementById('filterTipoAssociado')?.value || '';
     const filterCorporacao = document.getElementById('filterCorporacao').value;
     const filterPatente = document.getElementById('filterPatente').value;
 
-    associadosFiltrados = todosAssociados.filter(associado => {
-        // Filtro de busca
+    // Define o conjunto de dados base
+    // Se há termo de busca e já temos resultados filtrados do servidor, usa eles
+    // Caso contrário, usa todosAssociados
+    let dadosBase = todosAssociados;
+    
+    // Se NÃO tem busca de texto, sempre usa todosAssociados
+    if (!searchTerm) {
+        dadosBase = todosAssociados;
+    } else if (associadosFiltrados.length > 0 && searchTerm.length >= 3) {
+        // Se tem busca >= 3 chars e já tem resultados filtrados, mantém eles
+        // (provavelmente vieram do servidor)
+        dadosBase = associadosFiltrados;
+    }
+
+    associadosFiltrados = dadosBase.filter(associado => {
+        // Filtro de busca LOCAL (só aplica se termo for < 3 chars ou como complemento)
         const matchSearch = !searchTerm ||
             (associado.nome && associado.nome.toLowerCase().includes(searchTerm)) ||
-            (associado.cpf && associado.cpf.includes(searchTerm)) ||
+            (associado.cpf && associado.cpf.replace(/\D/g, '').includes(searchTerm.replace(/\D/g, ''))) ||
             (associado.rg && associado.rg.includes(searchTerm)) ||
-            (associado.telefone && associado.telefone.includes(searchTerm));
+            (associado.telefone && associado.telefone.replace(/\D/g, '').includes(searchTerm.replace(/\D/g, '')));
 
-        // Filtro de situação (apenas Filiado/Desfiliado)
+        // Outros filtros
         const matchSituacao = !filterSituacao || associado.situacao === filterSituacao;
-
-        // NOVO: Filtro de tipo de associado (Contribuinte, Agregado, etc)
         const matchTipoAssociado = !filterTipoAssociado || associado.tipo_associado === filterTipoAssociado;
-
-        // Filtro de corporação
         const matchCorporacao = !filterCorporacao || associado.corporacao === filterCorporacao;
-
-        // Filtro de patente
         const matchPatente = !filterPatente || associado.patente === filterPatente;
 
         return matchSearch && matchSituacao && matchTipoAssociado && matchCorporacao && matchPatente;
     });
 
-    console.log(`Filtros aplicados: ${associadosFiltrados.length} de ${todosAssociados.length} registros`);
+    console.log(`✅ Filtros aplicados: ${associadosFiltrados.length} de ${dadosBase.length} registros`);
 
     paginaAtual = 1;
     calcularPaginacao();
@@ -670,10 +684,32 @@ function limparFiltros() {
     renderizarPagina();
 }
 
-// Função para visualizar associado
+// Função para visualizar associado - VERSÃO CORRIGIDA
 function visualizarAssociado(id) {
     console.log('👁️ Visualizando associado:', id);
 
+    // NOVO: Se o modal já está aberto, fecha ele primeiro e aguarda
+    const modal = document.getElementById('modalAssociado');
+    if (modal.classList.contains('show')) {
+        console.log('🔄 Modal já aberto, fechando para reabrir...');
+        modal.classList.remove('show');
+        document.body.style.overflow = 'auto';
+        
+        // Aguarda a animação de fechamento antes de abrir novamente
+        setTimeout(() => {
+            visualizarAssociadoInterno(id);
+        }, 300); // Tempo da animação CSS
+        return;
+    }
+    
+    // Se modal não está aberto, abre normalmente
+    visualizarAssociadoInterno(id);
+}
+
+// Função interna separada para evitar repetição de código
+function visualizarAssociadoInterno(id) {
+    console.log('📋 Carregando associado:', id);
+    
     // CORREÇÃO: Procurar primeiro em associadosFiltrados (resultados da busca)
     // depois em todosAssociados (cache local)
     let associado = associadosFiltrados.find(a => a.id == id) ||
@@ -768,6 +804,10 @@ function visualizarAssociado(id) {
             abrirModalAssociadoCompleto(associado);
         });
     } else {
+        // Tem detalhes, abre direto
+        const modal = document.getElementById('modalAssociado');
+        modal.classList.add('show');
+        document.body.style.overflow = 'hidden';
         abrirModalAssociadoCompleto(associado);
     }
 }
@@ -2426,15 +2466,30 @@ function enviarDocumento() {
 
 function fecharModal() {
     const modal = document.getElementById('modalAssociado');
+    
+    // CORREÇÃO: Verificar se já está fechando ou já está fechado
+    if (modalFechando || !modal.classList.contains('show')) {
+        console.log('⚠️ Modal já está fechando ou fechado, ignorando chamada duplicada');
+        return;
+    }
 
-    // Remover IMEDIATAMENTE sem delays
+    console.log('🔒 Fechando modal...');
+    
+    // Marcar que está fechando
+    modalFechando = true;
+
+    // Remover classe show imediatamente (inicia animação CSS)
     modal.classList.remove('show');
-    modal.classList.remove('modal-edit-mode'); // Remove modo edição
+    modal.classList.remove('modal-edit-mode');
     document.body.style.overflow = 'auto';
     
     // Resetar estado de edição
-    modoEdicaoAtivo = false;
-    dadosOriginaisAssociado = null;
+    if (typeof modoEdicaoAtivo !== 'undefined') {
+        modoEdicaoAtivo = false;
+    }
+    if (typeof dadosOriginaisAssociado !== 'undefined') {
+        dadosOriginaisAssociado = null;
+    }
     
     // Resetar botões
     const btnEditar = document.getElementById('btnEditarModal');
@@ -2445,15 +2500,15 @@ function fecharModal() {
     if (btnSalvar) btnSalvar.style.display = 'none';
     if (btnCancelar) btnCancelar.style.display = 'none';
 
-    // Limpar dados DEPOIS da animação de fechamento
+    // Aguardar animação CSS (300ms) antes de limpar dados
     setTimeout(() => {
         associadoAtual = null;
-
-        // Reset de observações mais tarde
-        setTimeout(() => {
-            resetarObservacoes();
-        }, 100);
-    }, 200);
+        resetarObservacoes();
+        
+        // Liberar flag de fechamento
+        modalFechando = false;
+        console.log('✅ Modal fechado completamente');
+    }, 300);
 }
 
 // FUNÇÃO CORRIGIDA: Trocar de tab com carregamento de observações na visão geral
@@ -2555,19 +2610,41 @@ function excluirAssociado(id) {
     });
 }
 
-// Fecha modal ao clicar fora
-window.addEventListener('click', function (event) {
-    const modal = document.getElementById('modalAssociado');
-    if (event.target === modal) {
-        fecharModal();
+// NOVA FUNÇÃO: Inicializar event listeners do modal (só executa uma vez)
+function inicializarEventListenersModal() {
+    if (modalEventListenersAdded) {
+        console.log('⚠️ Event listeners do modal já foram adicionados');
+        return;
     }
-});
 
-// Tecla ESC fecha o modal
-document.addEventListener('keydown', function (event) {
-    if (event.key === 'Escape') {
-        fecharModal();
-    }
+    console.log('✅ Inicializando event listeners do modal...');
+
+    // Fecha modal ao clicar fora (no backdrop)
+    window.addEventListener('click', function (event) {
+        const modal = document.getElementById('modalAssociado');
+        // Só fecha se clicar EXATAMENTE no modal (backdrop), não nos elementos internos
+        if (event.target === modal && modal.classList.contains('show')) {
+            console.log('👆 Clique fora do modal detectado');
+            fecharModal();
+        }
+    });
+
+    // Tecla ESC fecha o modal
+    document.addEventListener('keydown', function (event) {
+        const modal = document.getElementById('modalAssociado');
+        if (event.key === 'Escape' && modal.classList.contains('show')) {
+            console.log('⌨️ ESC pressionado, fechando modal');
+            fecharModal();
+        }
+    });
+
+    modalEventListenersAdded = true;
+    console.log('✅ Event listeners do modal inicializados com sucesso');
+}
+
+// Inicializa os event listeners quando o documento estiver pronto
+$(document).ready(function() {
+    inicializarEventListenersModal();
 });
 
 // FUNÇÃO CORRIGIDA: Carregar observações na visão geral
@@ -2915,43 +2992,54 @@ function salvarContatoEditado() {
     });
 }
 
-let searchTimeout;
+// ========================================
+// FUNÇÕES DE BUSCA UNIFICADAS
+// ========================================
 
-// New search input handler
+// Variável global para timeout de busca e controle
+let searchTimeout;
+let ultimaBuscaServidor = '';
+
+// Handler para input de busca (com debounce)
 function handleSearchInput(e) {
     const termo = e.target.value.trim();
 
-    // Clear previous timeout
+    // Limpa timeout anterior
     clearTimeout(searchTimeout);
 
-    // If empty, show local data
+    // Se vazio, restaura dados originais
     if (!termo) {
-        console.log('Search cleared, showing local data');
+        console.log('🔄 Busca limpa, mostrando todos os dados');
+        ultimaBuscaServidor = '';
         associadosFiltrados = [...todosAssociados];
-        aplicarFiltrosLocais(); // Apply other filters
+        aplicarFiltros(); // Reaplica outros filtros
         return;
     }
 
-    // If too short, wait
-    if (termo.length < 2) {
+    // Se muito curto (menos de 3 chars), apenas busca local imediata
+    if (termo.length < 3) {
+        console.log('💻 Busca local (termo curto):', termo);
+        aplicarFiltros(); // Usa a busca local integrada
         return;
     }
 
-    // Debounce search
-    searchTimeout = setTimeout(() => {
-        buscarNoServidor(termo);
-    }, 300);
-}
-
-// Server search function (searches ALL 6000+ records)
-async function buscarNoServidor(termo) {
-    console.log('Searching server for:', termo);
-
-    // Show search indicator
+    // Mostra indicador de carregamento
     mostrarIndicadorBusca(true);
 
+    // Debounce: aguarda 400ms antes de buscar no servidor
+    searchTimeout = setTimeout(() => {
+        buscarNoServidor(termo);
+    }, 400);
+}
+
+// Busca no servidor (busca em TODOS os registros do banco)
+async function buscarNoServidor(termo) {
+    console.log('🌐 Buscando no servidor:', termo);
+    
+    ultimaBuscaServidor = termo;
+
     try {
-        const response = await fetch(`../api/buscar_associados.php?termo=${encodeURIComponent(termo)}&limit=10000`);
+        const response = await fetch(`../api/buscar_associados.php?termo=${encodeURIComponent(termo)}&limit=500`);
 
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}`);
@@ -2959,84 +3047,42 @@ async function buscarNoServidor(termo) {
 
         const resultado = await response.json();
 
+        // Verifica se o usuário ainda está buscando pelo mesmo termo
+        const termoAtual = document.getElementById('searchInput').value.trim();
+        if (termoAtual !== termo) {
+            console.log('⚠️ Termo mudou durante a busca, ignorando resultado');
+            return;
+        }
+
         if (resultado.status === 'success') {
-            console.log(`Found ${resultado.dados.length} results on server`);
+            console.log(`✅ Encontrados ${resultado.dados.length} resultados no servidor`);
 
-            // Use server results
+            // Atualiza dados filtrados com resultados do servidor
             associadosFiltrados = resultado.dados;
+            
+            // Aplica outros filtros (situação, corporação, etc) nos resultados do servidor
+            aplicarFiltros();
 
-            // Update pagination
-            paginaAtual = 1;
-            calcularPaginacao();
-            renderizarPagina();
-
-            // Show results info
             if (resultado.total_aproximado && resultado.total_aproximado > resultado.dados.length) {
-                console.log(`Showing ${resultado.dados.length} of ~${resultado.total_aproximado} total matches`);
+                console.log(`ℹ️ Mostrando ${resultado.dados.length} de ~${resultado.total_aproximado} resultados`);
             }
 
         } else {
-            console.warn('Server search error:', resultado.message);
-            buscarLocal(termo); // Fallback
+            console.warn('⚠️ Erro na busca do servidor:', resultado.message);
+            // Fallback para busca local
+            aplicarFiltros();
         }
 
     } catch (error) {
-        console.error('Search error:', error);
-        buscarLocal(termo); // Fallback to local search
-
+        console.error('❌ Erro na busca do servidor:', error);
+        // Fallback para busca local
+        aplicarFiltros();
     } finally {
         mostrarIndicadorBusca(false);
     }
 }
 
-// Apply filters without search
-function aplicarFiltrosLocais() {
-    console.log('Applying local filters only...');
-
-    const filterSituacao = document.getElementById('filterSituacao')?.value || '';
-    const filterCorporacao = document.getElementById('filterCorporacao')?.value || '';
-    const filterPatente = document.getElementById('filterPatente')?.value || '';
-
-    // Start with current data (could be search results or all data)
-    let dadosParaFiltrar = associadosFiltrados.length > 0 ? associadosFiltrados : todosAssociados;
-
-    associadosFiltrados = dadosParaFiltrar.filter(associado => {
-        const matchSituacao = !filterSituacao || associado.situacao === filterSituacao;
-        const matchCorporacao = !filterCorporacao || associado.corporacao === filterCorporacao;
-        const matchPatente = !filterPatente || associado.patente === filterPatente;
-
-        return matchSituacao && matchCorporacao && matchPatente;
-    });
-
-    paginaAtual = 1;
-    calcularPaginacao();
-    renderizarPagina();
-}
-
-// Enhanced local search (fallback)
-function buscarLocal(termo) {
-    console.log('Local search (fallback):', termo);
-
-    const termoLower = termo.toLowerCase();
-
-    associadosFiltrados = todosAssociados.filter(associado => {
-        return (associado.nome && associado.nome.toLowerCase().includes(termoLower)) ||
-            (associado.cpf && associado.cpf.includes(termo)) ||
-            (associado.rg && associado.rg.includes(termo)) ||
-            (associado.telefone && associado.telefone.includes(termo));
-    });
-
-    paginaAtual = 1;
-    calcularPaginacao();
-    renderizarPagina();
-
-    // Warning if few results
-    if (associadosFiltrados.length < 3 && termo.length >= 3) {
-        console.warn('Few local results. Person might not be in loaded data.');
-    }
-}
-
-// Visual search indicator
+// Indicador visual de busca
 function mostrarIndicadorBusca(mostrar) {
     const searchIcon = document.querySelector('.search-box .search-icon');
     if (!searchIcon) return;
@@ -3050,7 +3096,7 @@ function mostrarIndicadorBusca(mostrar) {
     }
 }
 
-// Event listeners - só adiciona UMA VEZ
+// Event listeners - INICIALIZAÇÃO ÚNICA
 document.addEventListener('DOMContentLoaded', function () {
     // Adiciona listeners aos filtros
     const searchInput = document.getElementById('searchInput');

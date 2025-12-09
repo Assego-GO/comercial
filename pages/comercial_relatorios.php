@@ -101,10 +101,22 @@ try {
     $stmt->execute();
     $lotacoesDB = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
+    // BUSCAR CIDADES ÚNICAS DO BANCO (da tabela Endereco)
+    $stmt = $db->prepare("
+        SELECT DISTINCT cidade 
+        FROM Endereco 
+        WHERE cidade IS NOT NULL 
+        AND cidade != '' 
+        ORDER BY cidade
+    ");
+    $stmt->execute();
+    $cidadesDB = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
 } catch (Exception $e) {
     $corporacoesDB = [];
     $patentesDB = [];
     $lotacoesDB = [];
+    $cidadesDB = [];
     error_log("Erro ao buscar dados dinâmicos: " . $e->getMessage());
 }
 
@@ -1357,6 +1369,25 @@ if (empty($patentesDB)) {
                             </select>
                         </div>
 
+                        <div class="col-md-3" id="campoCidade" style="display: none;">
+                            <label class="form-label-custom">
+                                <i class="fas fa-city"></i>
+                                Cidade
+                            </label>
+                            <select name="cidade" class="form-select form-select-custom select2" id="cidade">
+                                <option value="">Todas as cidades</option>
+                                <?php foreach($cidadesDB as $cidade): ?>
+                                    <?php if(!empty($cidade)): ?>
+                                        <option value="<?php echo htmlspecialchars($cidade); ?>">
+                                            <?php echo htmlspecialchars($cidade); ?>
+                                        </option>
+                                    <?php endif; ?>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
                         <div class="col-md-3">
                             <label class="form-label-custom">
                                 <i class="fas fa-sort-alpha-down"></i>
@@ -1492,6 +1523,27 @@ if (empty($patentesDB)) {
                     card.classList.add('active');
                 }
             });
+
+            // Mostrar/esconder campo de cidade (apenas para aniversariantes)
+            const campoCidade = document.getElementById('campoCidade');
+            if (campoCidade) {
+                if (tipo === 'aniversariantes') {
+                    campoCidade.style.display = 'block';
+                    // Reinicializar Select2 para o campo cidade
+                    if ($.fn.select2) {
+                        $('#cidade').select2({
+                            theme: 'bootstrap-5',
+                            placeholder: 'Todas as cidades',
+                            allowClear: true,
+                            width: '100%'
+                        });
+                    }
+                } else {
+                    campoCidade.style.display = 'none';
+                    // Limpar seleção
+                    $('#cidade').val('').trigger('change');
+                }
+            }
 
             // Limpar resultados anteriores
             document.getElementById('resultsContainer').innerHTML = `
@@ -1873,6 +1925,7 @@ if (empty($patentesDB)) {
                     { key: 'nome', label: 'Nome', type: 'text' },
                     { key: 'data_nascimento', label: 'Data Nascimento', type: 'date' },
                     { key: 'idade', label: 'Idade', type: 'number' },
+                    { key: 'cidade', label: 'Cidade', type: 'text' },
                     { key: 'patente', label: 'Patente', type: 'text' },
                     { key: 'corporacao', label: 'Corporação', type: 'text' },
                     { key: 'telefone', label: 'Telefone', type: 'phone' }
