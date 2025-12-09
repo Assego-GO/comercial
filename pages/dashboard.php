@@ -516,7 +516,7 @@ $headerComponent = HeaderComponent::create([
                         <label class="filter-label">Situação</label>
                         <select class="filter-select" id="filterSituacao">
                             <option value="">Todos</option>
-                            <option value="Filiado">Filiado</option>
+                            <option value="Filiado" selected>Filiado</option>
                             <option value="Desfiliado">Desfiliado</option>
                         </select>
                     </div>
@@ -672,7 +672,7 @@ $headerComponent = HeaderComponent::create([
                             <span>Cancelar</span>
                         </button>
                     </div>
-                    <button class="modal-close-custom" onclick="fecharModal()">
+                    <button class="modal-close-custom" onclick="event.stopPropagation(); fecharModal();">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>

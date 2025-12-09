@@ -78,18 +78,17 @@ try {
         // =====================================================
         // 1. BUSCAR AGREGADO (ESTRUTURA UNIFICADA)
         // =====================================================
+        // Nota: associado_titular_id ainda não existe no banco
         $stmt = $db->prepare("
             SELECT 
                 a.id,
                 a.nome,
                 a.cpf,
                 a.situacao,
-                a.associado_titular_id,
                 m.corporacao,
-                titular.nome as titular_nome
+                NULL as titular_nome
             FROM Associados a
             LEFT JOIN Militar m ON a.id = m.associado_id
-            LEFT JOIN Associados titular ON a.associado_titular_id = titular.id
             WHERE a.id = ?
             AND m.corporacao = 'Agregados'
         ");

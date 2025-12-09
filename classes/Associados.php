@@ -223,9 +223,8 @@ class Associados
             INSERT INTO Associados (
                 nome, nasc, sexo, rg, cpf, email, situacao, 
                 escolaridade, estadoCivil, telefone, foto, indicacao,
-                associado_titular_id,
                 pre_cadastro, data_pre_cadastro
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, NOW())
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, NOW())
         ");
 
             $stmt->execute([
@@ -240,8 +239,7 @@ class Associados
                 $dados['estadoCivil'] ?? null,
                 $dados['telefone'] ?? null,
                 $dados['foto'] ?? null,
-                $dados['indicacao'] ?? null,
-                $dados['associado_titular_id'] ?? null
+                $dados['indicacao'] ?? null
             ]);
 
             $associadoId = $this->db->lastInsertId();

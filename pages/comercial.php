@@ -500,9 +500,9 @@ $headerComponent = HeaderComponent::create([
         }
 
         .action-icon.info {
-            background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
             color: white;
-            box-shadow: 0 4px 14px rgba(139, 92, 246, 0.4);
+            box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4);
         }
 
         .action-content {
@@ -1075,6 +1075,8 @@ $headerComponent = HeaderComponent::create([
                         </div>
                     </div>
 
+                    <!-- ==================== CADASTRO ONLINE - INÍCIO ==================== -->
+                    <!-- Este é o botão que redireciona para a página de gerenciamento de cadastros online -->
                     <div class="action-card" onclick="cadastrosOnline()">
                         <div class="action-icon warning">
                             <i class="fas fa-laptop"></i>
@@ -1082,6 +1084,18 @@ $headerComponent = HeaderComponent::create([
                         <div class="action-content">
                             <h5>Cadastros Online</h5>
                             <p>Gerenciar cadastros realizados online</p>
+                        </div>
+                    </div>
+                    <!-- ==================== CADASTRO ONLINE - FIM ==================== -->
+
+                    <!-- Anexos / Documentos -->
+                    <div class="action-card" onclick="abrirDashboardDocumentos()">
+                        <div class="action-icon" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4);">
+                            <i class="fas fa-paperclip"></i>
+                        </div>
+                        <div class="action-content">
+                            <h5>Anexos</h5>
+                            <p>Visualizar documentos de todos os associados</p>
                         </div>
                     </div>
 
@@ -1302,6 +1316,282 @@ $headerComponent = HeaderComponent::create([
                                 <i class="fas fa-print me-2"></i>
                                 Imprimir Ficha
                             </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Dashboard de Documentos -->
+            <div class="modal fade" id="modalDashboardDocumentos" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-fullscreen">
+                    <div class="modal-content" style="background: linear-gradient(135deg, #f0f4ff 0%, #fafbff 50%, #f5f7fa 100%);">
+                        <!-- Header Premium -->
+                        <div class="modal-header border-0" style="background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); padding: 0;">
+                            <div style="width: 100%; padding: 1.5rem 2.5rem; position: relative; overflow: hidden;">
+                                <!-- Decorative Elements -->
+                                <div style="position: absolute; top: -50px; right: -50px; width: 200px; height: 200px; background: rgba(255,255,255,0.1); border-radius: 50%;"></div>
+                                <div style="position: absolute; bottom: -30px; left: 20%; width: 100px; height: 100px; background: rgba(255,255,255,0.05); border-radius: 50%;"></div>
+                                
+                                <div class="d-flex justify-content-between align-items-center position-relative">
+                                    <div class="d-flex align-items-center gap-4">
+                                        <div style="width: 60px; height: 60px; background: rgba(255,255,255,0.2); backdrop-filter: blur(10px); border-radius: 16px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.3);">
+                                            <i class="fas fa-folder-open" style="font-size: 1.75rem; color: white;"></i>
+                                        </div>
+                                        <div>
+                                            <h4 class="mb-1" style="color: white; font-weight: 800; font-size: 1.75rem; letter-spacing: -0.5px;">
+                                                Dashboard de Documentos
+                                            </h4>
+                                            <p class="mb-0" style="color: rgba(255,255,255,0.8); font-size: 0.95rem;">
+                                                <i class="fas fa-building me-2"></i>Gestão Centralizada de Anexos • ASSEGO
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <button type="button" class="btn" data-bs-dismiss="modal" style="width: 45px; height: 45px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); border-radius: 12px; color: white; backdrop-filter: blur(10px); transition: all 0.3s;">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="modal-body" style="padding: 2rem 2.5rem;">
+                            <!-- Stats Cards Premium -->
+                            <div class="row g-4 mb-4" id="statsDocumentos">
+                                <div class="col-lg-3 col-md-6">
+                                    <div class="card border-0 h-100" style="border-radius: 20px; background: white; box-shadow: 0 10px 40px rgba(34, 197, 94, 0.15); overflow: hidden; transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);" onmouseover="this.style.transform='translateY(-8px)';this.style.boxShadow='0 20px 60px rgba(34, 197, 94, 0.25)'" onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 10px 40px rgba(34, 197, 94, 0.15)'">
+                                        <div style="height: 4px; background: linear-gradient(90deg, #22c55e, #16a34a);"></div>
+                                        <div class="card-body p-4">
+                                            <div class="d-flex align-items-center justify-content-between mb-3">
+                                                <div style="width: 56px; height: 56px; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); border-radius: 16px; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 25px rgba(34, 197, 94, 0.4);">
+                                                    <i class="fas fa-file-alt" style="font-size: 1.5rem; color: white;"></i>
+                                                </div>
+                                                <div class="text-end">
+                                                    <span style="font-size: 0.75rem; color: #22c55e; background: rgba(34, 197, 94, 0.1); padding: 4px 10px; border-radius: 20px; font-weight: 600;">
+                                                        <i class="fas fa-database me-1"></i>TOTAL
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <h2 class="mb-1" id="statTotalDocs" style="font-weight: 900; font-size: 2.5rem; color: #1e293b; letter-spacing: -1px;">0</h2>
+                                            <p style="color: #64748b; margin: 0; font-weight: 500;">Total de Documentos</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-lg-3 col-md-6">
+                                    <div class="card border-0 h-100" style="border-radius: 20px; background: white; box-shadow: 0 10px 40px rgba(59, 130, 246, 0.15); overflow: hidden; transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);" onmouseover="this.style.transform='translateY(-8px)';this.style.boxShadow='0 20px 60px rgba(59, 130, 246, 0.25)'" onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 10px 40px rgba(59, 130, 246, 0.15)'">
+                                        <div style="height: 4px; background: linear-gradient(90deg, #3b82f6, #2563eb);"></div>
+                                        <div class="card-body p-4">
+                                            <div class="d-flex align-items-center justify-content-between mb-3">
+                                                <div style="width: 56px; height: 56px; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); border-radius: 16px; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 25px rgba(59, 130, 246, 0.4);">
+                                                    <i class="fas fa-users" style="font-size: 1.5rem; color: white;"></i>
+                                                </div>
+                                                <div class="text-end">
+                                                    <span style="font-size: 0.75rem; color: #3b82f6; background: rgba(59, 130, 246, 0.1); padding: 4px 10px; border-radius: 20px; font-weight: 600;">
+                                                        <i class="fas fa-user-tie me-1"></i>SÓCIOS
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <h2 class="mb-1" id="statSocios" style="font-weight: 900; font-size: 2.5rem; color: #1e293b; letter-spacing: -1px;">0</h2>
+                                            <p style="color: #64748b; margin: 0; font-weight: 500;">Documentos de Sócios</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-lg-3 col-md-6">
+                                    <div class="card border-0 h-100" style="border-radius: 20px; background: white; box-shadow: 0 10px 40px rgba(245, 158, 11, 0.15); overflow: hidden; transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);" onmouseover="this.style.transform='translateY(-8px)';this.style.boxShadow='0 20px 60px rgba(245, 158, 11, 0.25)'" onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 10px 40px rgba(245, 158, 11, 0.15)'">
+                                        <div style="height: 4px; background: linear-gradient(90deg, #f59e0b, #d97706);"></div>
+                                        <div class="card-body p-4">
+                                            <div class="d-flex align-items-center justify-content-between mb-3">
+                                                <div style="width: 56px; height: 56px; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); border-radius: 16px; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 25px rgba(245, 158, 11, 0.4);">
+                                                    <i class="fas fa-user-friends" style="font-size: 1.5rem; color: white;"></i>
+                                                </div>
+                                                <div class="text-end">
+                                                    <span style="font-size: 0.75rem; color: #f59e0b; background: rgba(245, 158, 11, 0.1); padding: 4px 10px; border-radius: 20px; font-weight: 600;">
+                                                        <i class="fas fa-user-plus me-1"></i>AGREGADOS
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <h2 class="mb-1" id="statAgregados" style="font-weight: 900; font-size: 2.5rem; color: #1e293b; letter-spacing: -1px;">0</h2>
+                                            <p style="color: #64748b; margin: 0; font-weight: 500;">Documentos de Agregados</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-lg-3 col-md-6">
+                                    <div class="card border-0 h-100" style="border-radius: 20px; background: white; box-shadow: 0 10px 40px rgba(239, 68, 68, 0.15); overflow: hidden; transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);" onmouseover="this.style.transform='translateY(-8px)';this.style.boxShadow='0 20px 60px rgba(239, 68, 68, 0.25)'" onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 10px 40px rgba(239, 68, 68, 0.15)'">
+                                        <div style="height: 4px; background: linear-gradient(90deg, #ef4444, #dc2626);"></div>
+                                        <div class="card-body p-4">
+                                            <div class="d-flex align-items-center justify-content-between mb-3">
+                                                <div style="width: 56px; height: 56px; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); border-radius: 16px; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 25px rgba(239, 68, 68, 0.4);">
+                                                    <i class="fas fa-hourglass-half" style="font-size: 1.5rem; color: white;"></i>
+                                                </div>
+                                                <div class="text-end">
+                                                    <span style="font-size: 0.75rem; color: #ef4444; background: rgba(239, 68, 68, 0.1); padding: 4px 10px; border-radius: 20px; font-weight: 600;">
+                                                        <i class="fas fa-signature me-1"></i>PENDENTES
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <h2 class="mb-1" id="statPendentes" style="font-weight: 900; font-size: 2.5rem; color: #1e293b; letter-spacing: -1px;">0</h2>
+                                            <p style="color: #64748b; margin: 0; font-weight: 500;">Aguardando Assinatura</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Filtros Premium -->
+                            <div class="card border-0 mb-4" style="border-radius: 20px; background: white; box-shadow: 0 4px 30px rgba(0, 0, 0, 0.08);">
+                                <div class="card-body p-4">
+                                    <div class="row g-3 align-items-end">
+                                        <div class="col-lg-3 col-md-6">
+                                            <label class="form-label" style="font-weight: 700; color: #374151; font-size: 0.875rem; margin-bottom: 0.5rem;">
+                                                <i class="fas fa-search me-2" style="color: #3b82f6;"></i>Buscar Associado
+                                            </label>
+                                            <div class="position-relative">
+                                                <input type="text" class="form-control" id="filtroDocBusca" placeholder="Nome, CPF ou RG..." 
+                                                    style="border: 2px solid #e5e7eb; border-radius: 12px; padding: 0.75rem 1rem 0.75rem 3rem; font-size: 0.95rem; transition: all 0.3s; background: #f9fafb;"
+                                                    onfocus="this.style.borderColor='#3b82f6';this.style.boxShadow='0 0 0 4px rgba(59, 130, 246, 0.1)';this.style.background='white'"
+                                                    onblur="this.style.borderColor='#e5e7eb';this.style.boxShadow='none';this.style.background='#f9fafb'"
+                                                    onkeypress="if(event.key==='Enter') carregarDocumentosDashboard(1)">
+                                                <i class="fas fa-search position-absolute" style="left: 1rem; top: 50%; transform: translateY(-50%); color: #9ca3af;"></i>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-2 col-md-6">
+                                            <label class="form-label" style="font-weight: 700; color: #374151; font-size: 0.875rem; margin-bottom: 0.5rem;">
+                                                <i class="fas fa-filter me-2" style="color: #3b82f6;"></i>Tipo
+                                            </label>
+                                            <select class="form-select" id="filtroDocTipo"
+                                                style="border: 2px solid #e5e7eb; border-radius: 12px; padding: 0.75rem 1rem; font-size: 0.95rem; cursor: pointer; background: #f9fafb;">
+                                                <option value="">Todos</option>
+                                                <option value="SOCIO">🔵 Sócios</option>
+                                                <option value="AGREGADO">🟠 Agregados</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-lg-2 col-md-6">
+                                            <label class="form-label" style="font-weight: 700; color: #374151; font-size: 0.875rem; margin-bottom: 0.5rem;">
+                                                <i class="fas fa-tasks me-2" style="color: #22c55e;"></i>Status
+                                            </label>
+                                            <select class="form-select" id="filtroDocStatus"
+                                                style="border: 2px solid #e5e7eb; border-radius: 12px; padding: 0.75rem 1rem; font-size: 0.95rem; cursor: pointer; background: #f9fafb;">
+                                                <option value="">Todos</option>
+                                                <option value="DIGITALIZADO">📄 Digitalizado</option>
+                                                <option value="AGUARDANDO_ASSINATURA">⏳ Aguardando Assinatura</option>
+                                                <option value="ASSINADO">✅ Assinado</option>
+                                                <option value="FINALIZADO">🏁 Finalizado</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-lg-2 col-md-6">
+                                            <label class="form-label" style="font-weight: 700; color: #374151; font-size: 0.875rem; margin-bottom: 0.5rem;">
+                                                <i class="fas fa-calendar-alt me-2" style="color: #f59e0b;"></i>Período
+                                            </label>
+                                            <select class="form-select" id="filtroDocPeriodo"
+                                                style="border: 2px solid #e5e7eb; border-radius: 12px; padding: 0.75rem 1rem; font-size: 0.95rem; cursor: pointer; background: #f9fafb;">
+                                                <option value="">Todos</option>
+                                                <option value="hoje">📅 Hoje</option>
+                                                <option value="semana">📆 Última Semana</option>
+                                                <option value="mes">🗓️ Último Mês</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-lg-3 col-md-12">
+                                            <div class="d-flex gap-2">
+                                                <button class="btn flex-grow-1" onclick="carregarDocumentosDashboard(1)" 
+                                                    style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; border: none; border-radius: 12px; padding: 0.75rem 1rem; font-weight: 600; font-size: 0.9rem; box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4); transition: all 0.3s;"
+                                                    onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 25px rgba(59, 130, 246, 0.5)'"
+                                                    onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 4px 15px rgba(59, 130, 246, 0.4)'">
+                                                    <i class="fas fa-search me-2"></i>Buscar
+                                                </button>
+                                                <button class="btn" onclick="limparFiltrosDocumentos()" 
+                                                    style="background: white; color: #64748b; border: 2px solid #e5e7eb; border-radius: 12px; padding: 0.75rem 1rem; font-weight: 600; font-size: 0.9rem; transition: all 0.3s;"
+                                                    onmouseover="this.style.borderColor='#ef4444';this.style.color='#ef4444'"
+                                                    onmouseout="this.style.borderColor='#e5e7eb';this.style.color='#64748b'"
+                                                    title="Limpar todos os filtros">
+                                                    <i class="fas fa-times"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <!-- Indicador de filtros ativos -->
+                                    <div id="filtrosAtivos" class="mt-3" style="display: none;">
+                                        <div class="d-flex align-items-center flex-wrap gap-2">
+                                            <span style="color: #64748b; font-size: 0.85rem; font-weight: 600;">
+                                                <i class="fas fa-filter me-1"></i>Filtros ativos:
+                                            </span>
+                                            <div id="badgesFiltros" class="d-flex flex-wrap gap-2"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Tabela de Documentos Premium -->
+                            <div class="card border-0" style="border-radius: 20px; background: white; box-shadow: 0 4px 30px rgba(0, 0, 0, 0.08); overflow: hidden;">
+                                <div class="card-header border-0 py-4 px-4" style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div class="d-flex align-items-center gap-3">
+                                            <div style="width: 45px; height: 45px; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                                                <i class="fas fa-list" style="color: white; font-size: 1.1rem;"></i>
+                                            </div>
+                                            <div>
+                                                <h5 class="mb-0" style="font-weight: 800; color: #1e293b;">Lista de Documentos</h5>
+                                                <small style="color: #64748b;">Todos os anexos cadastrados no sistema</small>
+                                            </div>
+                                        </div>
+                                        <span id="countDocumentos" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; padding: 8px 16px; border-radius: 30px; font-weight: 700; font-size: 0.875rem; box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);">
+                                            0 documentos
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="card-body p-0">
+                                    <div class="table-responsive">
+                                        <table class="table table-hover mb-0" id="tabelaDocumentos" style="font-size: 0.9rem;">
+                                            <thead>
+                                                <tr style="background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);">
+                                                    <th class="px-4 py-3 text-white border-0" style="font-weight: 700;">
+                                                        <i class="fas fa-user me-2"></i>Associado
+                                                    </th>
+                                                    <th class="px-4 py-3 text-white border-0" style="font-weight: 700;">
+                                                        <i class="fas fa-id-card me-2"></i>CPF
+                                                    </th>
+                                                    <th class="px-4 py-3 text-white border-0" style="font-weight: 700;">
+                                                        <i class="fas fa-address-card me-2"></i>RG
+                                                    </th>
+                                                    <th class="px-4 py-3 text-white border-0" style="font-weight: 700;">
+                                                        <i class="fas fa-info-circle me-2"></i>Situação
+                                                    </th>
+                                                    <th class="px-4 py-3 text-white border-0" style="font-weight: 700;">
+                                                        <i class="fas fa-tag me-2"></i>Tipo
+                                                    </th>
+                                                    <th class="px-4 py-3 text-white border-0" style="font-weight: 700;">
+                                                        <i class="fas fa-tasks me-2"></i>Status
+                                                    </th>
+                                                    <th class="px-4 py-3 text-white border-0" style="font-weight: 700;">
+                                                        <i class="fas fa-calendar me-2"></i>Data Upload
+                                                    </th>
+                                                    <th class="px-4 py-3 text-white border-0 text-center" style="font-weight: 700;">
+                                                        <i class="fas fa-paperclip me-2"></i>Anexo
+                                                    </th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="corpoTabelaDocumentos">
+                                                <tr>
+                                                    <td colspan="8" class="text-center py-5">
+                                                        <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;"></div>
+                                                        <p class="mt-3 mb-0" style="color: #64748b; font-weight: 500;">Carregando documentos...</p>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                                <!-- Paginação Premium -->
+                                <div class="card-footer border-0 py-4 px-4" style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);">
+                                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                                        <div id="infoPaginacao" style="color: #64748b; font-weight: 500; background: white; padding: 10px 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
+                                            <i class="fas fa-info-circle me-2" style="color: #3b82f6;"></i>
+                                            Mostrando 0 de 0 registros
+                                        </div>
+                                        <nav>
+                                            <ul class="pagination mb-0" id="paginacaoDocumentos" style="gap: 5px;">
+                                                <!-- Paginação será gerada via JS -->
+                                            </ul>
+                                        </nav>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -2472,12 +2762,15 @@ $headerComponent = HeaderComponent::create([
                 }
 
 
+                // ==================== CADASTRO ONLINE - INÍCIO ====================
+                // Esta função redireciona para a página de gerenciamento de cadastros online
                 function cadastrosOnline() {
                     showToast('Carregando cadastros online...', 'info');
                     setTimeout(() => {
                         window.location.href = '../pages/cadastros_online.php';
                     }, 500);
                 }
+                // ==================== CADASTRO ONLINE - FIM ====================
 
                 function formatarTelefone(telefone) {
                     if (!telefone) return '';
@@ -2662,6 +2955,411 @@ $headerComponent = HeaderComponent::create([
                         }
                     }
                 });
+
+                // ============================================
+                // DASHBOARD DE DOCUMENTOS - FUNÇÕES
+                // ============================================
+                
+                let paginaAtualDocs = 1;
+                let documentosCarregados = [];
+                let abortControllerDocs = null;
+
+                function abrirDashboardDocumentos() {
+                    const modal = new bootstrap.Modal(document.getElementById('modalDashboardDocumentos'));
+                    modal.show();
+                    // Limpar filtros ao abrir
+                    document.getElementById('filtroDocBusca').value = '';
+                    document.getElementById('filtroDocTipo').value = '';
+                    document.getElementById('filtroDocStatus').value = '';
+                    document.getElementById('filtroDocPeriodo').value = '';
+                    document.getElementById('filtrosAtivos').style.display = 'none';
+                    carregarDocumentosDashboard(1);
+                }
+
+                function carregarDocumentosDashboard(pagina = 1) {
+                    // Cancelar requisição anterior se existir
+                    if (abortControllerDocs) {
+                        abortControllerDocs.abort();
+                    }
+                    abortControllerDocs = new AbortController();
+                    
+                    const requestId = Date.now();
+                    window.lastRequestId = requestId;
+                    
+                    paginaAtualDocs = pagina;
+                    const tipo = document.getElementById('filtroDocTipo')?.value || '';
+                    const status = document.getElementById('filtroDocStatus')?.value || '';
+                    const periodo = document.getElementById('filtroDocPeriodo')?.value || '';
+                    const busca = document.getElementById('filtroDocBusca')?.value?.trim() || '';
+                    
+                    // Atualizar indicador de filtros ativos
+                    atualizarIndicadorFiltros();
+                    
+                    console.log('Carregando documentos com filtros:', { pagina, tipo, status, periodo, busca });
+
+                    const tbody = document.getElementById('corpoTabelaDocumentos');
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="8" class="text-center py-5">
+                                <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;"></div>
+                                <p class="mt-3 mb-0" style="color: #64748b; font-weight: 500;">Buscando documentos...</p>
+                            </td>
+                        </tr>
+                    `;
+
+                    const params = new URLSearchParams();
+                    params.append('pagina', pagina);
+                    params.append('por_pagina', 20);
+                    params.append('_t', Date.now()); // Cache buster
+                    if (tipo) params.append('tipo', tipo);
+                    if (status) params.append('status', status);
+                    if (periodo) params.append('periodo', periodo);
+                    if (busca) params.append('busca', busca);
+                    
+                    const url = `../api/documentos/documentos_unificados_listar.php?${params}`;
+                    console.log('=== NOVA REQUISIÇÃO ===');
+                    console.log('URL:', url);
+                    console.log('Filtros:', { pagina, tipo, status, periodo, busca });
+
+                    fetch(url, { signal: abortControllerDocs.signal })
+                        .then(response => {
+                            console.log('Response status:', response.status);
+                            return response.json();
+                        })
+                        .then(data => {
+                            // Ignorar resposta se não for da última requisição
+                            if (requestId !== window.lastRequestId) {
+                                console.log('Ignorando resposta antiga:', requestId, 'atual:', window.lastRequestId);
+                                return;
+                            }
+                            
+                            console.log('Resposta da API:', data);
+                            console.log('Total de documentos retornados:', data.data?.length);
+                            console.log('Paginação:', data.paginacao);
+                            console.log('Filtros aplicados (API):', data.filtros_aplicados);
+                            console.log('DEBUG API:', data.debug);
+                            
+                            if (data.status === 'success') {
+                                documentosCarregados = data.data;
+                                renderizarTabelaDocumentos(data.data);
+                                atualizarEstatisticasDocumentos(data.estatisticas);
+                                renderizarPaginacaoDocumentos(data.paginacao);
+                            } else {
+                                tbody.innerHTML = `
+                                    <tr>
+                                        <td colspan="8" class="text-center py-5">
+                                            <i class="fas fa-exclamation-triangle text-warning fa-3x mb-3"></i>
+                                            <p class="text-muted">Erro ao carregar documentos: ${data.message || 'Erro desconhecido'}</p>
+                                        </td>
+                                    </tr>
+                                `;
+                            }
+                        })
+                        .catch(error => {
+                            // Ignorar erros de abort (requisição cancelada)
+                            if (error.name === 'AbortError') {
+                                console.log('Requisição cancelada');
+                                return;
+                            }
+                            console.error('Erro:', error);
+                            tbody.innerHTML = `
+                                <tr>
+                                    <td colspan="8" class="text-center py-5">
+                                        <i class="fas fa-wifi text-danger fa-3x mb-3"></i>
+                                        <p class="text-muted">Erro de conexão. Tente novamente.</p>
+                                    </td>
+                                </tr>
+                            `;
+                        });
+                }
+
+                function renderizarTabelaDocumentos(documentos) {
+                    const tbody = document.getElementById('corpoTabelaDocumentos');
+                    
+                    if (!documentos || documentos.length === 0) {
+                        tbody.innerHTML = `
+                            <tr>
+                                <td colspan="8" class="text-center py-5">
+                                    <div style="padding: 3rem;">
+                                        <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem;">
+                                            <i class="fas fa-folder-open" style="font-size: 2rem; color: #94a3b8;"></i>
+                                        </div>
+                                        <h5 style="color: #475569; font-weight: 700; margin-bottom: 0.5rem;">Nenhum documento encontrado</h5>
+                                        <p style="color: #94a3b8; margin: 0;">Tente ajustar os filtros ou realizar uma nova busca</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        `;
+                        document.getElementById('countDocumentos').textContent = '0 documentos';
+                        return;
+                    }
+
+                    document.getElementById('countDocumentos').textContent = `${documentos.length} documento${documentos.length !== 1 ? 's' : ''}`;
+
+                    let html = '';
+                    documentos.forEach((doc, index) => {
+                        const statusBadge = getStatusBadge(doc.status_fluxo);
+                        const tipoBadge = doc.tipo_documento === 'AGREGADO' 
+                            ? '<span class="badge" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 6px 12px; font-weight: 600; border-radius: 8px;"><i class="fas fa-user-plus me-1"></i>Agregado</span>'
+                            : '<span class="badge" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); padding: 6px 12px; font-weight: 600; border-radius: 8px;"><i class="fas fa-user-tie me-1"></i>Sócio</span>';
+                        
+                        const situacaoAssociado = doc.situacao || 'Filiado';
+                        let situacaoBadge;
+                        if (situacaoAssociado.toLowerCase().includes('filiado') && !situacaoAssociado.toLowerCase().includes('desfiliado')) {
+                            situacaoBadge = '<span class="badge" style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); padding: 6px 12px; font-weight: 600; border-radius: 8px;"><i class="fas fa-check-circle me-1"></i>Filiado</span>';
+                        } else if (situacaoAssociado.toLowerCase().includes('desfiliado')) {
+                            situacaoBadge = '<span class="badge" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); padding: 6px 12px; font-weight: 600; border-radius: 8px;"><i class="fas fa-times-circle me-1"></i>Desfiliado</span>';
+                        } else {
+                            situacaoBadge = `<span class="badge" style="background: linear-gradient(135deg, #64748b 0%, #475569 100%); padding: 6px 12px; font-weight: 600; border-radius: 8px;">${situacaoAssociado}</span>`;
+                        }
+
+                        const cpfFormatado = formatarCPFDoc(doc.cpf);
+                        const rgFormatado = doc.rg || '---';
+                        const dataUpload = formatarDataDoc(doc.data_upload);
+                        
+                        // Gerar cor do avatar baseada no nome
+                        const cores = [
+                            'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                            'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)',
+                            'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
+                            'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                            'linear-gradient(135deg, #ec4899 0%, #db2777 100%)',
+                            'linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%)',
+                            'linear-gradient(135deg, #14b8a6 0%, #0d9488 100%)'
+                        ];
+                        const corIndex = doc.nome ? doc.nome.charCodeAt(0) % cores.length : 0;
+                        const corAvatar = cores[corIndex];
+                        
+                        // Botões de anexo melhorados
+                        const btnAnexo = doc.caminho_arquivo 
+                            ? `<div class="btn-group" role="group">
+                                <a href="../${doc.caminho_arquivo}" target="_blank" class="btn btn-sm" title="Visualizar documento" 
+                                   style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; border: none; border-radius: 8px 0 0 8px; padding: 8px 12px; transition: all 0.3s;"
+                                   onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a href="../api/documentos/upload_documentos_download.php?id=${doc.id}" class="btn btn-sm" title="Baixar documento"
+                                   style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: white; border: none; border-radius: 0 8px 8px 0; padding: 8px 12px; transition: all 0.3s;"
+                                   onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                                    <i class="fas fa-download"></i>
+                                </a>
+                               </div>`
+                            : '<span style="color: #cbd5e1; font-size: 0.85rem;"><i class="fas fa-ban me-1"></i>Sem anexo</span>';
+
+                        html += `
+                            <tr style="transition: all 0.2s; border-bottom: 1px solid #f1f5f9;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">
+                                <td class="px-4 py-3">
+                                    <div class="d-flex align-items-center">
+                                        <div style="width: 45px; height: 45px; background: ${corAvatar}; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: white; margin-right: 14px; font-weight: 700; font-size: 1.1rem; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);">
+                                            ${doc.nome ? doc.nome.charAt(0).toUpperCase() : '?'}
+                                        </div>
+                                        <div>
+                                            <div style="font-weight: 700; color: #1e293b; font-size: 0.95rem;">${doc.nome || 'Nome não informado'}</div>
+                                            <small style="color: #94a3b8; font-size: 0.8rem;"><i class="fas fa-id-badge me-1"></i>Matrícula: ${doc.pessoa_id || '-'}</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-4 py-3">
+                                    <code style="background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%); padding: 6px 12px; border-radius: 8px; font-weight: 600; color: #475569; font-size: 0.85rem;">${cpfFormatado}</code>
+                                </td>
+                                <td class="px-4 py-3">
+                                    <code style="background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); padding: 6px 12px; border-radius: 8px; color: #1e40af; font-weight: 600; font-size: 0.85rem;">${rgFormatado}</code>
+                                </td>
+                                <td class="px-4 py-3">${situacaoBadge}</td>
+                                <td class="px-4 py-3">${tipoBadge}</td>
+                                <td class="px-4 py-3">${statusBadge}</td>
+                                <td class="px-4 py-3">
+                                    <div style="color: #64748b; font-size: 0.875rem;">
+                                        <i class="fas fa-calendar-alt me-1" style="color: #94a3b8;"></i>${dataUpload}
+                                    </div>
+                                </td>
+                                <td class="px-4 py-3 text-center">
+                                    ${btnAnexo}
+                                </td>
+                            </tr>
+                        `;
+                    });
+
+                    tbody.innerHTML = html;
+                }
+
+                function getStatusBadge(status) {
+                    const statusMap = {
+                        'DIGITALIZADO': { bg: 'linear-gradient(135deg, #64748b 0%, #475569 100%)', text: 'Digitalizado', icon: 'fa-file-alt' },
+                        'AGUARDANDO_ASSINATURA': { bg: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', text: 'Aguardando', icon: 'fa-hourglass-half' },
+                        'ASSINADO': { bg: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)', text: 'Assinado', icon: 'fa-check-double' },
+                        'FINALIZADO': { bg: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)', text: 'Finalizado', icon: 'fa-flag-checkered' }
+                    };
+                    
+                    const config = statusMap[status] || { bg: 'linear-gradient(135deg, #94a3b8 0%, #64748b 100%)', text: status || 'Desconhecido', icon: 'fa-question' };
+                    return `<span class="badge" style="background: ${config.bg}; padding: 6px 12px; font-weight: 600; border-radius: 8px; font-size: 0.75rem;"><i class="fas ${config.icon} me-1"></i>${config.text}</span>`;
+                }
+
+                function atualizarEstatisticasDocumentos(stats) {
+                    if (!stats) return;
+                    
+                    const total = (stats.total_socios || 0) + (stats.total_agregados || 0);
+                    const pendentes = (stats.pendentes_socios || 0) + (stats.pendentes_agregados || 0);
+                    
+                    // Animação dos números
+                    animarNumero('statTotalDocs', total);
+                    animarNumero('statSocios', stats.total_socios || 0);
+                    animarNumero('statAgregados', stats.total_agregados || 0);
+                    animarNumero('statPendentes', pendentes);
+                }
+                
+                function animarNumero(elementId, valorFinal) {
+                    const elemento = document.getElementById(elementId);
+                    const valorInicial = parseInt(elemento.textContent) || 0;
+                    const duracao = 500;
+                    const inicio = performance.now();
+                    
+                    function atualizar(tempo) {
+                        const progresso = Math.min((tempo - inicio) / duracao, 1);
+                        const valorAtual = Math.floor(valorInicial + (valorFinal - valorInicial) * progresso);
+                        elemento.textContent = valorAtual.toLocaleString('pt-BR');
+                        
+                        if (progresso < 1) {
+                            requestAnimationFrame(atualizar);
+                        }
+                    }
+                    
+                    requestAnimationFrame(atualizar);
+                }
+
+                function renderizarPaginacaoDocumentos(paginacao) {
+                    if (!paginacao) return;
+                    
+                    const { pagina_atual, total_paginas, total_registros, por_pagina } = paginacao;
+                    const inicio = total_registros > 0 ? ((pagina_atual - 1) * por_pagina) + 1 : 0;
+                    const fim = Math.min(pagina_atual * por_pagina, total_registros);
+                    
+                    document.getElementById('infoPaginacao').innerHTML = `
+                        <i class="fas fa-info-circle me-2" style="color: #3b82f6;"></i>
+                        Mostrando <strong>${inicio}</strong> a <strong>${fim}</strong> de <strong>${total_registros.toLocaleString('pt-BR')}</strong> registros
+                    `;
+                    
+                    let paginacaoHtml = '';
+                    
+                    // Botão anterior
+                    paginacaoHtml += `
+                        <li class="page-item ${pagina_atual === 1 ? 'disabled' : ''}">
+                            <a class="page-link" href="#" onclick="carregarDocumentosDashboard(${pagina_atual - 1}); return false;"
+                               style="border: none; border-radius: 10px; margin: 0 3px; padding: 10px 15px; color: ${pagina_atual === 1 ? '#cbd5e1' : '#3b82f6'}; background: ${pagina_atual === 1 ? '#f1f5f9' : 'white'}; font-weight: 600; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                                <i class="fas fa-chevron-left"></i>
+                            </a>
+                        </li>
+                    `;
+                    
+                    // Páginas
+                    const maxPaginas = 5;
+                    let startPage = Math.max(1, pagina_atual - Math.floor(maxPaginas / 2));
+                    let endPage = Math.min(total_paginas, startPage + maxPaginas - 1);
+                    
+                    if (endPage - startPage < maxPaginas - 1) {
+                        startPage = Math.max(1, endPage - maxPaginas + 1);
+                    }
+                    
+                    for (let i = startPage; i <= endPage; i++) {
+                        const isActive = i === pagina_atual;
+                        paginacaoHtml += `
+                            <li class="page-item ${isActive ? 'active' : ''}">
+                                <a class="page-link" href="#" onclick="carregarDocumentosDashboard(${i}); return false;"
+                                   style="border: none; border-radius: 10px; margin: 0 3px; padding: 10px 15px; min-width: 45px; text-align: center; font-weight: 700; 
+                                          ${isActive 
+                                            ? 'background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);' 
+                                            : 'background: white; color: #3b82f6; box-shadow: 0 2px 8px rgba(0,0,0,0.05);'}">${i}</a>
+                            </li>
+                        `;
+                    }
+                    
+                    // Botão próximo
+                    paginacaoHtml += `
+                        <li class="page-item ${pagina_atual === total_paginas || total_paginas === 0 ? 'disabled' : ''}">
+                            <a class="page-link" href="#" onclick="carregarDocumentosDashboard(${pagina_atual + 1}); return false;"
+                               style="border: none; border-radius: 10px; margin: 0 3px; padding: 10px 15px; color: ${pagina_atual === total_paginas || total_paginas === 0 ? '#cbd5e1' : '#3b82f6'}; background: ${pagina_atual === total_paginas || total_paginas === 0 ? '#f1f5f9' : 'white'}; font-weight: 600; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                                <i class="fas fa-chevron-right"></i>
+                            </a>
+                        </li>
+                    `;
+                    
+                    document.getElementById('paginacaoDocumentos').innerHTML = paginacaoHtml;
+                }
+
+                function filtrarDocumentos(event) {
+                    // Se pressionar Enter, busca imediatamente
+                    if (event && event.key === 'Enter') {
+                        carregarDocumentosDashboard(1);
+                    }
+                }
+                
+                function limparFiltrosDocumentos() {
+                    document.getElementById('filtroDocBusca').value = '';
+                    document.getElementById('filtroDocTipo').value = '';
+                    document.getElementById('filtroDocStatus').value = '';
+                    document.getElementById('filtroDocPeriodo').value = '';
+                    document.getElementById('filtrosAtivos').style.display = 'none';
+                    carregarDocumentosDashboard(1);
+                }
+                
+                function atualizarIndicadorFiltros() {
+                    const busca = document.getElementById('filtroDocBusca')?.value?.trim() || '';
+                    const tipo = document.getElementById('filtroDocTipo')?.value || '';
+                    const status = document.getElementById('filtroDocStatus')?.value || '';
+                    const periodo = document.getElementById('filtroDocPeriodo')?.value || '';
+                    
+                    const container = document.getElementById('filtrosAtivos');
+                    const badges = document.getElementById('badgesFiltros');
+                    
+                    const filtros = [];
+                    
+                    if (busca) {
+                        filtros.push(`<span style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 600;"><i class="fas fa-search me-1"></i>"${busca}"</span>`);
+                    }
+                    if (tipo) {
+                        const tipoLabel = tipo === 'SOCIO' ? '🔵 Sócios' : '🟠 Agregados';
+                        filtros.push(`<span style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 600;">${tipoLabel}</span>`);
+                    }
+                    if (status) {
+                        const statusLabels = {
+                            'DIGITALIZADO': '📄 Digitalizado',
+                            'AGUARDANDO_ASSINATURA': '⏳ Aguardando',
+                            'ASSINADO': '✅ Assinado',
+                            'FINALIZADO': '🏁 Finalizado'
+                        };
+                        filtros.push(`<span style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 600;">${statusLabels[status] || status}</span>`);
+                    }
+                    if (periodo) {
+                        const periodoLabels = { 'hoje': '📅 Hoje', 'semana': '📆 Semana', 'mes': '🗓️ Mês' };
+                        filtros.push(`<span style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 600;">${periodoLabels[periodo] || periodo}</span>`);
+                    }
+                    
+                    if (filtros.length > 0) {
+                        container.style.display = 'block';
+                        badges.innerHTML = filtros.join('');
+                    } else {
+                        container.style.display = 'none';
+                    }
+                }
+
+                function formatarCPFDoc(cpf) {
+                    if (!cpf) return '---';
+                    cpf = cpf.toString().replace(/\D/g, '');
+                    if (cpf.length === 11) {
+                        return cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+                    }
+                    return cpf;
+                }
+
+                function formatarDataDoc(dataStr) {
+                    if (!dataStr) return '---';
+                    try {
+                        const data = new Date(dataStr);
+                        return data.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                    } catch (e) {
+                        return dataStr;
+                    }
+                }
             </script>
 </body>
 

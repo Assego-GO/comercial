@@ -1416,12 +1416,11 @@ class Documentos
                         a.situacao as agregado_situacao,
                         a.data_pre_cadastro as agregado_data_criacao,
                         m.corporacao,
-                        titular.nome as titular_nome,
-                        titular.cpf as titular_cpf
+                        NULL as titular_nome,
+                        NULL as titular_cpf
                     FROM Documentos_Associado d
                     INNER JOIN Associados a ON d.associado_id = a.id
                     LEFT JOIN Militar m ON a.id = m.associado_id
-                    LEFT JOIN Associados titular ON a.associado_titular_id = titular.id
                     WHERE m.corporacao = 'Agregados'
                     AND (d.id = ? OR d.associado_id = ?)
                     ORDER BY d.id DESC
@@ -1447,10 +1446,9 @@ class Documentos
                         a.data_pre_cadastro as data_criacao,
                         a.data_atualizacao,
                         m.corporacao,
-                        titular.nome as socio_titular_nome
+                        NULL as socio_titular_nome
                     FROM Associados a
                     LEFT JOIN Militar m ON a.id = m.associado_id
-                    LEFT JOIN Associados titular ON a.associado_titular_id = titular.id
                     WHERE m.corporacao = 'Agregados' AND a.id = ?
                 ");
                 $stmt->execute([$documentoId]);

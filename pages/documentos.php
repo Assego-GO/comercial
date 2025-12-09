@@ -70,6 +70,37 @@ if (isset($statsFluxo['por_status'])) {
     }
 }
 
+// Buscar estatísticas de desfiliação
+$desfiliacao_stats = [
+    'aguardando_financeiro' => 0,
+    'aguardando_juridico' => 0,
+    'aguardando_presidencia' => 0,
+    'finalizadas' => 0,
+    'rejeitadas' => 0
+];
+
+try {
+    $db = Database::getInstance(DB_NAME_CADASTRO)->getConnection();
+    
+    // Contar por status de aprovação
+    $stmt = $db->prepare("
+        SELECT 
+            SUM(CASE WHEN ad.departamento_id = 2 AND ad.status_aprovacao = 'PENDENTE' THEN 1 ELSE 0 END) as aguardando_financeiro,
+            SUM(CASE WHEN ad.departamento_id = 3 AND ad.status_aprovacao = 'PENDENTE' THEN 1 ELSE 0 END) as aguardando_juridico,
+            SUM(CASE WHEN ad.departamento_id = 1 AND ad.status_aprovacao = 'PENDENTE' THEN 1 ELSE 0 END) as aguardando_presidencia,
+            SUM(CASE WHEN da.status_fluxo = 'FINALIZADO' THEN 1 ELSE 0 END) as finalizadas,
+            SUM(CASE WHEN ad.status_aprovacao = 'REJEITADO' THEN 1 ELSE 0 END) as rejeitadas
+        FROM Documentos_Associado da
+        LEFT JOIN Aprovacoes_Desfiliacao ad ON da.id = ad.documento_id
+        WHERE da.tipo_documento = 'ficha_desfiliacao'
+        AND da.deletado = 0
+    ");
+    $stmt->execute();
+    $desfiliacao_stats = $stmt->fetch(PDO::FETCH_ASSOC);
+} catch (Exception $e) {
+    error_log("Erro ao buscar estatísticas de desfiliação: " . $e->getMessage());
+}
+
 // Cria instância do Header Component
 $headerComponent = HeaderComponent::create([
     'usuario' => $usuarioLogado,
@@ -1117,6 +1148,65 @@ body {
     }
 }
 
+/* === ESTILOS DESFILIAÇÃO === */
+.desfiliacao-icon {
+    background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
+}
+
+.dual-stat-item:hover .desfiliacao-icon {
+    transform: scale(1.1) rotate(-5deg);
+    box-shadow: 0 8px 25px rgba(245, 158, 11, 0.4);
+}
+
+.badge-tipo.desfiliacao {
+    background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
+    color: white;
+}
+
+.document-card.tipo-desfiliacao {
+    border-left: 4px solid #f59e0b;
+}
+
+.document-card.tipo-desfiliacao:hover {
+    box-shadow: 0 8px 30px rgba(245, 158, 11, 0.15);
+    border-left-color: #f97316;
+}
+
+.desfiliacao-flow-indicators {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+    padding: 10px;
+    background: #fff7ed;
+    border-radius: 8px;
+    flex-wrap: wrap;
+}
+
+.flow-indicator {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.75rem;
+    padding: 4px 8px;
+    border-radius: 4px;
+    background: white;
+}
+
+.flow-indicator.pendente {
+    color: #f59e0b;
+    border: 1px solid #f59e0b;
+}
+
+.flow-indicator.aprovado {
+    color: #10b981;
+    border: 1px solid #10b981;
+}
+
+.flow-indicator.rejeitado {
+    color: #ef4444;
+    border: 1px solid #ef4444;
+}
+
 /* === RESPONSIVO === */
 @media (max-width: 768px) {
     .content-area {
@@ -1337,6 +1427,50 @@ body {
                         </div>
                     </div>
                 </div>
+
+                <!-- Card 4: Desfiliações em Fluxo -->
+                <div class="stat-card dual-stat-card">
+                    <div class="dual-stat-header">
+                        <div class="dual-stat-title">
+                            <i class="fas fa-user-times"></i>
+                            Desfiliações
+                        </div>
+                        <div class="dual-stat-percentage">
+                            <i class="fas fa-tasks"></i>
+                            Em Aprovação
+                        </div>
+                    </div>
+                    <div class="dual-stats-row">
+                        <div class="dual-stat-item">
+                            <div class="dual-stat-icon desfiliacao-icon">
+                                <i class="fas fa-hourglass-half"></i>
+                            </div>
+                            <div class="dual-stat-info">
+                                <div class="dual-stat-value" id="statDesfiliacaoPendentes">
+                                    <?php echo number_format(
+                                        ($desfiliacao_stats['aguardando_financeiro'] ?? 0) + 
+                                        ($desfiliacao_stats['aguardando_juridico'] ?? 0) + 
+                                        ($desfiliacao_stats['aguardando_presidencia'] ?? 0), 
+                                        0, ',', '.'
+                                    ); ?>
+                                </div>
+                                <div class="dual-stat-label">Pendentes</div>
+                            </div>
+                        </div>
+                        <div class="dual-stats-separator"></div>
+                        <div class="dual-stat-item">
+                            <div class="dual-stat-icon" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+                                <i class="fas fa-check-double"></i>
+                            </div>
+                            <div class="dual-stat-info">
+                                <div class="dual-stat-value" id="statDesfiliacaoFinalizadas">
+                                    <?php echo number_format($desfiliacao_stats['finalizadas'] ?? 0, 0, ',', '.'); ?>
+                                </div>
+                                <div class="dual-stat-label">Finalizadas</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div class="alert-premium alert-info-premium animate__animated animate__fadeIn">
@@ -1350,6 +1484,16 @@ body {
             <!-- Filters Bar -->
             <div class="filters-bar animate__animated animate__fadeIn" data-aos="fade-up" data-aos-delay="500">
                 <div class="filters-row">
+                    <!-- NOVO: Filtro de Tipo de Documento -->
+                    <div class="filter-group">
+                        <label class="filter-label">Tipo de Documento</label>
+                        <select class="filter-select" id="filtroTipoDocumento">
+                            <option value="">Todos</option>
+                            <option value="FILIACAO">Filiação (Sócios e Agregados)</option>
+                            <option value="DESFILIACAO">Desfiliação</option>
+                        </select>
+                    </div>
+
                     <!-- NOVO: Filtro de Tipo de Pessoa -->
                     <div class="filter-group">
                         <label class="filter-label">Tipo de Pessoa</label>
@@ -1561,11 +1705,44 @@ body {
             if (filtros.status) params.append('status', filtros.status);
             if (filtros.busca) params.append('busca', filtros.busca);
             if (filtros.periodo) params.append('periodo', filtros.periodo);
+            if (filtros.tipoDocumento) params.append('tipo_documento', filtros.tipoDocumento);
 
-            // MODIFICADO: Usar nova API unificada
-            $.get('../api/documentos/documentos_unificados_listar.php?' + params.toString(), function(response) {
+            // MODIFICADO: Usar API atualizada que inclui desfiliações
+            $.get('../api/documentos/documentos_fluxo_listar.php?' + params.toString(), function(response) {
                 if (response.status === 'success') {
-                    renderizarDocumentosFluxo(response.data);
+                    const documentos = response.data.documentos || response.data || [];
+                    
+                    // Dedupicação: remover documentos duplicados por ID
+                    const documentosUnicos = [];
+                    const idsVistos = new Set();
+                    
+                    // Processar documentos para identificar desfiliações e deduplicar
+                    documentos.forEach(doc => {
+                        // Pular se já vimos este ID
+                        if (idsVistos.has(doc.id)) {
+                            return;
+                        }
+                        idsVistos.add(doc.id);
+                        
+                        if (doc.origem_tabela === 'DESFILIACAO' || doc.tipo_documento === 'ficha_desfiliacao') {
+                            // Processar aprovações JSON
+                            if (doc.aprovacoes_json) {
+                                try {
+                                    doc.aprovacoes = JSON.parse(doc.aprovacoes_json);
+                                    doc.status_geral = doc.status_descricao === 'Rejeitado' ? 'REJEITADO' : 
+                                                      doc.status_descricao === 'Finalizado' ? 'APROVADO' : 
+                                                      'EM_APROVACAO';
+                                } catch (e) {
+                                    doc.aprovacoes = [];
+                                    doc.status_geral = 'EM_APROVACAO';
+                                }
+                            }
+                        }
+                        
+                        documentosUnicos.push(doc);
+                    });
+                    
+                    renderizarDocumentosFluxo(documentosUnicos);
                     
                     // NOVO: Atualizar paginação
                     if (response.paginacao) {
@@ -1582,15 +1759,30 @@ body {
                             <i class="fas fa-exclamation-triangle"></i>
                             <h5>Erro ao carregar documentos</h5>
                             <p>${response.message || 'Tente novamente mais tarde'}</p>
+                            ${response.sql_error ? '<p class="text-danger small">SQL: ' + response.sql_error + '</p>' : ''}
                         </div>
                     `;
                 }
-            }).fail(function() {
+            }).fail(function(xhr) {
+                let errorMsg = 'Verifique sua conexão com a internet';
+                try {
+                    const errorResponse = JSON.parse(xhr.responseText);
+                    if (errorResponse.sql_error) {
+                        errorMsg = errorResponse.sql_error;
+                    } else if (errorResponse.message) {
+                        errorMsg = errorResponse.message;
+                    }
+                } catch (e) {
+                    errorMsg = xhr.responseText || errorMsg;
+                }
+                
+                console.error('Erro API detalhado:', errorMsg);
+                
                 container.innerHTML = `
                     <div class="empty-state">
                         <i class="fas fa-wifi-slash"></i>
                         <h5>Erro de conexão</h5>
-                        <p>Verifique sua conexão com a internet</p>
+                        <p>${errorMsg}</p>
                     </div>
                 `;
             });
@@ -1702,7 +1894,7 @@ body {
             carregarDocumentosFluxo(filtrosAtuais);
         }
 
-        // MODIFICADO: Renderizar documentos com suporte a tipos
+        // MODIFICADO: Renderizar documentos com suporte a tipos (filiações e desfiliações)
         function renderizarDocumentosFluxo(documentos) {
             const container = document.getElementById('documentosFluxoList');
             container.innerHTML = '';
@@ -1711,34 +1903,46 @@ body {
                 container.innerHTML = `
                     <div class="empty-state">
                         <i class="fas fa-folder-open"></i>
-                        <h5>Nenhum documento em fluxo</h5>
-                        <p>Os documentos de sócios e agregados aparecerão aqui</p>
+                        <h5>Nenhum documento encontrado</h5>
+                        <p>Os documentos aparecerão aqui</p>
                     </div>
                 `;
                 return;
             }
 
             documentos.forEach(doc => {
-                const statusClass = doc.status_fluxo.toLowerCase().replace('_', '-');
-                // NOVO: Determinar se é sócio ou agregado
-                const isSocio = doc.tipo_documento === 'SOCIO';
-                const tipoClass = isSocio ? 'socio' : 'agregado';
-                const tipoLabel = isSocio ? 'Sócio' : 'Agregado';
-                const tipoIcon = isSocio ? 'fa-user-tie' : 'fa-users';
-                
-                // NOVO: Informações do titular (apenas para agregados)
-                const titularInfo = !isSocio && doc.titular_nome ? `
-                    <div class="titular-info">
-                        <div class="titular-info-label">
-                            <i class="fas fa-user me-1"></i> Sócio Titular
-                        </div>
-                        <div class="titular-info-value">
+                // Verificar se é desfiliação
+                if (doc.origem_tabela === 'DESFILIACAO' || doc.tipo_documento === 'ficha_desfiliacao') {
+                    container.innerHTML += renderizarCardDesfiliacao(doc);
+                } else {
+                    // É filiação (sócio ou agregado)
+                    container.innerHTML += renderizarCardFiliacao(doc);
+                }
+            });
+        }
+
+        // NOVA: Renderizar card de filiação
+        function renderizarCardFiliacao(doc) {
+            const statusClass = doc.status_fluxo.toLowerCase().replace('_', '-');
+            // Determinar se é sócio ou agregado
+            const isSocio = doc.tipo_documento === 'SOCIO';
+            const tipoClass = isSocio ? 'socio' : 'agregado';
+            const tipoLabel = isSocio ? 'Sócio' : 'Agregado';
+            const tipoIcon = isSocio ? 'fa-user-tie' : 'fa-users';
+            
+            // Informações do titular (apenas para agregados)
+            const titularInfo = !isSocio && doc.titular_nome ? `
+                <div class="titular-info">
+                    <div class="titular-info-label">
+                        <i class="fas fa-user me-1"></i> Sócio Titular
+                    </div>
+                    <div class="titular-info-value">
                             ${doc.titular_nome} ${doc.titular_cpf ? '- CPF: ' + formatarCPF(doc.titular_cpf) : ''}
                         </div>
                     </div>
                 ` : '';
 
-                const cardHtml = `
+                return `
                     <div class="document-card tipo-${tipoClass}" data-aos="fade-up">
                         <div class="document-header">
                             <div class="document-icon ${tipoClass}">
@@ -1749,7 +1953,7 @@ body {
                                 <p class="document-subtitle">${doc.tipo_origem === 'VIRTUAL' ? 'Gerada no Sistema' : 'Digitalizada'}</p>
                             </div>
                             <div class="d-flex flex-column align-items-end gap-2">
-                                <!-- NOVO: Badge de tipo -->
+                                <!-- Badge de tipo -->
                                 <span class="badge-tipo ${tipoClass}">
                                     <i class="fas ${tipoIcon}"></i>
                                     ${tipoLabel}
@@ -1837,9 +2041,12 @@ body {
                         </div>
                     </div>
                 `;
+        }
 
-                container.innerHTML += cardHtml;
-            });
+        // Antiga renderização inline (agora removida)
+        function renderizarDocumentosFluxoLegacy(documentos) {
+            // Função legada - não mais utilizada
+            console.warn('renderizarDocumentosFluxoLegacy está deprecated');
         }
 
         function getStatusIcon(status) {
@@ -2136,6 +2343,210 @@ body {
             document.getElementById('assinaturaFileInput').value = '';
         }
 
+        // ============================================
+        // FUNÇÕES DE DESFILIAÇÃO
+        // ============================================
+
+        // NOVO: Função para carregar desfiliações
+        function carregarDesfiliacoes(filtros = {}, containerCustom = null) {
+            const container = containerCustom || document.getElementById('documentosFluxoList');
+            
+            if (!container) return;
+
+            container.innerHTML = `
+                <div class="text-center py-5">
+                    <div class="loading-spinner mb-3"></div>
+                    <p class="text-muted">Carregando desfiliações...</p>
+                </div>
+            `;
+
+            const params = new URLSearchParams();
+            params.append('pagina', paginaAtual);
+            params.append('por_pagina', itensPorPagina);
+
+            if (filtros.status) params.append('status', filtros.status);
+            if (filtros.busca) params.append('busca', filtros.busca);
+            if (filtros.periodo) params.append('periodo', filtros.periodo);
+
+            $.get('../api/documentos/documentos_desfiliacao_listar.php?' + params.toString(), function(response) {
+                if (response.status === 'success') {
+                    renderizarDesfiliacoes(response.data.documentos);
+                    
+                    if (response.data.estatisticas) {
+                        atualizarEstatisticasDesfiliacao(response.data.estatisticas);
+                    }
+                } else {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <h5>Erro ao carregar desfiliações</h5>
+                            <p>${response.message || 'Tente novamente mais tarde'}</p>
+                        </div>
+                    `;
+                }
+            }).fail(function() {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-wifi-slash"></i>
+                        <h5>Erro de conexão</h5>
+                        <p>Verifique sua conexão com a internet</p>
+                    </div>
+                `;
+            });
+        }
+
+        // NOVO: Renderizar card individual de desfiliação
+        function renderizarCardDesfiliacao(doc) {
+            const statusClass = doc.status_geral ? doc.status_geral.toLowerCase().replace('_', '-') : '';
+            
+            // Criar indicadores de fluxo
+            let fluxoHTML = '<div class="desfiliacao-flow-indicators">';
+            if (doc.aprovacoes && doc.aprovacoes.length > 0) {
+                doc.aprovacoes.forEach(aprov => {
+                    const iconClass = aprov.status_aprovacao === 'APROVADO' ? 'fa-check-circle' : 
+                                    aprov.status_aprovacao === 'REJEITADO' ? 'fa-times-circle' : 
+                                    'fa-clock';
+                    const statusText = aprov.status_aprovacao === 'APROVADO' ? 'Aprovado' :
+                                      aprov.status_aprovacao === 'REJEITADO' ? 'Rejeitado' :
+                                      'Pendente';
+                    
+                    fluxoHTML += `
+                        <div class="flow-indicator ${aprov.status_aprovacao.toLowerCase()}">
+                            <i class="fas ${iconClass}"></i>
+                            ${aprov.departamento_nome}: ${statusText}
+                        </div>
+                    `;
+                });
+            }
+            fluxoHTML += '</div>';
+
+            return `
+                <div class="document-card tipo-desfiliacao" data-aos="fade-up">
+                    <div class="document-header">
+                        <div class="document-icon desfiliacao-icon">
+                            <i class="fas fa-user-times"></i>
+                        </div>
+                        <div class="document-info">
+                            <h6 class="document-title">Ficha de Desfiliação</h6>
+                            <p class="document-subtitle">${doc.associado_nome || 'Nome não disponível'}</p>
+                        </div>
+                        <div class="d-flex flex-column align-items-end gap-2">
+                            <span class="badge-tipo desfiliacao">
+                                <i class="fas fa-user-times"></i>
+                                Desfiliação
+                            </span>
+                            <span class="status-badge ${statusClass}">
+                                <i class="fas fa-${getStatusIconDesfiliacao(doc.status_geral)}"></i>
+                                ${getStatusTextDesfiliacao(doc.status_geral)}
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div class="document-meta">
+                        <div class="meta-item">
+                            <i class="fas fa-id-card"></i>
+                            <span>CPF: ${formatarCPF(doc.associado_cpf)}</span>
+                        </div>
+                        <div class="meta-item">
+                            <i class="fas fa-calendar"></i>
+                            <span>${formatarData(doc.data_upload)}</span>
+                        </div>
+                        ${doc.funcionario_nome ? `
+                        <div class="meta-item">
+                            <i class="fas fa-user-circle"></i>
+                            <span>Por: ${doc.funcionario_nome}</span>
+                        </div>
+                        ` : ''}
+                        ${doc.dias_em_processo > 0 ? `
+                        <div class="meta-item">
+                            <i class="fas fa-hourglass-half"></i>
+                            <span class="text-warning"><strong>${doc.dias_em_processo} dias em processo</strong></span>
+                        </div>
+                        ` : ''}
+                    </div>
+                    
+                    ${fluxoHTML}
+                    
+                    <div class="document-actions">
+                        ${doc.caminho_arquivo ? `
+                        <button class="btn-modern btn-primary-premium btn-sm" onclick="downloadDocumento(${doc.id}, 'DESFILIACAO')">
+                            <i class="fas fa-download me-1"></i>
+                            Baixar
+                        </button>
+                        ` : ''}
+                        
+                        <button class="btn-modern btn-secondary-premium btn-sm" onclick="verHistoricoDesfiliacao(${doc.id})">
+                            <i class="fas fa-history me-1"></i>
+                            Histórico
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        // NOVO: Renderizar desfiliações (compatibilidade)
+        function renderizarDesfiliacoes(documentos) {
+            const container = document.getElementById('documentosFluxoList');
+            container.innerHTML = '';
+
+            if (documentos.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-user-times"></i>
+                        <h5>Nenhuma desfiliação em fluxo</h5>
+                        <p>As desfiliações aparecerão aqui</p>
+                    </div>
+                `;
+                return;
+            }
+
+            documentos.forEach(doc => {
+                container.innerHTML += renderizarCardDesfiliacao(doc);
+            });
+        }
+
+        function getStatusIconDesfiliacao(status) {
+            const icons = {
+                'EM_APROVACAO': 'hourglass-half',
+                'APROVADO': 'check-circle',
+                'REJEITADO': 'times-circle'
+            };
+            return icons[status] || 'question-circle';
+        }
+
+        function getStatusTextDesfiliacao(status) {
+            const texts = {
+                'EM_APROVACAO': 'Em Aprovação',
+                'APROVADO': 'Aprovado',
+                'REJEITADO': 'Rejeitado'
+            };
+            return texts[status] || 'Desconhecido';
+        }
+
+        function atualizarEstatisticasDesfiliacao(stats) {
+            if (stats.aguardando_financeiro !== undefined && stats.aguardando_juridico !== undefined && stats.aguardando_presidencia !== undefined) {
+                const totalPendentes = parseInt(stats.aguardando_financeiro || 0) + 
+                                      parseInt(stats.aguardando_juridico || 0) + 
+                                      parseInt(stats.aguardando_presidencia || 0);
+                const elem = document.getElementById('statDesfiliacaoPendentes');
+                if (elem) elem.textContent = totalPendentes.toLocaleString('pt-BR');
+            }
+            
+            if (stats.finalizadas !== undefined) {
+                const elem = document.getElementById('statDesfiliacaoFinalizadas');
+                if (elem) elem.textContent = parseInt(stats.finalizadas || 0).toLocaleString('pt-BR');
+            }
+        }
+
+        function verHistoricoDesfiliacao(documentoId) {
+            // Reutilizar a função de histórico existente
+            verHistorico(documentoId, 'DESFILIACAO');
+        }
+
+        // ============================================
+        // FILTROS E NAVEGAÇÃO
+        // ============================================
+
         // MODIFICADO: Aplicar filtros com novo campo de tipo
         function aplicarFiltros() {
             filtrosAtuais = {};
@@ -2152,6 +2563,10 @@ body {
 
             const periodo = document.getElementById('filtroPeriodo').value;
             if (periodo) filtrosAtuais.periodo = periodo;
+
+            // NOVO: Verificar tipo de documento
+            const tipoDoc = document.getElementById('filtroTipoDocumento')?.value;
+            if (tipoDoc) filtrosAtuais.tipoDocumento = tipoDoc;
 
             paginaAtual = 1; // Resetar para primeira página ao filtrar
             carregarDocumentosFluxo(filtrosAtuais);

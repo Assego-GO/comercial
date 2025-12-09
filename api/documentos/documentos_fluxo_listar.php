@@ -51,73 +51,111 @@ try {
     $tipoOrigem = isset($_GET['tipo_origem']) ? trim($_GET['tipo_origem']) : '';
     $origem = isset($_GET['origem']) ? trim($_GET['origem']) : '';
     $periodo = isset($_GET['periodo']) ? trim($_GET['periodo']) : '';
-    $limit = isset($_GET['limit']) ? intval($_GET['limit']) : 100;
-    $offset = isset($_GET['offset']) ? intval($_GET['offset']) : 0;
-
-    // Query adaptada à estrutura REAL do banco
-    // Tabela DocumentosFluxo tem: id, associado_id, tipo_documento, tipo_descricao, 
-    // nome_arquivo, caminho_arquivo, tamanho_arquivo, tipo_mime, status_fluxo,
-    // data_upload, funcionario_upload, departamento_atual, observacao, 
-    // data_ultima_acao, funcionario_ultima_acao
+    $tipoDocumento = isset($_GET['tipo_documento']) ? trim($_GET['tipo_documento']) : '';
     
-    $sql = "SELECT 
-                df.id,
-                df.associado_id,
-                df.tipo_documento,
-                df.tipo_descricao,
-                df.nome_arquivo,
-                df.caminho_arquivo AS arquivo_path,
-                df.tamanho_arquivo,
-                df.tipo_mime,
-                df.status_fluxo,
-                df.data_upload,
-                df.funcionario_upload,
-                df.departamento_atual,
-                df.observacao AS observacoes,
-                df.data_ultima_acao,
-                df.funcionario_ultima_acao,
+    // Paginação
+    $pagina = isset($_GET['pagina']) ? max(1, intval($_GET['pagina'])) : 1;
+    $porPagina = isset($_GET['por_pagina']) ? max(1, min(100, intval($_GET['por_pagina']))) : 20;
+    $offset = ($pagina - 1) * $porPagina;
+    $limit = $porPagina;
+
+    // Query APENAS da tabela Documentos_Associado
+    $sqlBase = "SELECT 
+                da.id,
+                da.associado_id,
+                da.tipo_documento,
+                CASE da.tipo_documento
+                    WHEN 'ficha_desfiliacao' THEN 'Ficha de Desfiliação'
+                    WHEN 'cpf' THEN 'CPF'
+                    WHEN 'rg' THEN 'RG'
+                    WHEN 'comprovante_residencia' THEN 'Comprovante de Residência'
+                    ELSE UPPER(REPLACE(da.tipo_documento, '_', ' '))
+                END AS tipo_descricao,
+                da.nome_arquivo,
+                da.caminho_arquivo AS arquivo_path,
+                0 AS tamanho_arquivo,
+                'application/pdf' AS tipo_mime,
+                da.status_fluxo,
+                da.data_upload,
+                da.funcionario_id AS funcionario_upload,
+                da.departamento_atual,
+                da.observacoes_fluxo AS observacoes,
+                da.data_upload AS data_ultima_acao,
+                da.funcionario_id AS funcionario_ultima_acao,
                 
                 -- Campos de Associados
                 a.nome AS associado_nome,
                 a.cpf AS associado_cpf,
                 a.email AS associado_email,
                 
-                -- Campos de Departamentos (sem data_atualizacao que não existe)
+                -- Campos de Departamentos
                 d.nome AS departamento_atual_nome,
                 
                 -- Campos calculados
-                CASE df.status_fluxo
-                    WHEN 'DIGITALIZADO' THEN 'Aguardando Envio'
-                    WHEN 'AGUARDANDO_ASSINATURA' THEN 'Na Presidência'
-                    WHEN 'ASSINADO' THEN 'Assinado'
-                    WHEN 'FINALIZADO' THEN 'Finalizado'
-                    ELSE df.status_fluxo
+                CASE 
+                    WHEN da.tipo_documento = 'ficha_desfiliacao' THEN
+                        CASE 
+                            WHEN EXISTS (
+                                SELECT 1 FROM Aprovacoes_Desfiliacao ad 
+                                WHERE ad.documento_id = da.id 
+                                AND ad.status_aprovacao = 'REJEITADO'
+                            ) THEN 'Rejeitado'
+                            WHEN da.status_fluxo = 'FINALIZADO' THEN 'Finalizado'
+                            ELSE 'Em Aprovação'
+                        END
+                    ELSE
+                        CASE da.status_fluxo
+                            WHEN 'DIGITALIZADO' THEN 'Digitalizado'
+                            WHEN 'AGUARDANDO_ASSINATURA' THEN 'Aguardando Assinatura'
+                            WHEN 'ASSINADO' THEN 'Assinado'
+                            WHEN 'FINALIZADO' THEN 'Finalizado'
+                            ELSE da.status_fluxo
+                        END
                 END AS status_descricao,
-                DATEDIFF(NOW(), df.data_upload) AS dias_em_processo,
+                DATEDIFF(NOW(), da.data_upload) AS dias_em_processo,
                 
-                -- Simular campos que não existem na tabela
-                NULL AS tipo_origem,
-                NULL AS data_envio_presidencia,
-                NULL AS data_assinatura,
-                NULL AS data_finalizacao,
-                NULL AS assinado_por
+                -- Identificador de origem
+                CASE 
+                    WHEN da.tipo_documento = 'ficha_desfiliacao' THEN 'DESFILIACAO'
+                    ELSE 'DOCUMENTO'
+                END AS origem_tabela,
                 
-            FROM DocumentosFluxo df
-            LEFT JOIN Associados a ON df.associado_id = a.id
-            LEFT JOIN Departamentos d ON df.departamento_atual = d.id
+                -- Aprovações (somente para desfiliação)
+                CASE 
+                    WHEN da.tipo_documento = 'ficha_desfiliacao' THEN
+                        (
+                            SELECT JSON_ARRAYAGG(
+                                JSON_OBJECT(
+                                    'departamento_id', ad2.departamento_id,
+                                    'departamento_nome', ad2.departamento_nome,
+                                    'status_aprovacao', ad2.status_aprovacao,
+                                    'ordem_aprovacao', ad2.ordem_aprovacao
+                                )
+                            )
+                            FROM Aprovacoes_Desfiliacao ad2 
+                            WHERE ad2.documento_id = da.id
+                            ORDER BY ad2.ordem_aprovacao
+                        )
+                    ELSE NULL
+                END AS aprovacoes_json
+                
+            FROM Documentos_Associado da
+            LEFT JOIN Associados a ON da.associado_id = a.id
+            LEFT JOIN Departamentos d ON da.departamento_atual = d.id
             WHERE 1=1";
-
+    
+    $sql = $sqlBase;
     $params = [];
 
     // Filtro por status
     if (!empty($status)) {
-        $sql .= " AND df.status_fluxo = :status";
+        $sql .= " AND status_fluxo = :status";
         $params[':status'] = $status;
     }
 
     // Filtro por busca (nome ou CPF)
     if (!empty($busca)) {
-        $sql .= " AND (a.nome LIKE :busca OR a.cpf LIKE :busca_cpf)";
+        $sql .= " AND (associado_nome LIKE :busca OR associado_cpf LIKE :busca_cpf)";
         $params[':busca'] = '%' . $busca . '%';
         $params[':busca_cpf'] = '%' . preg_replace('/\D/', '', $busca) . '%';
     }
@@ -126,42 +164,63 @@ try {
     if (!empty($periodo)) {
         switch ($periodo) {
             case 'hoje':
-                $sql .= " AND DATE(df.data_upload) = CURDATE()";
+                $sql .= " AND DATE(data_upload) = CURDATE()";
                 break;
             case 'semana':
-                $sql .= " AND df.data_upload >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)";
+                $sql .= " AND data_upload >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)";
                 break;
             case 'mes':
-                $sql .= " AND df.data_upload >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)";
+                $sql .= " AND data_upload >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)";
                 break;
         }
     }
 
     // Ordenação e paginação
-    $sql .= " ORDER BY df.data_upload DESC";
+    $sql .= " ORDER BY data_upload DESC";
     $sql .= " LIMIT " . intval($limit) . " OFFSET " . intval($offset);
 
     // Executar query
-    $stmt = $db->prepare($sql);
-    $stmt->execute($params);
-    $documentos = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    try {
+        $stmt = $db->prepare($sql);
+        $stmt->execute($params);
+        $documentos = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        http_response_code(500);
+        echo json_encode([
+            'status' => 'error',
+            'message' => 'Erro ao buscar documentos: ' . $e->getMessage(),
+            'sql_error' => $e->getMessage()
+        ]);
+        exit;
+    }
 
-    // Contar total
-    $sqlCount = "SELECT COUNT(*) as total FROM DocumentosFluxo";
+    // Contar total de documentos
+    $sqlCount = "SELECT COUNT(*) as total FROM Documentos_Associado WHERE 1=1";
     $stmtCount = $db->query($sqlCount);
     $totalRow = $stmtCount->fetch(PDO::FETCH_ASSOC);
     $total = $totalRow['total'] ?? 0;
 
     // Estatísticas por status
-    $sqlStats = "SELECT status_fluxo, COUNT(*) as total FROM DocumentosFluxo GROUP BY status_fluxo";
+    $sqlStats = "SELECT status_fluxo, COUNT(*) as total FROM Documentos_Associado GROUP BY status_fluxo";
     $stmtStats = $db->query($sqlStats);
     $estatisticas = $stmtStats->fetchAll(PDO::FETCH_ASSOC);
+
+    // Calcular informações de paginação
+    $totalPaginas = ceil($total / $porPagina);
 
     $response = [
         'status' => 'success',
         'data' => $documentos,
         'total' => count($documentos),
         'total_geral' => intval($total),
+        'paginacao' => [
+            'pagina_atual' => $pagina,
+            'por_pagina' => $porPagina,
+            'total_paginas' => $totalPaginas,
+            'total_registros' => intval($total),
+            'tem_proxima' => $pagina < $totalPaginas,
+            'tem_anterior' => $pagina > 1
+        ],
         'estatisticas' => [
             'por_status' => $estatisticas
         ],

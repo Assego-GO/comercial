@@ -1,7 +1,12 @@
 <?php
 /**
+ * ==================== CADASTRO ONLINE - ARQUIVO PRINCIPAL ====================
  * Formulário de Cadastro Simplificado de Associados
  * pages/cadastro_simplificado.php
+ * 
+ * Este é o formulário de CADASTRO ONLINE que os usuários acessam externamente
+ * para se cadastrarem na ASSEGO pela internet.
+ * ==================== CADASTRO ONLINE ====================
  */
 
 // Configuração e includes
