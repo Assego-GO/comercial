@@ -135,19 +135,30 @@ try {
     error_log("📋 Associado encontrado: " . $associado['nome'] . " | Pre-cadastro atual: " . $associado['pre_cadastro']);
 
     // Cria diretório de upload se não existir
-    $baseDir = '../../uploads/anexos';
+    $baseDir = __DIR__ . '/../../uploads/anexos';
     $associadoDir = $baseDir . '/' . $associadoId;
     
+    // Log para debug
+    error_log("📂 Diretório base: " . realpath($baseDir));
+    error_log("📂 Diretório do associado: " . $associadoDir);
+    
     if (!is_dir($baseDir)) {
-        if (!mkdir($baseDir, 0755, true)) {
-            throw new Exception('Erro ao criar diretório base de uploads');
+        if (!@mkdir($baseDir, 0775, true)) {
+            throw new Exception('Erro ao criar diretório base de uploads. Verifique as permissões.');
         }
     }
     
     if (!is_dir($associadoDir)) {
-        if (!mkdir($associadoDir, 0755, true)) {
-            throw new Exception('Erro ao criar diretório do associado');
+        if (!@mkdir($associadoDir, 0775, true)) {
+            error_log("❌ Erro ao criar diretório: " . $associadoDir . " - Permissão negada?");
+            throw new Exception('Erro ao criar diretório do associado. Verifique as permissões do servidor.');
         }
+    }
+    
+    // Verifica se podemos escrever no diretório
+    if (!is_writable($associadoDir)) {
+        error_log("❌ Diretório não é gravável: " . $associadoDir);
+        throw new Exception('Diretório de uploads não tem permissão de escrita.');
     }
 
     // Gera nome único para o arquivo
@@ -163,6 +174,7 @@ try {
     // Define descrição do tipo
     $tiposDescricao = [
         'FICHA_FILIACAO' => 'Ficha de Filiação',
+        'FICHA_DESFILIACAO' => 'Ficha de Desfiliação',
         'RG' => 'RG (Cópia)',
         'CPF' => 'CPF (Cópia)',
         'COMPROVANTE_RESIDENCIA' => 'Comprovante de Residência',

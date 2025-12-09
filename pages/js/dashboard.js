@@ -2274,6 +2274,7 @@ function abrirModalUploadDocumento(associadoId, associadoNome) {
                                 <select class="form-select" id="tipoDocumento" name="tipo_documento" required>
                                     <option value="">Selecione o tipo</option>
                                     <option value="FICHA_FILIACAO">Ficha de Filiação</option>
+                                    <option value="FICHA_DESFILIACAO">Ficha de Desfiliação</option>
                                     <option value="RG">RG (Cópia)</option>
                                     <option value="CPF">CPF (Cópia)</option>
                                     <option value="COMPROVANTE_RESIDENCIA">Comprovante de Residência</option>
@@ -2457,7 +2458,7 @@ function enviarDocumento() {
         uploadProgress.style.display = 'none';
     });
 
-    xhr.open('POST', '../api/documentos/documentos_upload.php');
+    xhr.open('POST', '/api/documentos/documentos_upload.php');
     xhr.send(formData);
 }
 
