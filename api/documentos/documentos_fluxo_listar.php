@@ -51,16 +51,21 @@ try {
     $tipoOrigem = isset($_GET['tipo_origem']) ? trim($_GET['tipo_origem']) : '';
     $origem = isset($_GET['origem']) ? trim($_GET['origem']) : '';
     $periodo = isset($_GET['periodo']) ? trim($_GET['periodo']) : '';
+    $tipoDocumento = isset($_GET['tipo_documento']) ? trim($_GET['tipo_documento']) : '';
     $limit = isset($_GET['limit']) ? intval($_GET['limit']) : 100;
     $offset = isset($_GET['offset']) ? intval($_GET['offset']) : 0;
 
+    // Se filtro é específico para DESFILIACAO, buscar só da tabela Documentos_Associado
+    if ($tipoDocumento === 'DESFILIACAO') {
+        // Redirecionar para a API de desfiliação
+        include 'documentos_desfiliacao_listar.php';
+        exit;
+    }
+
     // Query adaptada à estrutura REAL do banco
-    // Tabela DocumentosFluxo tem: id, associado_id, tipo_documento, tipo_descricao, 
-    // nome_arquivo, caminho_arquivo, tamanho_arquivo, tipo_mime, status_fluxo,
-    // data_upload, funcionario_upload, departamento_atual, observacao, 
-    // data_ultima_acao, funcionario_ultima_acao
+    // UNION entre DocumentosFluxo (filiações) e Documentos_Associado (desfiliações)
     
-    $sql = "SELECT 
+    $sqlBase = "SELECT 
                 df.id,
                 df.associado_id,
                 df.tipo_documento,
@@ -82,7 +87,7 @@ try {
                 a.cpf AS associado_cpf,
                 a.email AS associado_email,
                 
-                -- Campos de Departamentos (sem data_atualizacao que não existe)
+                -- Campos de Departamentos
                 d.nome AS departamento_atual_nome,
                 
                 -- Campos calculados
@@ -95,17 +100,79 @@ try {
                 END AS status_descricao,
                 DATEDIFF(NOW(), df.data_upload) AS dias_em_processo,
                 
-                -- Simular campos que não existem na tabela
-                NULL AS tipo_origem,
-                NULL AS data_envio_presidencia,
-                NULL AS data_assinatura,
-                NULL AS data_finalizacao,
-                NULL AS assinado_por
+                -- Identificador de origem
+                'FILIACAO' AS origem_tabela,
+                NULL AS aprovacoes_json
                 
             FROM DocumentosFluxo df
             LEFT JOIN Associados a ON df.associado_id = a.id
             LEFT JOIN Departamentos d ON df.departamento_atual = d.id
             WHERE 1=1";
+    
+    // Se não filtrou especificamente para FILIACAO, adicionar desfiliações via UNION
+    if ($tipoDocumento !== 'FILIACAO') {
+        $sqlBase .= "
+            UNION ALL
+            
+            SELECT 
+                da.id,
+                da.associado_id,
+                da.tipo_documento,
+                'Ficha de Desfiliação' AS tipo_descricao,
+                SUBSTRING_INDEX(da.caminho_arquivo, '/', -1) AS nome_arquivo,
+                da.caminho_arquivo AS arquivo_path,
+                0 AS tamanho_arquivo,
+                'application/pdf' AS tipo_mime,
+                da.status_fluxo,
+                da.data_upload,
+                da.funcionario_id AS funcionario_upload,
+                NULL AS departamento_atual,
+                NULL AS observacoes,
+                da.data_atualizacao AS data_ultima_acao,
+                NULL AS funcionario_ultima_acao,
+                
+                -- Campos de Associados
+                a.nome AS associado_nome,
+                a.cpf AS associado_cpf,
+                a.email AS associado_email,
+                
+                -- Campos de Departamentos
+                NULL AS departamento_atual_nome,
+                
+                -- Campos calculados
+                CASE 
+                    WHEN EXISTS (
+                        SELECT 1 FROM Aprovacoes_Desfiliacao ad 
+                        WHERE ad.documento_id = da.id 
+                        AND ad.status_aprovacao = 'REJEITADO'
+                    ) THEN 'Rejeitado'
+                    WHEN da.status_fluxo = 'FINALIZADO' THEN 'Finalizado'
+                    ELSE 'Em Aprovação'
+                END AS status_descricao,
+                DATEDIFF(NOW(), da.data_upload) AS dias_em_processo,
+                
+                -- Identificador de origem
+                'DESFILIACAO' AS origem_tabela,
+                (
+                    SELECT JSON_ARRAYAGG(
+                        JSON_OBJECT(
+                            'departamento_id', ad2.departamento_id,
+                            'departamento_nome', ad2.departamento_nome,
+                            'status_aprovacao', ad2.status_aprovacao,
+                            'ordem_aprovacao', ad2.ordem_aprovacao
+                        )
+                    )
+                    FROM Aprovacoes_Desfiliacao ad2 
+                    WHERE ad2.documento_id = da.id
+                ) AS aprovacoes_json
+                
+            FROM Documentos_Associado da
+            LEFT JOIN Associados a ON da.associado_id = a.id
+            WHERE da.tipo_documento = 'ficha_desfiliacao'
+            AND da.deletado = 0";
+    }
+    
+    $sql = $sqlBase;
 
     $params = [];
 

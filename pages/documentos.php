@@ -1705,11 +1705,32 @@ body {
             if (filtros.status) params.append('status', filtros.status);
             if (filtros.busca) params.append('busca', filtros.busca);
             if (filtros.periodo) params.append('periodo', filtros.periodo);
+            if (filtros.tipoDocumento) params.append('tipo_documento', filtros.tipoDocumento);
 
-            // MODIFICADO: Usar nova API unificada
-            $.get('../api/documentos/documentos_unificados_listar.php?' + params.toString(), function(response) {
+            // MODIFICADO: Usar API atualizada que inclui desfiliações
+            $.get('../api/documentos/documentos_fluxo_listar.php?' + params.toString(), function(response) {
                 if (response.status === 'success') {
-                    renderizarDocumentosFluxo(response.data);
+                    const documentos = response.data.documentos || response.data || [];
+                    
+                    // Processar documentos para identificar desfiliações
+                    documentos.forEach(doc => {
+                        if (doc.origem_tabela === 'DESFILIACAO' || doc.tipo_documento === 'ficha_desfiliacao') {
+                            // Processar aprovações JSON
+                            if (doc.aprovacoes_json) {
+                                try {
+                                    doc.aprovacoes = JSON.parse(doc.aprovacoes_json);
+                                    doc.status_geral = doc.status_descricao === 'Rejeitado' ? 'REJEITADO' : 
+                                                      doc.status_descricao === 'Finalizado' ? 'APROVADO' : 
+                                                      'EM_APROVACAO';
+                                } catch (e) {
+                                    doc.aprovacoes = [];
+                                    doc.status_geral = 'EM_APROVACAO';
+                                }
+                            }
+                        }
+                    });
+                    
+                    renderizarDocumentosFluxo(documentos);
                     
                     // NOVO: Atualizar paginação
                     if (response.paginacao) {
@@ -1846,7 +1867,7 @@ body {
             carregarDocumentosFluxo(filtrosAtuais);
         }
 
-        // MODIFICADO: Renderizar documentos com suporte a tipos
+        // MODIFICADO: Renderizar documentos com suporte a tipos (filiações e desfiliações)
         function renderizarDocumentosFluxo(documentos) {
             const container = document.getElementById('documentosFluxoList');
             container.innerHTML = '';
@@ -1855,34 +1876,46 @@ body {
                 container.innerHTML = `
                     <div class="empty-state">
                         <i class="fas fa-folder-open"></i>
-                        <h5>Nenhum documento em fluxo</h5>
-                        <p>Os documentos de sócios e agregados aparecerão aqui</p>
+                        <h5>Nenhum documento encontrado</h5>
+                        <p>Os documentos aparecerão aqui</p>
                     </div>
                 `;
                 return;
             }
 
             documentos.forEach(doc => {
-                const statusClass = doc.status_fluxo.toLowerCase().replace('_', '-');
-                // NOVO: Determinar se é sócio ou agregado
-                const isSocio = doc.tipo_documento === 'SOCIO';
-                const tipoClass = isSocio ? 'socio' : 'agregado';
-                const tipoLabel = isSocio ? 'Sócio' : 'Agregado';
-                const tipoIcon = isSocio ? 'fa-user-tie' : 'fa-users';
-                
-                // NOVO: Informações do titular (apenas para agregados)
-                const titularInfo = !isSocio && doc.titular_nome ? `
-                    <div class="titular-info">
-                        <div class="titular-info-label">
-                            <i class="fas fa-user me-1"></i> Sócio Titular
-                        </div>
-                        <div class="titular-info-value">
+                // Verificar se é desfiliação
+                if (doc.origem_tabela === 'DESFILIACAO' || doc.tipo_documento === 'ficha_desfiliacao') {
+                    container.innerHTML += renderizarCardDesfiliacao(doc);
+                } else {
+                    // É filiação (sócio ou agregado)
+                    container.innerHTML += renderizarCardFiliacao(doc);
+                }
+            });
+        }
+
+        // NOVA: Renderizar card de filiação
+        function renderizarCardFiliacao(doc) {
+            const statusClass = doc.status_fluxo.toLowerCase().replace('_', '-');
+            // Determinar se é sócio ou agregado
+            const isSocio = doc.tipo_documento === 'SOCIO';
+            const tipoClass = isSocio ? 'socio' : 'agregado';
+            const tipoLabel = isSocio ? 'Sócio' : 'Agregado';
+            const tipoIcon = isSocio ? 'fa-user-tie' : 'fa-users';
+            
+            // Informações do titular (apenas para agregados)
+            const titularInfo = !isSocio && doc.titular_nome ? `
+                <div class="titular-info">
+                    <div class="titular-info-label">
+                        <i class="fas fa-user me-1"></i> Sócio Titular
+                    </div>
+                    <div class="titular-info-value">
                             ${doc.titular_nome} ${doc.titular_cpf ? '- CPF: ' + formatarCPF(doc.titular_cpf) : ''}
                         </div>
                     </div>
                 ` : '';
 
-                const cardHtml = `
+                return `
                     <div class="document-card tipo-${tipoClass}" data-aos="fade-up">
                         <div class="document-header">
                             <div class="document-icon ${tipoClass}">
@@ -1893,7 +1926,7 @@ body {
                                 <p class="document-subtitle">${doc.tipo_origem === 'VIRTUAL' ? 'Gerada no Sistema' : 'Digitalizada'}</p>
                             </div>
                             <div class="d-flex flex-column align-items-end gap-2">
-                                <!-- NOVO: Badge de tipo -->
+                                <!-- Badge de tipo -->
                                 <span class="badge-tipo ${tipoClass}">
                                     <i class="fas ${tipoIcon}"></i>
                                     ${tipoLabel}
@@ -1981,20 +2014,13 @@ body {
                         </div>
                     </div>
                 `;
-
-                container.innerHTML += cardHtml;
-            });
         }
 
-        function getStatusIcon(status) {
-            const icons = {
-                'DIGITALIZADO': 'upload',
-                'AGUARDANDO_ASSINATURA': 'clock',
-                'ASSINADO': 'check',
-                'FINALIZADO': 'flag-checkered'
-            };
-            return icons[status] || 'file';
-        }
+        // Antiga renderização inline (agora removida)
+        function renderizarDocumentosFluxoLegacy(documentos) {
+            const container = document.getElementById('documentosFluxoList');
+            documentos.forEach(doc => {
+                const statusClass = doc.status_fluxo.toLowerCase().replace('_', '-');
 
         // MODIFICADO: Ações com suporte ao tipo de documento
         function getAcoesFluxo(doc) {
