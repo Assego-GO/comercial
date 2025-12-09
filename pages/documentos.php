@@ -1759,15 +1759,30 @@ body {
                             <i class="fas fa-exclamation-triangle"></i>
                             <h5>Erro ao carregar documentos</h5>
                             <p>${response.message || 'Tente novamente mais tarde'}</p>
+                            ${response.sql_error ? '<p class="text-danger small">SQL: ' + response.sql_error + '</p>' : ''}
                         </div>
                     `;
                 }
-            }).fail(function() {
+            }).fail(function(xhr) {
+                let errorMsg = 'Verifique sua conexão com a internet';
+                try {
+                    const errorResponse = JSON.parse(xhr.responseText);
+                    if (errorResponse.sql_error) {
+                        errorMsg = errorResponse.sql_error;
+                    } else if (errorResponse.message) {
+                        errorMsg = errorResponse.message;
+                    }
+                } catch (e) {
+                    errorMsg = xhr.responseText || errorMsg;
+                }
+                
+                console.error('Erro API detalhado:', errorMsg);
+                
                 container.innerHTML = `
                     <div class="empty-state">
                         <i class="fas fa-wifi-slash"></i>
                         <h5>Erro de conexão</h5>
-                        <p>Verifique sua conexão com a internet</p>
+                        <p>${errorMsg}</p>
                     </div>
                 `;
             });
