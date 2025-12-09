@@ -1049,7 +1049,7 @@ $headerComponent = HeaderComponent::create([
             <!-- Form Content -->
             <form id="formAssociado" class="form-content" enctype="multipart/form-data">
                 <?php if ($isEdit): ?>
-                    <input type="hidden" name="id" value="<?php echo $associadoId; ?>">
+                    <input type="hidden" id="associadoId" name="id" value="<?php echo $associadoId; ?>">
                 <?php endif; ?>
 
                 <!-- Step 1: Dados Pessoais -->
