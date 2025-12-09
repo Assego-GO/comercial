@@ -2018,9 +2018,19 @@ body {
 
         // Antiga renderização inline (agora removida)
         function renderizarDocumentosFluxoLegacy(documentos) {
-            const container = document.getElementById('documentosFluxoList');
-            documentos.forEach(doc => {
-                const statusClass = doc.status_fluxo.toLowerCase().replace('_', '-');
+            // Função legada - não mais utilizada
+            console.warn('renderizarDocumentosFluxoLegacy está deprecated');
+        }
+
+        function getStatusIcon(status) {
+            const icons = {
+                'DIGITALIZADO': 'upload',
+                'AGUARDANDO_ASSINATURA': 'clock',
+                'ASSINADO': 'check',
+                'FINALIZADO': 'flag-checkered'
+            };
+            return icons[status] || 'file';
+        }
 
         // MODIFICADO: Ações com suporte ao tipo de documento
         function getAcoesFluxo(doc) {
