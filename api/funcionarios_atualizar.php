@@ -37,6 +37,21 @@ if (!$dados || !isset($dados['id'])) {
 $funcionarioId = $dados['id'];
 unset($dados['id']); // Remove ID dos dados de atualização
 
+// ========================================
+// CORREÇÃO: Converter strings vazias em NULL para campos com UNIQUE constraint
+// ========================================
+$camposNulaveis = ['rg', 'cpf', 'departamento_id', 'cargo', 'foto'];
+foreach ($camposNulaveis as $campo) {
+    if (isset($dados[$campo])) {
+        $valor = is_string($dados[$campo]) ? trim($dados[$campo]) : $dados[$campo];
+        // Converte strings vazias ou literalmente 'null' em NULL
+        if ($valor === '' || $valor === 'null' || $valor === null) {
+            $dados[$campo] = null;
+        }
+    }
+}
+// ========================================
+
 try {
     $funcionarios = new Funcionarios();
     
@@ -162,7 +177,9 @@ try {
     $alteracoes = [];
     foreach ($dados as $campo => $valor) {
         if (isset($funcionarioAtual[$campo]) && $funcionarioAtual[$campo] != $valor) {
-            $alteracoes[] = "{$campo}: '{$funcionarioAtual[$campo]}' → '{$valor}'";
+            $valorAntigo = $funcionarioAtual[$campo] ?? 'NULL';
+            $valorNovo = $valor ?? 'NULL';
+            $alteracoes[] = "{$campo}: '{$valorAntigo}' → '{$valorNovo}'";
         }
     }
     if (!empty($alteracoes)) {
