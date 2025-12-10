@@ -1001,6 +1001,12 @@ class Associados
     public function adicionarDependente($associadoId, $dados)
     {
         try {
+            // Valida data de nascimento - string vazia deve ser null
+            $dataNasc = $dados['data_nascimento'] ?? null;
+            if (empty($dataNasc) || $dataNasc === '0000-00-00' || $dataNasc === '0000-00-00 00:00:00') {
+                $dataNasc = null;
+            }
+            
             $stmt = $this->db->prepare("
                 INSERT INTO Dependentes (
                     associado_id, nome, data_nascimento, parentesco, sexo
@@ -1010,7 +1016,7 @@ class Associados
             $stmt->execute([
                 $associadoId,
                 $dados['nome'],
-                $dados['data_nascimento'] ?? null,
+                $dataNasc,
                 $dados['parentesco'] ?? null,
                 $dados['sexo'] ?? null
             ]);

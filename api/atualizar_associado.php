@@ -182,11 +182,26 @@ try {
         // Valida se a data recebida é válida
         $dataRecebida = $_POST['dataDesfiliacao'] ?? $associadoAtual['data_desfiliacao'];
         
-        // Verifica se não é uma data inválida (NaN, vazio, etc)
-        if (!empty($dataRecebida) && $dataRecebida !== 'NaN-NaN-01' && strtotime($dataRecebida) !== false) {
+        // Verifica se não é uma data inválida (NaN, vazio, 0000-00-00, etc)
+        if (!empty($dataRecebida) && 
+            $dataRecebida !== 'NaN-NaN-01' && 
+            $dataRecebida !== '0000-00-00' && 
+            $dataRecebida !== '0000-00-00 00:00:00' &&
+            strtotime($dataRecebida) !== false &&
+            strtotime($dataRecebida) > 0) {
             $dataDesfiliacao = $dataRecebida;
         } else {
-            $dataDesfiliacao = $associadoAtual['data_desfiliacao'] ?? null;
+            // Se a data do banco também é inválida, usa null
+            $dataAtual = $associadoAtual['data_desfiliacao'] ?? null;
+            if (!empty($dataAtual) && 
+                $dataAtual !== '0000-00-00' && 
+                $dataAtual !== '0000-00-00 00:00:00' &&
+                strtotime($dataAtual) !== false &&
+                strtotime($dataAtual) > 0) {
+                $dataDesfiliacao = $dataAtual;
+            } else {
+                $dataDesfiliacao = null;
+            }
         }
     }
 
@@ -199,10 +214,25 @@ try {
         $dataFiliacaoRecebida = $_POST['dataFiliacao'] ?? $associadoAtual['data_filiacao'];
         $dataFiliacao = null;
         
-        if (!empty($dataFiliacaoRecebida) && $dataFiliacaoRecebida !== 'NaN-NaN-01' && strtotime($dataFiliacaoRecebida) !== false) {
+        if (!empty($dataFiliacaoRecebida) && 
+            $dataFiliacaoRecebida !== 'NaN-NaN-01' && 
+            $dataFiliacaoRecebida !== '0000-00-00' && 
+            $dataFiliacaoRecebida !== '0000-00-00 00:00:00' &&
+            strtotime($dataFiliacaoRecebida) !== false &&
+            strtotime($dataFiliacaoRecebida) > 0) {
             $dataFiliacao = $dataFiliacaoRecebida;
         } else {
-            $dataFiliacao = $associadoAtual['data_filiacao'] ?? null;
+            // Se a data do banco também é inválida, usa null
+            $dataAtual = $associadoAtual['data_filiacao'] ?? null;
+            if (!empty($dataAtual) && 
+                $dataAtual !== '0000-00-00' && 
+                $dataAtual !== '0000-00-00 00:00:00' &&
+                strtotime($dataAtual) !== false &&
+                strtotime($dataAtual) > 0) {
+                $dataFiliacao = $dataAtual;
+            } else {
+                $dataFiliacao = null;
+            }
         }
         
         // Valida data de nascimento
@@ -261,9 +291,20 @@ try {
         if (isset($_POST['dependentes']) && is_array($_POST['dependentes'])) {
             foreach ($_POST['dependentes'] as $dep) {
                 if (!empty($dep['nome'])) {
+                    // Valida data de nascimento do dependente
+                    $dataNascDep = $dep['data_nascimento'] ?? null;
+                    if (empty($dataNascDep) || 
+                        $dataNascDep === '0000-00-00' || 
+                        $dataNascDep === '0000-00-00 00:00:00' ||
+                        $dataNascDep === 'NaN-NaN-01' ||
+                        strtotime($dataNascDep) === false ||
+                        strtotime($dataNascDep) <= 0) {
+                        $dataNascDep = null;
+                    }
+                    
                     $dados['dependentes'][] = [
                         'nome' => trim($dep['nome']),
-                        'data_nascimento' => $dep['data_nascimento'] ?? null,
+                        'data_nascimento' => $dataNascDep,
                         'parentesco' => $dep['parentesco'] ?? null,
                         'sexo' => $dep['sexo'] ?? null
                     ];
