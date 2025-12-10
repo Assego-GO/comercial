@@ -2340,7 +2340,7 @@ function abrirModalUploadDocumento(associadoId, associadoNome) {
                                 ">
                                     <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
                                     <p class="mb-2"><strong>Clique para selecionar</strong> o arquivo</p>
-                                    <small class="text-muted">PDF, JPG, PNG até 5MB</small>
+                                    <small class="text-muted">PDF, JPG, PNG até 10MB</small>
                                     <input type="file" id="arquivoDocumento" name="arquivo" accept=".pdf,.jpg,.jpeg,.png" required style="display: none;" onchange="updateFileInfo(this)">
                                 </div>
                                 <div id="fileInfo" class="mt-2" style="display: none;"></div>
@@ -2435,9 +2435,9 @@ function enviarDocumento() {
         return;
     }
 
-    // Check file size (5MB max)
-    if (arquivo.size > 5 * 1024 * 1024) {
-        alert('Arquivo muito grande. Máximo: 5MB');
+    // Check file size (10MB max)
+    if (arquivo.size > 10 * 1024 * 1024) {
+        alert('Arquivo muito grande. Máximo: 10MB');
         return;
     }
 
@@ -4284,9 +4284,10 @@ function coletarDadosFormularioModal() {
         return null;
     }
     
-    if (!dados.cpf || dados.cpf.length !== 11) {
-        alert('CPF inválido');
-        return null;
+    // CPF: Não validamos pois o campo não é editável
+    // Apenas garantimos que o CPF do associado atual seja mantido
+    if (associadoAtual && associadoAtual.cpf) {
+        dados.cpf = (associadoAtual.cpf || '').replace(/\D/g, '');
     }
     
     if (!dados.telefone || dados.telefone.length < 10) {

@@ -93,10 +93,10 @@ try {
     $tipoMime = $arquivo['type'];
     $arquivoTmp = $arquivo['tmp_name'];
 
-    // Valida tamanho (5MB máximo)
-    $tamanhoMaximo = 5 * 1024 * 1024; // 5MB
+    // Valida tamanho (10MB máximo)
+    $tamanhoMaximo = 10 * 1024 * 1024; // 10MB
     if ($tamanho > $tamanhoMaximo) {
-        throw new Exception('Arquivo muito grande. Tamanho máximo: 5MB');
+        throw new Exception('Arquivo muito grande. Tamanho máximo: 10MB');
     }
 
     // Valida extensão
