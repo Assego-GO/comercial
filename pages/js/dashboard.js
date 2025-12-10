@@ -2340,7 +2340,7 @@ function abrirModalUploadDocumento(associadoId, associadoNome) {
                                 ">
                                     <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
                                     <p class="mb-2"><strong>Clique para selecionar</strong> o arquivo</p>
-                                    <small class="text-muted">PDF, JPG, PNG até 5MB</small>
+                                    <small class="text-muted">PDF, JPG, PNG até 10MB</small>
                                     <input type="file" id="arquivoDocumento" name="arquivo" accept=".pdf,.jpg,.jpeg,.png" required style="display: none;" onchange="updateFileInfo(this)">
                                 </div>
                                 <div id="fileInfo" class="mt-2" style="display: none;"></div>
@@ -2435,9 +2435,9 @@ function enviarDocumento() {
         return;
     }
 
-    // Check file size (5MB max)
-    if (arquivo.size > 5 * 1024 * 1024) {
-        alert('Arquivo muito grande. Máximo: 5MB');
+    // Check file size (10MB max)
+    if (arquivo.size > 10 * 1024 * 1024) {
+        alert('Arquivo muito grande. Máximo: 10MB');
         return;
     }
 
@@ -2581,13 +2581,10 @@ function abrirTab(tabName) {
     // Se for a aba de observações, carregar dados completos
     if (tabName === 'observacoes' && associadoAtual && associadoAtual.id) {
         const associadoId = associadoAtual.id;
-        // Só carrega se ainda não carregou para este associado
-        if (currentAssociadoIdObs !== associadoId || observacoesData.length === 0) {
-            carregarObservacoes(associadoId);
-        } else {
-            // Se já tem dados, apenas renderiza novamente
-            renderizarObservacoes();
-        }
+        // Sempre força o carregamento ao clicar na aba
+        setTimeout(() => {
+            carregarObservacoes(associadoId, true);
+        }, 50);
     }
 }
 
@@ -3230,20 +3227,33 @@ let currentFilterObs = 'all';
 let currentAssociadoIdObs = null;
 
 function carregarObservacoes(associadoId, forceReload = false) {
-    // Evitar carregar se já estiver carregando
-    if (window.carregandoObservacoes) {
-        console.log('Já está carregando observações, ignorando...');
+    // Se não tem associado, não faz nada
+    if (!associadoId) {
+        console.log('ID do associado não fornecido');
         return;
+    }
+
+    // Evitar carregar se já estiver carregando (com timeout de segurança)
+    if (window.carregandoObservacoes) {
+        // Timeout de segurança: se travou por mais de 5 segundos, libera
+        if (window.carregandoObservacoesTimeout && (Date.now() - window.carregandoObservacoesTimeout > 5000)) {
+            console.log('Timeout de carregamento, liberando...');
+            window.carregandoObservacoes = false;
+        } else {
+            console.log('Já está carregando observações, ignorando...');
+            return;
+        }
     }
 
     // Evitar recarregar se já carregou para este associado E não for reload forçado
     if (!forceReload && currentAssociadoIdObs === associadoId && observacoesData.length > 0) {
-        console.log('Observações já carregadas para este associado');
+        console.log('Observações já carregadas para este associado, renderizando...');
         renderizarObservacoes();
         return;
     }
 
     window.carregandoObservacoes = true;
+    window.carregandoObservacoesTimeout = Date.now();
     currentAssociadoIdObs = associadoId;
 
     // Mostrar loading
@@ -3425,10 +3435,14 @@ function criarCardObservacao(obs) {
                     ${obs.tags ? obs.tags.split(',').map(tag => criarTagObs(tag.trim())).join('') : ''}
                 </div>
             ` : ''}
-            ${obs.editado == '1' ? `
-                <div class="observacao-edited" style="font-size: 0.625rem; color: var(--gray-500); font-style: italic; margin-top: 0.5rem;">
-                    <i class="fas fa-edit"></i>
-                    Editado em ${obs.data_edicao_formatada || 'Data não disponível'}
+            ${obs.historico_edicoes && obs.historico_edicoes.length > 0 ? `
+                <div class="observacao-historico-edicoes" style="margin-top: 0.5rem; border-top: 1px solid #e0e0e0; padding-top: 0.5rem;">
+                    ${obs.historico_edicoes.map((edicao, index) => `
+                        <div class="edicao-item" style="font-size: 0.7rem; color: var(--gray-600); font-style: italic; background: ${index === obs.historico_edicoes.length - 1 ? '#e8f4fd' : '#f5f5f5'}; padding: 0.3rem 0.6rem; border-radius: 4px; margin-bottom: 0.25rem;">
+                            <i class="fas fa-edit" style="color: ${index === obs.historico_edicoes.length - 1 ? '#0d6efd' : '#6c757d'};"></i>
+                            Editado por <strong>${edicao.editado_por_nome || 'Usuário'}</strong> em ${edicao.data_edicao_formatada || 'Data não disponível'}
+                        </div>
+                    `).join('')}
                 </div>
             ` : ''}
         </div>
@@ -4270,9 +4284,10 @@ function coletarDadosFormularioModal() {
         return null;
     }
     
-    if (!dados.cpf || dados.cpf.length !== 11) {
-        alert('CPF inválido');
-        return null;
+    // CPF: Não validamos pois o campo não é editável
+    // Apenas garantimos que o CPF do associado atual seja mantido
+    if (associadoAtual && associadoAtual.cpf) {
+        dados.cpf = (associadoAtual.cpf || '').replace(/\D/g, '');
     }
     
     if (!dados.telefone || dados.telefone.length < 10) {

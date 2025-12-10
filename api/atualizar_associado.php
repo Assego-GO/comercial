@@ -901,11 +901,11 @@ function processarUploadFoto($arquivo, $cpf)
             throw new Exception('Arquivo não foi enviado corretamente');
         }
 
-        $tamanhoMaximo = 5 * 1024 * 1024; // 5MB
+        $tamanhoMaximo = 10 * 1024 * 1024; // 10MB
         $tiposPermitidos = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
 
         if ($arquivo['size'] > $tamanhoMaximo) {
-            throw new Exception('Arquivo muito grande. Tamanho máximo: 5MB');
+            throw new Exception('Arquivo muito grande. Tamanho máximo: 10MB');
         }
 
         if (!in_array($arquivo['type'], $tiposPermitidos)) {

@@ -13,7 +13,7 @@ async function carregarDesfiliaçõesJuridico() {
   container.innerHTML = '<div class="loading-spinner-desfiliacao"><div class="spinner"></div><p class="text-muted">Carregando desfiliações...</p></div>';
 
   try {
-    const response = await fetch('../../api/desfiliacao_listar_juridico.php');
+    const response = await fetch(window.BASE_URL + '/api/desfiliacao_listar_juridico.php');
     const resultado = await response.json();
 
     if (resultado.status === 'error') {
@@ -173,7 +173,7 @@ async function confirmarAçao() {
   }
   
   try {
-    const response = await fetch('../../api/desfiliacao_aprovar.php', {
+    const response = await fetch(window.BASE_URL + '/api/desfiliacao_aprovar.php', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
