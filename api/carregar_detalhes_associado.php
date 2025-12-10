@@ -73,8 +73,7 @@ try {
         e.cidade,
         e.numero,
         e.complemento,
-        c.dataFiliacao as data_filiacao,
-        c.dataDesfiliacao as data_desfiliacao,
+        c.dataFiliacao as data_filiacao_contrato,
         p.valor as peculio_valor,
         p.data_prevista as peculio_data_prevista,
         p.data_recebimento as peculio_data_recebimento
@@ -187,8 +186,8 @@ try {
         'complemento' => $associado['complemento'] ?? '',
         
         // Datas
-        'data_filiacao' => $associado['data_filiacao'] ?? $associado['dataFiliacao'] ?? '',
-        'data_desfiliacao' => $associado['data_desfiliacao'] ?? $associado['dataDesfiliacao'] ?? '',
+        'data_filiacao' => $associado['data_filiacao_contrato'] ?? '',
+        'data_desfiliacao' => $associado['data_desfiliacao'] ?? '',
         
         // Péculio
         'peculio_valor' => $associado['peculio_valor'] ?? null,
