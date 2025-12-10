@@ -69,7 +69,9 @@ function preloadImage(url) {
 function formatarData(dataStr) {
     if (!dataStr || dataStr === "0000-00-00" || dataStr === "") return "-";
     try {
-        const [ano, mes, dia] = dataStr.split("-");
+        // Remove a parte da hora se existir (ex: 2025-06-27 00:00:00 -> 2025-06-27)
+        const dataLimpa = dataStr.split(" ")[0];
+        const [ano, mes, dia] = dataLimpa.split("-");
         return `${dia}/${mes}/${ano}`;
     } catch (e) {
         return "-";
@@ -1124,7 +1126,7 @@ function preencherTabVisaoGeral(associado) {
                     </div>
                     <div class="overview-item">
                         <span class="overview-label">Data de Desfiliação</span>
-                        <span class="overview-value">${formatarData(associado.data_desfiliacao)}</span>
+                        <span class="overview-value">${associado.data_desfiliacao && associado.data_desfiliacao !== '0000-00-00' ? formatarData(associado.data_desfiliacao) : '-'}</span>
                     </div>
                     <div class="overview-item">
                         <span class="overview-label">Escolaridade</span>
