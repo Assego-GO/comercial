@@ -297,7 +297,7 @@ class Associados
                 ]);
             }
 
-            // Inserir dados militares
+            // Inserir dados militares SOMENTE se fornecidos (para Sócios)
             if (!empty($dados['corporacao']) || !empty($dados['patente'])) {
                 $stmt = $this->db->prepare("
                 INSERT INTO Militar (
@@ -312,6 +312,10 @@ class Associados
                     $dados['lotacao'] ?? null,
                     $dados['unidade'] ?? null
                 ]);
+                
+                error_log("✓ Dados militares inseridos - Corporação: " . ($dados['corporacao'] ?? 'NULL') . ", Patente: " . ($dados['patente'] ?? 'NULL'));
+            } else {
+                error_log("ℹ Dados militares não fornecidos - Associado será identificado como AGREGADO");
             }
 
             // CORRIGIDO: Inserir dados financeiros COM OS NOVOS CAMPOS

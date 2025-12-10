@@ -1924,8 +1924,8 @@ body {
         // NOVA: Renderizar card de filiação
         function renderizarCardFiliacao(doc) {
             const statusClass = doc.status_fluxo.toLowerCase().replace('_', '-');
-            // Determinar se é sócio ou agregado
-            const isSocio = doc.tipo_documento === 'SOCIO';
+            // Determinar se é sócio ou agregado - CORRIGIDO: usar tipo_pessoa, não tipo_documento
+            const isSocio = doc.tipo_pessoa === 'SOCIO';
             const tipoClass = isSocio ? 'socio' : 'agregado';
             const tipoLabel = isSocio ? 'Sócio' : 'Agregado';
             const tipoIcon = isSocio ? 'fa-user-tie' : 'fa-users';
@@ -2399,6 +2399,23 @@ body {
         function renderizarCardDesfiliacao(doc) {
             const statusClass = doc.status_geral ? doc.status_geral.toLowerCase().replace('_', '-') : '';
             
+            // NOVO: Determinar badge correto (Sócio ou Agregado)
+            const tipoPessoa = doc.tipo_pessoa || 'SOCIO';
+            const badgeTipoClass = tipoPessoa === 'AGREGADO' ? 'agregado' : 'socio';
+            const badgeTipoTexto = tipoPessoa === 'AGREGADO' ? 'Agregado' : 'Sócio';
+            const badgeTipoIcon = tipoPessoa === 'AGREGADO' ? 'fa-users' : 'fa-user-tie';
+            
+            // NOVO: Para agregados, mostrar info do titular
+            let titularInfo = '';
+            if (tipoPessoa === 'AGREGADO' && doc.titular_nome) {
+                titularInfo = `
+                    <div class="titular-info">
+                        <i class="fas fa-user-tie"></i>
+                        <span><strong>Titular:</strong> ${doc.titular_nome}</span>
+                    </div>
+                `;
+            }
+            
             // Criar indicadores de fluxo
             let fluxoHTML = '<div class="desfiliacao-flow-indicators">';
             if (doc.aprovacoes && doc.aprovacoes.length > 0) {
@@ -2421,7 +2438,7 @@ body {
             fluxoHTML += '</div>';
 
             return `
-                <div class="document-card tipo-desfiliacao" data-aos="fade-up">
+                <div class="document-card tipo-desfiliacao tipo-${badgeTipoClass}" data-aos="fade-up">
                     <div class="document-header">
                         <div class="document-icon desfiliacao-icon">
                             <i class="fas fa-user-times"></i>
@@ -2431,9 +2448,9 @@ body {
                             <p class="document-subtitle">${doc.associado_nome || 'Nome não disponível'}</p>
                         </div>
                         <div class="d-flex flex-column align-items-end gap-2">
-                            <span class="badge-tipo desfiliacao">
-                                <i class="fas fa-user-times"></i>
-                                Desfiliação
+                            <span class="badge-tipo ${badgeTipoClass}">
+                                <i class="fas ${badgeTipoIcon}"></i>
+                                ${badgeTipoTexto}
                             </span>
                             <span class="status-badge ${statusClass}">
                                 <i class="fas fa-${getStatusIconDesfiliacao(doc.status_geral)}"></i>
@@ -2441,6 +2458,8 @@ body {
                             </span>
                         </div>
                     </div>
+                    
+                    ${titularInfo}
                     
                     <div class="document-meta">
                         <div class="meta-item">
