@@ -4,7 +4,7 @@
  * pages/financeiro.php
  * VERSÃO COM SISTEMA DE PERMISSÕES RBAC/ACL INTEGRADO
  * Sistema de navegação interno com componentes dinâmicos
- * ATUALIZADO COM VERIFICADOR DE ASSOCIADOS VIA CSV
+ * ATUALIZADO COM VERIFICADOR DE ASSOCIADOS VIA CSV, IMPORTAR QUITAÇÃO E DESFILIAÇÕES
  */
 
 // Tratamento de erros para debug
@@ -16,7 +16,7 @@ require_once '../config/database.php';
 require_once '../classes/Database.php';
 require_once '../classes/Auth.php';
 require_once '../classes/Funcionarios.php';
-require_once '../classes/Permissoes.php'; // CLASSE DE PERMISSÕES RBAC/ACL
+require_once '../classes/Permissoes.php';
 require_once './components/header.php';
 
 // Inicia autenticação
@@ -78,8 +78,8 @@ $permissoesDetalhadas = [
         'estornar' => $permissoes->hasPermission('FINANCEIRO_PAGAMENTOS_ESTORNAR', 'DELETE')
     ],
     'desfiliacao' => [
-        'visualizar' => $permissoes->hasPermission('FINANCEIRO_DESFILIACAO', 'VIEW') || $isFinanceiro,
-        'aprovar' => $permissoes->hasPermission('FINANCEIRO_DESFILIACAO_APROVAR', 'APPROVE') || $isFinanceiro
+        'visualizar' => $permissoes->hasPermission('FINANCEIRO_DESFILIACAO', 'VIEW'),
+        'aprovar' => $permissoes->hasPermission('FINANCEIRO_DESFILIACAO_APROVAR', 'APPROVE')
     ]
 ];
 
@@ -91,11 +91,16 @@ $isFinanceiro = ($usuarioLogado['departamento_id'] == $departamentoFinanceiro);
 $isOperadorFinanceiro = $isFinanceiro && $permissoes->hasRole('FUNCIONARIO');
 $isSupervisorFinanceiro = $isFinanceiro && $permissoes->hasRole('SUPERVISOR');
 $isDiretorFinanceiro = $isFinanceiro && $permissoes->hasRole('DIRETOR');
-$isPresidencia = $permissoes->hasRole('PRESIDENTE') ||
-    $permissoes->hasRole('SUPER_ADMIN');
+$isPresidencia = $permissoes->hasRole('PRESIDENTE') || $permissoes->hasRole('SUPER_ADMIN');
 
 $isDiretor = $permissoes->isDiretor();
 $departamentoUsuario = $usuarioLogado['departamento_id'] ?? null;
+
+// Se não tem permissão específica de desfiliação mas é do financeiro, concede acesso
+if ($isFinanceiro && !$permissoesDetalhadas['desfiliacao']['visualizar']) {
+    $permissoesDetalhadas['desfiliacao']['visualizar'] = true;
+    $permissoesDetalhadas['desfiliacao']['aprovar'] = true;
+}
 
 // Log de debug das permissões
 error_log("=== DEBUG PERMISSÕES FINANCEIRAS RBAC/ACL ===");
@@ -106,17 +111,6 @@ error_log("Tem permissão financeiro: " . ($temPermissaoFinanceiro ? 'SIM' : 'N�
 error_log("Roles: Financeiro=" . ($isFinanceiro ? 'SIM' : 'NÃO') .
     ", Presidência=" . ($isPresidencia ? 'SIM' : 'NÃO') .
     ", Diretor=" . ($isDiretor ? 'SIM' : 'NÃO'));
-
-// Log detalhado de permissões
-foreach ($permissoesDetalhadas as $modulo => $perms) {
-    if (is_array($perms)) {
-        foreach ($perms as $acao => $permitido) {
-            error_log("  $modulo.$acao: " . ($permitido ? '✓' : '✗'));
-        }
-    } else {
-        error_log("  $modulo: " . ($perms ? '✓' : '✗'));
-    }
-}
 
 $motivoNegacao = '';
 if (!$temPermissaoFinanceiro) {
@@ -219,8 +213,7 @@ $headerComponent = HeaderComponent::create([
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap"
-        rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
     <!-- AOS Animation -->
     <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
@@ -232,7 +225,6 @@ $headerComponent = HeaderComponent::create([
     <?php $headerComponent->renderCSS(); ?>
 
     <style>
-        /* Existing styles from original file... */
         :root {
             --primary: #0056d2;
             --primary-light: #4A90E2;
@@ -258,7 +250,6 @@ $headerComponent = HeaderComponent::create([
             color: var(--dark);
         }
 
-        /* All existing styles from original file... */
         .main-wrapper {
             min-height: 100vh;
             display: flex;
@@ -578,7 +569,7 @@ $headerComponent = HeaderComponent::create([
             font-weight: 600;
         }
 
-        /* ÍCONES ESPECÍFICOS */
+        /* ÍCONES ESPECÍFICOS POR ABA */
         .financial-nav-tabs .nav-tab .nav-tab-btn[data-target="lista-inadimplentes"] .nav-tab-icon {
             background: #dc2626 !important;
         }
@@ -619,7 +610,7 @@ $headerComponent = HeaderComponent::create([
             font-weight: 900;
         }
 
-        /* NEW: Verificador de Associados Icon */
+        /* Verificador de Associados */
         .financial-nav-tabs .nav-tab .nav-tab-btn[data-target="verificar-associados"] .nav-tab-icon {
             background: #059669 !important;
         }
@@ -630,7 +621,18 @@ $headerComponent = HeaderComponent::create([
             font-weight: 900;
         }
 
-        /* NEW: Desfiliações Icon */
+        /* Importar Quitação */
+        .financial-nav-tabs .nav-tab .nav-tab-btn[data-target="importar-quitacao"] .nav-tab-icon {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+        }
+
+        .financial-nav-tabs .nav-tab .nav-tab-btn[data-target="importar-quitacao"] .nav-tab-icon::before {
+            content: "\f560";
+            font-family: "Font Awesome 6 Pro", "Font Awesome 6 Free";
+            font-weight: 900;
+        }
+
+        /* Desfiliações Icon */
         .financial-nav-tabs .nav-tab .nav-tab-btn[data-target="desfiliacao-pendentes"] .nav-tab-icon {
             background: #9333ea !important;
         }
@@ -683,7 +685,9 @@ $headerComponent = HeaderComponent::create([
         #lista-inadimplentes,
         #neoconsig,
         #importar-asaas,
-        #verificar-associados {
+        #verificar-associados,
+        #importar-quitacao,
+        #desfiliacao-pendentes {
             padding: 0 !important;
             margin: 0 !important;
             min-height: auto !important;
@@ -697,7 +701,9 @@ $headerComponent = HeaderComponent::create([
         #lista-inadimplentes>*,
         #neoconsig>*,
         #importar-asaas>*,
-        #verificar-associados>* {
+        #verificar-associados>*,
+        #importar-quitacao>*,
+        #desfiliacao-pendentes>* {
             margin-top: 0 !important;
             padding-top: 0 !important;
         }
@@ -932,8 +938,7 @@ $headerComponent = HeaderComponent::create([
                             </span>
                         <?php endif; ?>
                     </h1>
-                    <p class="page-subtitle">Gerencie mensalidades, inadimplência, relatórios financeiros e arrecadação da
-                        ASSEGO</p>
+                    <p class="page-subtitle">Gerencie mensalidades, inadimplência, relatórios financeiros e arrecadação da ASSEGO</p>
                 </div>
 
                 <!-- KPIs Dashboard (se tem permissão) -->
@@ -988,9 +993,7 @@ $headerComponent = HeaderComponent::create([
                                         <i class="fas fa-dollar-sign"></i>
                                     </div>
                                     <div>
-                                        <div class="dual-stat-value">R$
-                                            <?php echo number_format($arrecadacaoMes, 0, ',', '.'); ?>
-                                        </div>
+                                        <div class="dual-stat-value">R$ <?php echo number_format($arrecadacaoMes, 0, ',', '.'); ?></div>
                                         <div class="dual-stat-label">Arrecadação/Mês</div>
                                     </div>
                                 </div>
@@ -1000,8 +1003,7 @@ $headerComponent = HeaderComponent::create([
                                         <i class="fas fa-receipt"></i>
                                     </div>
                                     <div>
-                                        <div class="dual-stat-value"><?php echo number_format($pagamentosHoje, 0, ',', '.'); ?>
-                                        </div>
+                                        <div class="dual-stat-value"><?php echo number_format($pagamentosHoje, 0, ',', '.'); ?></div>
                                         <div class="dual-stat-label">Pagamentos Hoje</div>
                                     </div>
                                 </div>
@@ -1049,7 +1051,6 @@ $headerComponent = HeaderComponent::create([
                             </li>
                         <?php endif; ?>
 
-                        <!-- NEW: Verificador de Associados Tab -->
                         <?php if ($permissoesDetalhadas['verificador']['visualizar']): ?>
                             <li class="nav-tab">
                                 <button class="nav-tab-btn" data-target="verificar-associados">
@@ -1059,7 +1060,15 @@ $headerComponent = HeaderComponent::create([
                             </li>
                         <?php endif; ?>
 
-                        <!-- NEW: Desfiliações Tab -->
+                        <?php if ($permissoesDetalhadas['neoconsig']['visualizar']): ?>
+                            <li class="nav-tab">
+                                <button class="nav-tab-btn" data-target="importar-quitacao">
+                                    <div class="nav-tab-icon"></div>
+                                    <span class="nav-tab-label">Importar Quitação</span>
+                                </button>
+                            </li>
+                        <?php endif; ?>
+
                         <?php if ($permissoesDetalhadas['desfiliacao']['visualizar']): ?>
                             <li class="nav-tab">
                                 <button class="nav-tab-btn" data-target="desfiliacao-pendentes">
@@ -1077,7 +1086,6 @@ $headerComponent = HeaderComponent::create([
                 <!-- Content Area -->
                 <div class="financial-content" style="margin: 0 !important; padding: 0 !important;">
                     <?php if ($permissoesDetalhadas['inadimplentes']['visualizar']): ?>
-                        <!-- Lista Inadimplentes -->
                         <div id="lista-inadimplentes" class="content-panel active">
                             <div class="loading-spinner">
                                 <div class="spinner"></div>
@@ -1087,7 +1095,6 @@ $headerComponent = HeaderComponent::create([
                     <?php endif; ?>
 
                     <?php if ($permissoesDetalhadas['neoconsig']['visualizar']): ?>
-                        <!-- NeoConsig -->
                         <div id="neoconsig" class="content-panel">
                             <div class="loading-spinner">
                                 <div class="spinner"></div>
@@ -1097,7 +1104,6 @@ $headerComponent = HeaderComponent::create([
                     <?php endif; ?>
 
                     <?php if ($permissoesDetalhadas['asaas']['visualizar']): ?>
-                        <!-- Importar ASAAS -->
                         <div id="importar-asaas" class="content-panel">
                             <div class="loading-spinner">
                                 <div class="spinner"></div>
@@ -1107,7 +1113,6 @@ $headerComponent = HeaderComponent::create([
                     <?php endif; ?>
 
                     <?php if ($permissoesDetalhadas['peculio']['visualizar']): ?>
-                        <!-- Gestão Pecúlio -->
                         <div id="gestao-peculio" class="content-panel">
                             <div class="loading-spinner">
                                 <div class="spinner"></div>
@@ -1116,7 +1121,6 @@ $headerComponent = HeaderComponent::create([
                         </div>
                     <?php endif; ?>
 
-                    <!-- NEW: Verificador de Associados -->
                     <?php if ($permissoesDetalhadas['verificador']['visualizar']): ?>
                         <div id="verificar-associados" class="content-panel">
                             <div class="loading-spinner">
@@ -1126,7 +1130,15 @@ $headerComponent = HeaderComponent::create([
                         </div>
                     <?php endif; ?>
 
-                    <!-- NEW: Desfiliações -->
+                    <?php if ($permissoesDetalhadas['neoconsig']['visualizar']): ?>
+                        <div id="importar-quitacao" class="content-panel">
+                            <div class="loading-spinner">
+                                <div class="spinner"></div>
+                                <p class="text-muted">Carregando importador de quitação...</p>
+                            </div>
+                        </div>
+                    <?php endif; ?>
+
                     <?php if ($permissoesDetalhadas['desfiliacao']['visualizar']): ?>
                         <div id="desfiliacao-pendentes" class="content-panel">
                             <div class="loading-spinner">
@@ -1208,6 +1220,7 @@ $headerComponent = HeaderComponent::create([
             'neoconsig': './rend/js/neoconsig.js?v=' + Date.now(),
             'importar-asaas': './rend/js/importar_asaas.js?v=' + Date.now(),
             'verificar-associados': './rend/js/verificar_associados.js?v=' + Date.now(),
+            'importar-quitacao': './rend/js/importar_quitacao.js?v=' + Date.now(),
             'desfiliacao-pendentes': './rend/js/desfiliacao_financeiro.js?v=' + Date.now()
         };
 
@@ -1247,23 +1260,21 @@ $headerComponent = HeaderComponent::create([
             }
 
             getFirstAvailableTab() {
-                // Retornar primeira aba disponível baseada em permissões
                 if (permissoesUsuario.inadimplentes?.visualizar) return 'lista-inadimplentes';
                 if (permissoesUsuario.neoconsig?.visualizar) return 'neoconsig';
                 if (permissoesUsuario.asaas?.visualizar) return 'importar-asaas';
                 if (permissoesUsuario.peculio?.visualizar) return 'gestao-peculio';
-                if (permissoesUsuario.verificador?.visualizar) return 'verificar-associados'; // NEW
+                if (permissoesUsuario.verificador?.visualizar) return 'verificar-associados';
+                if (permissoesUsuario.desfiliacao?.visualizar) return 'desfiliacao-pendentes';
                 return null;
             }
 
             init() {
-                // Verificar se há abas disponíveis
                 if (!this.activeTab) {
                     console.error('Nenhuma aba disponível com as permissões atuais');
                     return;
                 }
 
-                // Event listeners para as abas
                 document.querySelectorAll('.nav-tab-btn').forEach(btn => {
                     btn.addEventListener('click', (e) => {
                         const target = e.currentTarget.dataset.target;
@@ -1271,7 +1282,6 @@ $headerComponent = HeaderComponent::create([
                     });
                 });
 
-                // Definir primeira aba como ativa
                 document.querySelectorAll('.nav-tab-btn').forEach(btn => {
                     btn.classList.remove('active');
                 });
@@ -1281,21 +1291,20 @@ $headerComponent = HeaderComponent::create([
                     firstBtn.classList.add('active');
                 }
 
-                // Carregar a primeira aba
                 this.loadTabContent(this.activeTab);
             }
 
             switchTab(tabId) {
                 if (this.activeTab === tabId) return;
 
-                // Verificar permissão para a aba
                 const tabPermissions = {
                     'lista-inadimplentes': permissoesUsuario.inadimplentes?.visualizar,
                     'neoconsig': permissoesUsuario.neoconsig?.visualizar,
                     'importar-asaas': permissoesUsuario.asaas?.visualizar,
                     'gestao-peculio': permissoesUsuario.peculio?.visualizar,
-                    'verificar-associados': permissoesUsuario.verificador?.visualizar, // NEW
-                    'desfiliacao-pendentes': permissoesUsuario.desfiliacao?.visualizar // NEW
+                    'verificar-associados': permissoesUsuario.verificador?.visualizar,
+                    'importar-quitacao': permissoesUsuario.neoconsig?.visualizar,
+                    'desfiliacao-pendentes': permissoesUsuario.desfiliacao?.visualizar
                 };
 
                 if (!tabPermissions[tabId]) {
@@ -1303,23 +1312,19 @@ $headerComponent = HeaderComponent::create([
                     return;
                 }
 
-                // Atualiza botões
                 document.querySelectorAll('.nav-tab-btn').forEach(btn => {
                     btn.classList.remove('active');
                 });
                 document.querySelector(`[data-target="${tabId}"]`).classList.add('active');
 
-                // Esconde painel atual
                 document.querySelectorAll('.content-panel').forEach(panel => {
                     panel.classList.remove('active');
                 });
 
-                // Mostra novo painel
                 const targetPanel = document.getElementById(tabId);
                 if (targetPanel) {
                     targetPanel.classList.add('active');
 
-                    // Aplicar estilos de limpeza
                     targetPanel.style.cssText = `
                         padding: 0 !important;
                         margin: 0 !important;
@@ -1329,7 +1334,6 @@ $headerComponent = HeaderComponent::create([
                         box-shadow: none !important;
                     `;
 
-                    // Carrega conteúdo se necessário
                     if (!this.loadedTabs.has(tabId)) {
                         this.loadTabContent(tabId);
                         this.loadedTabs.add(tabId);
@@ -1346,8 +1350,9 @@ $headerComponent = HeaderComponent::create([
                     'neoconsig': 'NeoConsig',
                     'importar-asaas': 'Importar ASAAS',
                     'gestao-peculio': 'Gestão de Pecúlio',
-                    'verificar-associados': 'Verificador de Associados', // NEW
-                    'desfiliacao-pendentes': 'Desfiliações Pendentes' // NEW
+                    'verificar-associados': 'Verificador de Associados',
+                    'importar-quitacao': 'Importar Quitação',
+                    'desfiliacao-pendentes': 'Desfiliações Pendentes'
                 };
                 return names[tabId] || tabId;
             }
@@ -1385,12 +1390,12 @@ $headerComponent = HeaderComponent::create([
                         } else {
                             console.warn('Função carregarDesfiliaçõesFinanceiro não encontrada');
                         }
-                        return; // Sai da função, não precisa executar o resto
+                        return;
                     }
 
                     const partialUrl = tabId === 'gestao-peculio'
                         ? '../pages/rend/gestao_peculio_content.php'
-                        : `./rend/${tabId.replace('-', '_')}_content.php`;
+                        : `./rend/${tabId.replace(/-/g, '_')}_content.php`;
 
                     console.log(`Buscando partial: ${partialUrl}`);
 
@@ -1403,15 +1408,12 @@ $headerComponent = HeaderComponent::create([
                     const htmlContent = await response.text();
                     console.log(`✅ HTML carregado: ${htmlContent.length} chars`);
 
-                    // Esconder spinner
                     if (spinner) {
                         spinner.style.display = 'none';
                     }
 
-                    // Limpar e injetar conteúdo
                     panel.innerHTML = htmlContent;
 
-                    // Aplicar estilos de limpeza
                     panel.style.cssText = `
                         padding: 0 !important;
                         margin: 0 !important;
@@ -1422,11 +1424,9 @@ $headerComponent = HeaderComponent::create([
                         box-shadow: none !important;
                     `;
 
-                    // Remover headers desnecessários
                     const contentHeaders = panel.querySelectorAll('.content-header');
                     contentHeaders.forEach(header => header.remove());
 
-                    // Aplicar estilos em todos os filhos
                     Array.from(panel.children).forEach(child => {
                         if (child.classList.contains('content-header')) {
                             child.remove();
@@ -1440,7 +1440,6 @@ $headerComponent = HeaderComponent::create([
 
                     console.log('✅ Estilos aplicados');
 
-                    // Carregar scripts se necessário
                     const scriptSrc = TAB_SCRIPTS[tabId];
                     if (scriptSrc) {
                         await loadScriptOnce(scriptSrc);
@@ -1508,13 +1507,22 @@ $headerComponent = HeaderComponent::create([
                             }
                             break;
 
-                        // NEW: Verificador de Associados
                         case 'verificar-associados':
                             if (window.VerificarAssociados) {
                                 console.log('Inicializando módulo Verificador de Associados com permissões...');
                                 window.VerificarAssociados.init({
                                     temPermissao: temPermissaoFinanceiro,
                                     permissoes: permissoesUsuario.verificador
+                                });
+                            }
+                            break;
+
+                        case 'importar-quitacao':
+                            if (window.ImportarQuitacao) {
+                                console.log('Inicializando módulo Importar Quitação com permissões...');
+                                window.ImportarQuitacao.init({
+                                    temPermissao: temPermissaoFinanceiro,
+                                    permissoes: permissoesUsuario.neoconsig
                                 });
                             }
                             break;
@@ -1561,10 +1569,8 @@ $headerComponent = HeaderComponent::create([
                 return;
             }
 
-            // Inicializa sistema de navegação
             financialNav = new FinancialNavigation();
 
-            // Mostrar notificação baseada em permissões
             if (isPresidencia) {
                 notifications.show('Sistema financeiro carregado - Acesso Presidência', 'success', 3000);
             } else if (isFinanceiro) {

@@ -1,0 +1,8 @@
+[10-Dec-2025 12:58:15 UTC] Erro PHP [2]: ini_set(): Session ini settings cannot be changed when a session is active em /var/www/html/matheus/comercial/config/database.php:23
+[10-Dec-2025 12:58:15 UTC] Erro PHP [2]: ini_set(): Session ini settings cannot be changed when a session is active em /var/www/html/matheus/comercial/config/database.php:24
+[10-Dec-2025 12:58:15 UTC] Erro PHP [2]: ini_set(): Session ini settings cannot be changed when a session is active em /var/www/html/matheus/comercial/config/database.php:25
+[10-Dec-2025 12:58:15 UTC] Erro PHP [2]: ini_set(): Session ini settings cannot be changed when a session is active em /var/www/html/matheus/comercial/config/database.php:26
+[10-Dec-2025 12:58:21 UTC] Erro PHP [2]: ini_set(): Session ini settings cannot be changed when a session is active em /var/www/html/matheus/comercial/config/database.php:23
+[10-Dec-2025 12:58:21 UTC] Erro PHP [2]: ini_set(): Session ini settings cannot be changed when a session is active em /var/www/html/matheus/comercial/config/database.php:24
+[10-Dec-2025 12:58:21 UTC] Erro PHP [2]: ini_set(): Session ini settings cannot be changed when a session is active em /var/www/html/matheus/comercial/config/database.php:25
+[10-Dec-2025 12:58:21 UTC] Erro PHP [2]: ini_set(): Session ini settings cannot be changed when a session is active em /var/www/html/matheus/comercial/config/database.php:26
