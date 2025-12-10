@@ -88,6 +88,17 @@ try {
                 a.cpf AS associado_cpf,
                 a.email AS associado_email,
                 
+                -- CORRIGIDO: Se está na tabela Militar = SOCIO, se não está = AGREGADO
+                CASE 
+                    WHEN m.id IS NOT NULL THEN 'SOCIO'
+                    ELSE 'AGREGADO'
+                END AS tipo_pessoa,
+                
+                -- NOVO: Nome do titular (para agregados via associado_titular_id)
+                titular.nome AS titular_nome,
+                titular.cpf AS titular_cpf,
+                titular.rg AS titular_rg,
+                
                 -- Campos de Departamentos
                 d.nome AS departamento_atual_nome,
                 
@@ -141,6 +152,8 @@ try {
                 
             FROM Documentos_Associado da
             LEFT JOIN Associados a ON da.associado_id = a.id
+            LEFT JOIN Militar m ON a.id = m.associado_id
+            LEFT JOIN Associados titular ON a.associado_titular_id = titular.id
             LEFT JOIN Departamentos d ON da.departamento_atual = d.id
             WHERE 1=1";
     
