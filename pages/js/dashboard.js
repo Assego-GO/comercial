@@ -1283,6 +1283,44 @@ function preencherTabFinanceiro(associado) {
                 if (dados.historico && dados.historico.length > 0) {
                     historicoHtml = gerarHtmlHistorico(dados.historico);
                 }
+                
+                // CORREÇÃO: Salvar dados dos serviços no associadoAtual para uso na edição
+                if (associadoAtual && associadoAtual.id === associado.id) {
+                    associadoAtual.tipoAssociadoServico = tipoAssociadoServico;
+                    associadoAtual.tipo_associado_servico = tipoAssociadoServico;
+                    
+                    if (dados.servicos.social) {
+                        associadoAtual.valorSocial = parseFloat(dados.servicos.social.valor_aplicado) || 0;
+                        associadoAtual.percentualAplicadoSocial = parseFloat(dados.servicos.social.percentual_aplicado) || 0;
+                        associadoAtual.valor_social = associadoAtual.valorSocial;
+                        associadoAtual.percentual_aplicado_social = associadoAtual.percentualAplicadoSocial;
+                    }
+                    
+                    if (dados.servicos.juridico) {
+                        associadoAtual.servicoJuridico = true;
+                        associadoAtual.servico_juridico = true;
+                        associadoAtual.valorJuridico = parseFloat(dados.servicos.juridico.valor_aplicado) || 0;
+                        associadoAtual.percentualAplicadoJuridico = parseFloat(dados.servicos.juridico.percentual_aplicado) || 0;
+                        associadoAtual.valor_juridico = associadoAtual.valorJuridico;
+                        associadoAtual.percentual_aplicado_juridico = associadoAtual.percentualAplicadoJuridico;
+                    } else {
+                        associadoAtual.servicoJuridico = false;
+                        associadoAtual.servico_juridico = false;
+                        associadoAtual.valorJuridico = 0;
+                        associadoAtual.percentualAplicadoJuridico = 0;
+                        associadoAtual.valor_juridico = 0;
+                        associadoAtual.percentual_aplicado_juridico = 0;
+                    }
+                    
+                    console.log('✅ Dados dos serviços salvos no associadoAtual:', {
+                        tipoAssociadoServico: associadoAtual.tipoAssociadoServico,
+                        valorSocial: associadoAtual.valorSocial,
+                        percentualSocial: associadoAtual.percentualAplicadoSocial,
+                        valorJuridico: associadoAtual.valorJuridico,
+                        percentualJuridico: associadoAtual.percentualAplicadoJuridico,
+                        temJuridico: associadoAtual.servicoJuridico
+                    });
+                }
             } else {
                 servicosHtml = `
                     <div class="empty-state" style="padding: 2rem; text-align: center; color: var(--gray-500);">
@@ -1514,7 +1552,7 @@ function gerarHtmlServicosCompleto(servicos, valorTotal) {
     if (servicos.social) {
         const social = servicos.social;
         const dataAdesao = new Date(social.data_adesao).toLocaleDateString('pt-BR');
-        const valorBase = parseFloat(social.valor_base || 173.10);
+        const valorBase = parseFloat(social.valor_base || 181.46);
         const desconto = ((valorBase - parseFloat(social.valor_aplicado)) / valorBase * 100).toFixed(0);
 
         servicosHtml += `
@@ -1577,7 +1615,7 @@ function gerarHtmlServicosCompleto(servicos, valorTotal) {
     if (servicos.juridico) {
         const juridico = servicos.juridico;
         const dataAdesao = new Date(juridico.data_adesao).toLocaleDateString('pt-BR');
-        const valorBase = parseFloat(juridico.valor_base || 43.28);
+        const valorBase = parseFloat(juridico.valor_base || 45.37);
         const desconto = ((valorBase - parseFloat(juridico.valor_aplicado)) / valorBase * 100).toFixed(0);
 
         servicosHtml += `
@@ -3361,9 +3399,15 @@ function criarCardObservacao(obs) {
                             <span class="author-role">${obs.criado_por_cargo || 'Administrador'}</span>
                         </div>
                     </div>
-                    <div class="observacao-actions">
+                    <div class="observacao-actions" style="display: flex; gap: 0.25rem;">
                         <button class="btn-observacao-action" title="${isImportante ? 'Remover importância' : 'Marcar como importante'}" onclick="toggleImportanteObs(${obs.id})">
                             <i class="${isImportante ? 'fas' : 'far'} fa-star ${isImportante ? 'text-warning' : ''}"></i>
+                        </button>
+                        <button class="btn-observacao-action" title="Editar observação" onclick="editarObservacao(${obs.id})" style="color: #0d6efd;">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn-observacao-action" title="Excluir observação" onclick="excluirObservacao(${obs.id})" style="color: #dc3545;">
+                            <i class="fas fa-trash"></i>
                         </button>
                     </div>
                 </div>
@@ -3704,13 +3748,18 @@ function criarModalConfirmacaoExclusao() {
             dataType: 'json',
             success: function (response) {
                 if (response.status === 'success') {
-                    carregarObservacoes(currentAssociadoIdObs);
+                    // Remover observação do array local imediatamente
+                    observacoesData = observacoesData.filter(obs => obs.id != id);
+                    
+                    // Re-renderizar a lista sem precisar fazer nova requisição
+                    renderizarObservacoes();
+                    atualizarContadorObservacoes();
 
                     // ATUALIZAR TAMBÉM AS OBSERVAÇÕES DA VISÃO GERAL
                     if (associadoAtual && associadoAtual.id) {
                         setTimeout(() => {
                             carregarObservacoesVisaoGeral(associadoAtual.id);
-                        }, 500);
+                        }, 300);
                     }
 
                     mostrarNotificacaoObs('📋 Observação excluída com sucesso!', 'success');
@@ -4773,7 +4822,7 @@ function preencherTabFinanceiroEditavel(associado) {
                         </span>
                     </div>
                     <div style="text-align: right;">
-                        <div style="font-size: 0.8rem; color: #6c757d;">Valor Base: R$ 173,10</div>
+                        <div style="font-size: 0.8rem; color: #6c757d;">Valor Base: R$ 181,46</div>
                         <div style="font-weight: 700; color: #28a745;">Total: R$ <span id="displayValorSocial">${parseFloat(valorSocial).toFixed(2)}</span></div>
                     </div>
                 </div>
@@ -4799,7 +4848,7 @@ function preencherTabFinanceiroEditavel(associado) {
                         </span>
                     </div>
                     <div style="text-align: right;">
-                        <div style="font-size: 0.8rem; color: #6c757d;">Valor Base: R$ 43,28</div>
+                        <div style="font-size: 0.8rem; color: #6c757d;">Valor Base: R$ 45,37</div>
                         <div style="font-weight: 700; color: #17a2b8;">Total: R$ <span id="displayValorJuridico">${parseFloat(valorJuridico).toFixed(2)}</span></div>
                     </div>
                 </div>
@@ -4903,19 +4952,19 @@ function calcularServicosModal() {
     const tipoSelecionado = document.getElementById('edit_tipoAssociadoServico')?.value || '';
     const checkJuridico = document.getElementById('edit_servicoJuridico');
     
-    // Valores base
-    const valorBaseSocial = 173.10;
-    const valorBaseJuridico = 43.28;
+    // Valores base CORRETOS (valores atualizados)
+    const valorBaseSocial = 181.46;
+    const valorBaseJuridico = 45.37;
     
     // Mapeamento de percentuais por tipo
     const percentuaisPorTipo = {
         'Contribuinte': 100,
-        'Aluno': 0,
-        'Soldado 1ª Classe': 30,
-        'Soldado 2ª Classe': 0,
-        'Agregado (Sem serviço jurídico)': 30,
+        'Aluno': 50,
+        'Soldado 1ª Classe': 50,
+        'Soldado 2ª Classe': 50,
+        'Agregado (Sem serviço jurídico)': 50,
         'Remido 50%': 50,
-        'Remido': 0,
+        'Remido': 50,
         'Benemérito (Sem serviço jurídico)': 0
     };
     
