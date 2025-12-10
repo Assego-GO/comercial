@@ -1489,6 +1489,8 @@ class Associados
                 f.nome as criado_por_nome,
                 f.cargo as criado_por_cargo,
                 f.foto as criado_por_foto,
+                fe.nome as editado_por_nome,
+                fe.cargo as editado_por_cargo,
                 DATE_FORMAT(CONVERT_TZ(o.data_criacao, '+00:00', '-03:00'), '%d/%m/%Y às %H:%i') as data_formatada,
                 DATE_FORMAT(CONVERT_TZ(o.data_edicao, '+00:00', '-03:00'), '%d/%m/%Y às %H:%i') as data_edicao_formatada,
                 CASE 
@@ -1497,6 +1499,7 @@ class Associados
                 END as recente
             FROM Observacoes_Associado o
             LEFT JOIN Funcionarios f ON o.criado_por = f.id
+            LEFT JOIN Funcionarios fe ON o.editado_por = fe.id
             WHERE o.associado_id = ? AND o.ativo = 1
             ORDER BY o.data_criacao DESC
         ");
@@ -1504,14 +1507,46 @@ class Associados
             $stmt->execute([$associadoId]);
             $observacoes = $stmt->fetchAll();
 
-            // Adicionar tags baseadas na categoria
+            // Adicionar tags e histórico de edições
             foreach ($observacoes as &$obs) {
                 $obs['tags'] = $this->getTagsObservacao($obs);
+                
+                // Buscar histórico de edições
+                if ($obs['editado'] == '1') {
+                    $obs['historico_edicoes'] = $this->getHistoricoEdicoesObservacao($obs['id']);
+                } else {
+                    $obs['historico_edicoes'] = [];
+                }
             }
 
             return $observacoes;
         } catch (PDOException $e) {
             error_log("Erro ao buscar observações: " . $e->getMessage());
+            return [];
+        }
+    }
+    
+    /**
+     * Buscar histórico de edições de uma observação
+     */
+    public function getHistoricoEdicoesObservacao($observacaoId)
+    {
+        try {
+            $stmt = $this->db->prepare("
+                SELECT 
+                    h.*,
+                    f.nome as editado_por_nome,
+                    f.cargo as editado_por_cargo,
+                    DATE_FORMAT(CONVERT_TZ(h.data_edicao, '+00:00', '-03:00'), '%d/%m/%Y às %H:%i') as data_edicao_formatada
+                FROM Historico_Edicao_Observacoes h
+                LEFT JOIN Funcionarios f ON h.editado_por = f.id
+                WHERE h.observacao_id = ?
+                ORDER BY h.data_edicao ASC
+            ");
+            $stmt->execute([$observacaoId]);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            error_log("Erro ao buscar histórico de edições: " . $e->getMessage());
             return [];
         }
     }
@@ -1605,10 +1640,7 @@ class Associados
                 throw new Exception("Observação não encontrada");
             }
 
-            // Verificar permissão (só quem criou ou admin pode editar)
-            if ($obsAtual['criado_por'] != $_SESSION['funcionario_id'] && !$this->isAdmin()) {
-                throw new Exception("Sem permissão para editar esta observação");
-            }
+            // REMOVIDA RESTRIÇÃO: Qualquer usuário logado pode editar qualquer observação
 
             $campos = [];
             $valores = [];
@@ -1636,12 +1668,24 @@ class Associados
             if (!empty($campos)) {
                 $campos[] = "data_edicao = NOW()";
                 $campos[] = "editado = 1";
+                $campos[] = "editado_por = ?";
+                $funcionarioId = $_SESSION['funcionario_id'] ?? null;
+                $valores[] = $funcionarioId;
 
                 $valores[] = $id;
 
                 $sql = "UPDATE Observacoes_Associado SET " . implode(", ", $campos) . " WHERE id = ?";
                 $stmt = $this->db->prepare($sql);
                 $stmt->execute($valores);
+
+                // Registrar no histórico de edições
+                if ($funcionarioId) {
+                    $stmtHist = $this->db->prepare("
+                        INSERT INTO Historico_Edicao_Observacoes (observacao_id, editado_por, data_edicao)
+                        VALUES (?, ?, NOW())
+                    ");
+                    $stmtHist->execute([$id, $funcionarioId]);
+                }
 
                 // Registrar na auditoria
                 $this->registrarAuditoriaObservacao('UPDATE', $id, $dados, $obsAtual);
@@ -1679,24 +1723,8 @@ class Associados
             // Obter ID do funcionário atual
             $funcionarioId = $_SESSION['funcionario_id'] ?? null;
 
-            // Verificar permissão (criador ou admin pode excluir)
-            $podeExcluir = false;
-            $motivo = '';
-
-            // Verifica se é o criador
-            if ($obs['criado_por'] == $funcionarioId) {
-                $podeExcluir = true;
-                $motivo = 'É o criador da observação';
-            }
-            // Verifica se é admin/diretor
-            elseif ($this->isAdmin()) {
-                $podeExcluir = true;
-                $motivo = 'Tem permissão administrativa';
-            }
-
-            if (!$podeExcluir) {
-                throw new Exception("Sem permissão para excluir esta observação. " . $motivo);
-            }
+            // REMOVIDA RESTRIÇÃO: Qualquer usuário logado pode excluir qualquer observação
+            $motivo = 'Usuário autorizado';
 
             // Log para debug
             error_log("Excluindo observação ID: $id, Funcionário: $funcionarioId, Motivo: $motivo");
