@@ -1484,8 +1484,6 @@ $headerComponent = HeaderComponent::create([
                                     isPresidencia: isPresidencia,
                                     permissoes: permissoesUsuario.peculio
                                 });
-                            } else {
-                                console.error('Módulo Peculio não encontrado');
                             }
                             break;
 
@@ -1538,6 +1536,19 @@ $headerComponent = HeaderComponent::create([
                                 });
                             }
                             break;
+
+                        // 🆕 ADICIONE ESTE BLOCO AQUI:
+                        case 'desfiliacao-pendentes':
+                            console.log('✅ Inicializando módulo Desfiliações Financeiro...');
+
+                            // Chamar a função de carregamento
+                            if (typeof window.carregarDesfiliaçõesFinanceiro === 'function') {
+                                console.log('📋 Carregando lista de desfiliações...');
+                                await window.carregarDesfiliaçõesFinanceiro();
+                            } else {
+                                console.error('❌ Função carregarDesfiliaçõesFinanceiro não encontrada');
+                            }
+                            break;
                     }
                 } catch (error) {
                     console.error(`Erro ao inicializar módulo ${tabId}:`, error);
@@ -1576,7 +1587,8 @@ $headerComponent = HeaderComponent::create([
                 once: true
             });
 
-            if (!temPermissaoFinanceiro) {S
+            if (!temPermissaoFinanceiro) {
+                S
                 console.log('❌ Usuário sem permissão para módulo financeiro');
                 return;
             }
