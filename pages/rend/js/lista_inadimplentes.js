@@ -1,7 +1,8 @@
 /**
- * Sistema Lista de Inadimplentes - V2 com Modal de Pendências
- * Modal moderno com UX/UI aprimorada e detalhamento de pendências por mês
- * @version 2.1.0
+ * Sistema Lista de Inadimplentes - V5.0 COM VISUALIZAÇÃO DE QUITADAS
+ * ✅ CÓDIGO COMPLETO - TODAS AS FUNÇÕES
+ * @version 5.0.0
+ * @author Sistema ASSEGO
  */
 
 window.ListaInadimplentes = (function() {
@@ -13,6 +14,9 @@ window.ListaInadimplentes = (function() {
     let dadosOriginais = [];
     let associadoAtual = null;
     let pendenciasAtuais = [];
+    let pendenciasQuitadas = new Set();
+    let cacheAssociados = new Map();
+    let processandoAcerto = new Set();
 
     // ===== CONFIGURAÇÃO =====
     const API_PATHS = {
@@ -27,7 +31,7 @@ window.ListaInadimplentes = (function() {
         quitarDividas: '../api/financeiro/quitar_dividas.php'
     };
 
-    // ===== SISTEMA DE TOAST PERSONALIZADO =====
+    // ===== SISTEMA DE TOAST =====
     const Toast = {
         container: null,
         
@@ -70,6 +74,47 @@ window.ListaInadimplentes = (function() {
                 toast.style.transform = 'translateX(100%)';
                 setTimeout(() => toast.remove(), 300);
             }, duration);
+        },
+        
+        showMegaSuccess(message, duration = 6000) {
+            if (!this.container) this.init();
+            
+            const toast = document.createElement('div');
+            toast.className = 'toast-custom mega-success';
+            toast.innerHTML = `
+                <div class="toast-icon">
+                    <i class="fas fa-check-double"></i>
+                </div>
+                <div class="toast-content">
+                    <span class="toast-message">${message}</span>
+                    <div class="toast-progress"></div>
+                </div>
+                <button class="toast-close" onclick="this.closest('.toast-custom').remove()">
+                    <i class="fas fa-times"></i>
+                </button>
+            `;
+            
+            this.container.appendChild(toast);
+            
+            const progress = toast.querySelector('.toast-progress');
+            if (progress) {
+                progress.style.width = '100%';
+                progress.style.height = '3px';
+                progress.style.background = 'white';
+                progress.style.marginTop = '0.5rem';
+                progress.style.borderRadius = '3px';
+                progress.style.transition = `width ${duration}ms linear`;
+                
+                setTimeout(() => {
+                    progress.style.width = '0%';
+                }, 100);
+            }
+            
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(100%)';
+                setTimeout(() => toast.remove(), 300);
+            }, duration);
         }
     };
 
@@ -80,7 +125,7 @@ window.ListaInadimplentes = (function() {
             return;
         }
 
-        console.log('🚀 Inicializando ListaInadimplentes v2...');
+        console.log('🚀 Inicializando ListaInadimplentes v5.0...');
         
         Toast.init();
         setupEventListeners();
@@ -89,11 +134,10 @@ window.ListaInadimplentes = (function() {
         isInitialized = true;
         Toast.show('Sistema de inadimplência carregado', 'info', 3000);
         
-        console.log('✅ ListaInadimplentes v2 inicializado com sucesso');
+        console.log('✅ ListaInadimplentes v5.0 inicializado com sucesso');
     }
 
     function setupEventListeners() {
-        // Filtros - Enter para buscar
         ['filtroNomeInadim', 'filtroRGInadim'].forEach(id => {
             const el = document.getElementById(id);
             if (el) {
@@ -106,7 +150,6 @@ window.ListaInadimplentes = (function() {
             }
         });
         
-        // Fechar modal de detalhes ao clicar fora
         const overlay = document.getElementById('modalOverlayInadim');
         if (overlay) {
             overlay.addEventListener('click', e => {
@@ -116,7 +159,6 @@ window.ListaInadimplentes = (function() {
             });
         }
         
-        // Fechar modal de pendências ao clicar fora
         const overlayPendencias = document.getElementById('modalOverlayPendencias');
         if (overlayPendencias) {
             overlayPendencias.addEventListener('click', e => {
@@ -126,7 +168,6 @@ window.ListaInadimplentes = (function() {
             });
         }
         
-        // Fechar modais com ESC
         document.addEventListener('keydown', e => {
             if (e.key === 'Escape') {
                 const pendenciasModal = document.getElementById('modalOverlayPendencias');
@@ -138,7 +179,6 @@ window.ListaInadimplentes = (function() {
             }
         });
         
-        // Máscara para valor renegociado
         const valorRenegociado = document.getElementById('valorRenegociado');
         if (valorRenegociado) {
             valorRenegociado.addEventListener('input', function(e) {
@@ -163,6 +203,7 @@ window.ListaInadimplentes = (function() {
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             
             const result = await response.json();
+            console.log('📦 Resposta API inadimplentes:', result);
             
             if (result.status === 'success') {
                 dadosInadimplentes = result.data || [];
@@ -174,7 +215,7 @@ window.ListaInadimplentes = (function() {
                 throw new Error(result.message || 'Erro desconhecido');
             }
         } catch (error) {
-            console.error('❌ Erro:', error);
+            console.error('❌ Erro ao carregar inadimplentes:', error);
             if (tabela) {
                 tabela.innerHTML = `
                     <tr>
@@ -193,7 +234,7 @@ window.ListaInadimplentes = (function() {
 
     function atualizarEstatisticas(dados) {
         const total = dados.length;
-        const base = 1000; // Mock - substituir por valor real
+        const base = 1000;
         const percentual = base > 0 ? ((total / base) * 100).toFixed(1) : 0;
         
         const elTotal = document.getElementById('totalInadimplentesInadim');
@@ -288,7 +329,6 @@ window.ListaInadimplentes = (function() {
         if (loading) loading.style.display = 'flex';
         if (content) content.style.display = 'none';
         
-        // Reset tabs
         document.querySelectorAll('.nav-tab').forEach(tab => tab.classList.remove('active'));
         document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
         
@@ -297,7 +337,6 @@ window.ListaInadimplentes = (function() {
         if (firstTab) firstTab.classList.add('active');
         if (firstContent) firstContent.classList.add('active');
         
-        // Reset badge
         const badge = document.getElementById('obsCountBadge');
         if (badge) {
             badge.style.display = 'none';
@@ -306,12 +345,10 @@ window.ListaInadimplentes = (function() {
     }
     
     function trocarTab(tabId) {
-        // Atualizar navegação
         document.querySelectorAll('.nav-tab').forEach(tab => {
             tab.classList.toggle('active', tab.dataset.tab === tabId);
         });
         
-        // Atualizar conteúdo
         document.querySelectorAll('.tab-content').forEach(content => {
             content.classList.toggle('active', content.id === `tab-${tabId}`);
         });
@@ -371,7 +408,6 @@ window.ListaInadimplentes = (function() {
         const militar = dados.dados_militares || {};
         const financeiro = dados.dados_financeiros || {};
         
-        // Função auxiliar
         const set = (id, value, isHtml = false) => {
             const el = document.getElementById(id);
             if (el) {
@@ -383,7 +419,6 @@ window.ListaInadimplentes = (function() {
             }
         };
         
-        // Avatar com iniciais
         const avatar = document.getElementById('modalAvatarInadim');
         if (avatar && pessoais.nome) {
             const iniciais = pessoais.nome.split(' ')
@@ -394,12 +429,10 @@ window.ListaInadimplentes = (function() {
             avatar.innerHTML = `<span>${iniciais}</span>`;
         }
         
-        // Header
         set('modalNomeInadim', pessoais.nome);
         set('modalCPFHeaderInadim', formatarCPF(pessoais.cpf));
         set('modalIDHeaderInadim', `ID: ${pessoais.id || '0'}`);
         
-        // Dados pessoais
         set('detalheNomeInadim', pessoais.nome);
         set('detalheCPFInadim', formatarCPF(pessoais.cpf));
         set('detalheRGInadim', pessoais.rg);
@@ -407,29 +440,24 @@ window.ListaInadimplentes = (function() {
         set('detalheSexoInadim', pessoais.sexo === 'M' ? 'Masculino' : pessoais.sexo === 'F' ? 'Feminino' : '-');
         set('detalheEstadoCivilInadim', pessoais.estadoCivil);
         
-        // Contato
         set('detalheTelefoneInadim', formatarTelefone(pessoais.telefone));
         set('detalheEmailInadim', pessoais.email);
         
-        // Endereço
         const enderecoCompleto = [endereco.endereco, endereco.numero].filter(Boolean).join(', ');
         set('detalheEnderecoInadim', enderecoCompleto || '-');
         set('detalheBairroInadim', endereco.bairro);
         set('detalheCidadeInadim', endereco.cidade);
         set('detalheCEPInadim', formatarCEP(endereco.cep));
         
-        // Dados militares
         set('detalhePatenteInadim', militar.patente);
         set('detalheCorporacaoInadim', militar.corporacao);
         set('detalheLotacaoInadim', militar.lotacao);
         set('detalheUnidadeInadim', militar.unidade);
         
-        // Dados financeiros básicos
         set('detalheTipoAssociadoInadim', financeiro.tipoAssociado);
         set('detalheVinculoInadim', financeiro.vinculoServidor);
         set('detalheLocalDebitoInadim', financeiro.localDebito);
         
-        // Última atualização
         set('lastUpdateInadim', new Date().toLocaleDateString('pt-BR', {
             day: '2-digit',
             month: '2-digit',
@@ -438,14 +466,13 @@ window.ListaInadimplentes = (function() {
             minute: '2-digit'
         }));
         
-        // Buscar dados de pendência financeira
         if (pessoais.id) {
             carregarPendenciasFinanceiras(pessoais.id);
             carregarObservacoes(pessoais.id);
         }
     }
     
-    // ===== BUSCAR PENDÊNCIAS FINANCEIRAS =====
+    // ===== BUSCAR PENDÊNCIAS FINANCEIRAS (RESUMO) =====
     async function carregarPendenciasFinanceiras(associadoId) {
         console.log('💰 Buscando pendências financeiras para ID:', associadoId);
         
@@ -550,7 +577,6 @@ window.ListaInadimplentes = (function() {
     async function abrirModalPendenciasDireto(id) {
         console.log('📄 Abrindo modal de pendências direto para ID:', id);
         
-        // Buscar dados básicos do associado primeiro
         try {
             const response = await fetch(`${API_PATHS.buscarDadosCompletos}?id=${id}`);
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -579,6 +605,7 @@ window.ListaInadimplentes = (function() {
         pendenciasAtuais = [];
     }
     
+    // ===== 🎯 CARREGAR PENDÊNCIAS DETALHADAS - MODIFICADO =====
     async function carregarPendenciasDetalhadas(associadoId) {
         console.log('📊 Carregando pendências detalhadas para ID:', associadoId);
         
@@ -589,7 +616,6 @@ window.ListaInadimplentes = (function() {
         if (content) content.style.display = 'none';
         
         try {
-            // Buscar dados do associado se ainda não temos
             if (!associadoAtual?.dados_pessoais) {
                 const respAssociado = await fetch(`${API_PATHS.buscarDadosCompletos}?id=${associadoId}`);
                 if (respAssociado.ok) {
@@ -600,7 +626,6 @@ window.ListaInadimplentes = (function() {
                 }
             }
             
-            // Atualizar header do modal
             const nome = associadoAtual?.dados_pessoais?.nome || 'Associado';
             const id = associadoAtual?.dados_pessoais?.id || associadoId;
             
@@ -610,8 +635,7 @@ window.ListaInadimplentes = (function() {
             if (elNome) elNome.textContent = nome;
             if (elId) elId.textContent = `ID: ${id}`;
             
-            // Buscar pendências detalhadas
-            const response = await fetch(`${API_PATHS.buscarPendenciasDetalhadas}?id=${associadoId}`);
+            const response = await fetch(`${API_PATHS.buscarPendenciasDetalhadas}?id=${associadoId}&_t=${Date.now()}`);
             
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}`);
@@ -621,162 +645,227 @@ window.ListaInadimplentes = (function() {
             console.log('📋 Pendências detalhadas recebidas:', result);
             
             if (result.status === 'success') {
-                pendenciasAtuais = result.data.pendencias || [];
-                renderizarTabelaPendencias(pendenciasAtuais, result.data);
+                const todasPendencias = result.data.pendencias || [];
                 
-                // Atualizar valor total no header
+                pendenciasAtuais = todasPendencias;
+                
+                renderizarTabelaPendencias(todasPendencias, result.data);
+                
                 const totalEl = document.getElementById('pendenciasTotalDebito');
                 if (totalEl) {
                     totalEl.textContent = formatarMoeda(result.data.total_debito || 0);
                 }
                 
-                // Preencher campo de renegociação com valor total
                 const valorRenegociado = document.getElementById('valorRenegociado');
                 if (valorRenegociado) {
                     const total = result.data.total_debito || 0;
                     valorRenegociado.value = total.toFixed(2).replace('.', ',');
                 }
+                
+                const pendenciasAtivas = todasPendencias.filter(p => !p.ja_quitado);
+                
+                if (pendenciasAtivas.length === 0) {
+                    mostrarTelaQuitacao();
+                }
+                
             } else {
-                // Se não há API ainda, mostrar dados mockados
-                renderizarPendenciasMock(associadoId);
+                throw new Error(result.message || 'Erro ao buscar pendências detalhadas');
             }
         } catch (error) {
             console.error('❌ Erro ao carregar pendências:', error);
-            // Mostrar dados mockados em caso de erro
-            renderizarPendenciasMock(associadoId);
+            mostrarErroCarregamento(associadoId, error.message);
         } finally {
             if (loading) loading.style.display = 'none';
             if (content) content.style.display = 'block';
         }
     }
-    
-    function renderizarPendenciasMock(associadoId) {
-        // Dados mockados baseados na imagem fornecida
-        const nome = associadoAtual?.dados_pessoais?.nome || 'ASSOCIADO EXEMPLO';
-        const id = associadoAtual?.dados_pessoais?.id || associadoId;
-        
-        const elNome = document.getElementById('pendenciasAssociadoNome');
-        const elId = document.getElementById('pendenciasAssociadoId');
-        
-        if (elNome) elNome.textContent = nome;
-        if (elId) elId.textContent = `ID: ${id}`;
-        
-        // Mock de pendências
-        pendenciasAtuais = [
-            { id: 1, tipo: 'Contribuição social', mes: '10/2023', valor: 156.32, status: 'sem_retorno' },
-            { id: 2, tipo: 'Contribuição social', mes: '11/2023', valor: 156.32, status: 'sem_retorno' },
-            { id: 3, tipo: 'Contribuição social', mes: '12/2023', valor: 156.32, status: 'sem_retorno' },
-            { id: 4, tipo: 'Contribuição social', mes: '01/2024', valor: 156.32, status: 'sem_retorno' },
-            { id: 5, tipo: 'Contribuição social', mes: '03/2025', valor: 173.10, status: 'sem_retorno' },
-            { id: 6, tipo: 'Contribuição jurídica', mes: '03/2025', valor: 43.28, status: 'sem_retorno' },
-            { id: 7, tipo: 'Contribuição jurídica', mes: '05/2025', valor: 45.37, status: 'sem_retorno' },
-            { id: 8, tipo: 'Contribuição social', mes: '05/2025', valor: 181.46, status: 'sem_retorno' }
-        ];
-        
-        const totalDebito = pendenciasAtuais.reduce((acc, p) => acc + p.valor, 0);
-        
-        renderizarTabelaPendencias(pendenciasAtuais, { total_debito: totalDebito });
-        
-        const totalEl = document.getElementById('pendenciasTotalDebito');
-        if (totalEl) {
-            totalEl.textContent = formatarMoeda(totalDebito);
-        }
-        
-        const valorRenegociado = document.getElementById('valorRenegociado');
-        if (valorRenegociado) {
-            valorRenegociado.value = totalDebito.toFixed(2).replace('.', ',');
-        }
-    }
-    
+
+    // ===== 🎨 RENDERIZAR TABELA DE PENDÊNCIAS - NOVO =====
     function renderizarTabelaPendencias(pendencias, dados) {
         const tbody = document.getElementById('pendenciasTableBody');
         const somaTotal = document.getElementById('pendenciasSomaTotal');
         
         if (!tbody) return;
         
-        if (!pendencias || pendencias.length === 0) {
-            tbody.innerHTML = `
-                <tr>
-                    <td colspan="5" style="text-align: center; padding: 3rem; color: var(--color-gray-500);">
-                        <i class="fas fa-check-circle" style="font-size: 2rem; margin-bottom: 0.5rem; display: block; color: var(--color-success);"></i>
-                        Nenhuma pendência encontrada
-                    </td>
-                </tr>
-            `;
-            if (somaTotal) somaTotal.textContent = 'R$ 0,00';
+        const pendenciasAtivas = pendencias.filter(p => !p.ja_quitado);
+        const pendenciasQuitadas = pendencias.filter(p => p.ja_quitado);
+        
+        if (pendencias.length === 0) {
+            mostrarTelaQuitacao();
             return;
         }
         
-        let total = 0;
+        tbody.innerHTML = '';
+        let totalAtivo = 0;
         
-        tbody.innerHTML = pendencias.map((p, index) => {
-            total += parseFloat(p.valor) || 0;
-            
-            const statusClass = p.status === 'sem_retorno' ? 'sem-retorno' : 'parcial';
-            const statusTexto = p.status === 'sem_retorno' ? 'sem retorno(assego)' : 'parcialmente pago';
-            
-            return `
-                <tr data-pendencia-id="${p.id || index}">
-                    <td>
-                        <div class="pendencia-descricao">
-                            <span class="pendencia-tipo">${escapeHtml(p.tipo)} não quitado em ${escapeHtml(p.mes)}</span>
-                        </div>
-                    </td>
-                    <td>
-                        <span class="valor-original">${formatarMoeda(p.valor)}</span>
-                    </td>
-                    <td>
-                        <span class="pendencia-status ${statusClass}">
-                            <i class="fas fa-clock"></i>
-                            ${statusTexto}
-                        </span>
-                    </td>
-                    <td>
-                        <div class="input-valor-acerto">
-                            <span class="prefix">Valor:</span>
-                            <input type="text" 
-                                   id="valorAcerto_${p.id || index}" 
-                                   value="${parseFloat(p.valor).toFixed(2)}" 
-                                   onchange="ListaInadimplentes.atualizarValorAcerto(${p.id || index}, this.value)">
-                        </div>
-                    </td>
-                    <td>
-                        <button class="btn-acerto" onclick="ListaInadimplentes.registrarAcertoDivida(${p.id || index})">
-                            Acerto da dívida
-                        </button>
+        // ===== 1. SEÇÃO: PENDÊNCIAS ATIVAS =====
+        if (pendenciasAtivas.length > 0) {
+            tbody.innerHTML += `
+                <tr class="section-header">
+                    <td colspan="5" style="background: #fef3c7; padding: 0.75rem 1.25rem; font-weight: 700; color: #92400e;">
+                        <i class="fas fa-exclamation-triangle"></i> PENDÊNCIAS ATIVAS (${pendenciasAtivas.length})
                     </td>
                 </tr>
             `;
-        }).join('');
+            
+            pendenciasAtivas.forEach((p, index) => {
+                totalAtivo += parseFloat(p.valor) || 0;
+                const idPendencia = p.id_pagamento || p.id || `pendente_${index}`;
+                
+                tbody.innerHTML += `
+                    <tr data-pendencia-id="${idPendencia}" 
+                        data-mes-referencia="${p.mes_referencia || ''}" 
+                        data-tipo="${escapeHtml(p.tipo)}"
+                        class="pendencia-row pendencia-ativa">
+                        <td>
+                            <div class="pendencia-descricao">
+                                <span class="pendencia-tipo">${escapeHtml(p.tipo)} não quitado em ${escapeHtml(p.mes)}</span>
+                                ${p.is_historica ? '<span class="badge-historica" style="font-size: 0.75rem; color: #f59e0b; margin-left: 0.5rem;">⚠️ Histórica</span>' : ''}
+                            </div>
+                        </td>
+                        <td>
+                            <span class="valor-original">${formatarMoeda(p.valor)}</span>
+                        </td>
+                        <td>
+                            <span class="pendencia-status sem-retorno">
+                                <i class="fas fa-clock"></i>
+                                ${p.status_texto || 'Pendente'}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="input-valor-acerto">
+                                <span class="prefix">Valor:</span>
+                                <input type="text" 
+                                       id="valorAcerto_${idPendencia}" 
+                                       value="${parseFloat(p.valor).toFixed(2)}" 
+                                       onchange="ListaInadimplentes.atualizarValorAcerto(${idPendencia}, this.value)">
+                            </div>
+                        </td>
+                        <td>
+                            <button class="btn-acerto" 
+                                    id="btnAcerto_${idPendencia}"
+                                    onclick="ListaInadimplentes.registrarAcertoDivida(${idPendencia})">
+                                <i class="fas fa-check-circle"></i>
+                                Acerto da dívida
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+        
+        // ===== 2. SEÇÃO: PENDÊNCIAS JÁ QUITADAS =====
+        if (pendenciasQuitadas.length > 0) {
+            tbody.innerHTML += `
+                <tr class="section-header">
+                    <td colspan="5" style="background: #dcfce7; padding: 0.75rem 1.25rem; font-weight: 700; color: #166534;">
+                        <i class="fas fa-check-circle"></i> JÁ QUITADAS (${pendenciasQuitadas.length})
+                    </td>
+                </tr>
+            `;
+            
+            pendenciasQuitadas.forEach((p, index) => {
+                const idPendencia = p.id_pagamento || `quitado_${index}`;
+                const dataQuitacao = p.data_quitacao ? formatarData(p.data_quitacao) : 'Data não informada';
+                const formaPagamento = p.forma_pagamento_quitacao || 'N/A';
+                const funcionarioNome = p.funcionario_quitacao_nome || 'Sistema';
+                
+                tbody.innerHTML += `
+                    <tr class="pendencia-row pendencia-quitada" data-pendencia-id="${idPendencia}">
+                        <td>
+                            <div class="pendencia-descricao">
+                                <span class="pendencia-tipo quitada">${escapeHtml(p.tipo)} - ${escapeHtml(p.mes)}</span>
+                                <span class="info-quitacao">
+                                    <i class="fas fa-calendar-check"></i> Quitado em ${dataQuitacao}
+                                </span>
+                                <span class="info-quitacao">
+                                    <i class="fas fa-user"></i> Por: ${escapeHtml(funcionarioNome)}
+                                </span>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="valor-original quitado">${formatarMoeda(p.valor)}</span>
+                        </td>
+                        <td>
+                            <span class="badge-quitado">
+                                <i class="fas fa-check-double"></i>
+                                QUITADO
+                            </span>
+                            <span class="forma-pagamento-badge">
+                                <i class="fas fa-credit-card"></i>
+                                ${escapeHtml(formaPagamento)}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="input-valor-acerto quitado">
+                                <span class="prefix">Pago:</span>
+                                <input type="text" 
+                                       value="${parseFloat(p.valor).toFixed(2)}" 
+                                       disabled
+                                       style="background: #f3f4f6; cursor: not-allowed;">
+                            </div>
+                        </td>
+                        <td>
+                            <button class="btn-acerto" disabled style="opacity: 0.5; cursor: not-allowed; background: #9ca3af;">
+                                <i class="fas fa-check"></i>
+                                Já Quitado
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
         
         if (somaTotal) {
-            somaTotal.textContent = formatarMoeda(total);
+            somaTotal.textContent = formatarMoeda(totalAtivo);
         }
     }
-    
+
     function atualizarValorAcerto(pendenciaId, valor) {
-        // Formatar valor
         valor = valor.replace(/[^\d.,]/g, '').replace(',', '.');
         const valorNumerico = parseFloat(valor) || 0;
         
-        // Atualizar no array de pendências
-        const pendencia = pendenciasAtuais.find(p => (p.id || pendenciasAtuais.indexOf(p)) == pendenciaId);
+        const pendencia = pendenciasAtuais.find(p => {
+            const idComparar = p.id_pagamento || p.id;
+            return idComparar == pendenciaId;
+        });
+        
         if (pendencia) {
             pendencia.valorAcerto = valorNumerico;
         }
         
-        console.log(`Valor de acerto atualizado para pendência ${pendenciaId}: ${valorNumerico}`);
+        console.log(`✏️ Valor de acerto atualizado para pendência ${pendenciaId}: ${valorNumerico}`);
     }
     
+    // ===== REGISTRAR ACERTO - MODIFICADO =====
     async function registrarAcertoDivida(pendenciaId) {
-        const pendencia = pendenciasAtuais.find(p => (p.id || pendenciasAtuais.indexOf(p)) == pendenciaId);
+        console.log('💰 Iniciando acerto de dívida para pendência:', pendenciaId);
+        
+        if (processandoAcerto.has(pendenciaId)) {
+            Toast.show('⚠️ Acerto já está sendo processado', 'warning');
+            return;
+        }
+        
+        const pendencia = pendenciasAtuais.find(p => {
+            const idComparar = p.id_pagamento || p.id;
+            return idComparar == pendenciaId;
+        });
+        
         if (!pendencia) {
             Toast.show('Pendência não encontrada', 'error');
+            console.error('❌ Pendência não encontrada no array:', pendenciaId);
             return;
         }
         
         const inputValor = document.getElementById(`valorAcerto_${pendenciaId}`);
         const valor = inputValor ? parseFloat(inputValor.value.replace(',', '.')) : pendencia.valor;
+        
+        console.log('📊 Dados da pendência:', {
+            id: pendenciaId,
+            mes_referencia: pendencia.mes_referencia,
+            tipo: pendencia.tipo,
+            valor: valor
+        });
         
         if (typeof Swal !== 'undefined') {
             const result = await Swal.fire({
@@ -796,52 +885,108 @@ window.ListaInadimplentes = (function() {
                 confirmButtonColor: '#16a34a'
             });
             
-            if (result.isConfirmed) {
-                await processarAcertoDivida(pendenciaId, valor);
+            if (!result.isConfirmed) {
+                console.log('❌ Acerto cancelado pelo usuário');
+                return;
             }
         } else {
-            if (confirm(`Confirma o acerto da dívida de ${formatarMoeda(valor)}?`)) {
-                await processarAcertoDivida(pendenciaId, valor);
+            if (!confirm(`Confirma o acerto da dívida de ${formatarMoeda(valor)}?`)) {
+                return;
             }
         }
+        
+        await processarAcertoDivida(pendenciaId, valor, pendencia);
     }
     
-    async function processarAcertoDivida(pendenciaId, valor) {
+    // ===== PROCESSAR ACERTO =====
+    async function processarAcertoDivida(pendenciaId, valor, pendencia) {
+        console.log('⚙️ Processando acerto de dívida...');
+        
+        processandoAcerto.add(pendenciaId);
+        
+        const btn = document.getElementById(`btnAcerto_${pendenciaId}`);
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processando...';
+        }
+        
         try {
-            // Aqui faria o POST para a API
-            // const response = await fetch(API_PATHS.registrarAcerto, {
-            //     method: 'POST',
-            //     headers: { 'Content-Type': 'application/json' },
-            //     body: JSON.stringify({
-            //         associado_id: associadoAtual?.dados_pessoais?.id,
-            //         pendencia_id: pendenciaId,
-            //         valor: valor
-            //     })
-            // });
-            
-            Toast.show('Acerto de dívida registrado com sucesso!', 'success');
-            
-            // Remover a linha da tabela
-            const row = document.querySelector(`tr[data-pendencia-id="${pendenciaId}"]`);
-            if (row) {
-                row.style.transition = 'opacity 0.3s, transform 0.3s';
-                row.style.opacity = '0';
-                row.style.transform = 'translateX(50px)';
-                setTimeout(() => {
-                    row.remove();
-                    atualizarTotalPendencias();
-                }, 300);
+            if (!pendencia.mes_referencia) {
+                throw new Error('Mês de referência não encontrado na pendência');
             }
             
-            // Remover do array
-            const index = pendenciasAtuais.findIndex(p => (p.id || pendenciasAtuais.indexOf(p)) == pendenciaId);
-            if (index > -1) {
-                pendenciasAtuais.splice(index, 1);
+            if (!associadoAtual?.dados_pessoais?.id) {
+                throw new Error('ID do associado não encontrado');
+            }
+            
+            const valorNum = parseFloat(valor);
+            if (isNaN(valorNum) || valorNum <= 0) {
+                throw new Error('Valor inválido para acerto');
+            }
+            
+            const payload = {
+                associado_id: associadoAtual.dados_pessoais.id,
+                mes_referencia: pendencia.mes_referencia,
+                valor: valorNum,
+                servico_nome: pendencia.tipo,
+                observacao: 'Acerto registrado via sistema web'
+            };
+            
+            console.log('📤 Enviando payload para API:', payload);
+            
+            const response = await fetch(API_PATHS.registrarAcerto, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            
+            const result = await response.json();
+            console.log('📥 Resposta da API:', result);
+            
+            if (result.status === 'success') {
+                Toast.show('✅ Acerto de dívida registrado com sucesso!', 'success');
+                
+                pendenciasQuitadas.add(pendenciaId);
+                
+                const row = document.querySelector(`tr[data-pendencia-id="${pendenciaId}"]`);
+                if (row) {
+                    row.style.transition = 'opacity 0.3s, transform 0.3s';
+                    row.style.opacity = '0';
+                    row.style.transform = 'translateX(50px)';
+                    
+                    setTimeout(() => {
+                        carregarPendenciasDetalhadas(associadoAtual.dados_pessoais.id);
+                    }, 300);
+                }
+                
+                cacheAssociados.delete(associadoAtual.dados_pessoais.id);
+                
+                setTimeout(() => {
+                    carregarInadimplentes();
+                }, 1000);
+                
+            } else {
+                if (result.message && result.message.includes('já existe um pagamento')) {
+                    Toast.show('⚠️ Esta pendência já foi quitada', 'warning');
+                    
+                    setTimeout(() => {
+                        carregarPendenciasDetalhadas(associadoAtual.dados_pessoais.id);
+                    }, 500);
+                } else {
+                    throw new Error(result.message || 'Erro ao registrar acerto');
+                }
             }
             
         } catch (error) {
-            console.error('Erro ao registrar acerto:', error);
-            Toast.show('Erro ao registrar acerto de dívida', 'error');
+            console.error('❌ Erro ao registrar acerto:', error);
+            Toast.show('❌ ' + error.message, 'error');
+            
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-check-circle"></i> Acerto da dívida';
+            }
+        } finally {
+            processandoAcerto.delete(pendenciaId);
         }
     }
     
@@ -856,30 +1001,27 @@ window.ListaInadimplentes = (function() {
         if (totalDebito) totalDebito.textContent = formatarMoeda(total);
         if (valorRenegociado) valorRenegociado.value = total.toFixed(2).replace('.', ',');
         
-        // Se não há mais pendências
-        if (pendenciasAtuais.length === 0) {
-            const tbody = document.getElementById('pendenciasTableBody');
-            if (tbody) {
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="5" style="text-align: center; padding: 3rem; color: var(--color-success);">
-                            <i class="fas fa-check-circle" style="font-size: 2rem; margin-bottom: 0.5rem; display: block;"></i>
-                            Todas as pendências foram quitadas!
-                        </td>
-                    </tr>
-                `;
-            }
-        }
+        console.log(`📊 Total pendências atualizado: R$ ${total.toFixed(2)}`);
     }
     
     async function lancarRenegociacao() {
+        console.log('📋 Iniciando renegociação...');
+        
         const input = document.getElementById('valorRenegociado');
-        if (!input) return;
+        if (!input) {
+            Toast.show('Campo de valor não encontrado', 'error');
+            return;
+        }
         
         const valor = parseFloat(input.value.replace(',', '.')) || 0;
         
         if (valor <= 0) {
             Toast.show('Informe um valor válido para renegociação', 'warning');
+            return;
+        }
+        
+        if (pendenciasAtuais.length === 0) {
+            Toast.show('Não há pendências para renegociar', 'warning');
             return;
         }
         
@@ -896,7 +1038,7 @@ window.ListaInadimplentes = (function() {
                             Valor: ${formatarMoeda(valor)}
                         </p>
                         <p style="font-size: 0.875rem; color: #6b7280; margin-top: 1rem;">
-                            Este valor será incluído na próxima fatura do associado.
+                            ${pendenciasAtuais.length} pendência(s) serão quitadas e o valor será lançado na próxima fatura.
                         </p>
                     </div>
                 `,
@@ -907,50 +1049,94 @@ window.ListaInadimplentes = (function() {
                 confirmButtonColor: '#16a34a'
             });
             
-            if (result.isConfirmed) {
-                await processarRenegociacao(valor);
+            if (!result.isConfirmed) {
+                console.log('❌ Renegociação cancelada pelo usuário');
+                return;
             }
         } else {
-            if (confirm(`Confirma a renegociação de ${formatarMoeda(valor)}?`)) {
-                await processarRenegociacao(valor);
+            if (!confirm(`Confirma a renegociação de ${formatarMoeda(valor)}?`)) {
+                return;
             }
         }
+        
+        await processarRenegociacao(valor);
     }
     
     async function processarRenegociacao(valor) {
+        console.log('⚙️ Processando renegociação...');
+        
         try {
-            // Aqui faria o POST para a API
-            // const response = await fetch(API_PATHS.registrarRenegociacao, {
-            //     method: 'POST',
-            //     headers: { 'Content-Type': 'application/json' },
-            //     body: JSON.stringify({
-            //         associado_id: associadoAtual?.dados_pessoais?.id,
-            //         valor: valor,
-            //         pendencias: pendenciasAtuais.map(p => p.id)
-            //     })
-            // });
+            if (!associadoAtual?.dados_pessoais?.id) {
+                throw new Error('ID do associado não encontrado');
+            }
             
-            Toast.show('Renegociação lançada com sucesso!', 'success');
+            const payload = {
+                associado_id: associadoAtual.dados_pessoais.id,
+                valor_renegociado: valor,
+                pendencias_ids: pendenciasAtuais.map(p => p.id_pagamento || p.id),
+                parcelas: 1,
+                observacao: 'Renegociação registrada via sistema web'
+            };
             
-            // Fechar modal e recarregar dados
-            setTimeout(() => {
-                fecharModalPendencias();
-                carregarInadimplentes();
-            }, 1500);
+            console.log('📤 Enviando payload para API:', payload);
+            
+            const response = await fetch(API_PATHS.registrarRenegociacao, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            
+            const result = await response.json();
+            console.log('📥 Resposta da API:', result);
+            
+            if (result.status === 'success') {
+                Toast.show('Renegociação lançada com sucesso!', 'success');
+                
+                if (typeof Swal !== 'undefined') {
+                    await Swal.fire({
+                        title: 'Renegociação Registrada!',
+                        html: `
+                            <div style="text-align: left; padding: 1rem;">
+                                <p><strong>Acordo #${result.data.acordo_id}</strong></p>
+                                <p>Valor original: R$ ${result.data.valor_original.toFixed(2).replace('.', ',')}</p>
+                                <p>Valor renegociado: R$ ${result.data.valor_renegociado.toFixed(2).replace('.', ',')}</p>
+                                <p>Desconto: ${result.data.desconto_percentual}%</p>
+                                <p>Parcelas: ${result.data.parcelas} x R$ ${result.data.valor_parcela.toFixed(2).replace('.', ',')}</p>
+                                <p>Primeiro vencimento: ${result.data.primeiro_vencimento}</p>
+                                <p>Meses quitados: ${result.data.meses_quitados}</p>
+                            </div>
+                        `,
+                        icon: 'success'
+                    });
+                }
+                
+                setTimeout(() => {
+                    fecharModalPendencias();
+                    carregarInadimplentes();
+                }, 1500);
+                
+            } else {
+                throw new Error(result.message || 'Erro ao processar renegociação');
+            }
             
         } catch (error) {
-            console.error('Erro ao processar renegociação:', error);
-            Toast.show('Erro ao processar renegociação', 'error');
+            console.error('❌ Erro ao processar renegociação:', error);
+            Toast.show('Erro ao processar renegociação: ' + error.message, 'error');
         }
     }
     
+    // ===== QUITAR TODAS AS DÍVIDAS =====
     async function quitarTodasDividas() {
-        if (pendenciasAtuais.length === 0) {
+        console.log('💰 Iniciando quitação total...');
+        
+        const pendenciasAtivas = pendenciasAtuais.filter(p => !p.ja_quitado);
+        
+        if (pendenciasAtivas.length === 0) {
             Toast.show('Não há pendências para quitar', 'info');
             return;
         }
         
-        const total = pendenciasAtuais.reduce((acc, p) => acc + (parseFloat(p.valor) || 0), 0);
+        const total = pendenciasAtivas.reduce((acc, p) => acc + (parseFloat(p.valor) || 0), 0);
         const nome = associadoAtual?.dados_pessoais?.nome || 'Associado';
         
         if (typeof Swal !== 'undefined') {
@@ -961,7 +1147,7 @@ window.ListaInadimplentes = (function() {
                         <p style="margin-bottom: 1rem;">Confirma a quitação de todas as dívidas de:</p>
                         <p style="font-weight: 700; font-size: 1.1rem; margin-bottom: 0.5rem;">${escapeHtml(nome)}</p>
                         <p style="font-size: 0.875rem; color: #6b7280; margin-bottom: 1rem;">
-                            ${pendenciasAtuais.length} pendência(s)
+                            ${pendenciasAtivas.length} pendência(s)
                         </p>
                         <p style="font-size: 1.75rem; font-weight: 700; color: #16a34a;">
                             Total: ${formatarMoeda(total)}
@@ -975,32 +1161,105 @@ window.ListaInadimplentes = (function() {
                 confirmButtonColor: '#16a34a'
             });
             
-            if (result.isConfirmed) {
-                await processarQuitacaoTotal();
+            if (!result.isConfirmed) {
+                console.log('❌ Quitação cancelada pelo usuário');
+                return;
             }
         } else {
-            if (confirm(`Confirma a quitação de todas as dívidas? Total: ${formatarMoeda(total)}`)) {
-                await processarQuitacaoTotal();
+            if (!confirm(`Confirma a quitação de todas as dívidas? Total: ${formatarMoeda(total)}`)) {
+                return;
             }
         }
+        
+        await processarQuitacaoTotal();
     }
     
     async function processarQuitacaoTotal() {
+        console.log('⚙️ Processando quitação total...');
+        
+        const btnQuitar = document.querySelector('.pendencias-footer .btn-action.success');
+        if (btnQuitar) {
+            btnQuitar.disabled = true;
+            btnQuitar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processando...';
+        }
+        
         try {
-            // Aqui faria o POST para a API
-            Toast.show('Todas as dívidas foram quitadas!', 'success');
+            if (!associadoAtual?.dados_pessoais?.id) {
+                throw new Error('ID do associado não encontrado');
+            }
             
-            pendenciasAtuais = [];
-            atualizarTotalPendencias();
+            const pendenciasAtivas = pendenciasAtuais.filter(p => !p.ja_quitado);
+            const total = pendenciasAtivas.reduce((acc, p) => acc + (parseFloat(p.valor) || 0), 0);
             
-            setTimeout(() => {
-                fecharModalPendencias();
-                carregarInadimplentes();
-            }, 1500);
+            if (pendenciasAtivas.length === 0) {
+                Toast.show('ℹ️ Não há pendências para quitar', 'info');
+                return;
+            }
+            
+            const payload = {
+                associado_id: associadoAtual.dados_pessoais.id,
+                valor_total: total,
+                forma_pagamento: 'QUITACAO_TOTAL',
+                observacao: 'Quitação total registrada via sistema web'
+            };
+            
+            console.log('📤 Enviando payload para API:', payload);
+            
+            const response = await fetch(API_PATHS.quitarDividas, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            
+            const result = await response.json();
+            console.log('📥 Resposta da API:', result);
+            
+            if (result.status === 'success') {
+                Toast.showMegaSuccess('🎉 Todas as dívidas foram quitadas com sucesso!');
+                
+                pendenciasAtuais.forEach(p => {
+                    const idPendencia = p.id_pagamento || p.id;
+                    pendenciasQuitadas.add(idPendencia);
+                });
+                
+                if (typeof Swal !== 'undefined') {
+                    await Swal.fire({
+                        title: '🎉 Quitação Concluída!',
+                        html: `
+                            <div style="text-align: left; padding: 1rem;">
+                                <p><strong>${result.data.meses_quitados} meses quitados</strong></p>
+                                <p>Valor total: ${formatarMoeda(result.data.valor_total)}</p>
+                                <p>Forma de pagamento: ${result.data.forma_pagamento}</p>
+                                <p>Situação: <span style="color: #16a34a; font-weight: 700;">${result.data.situacao_financeira}</span></p>
+                            </div>
+                        `,
+                        icon: 'success',
+                        confirmButtonColor: '#16a34a'
+                    });
+                }
+                
+                setTimeout(() => {
+                    carregarPendenciasDetalhadas(associadoAtual.dados_pessoais.id);
+                }, 500);
+                
+                cacheAssociados.delete(associadoAtual.dados_pessoais.id);
+                
+                setTimeout(() => {
+                    carregarInadimplentes();
+                }, 1500);
+                
+            } else {
+                throw new Error(result.message || 'Erro ao quitar dívidas');
+            }
             
         } catch (error) {
-            console.error('Erro ao quitar dívidas:', error);
-            Toast.show('Erro ao quitar dívidas', 'error');
+            console.error('❌ Erro ao quitar dívidas:', error);
+            Toast.show('❌ ' + error.message, 'error');
+            
+            if (btnQuitar) {
+                btnQuitar.disabled = false;
+                btnQuitar.innerHTML = '<i class="fas fa-check-double"></i> Quitar Todas as Dívidas';
+            }
         }
     }
     
@@ -1010,7 +1269,6 @@ window.ListaInadimplentes = (function() {
     
     function exportarPendenciasPDF() {
         Toast.show('Gerando PDF das pendências...', 'info');
-        // Implementar exportação real
     }
 
     // ===== OBSERVAÇÕES =====
@@ -1255,6 +1513,68 @@ window.ListaInadimplentes = (function() {
         window.print();
     }
 
+    // ===== MOSTRAR TELA DE QUITAÇÃO =====
+    function mostrarTelaQuitacao() {
+        const tbody = document.getElementById('pendenciasTableBody');
+        const somaTotal = document.getElementById('pendenciasSomaTotal');
+        const totalDebito = document.getElementById('pendenciasTotalDebito');
+        const renegociacaoSection = document.querySelector('.renegociacao-section');
+        
+        if (tbody) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="5" style="padding: 0;">
+                        <div class="quitacao-completa">
+                            <div class="quitacao-icon">
+                                <i class="fas fa-check-circle"></i>
+                            </div>
+                            <h3>✅ Todas as Dívidas Quitadas!</h3>
+                            <p>Este associado não possui pendências financeiras no momento.</p>
+                            <div class="quitacao-badge">
+                                <i class="fas fa-shield-check"></i>
+                                <span>SITUAÇÃO REGULARIZADA</span>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }
+        
+        if (somaTotal) somaTotal.textContent = 'R$ 0,00';
+        if (totalDebito) totalDebito.textContent = 'R$ 0,00';
+        
+        if (renegociacaoSection) {
+            renegociacaoSection.style.display = 'none';
+        }
+        
+        const btnQuitarTodas = document.querySelector('.pendencias-footer .btn-action.success');
+        if (btnQuitarTodas) {
+            btnQuitarTodas.disabled = true;
+            btnQuitarTodas.style.opacity = '0.5';
+            btnQuitarTodas.style.cursor = 'not-allowed';
+        }
+    }
+
+    function mostrarErroCarregamento(associadoId, mensagem) {
+        const tbody = document.getElementById('pendenciasTableBody');
+        if (tbody) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="5" style="text-align: center; padding: 3rem;">
+                        <i class="fas fa-exclamation-triangle" style="font-size: 2rem; color: var(--color-warning); margin-bottom: 1rem; display: block;"></i>
+                        <p style="color: var(--color-gray-700); margin-bottom: 0.5rem;">Não foi possível carregar as pendências</p>
+                        <p style="color: var(--color-gray-500); font-size: 0.875rem;">${mensagem}</p>
+                        <button onclick="ListaInadimplentes.carregarPendenciasDetalhadas(${associadoId})" 
+                                style="margin-top: 1rem; padding: 0.5rem 1rem; border: none; border-radius: 6px; background: var(--color-primary); color: white; cursor: pointer;">
+                            <i class="fas fa-sync"></i> Tentar Novamente
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }
+        Toast.show('Erro ao carregar pendências: ' + mensagem, 'error');
+    }
+
     // ===== UTILITÁRIOS =====
     function formatarMoeda(valor) {
         if (valor === null || valor === undefined) return 'R$ 0,00';
@@ -1337,6 +1657,7 @@ window.ListaInadimplentes = (function() {
         abrirModalPendencias,
         abrirModalPendenciasDireto,
         fecharModalPendencias,
+        carregarPendenciasDetalhadas,
         registrarPagamento,
         aplicarFiltros,
         limparFiltros,
@@ -1352,17 +1673,17 @@ window.ListaInadimplentes = (function() {
         enviarEmail,
         exportarExcel,
         exportarPDF,
-        imprimirRelatorio
+        imprimirRelatorio,
+        mostrarTelaQuitacao
     };
 
 })();
 
-// Inicialização automática quando DOM estiver pronto
+// Inicialização automática
 document.addEventListener('DOMContentLoaded', function() {
     if (typeof ListaInadimplentes !== 'undefined') {
         ListaInadimplentes.init();
     }
 });
 
-// Log de carregamento
-console.log('✅ ListaInadimplentes v2 com Modal de Pendências carregado');
+console.log('✅ ListaInadimplentes v5.0 COM QUITADAS - COMPLETO');

@@ -1,0 +1,40 @@
+[10-Dec-2025 13:32:15 UTC] PHP Warning:  ini_set(): Session ini settings cannot be changed when a session is active in /var/www/html/matheus/comercial/config/database.php on line 23
+[10-Dec-2025 13:32:15 UTC] PHP Stack trace:
+[10-Dec-2025 13:32:15 UTC] PHP   1. {main}() /var/www/html/matheus/comercial/api/financeiro/importar_quitacao.php:0
+[10-Dec-2025 13:32:15 UTC] PHP   2. include_once() /var/www/html/matheus/comercial/api/financeiro/importar_quitacao.php:338
+[10-Dec-2025 13:32:15 UTC] PHP   3. ini_set($option = 'session.gc_maxlifetime', $value = 36000) /var/www/html/matheus/comercial/config/database.php:23
+[10-Dec-2025 13:32:15 UTC] PHP Warning:  ini_set(): Session ini settings cannot be changed when a session is active in /var/www/html/matheus/comercial/config/database.php on line 24
+[10-Dec-2025 13:32:15 UTC] PHP Stack trace:
+[10-Dec-2025 13:32:15 UTC] PHP   1. {main}() /var/www/html/matheus/comercial/api/financeiro/importar_quitacao.php:0
+[10-Dec-2025 13:32:15 UTC] PHP   2. include_once() /var/www/html/matheus/comercial/api/financeiro/importar_quitacao.php:338
+[10-Dec-2025 13:32:15 UTC] PHP   3. ini_set($option = 'session.cookie_httponly', $value = 1) /var/www/html/matheus/comercial/config/database.php:24
+[10-Dec-2025 13:32:15 UTC] PHP Warning:  ini_set(): Session ini settings cannot be changed when a session is active in /var/www/html/matheus/comercial/config/database.php on line 25
+[10-Dec-2025 13:32:15 UTC] PHP Stack trace:
+[10-Dec-2025 13:32:15 UTC] PHP   1. {main}() /var/www/html/matheus/comercial/api/financeiro/importar_quitacao.php:0
+[10-Dec-2025 13:32:15 UTC] PHP   2. include_once() /var/www/html/matheus/comercial/api/financeiro/importar_quitacao.php:338
+[10-Dec-2025 13:32:15 UTC] PHP   3. ini_set($option = 'session.use_only_cookies', $value = 1) /var/www/html/matheus/comercial/config/database.php:25
+[10-Dec-2025 13:32:15 UTC] PHP Warning:  ini_set(): Session ini settings cannot be changed when a session is active in /var/www/html/matheus/comercial/config/database.php on line 26
+[10-Dec-2025 13:32:15 UTC] PHP Stack trace:
+[10-Dec-2025 13:32:15 UTC] PHP   1. {main}() /var/www/html/matheus/comercial/api/financeiro/importar_quitacao.php:0
+[10-Dec-2025 13:32:15 UTC] PHP   2. include_once() /var/www/html/matheus/comercial/api/financeiro/importar_quitacao.php:338
+[10-Dec-2025 13:32:15 UTC] PHP   3. ini_set($option = 'session.cookie_secure', $value = FALSE) /var/www/html/matheus/comercial/config/database.php:26
+[10-Dec-2025 13:32:24 UTC] PHP Warning:  ini_set(): Session ini settings cannot be changed when a session is active in /var/www/html/matheus/comercial/config/database.php on line 23
+[10-Dec-2025 13:32:24 UTC] PHP Stack trace:
+[10-Dec-2025 13:32:24 UTC] PHP   1. {main}() /var/www/html/matheus/comercial/api/financeiro/importar_quitacao.php:0
+[10-Dec-2025 13:32:24 UTC] PHP   2. include_once() /var/www/html/matheus/comercial/api/financeiro/importar_quitacao.php:338
+[10-Dec-2025 13:32:24 UTC] PHP   3. ini_set($option = 'session.gc_maxlifetime', $value = 36000) /var/www/html/matheus/comercial/config/database.php:23
+[10-Dec-2025 13:32:24 UTC] PHP Warning:  ini_set(): Session ini settings cannot be changed when a session is active in /var/www/html/matheus/comercial/config/database.php on line 24
+[10-Dec-2025 13:32:24 UTC] PHP Stack trace:
+[10-Dec-2025 13:32:24 UTC] PHP   1. {main}() /var/www/html/matheus/comercial/api/financeiro/importar_quitacao.php:0
+[10-Dec-2025 13:32:24 UTC] PHP   2. include_once() /var/www/html/matheus/comercial/api/financeiro/importar_quitacao.php:338
+[10-Dec-2025 13:32:24 UTC] PHP   3. ini_set($option = 'session.cookie_httponly', $value = 1) /var/www/html/matheus/comercial/config/database.php:24
+[10-Dec-2025 13:32:24 UTC] PHP Warning:  ini_set(): Session ini settings cannot be changed when a session is active in /var/www/html/matheus/comercial/config/database.php on line 25
+[10-Dec-2025 13:32:24 UTC] PHP Stack trace:
+[10-Dec-2025 13:32:24 UTC] PHP   1. {main}() /var/www/html/matheus/comercial/api/financeiro/importar_quitacao.php:0
+[10-Dec-2025 13:32:24 UTC] PHP   2. include_once() /var/www/html/matheus/comercial/api/financeiro/importar_quitacao.php:338
+[10-Dec-2025 13:32:24 UTC] PHP   3. ini_set($option = 'session.use_only_cookies', $value = 1) /var/www/html/matheus/comercial/config/database.php:25
+[10-Dec-2025 13:32:24 UTC] PHP Warning:  ini_set(): Session ini settings cannot be changed when a session is active in /var/www/html/matheus/comercial/config/database.php on line 26
+[10-Dec-2025 13:32:24 UTC] PHP Stack trace:
+[10-Dec-2025 13:32:24 UTC] PHP   1. {main}() /var/www/html/matheus/comercial/api/financeiro/importar_quitacao.php:0
+[10-Dec-2025 13:32:24 UTC] PHP   2. include_once() /var/www/html/matheus/comercial/api/financeiro/importar_quitacao.php:338
+[10-Dec-2025 13:32:24 UTC] PHP   3. ini_set($option = 'session.cookie_secure', $value = FALSE) /var/www/html/matheus/comercial/config/database.php:26
