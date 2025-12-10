@@ -1283,6 +1283,44 @@ function preencherTabFinanceiro(associado) {
                 if (dados.historico && dados.historico.length > 0) {
                     historicoHtml = gerarHtmlHistorico(dados.historico);
                 }
+                
+                // CORREÇÃO: Salvar dados dos serviços no associadoAtual para uso na edição
+                if (associadoAtual && associadoAtual.id === associado.id) {
+                    associadoAtual.tipoAssociadoServico = tipoAssociadoServico;
+                    associadoAtual.tipo_associado_servico = tipoAssociadoServico;
+                    
+                    if (dados.servicos.social) {
+                        associadoAtual.valorSocial = parseFloat(dados.servicos.social.valor_aplicado) || 0;
+                        associadoAtual.percentualAplicadoSocial = parseFloat(dados.servicos.social.percentual_aplicado) || 0;
+                        associadoAtual.valor_social = associadoAtual.valorSocial;
+                        associadoAtual.percentual_aplicado_social = associadoAtual.percentualAplicadoSocial;
+                    }
+                    
+                    if (dados.servicos.juridico) {
+                        associadoAtual.servicoJuridico = true;
+                        associadoAtual.servico_juridico = true;
+                        associadoAtual.valorJuridico = parseFloat(dados.servicos.juridico.valor_aplicado) || 0;
+                        associadoAtual.percentualAplicadoJuridico = parseFloat(dados.servicos.juridico.percentual_aplicado) || 0;
+                        associadoAtual.valor_juridico = associadoAtual.valorJuridico;
+                        associadoAtual.percentual_aplicado_juridico = associadoAtual.percentualAplicadoJuridico;
+                    } else {
+                        associadoAtual.servicoJuridico = false;
+                        associadoAtual.servico_juridico = false;
+                        associadoAtual.valorJuridico = 0;
+                        associadoAtual.percentualAplicadoJuridico = 0;
+                        associadoAtual.valor_juridico = 0;
+                        associadoAtual.percentual_aplicado_juridico = 0;
+                    }
+                    
+                    console.log('✅ Dados dos serviços salvos no associadoAtual:', {
+                        tipoAssociadoServico: associadoAtual.tipoAssociadoServico,
+                        valorSocial: associadoAtual.valorSocial,
+                        percentualSocial: associadoAtual.percentualAplicadoSocial,
+                        valorJuridico: associadoAtual.valorJuridico,
+                        percentualJuridico: associadoAtual.percentualAplicadoJuridico,
+                        temJuridico: associadoAtual.servicoJuridico
+                    });
+                }
             } else {
                 servicosHtml = `
                     <div class="empty-state" style="padding: 2rem; text-align: center; color: var(--gray-500);">
@@ -1514,7 +1552,7 @@ function gerarHtmlServicosCompleto(servicos, valorTotal) {
     if (servicos.social) {
         const social = servicos.social;
         const dataAdesao = new Date(social.data_adesao).toLocaleDateString('pt-BR');
-        const valorBase = parseFloat(social.valor_base || 173.10);
+        const valorBase = parseFloat(social.valor_base || 181.46);
         const desconto = ((valorBase - parseFloat(social.valor_aplicado)) / valorBase * 100).toFixed(0);
 
         servicosHtml += `
@@ -1577,7 +1615,7 @@ function gerarHtmlServicosCompleto(servicos, valorTotal) {
     if (servicos.juridico) {
         const juridico = servicos.juridico;
         const dataAdesao = new Date(juridico.data_adesao).toLocaleDateString('pt-BR');
-        const valorBase = parseFloat(juridico.valor_base || 43.28);
+        const valorBase = parseFloat(juridico.valor_base || 45.37);
         const desconto = ((valorBase - parseFloat(juridico.valor_aplicado)) / valorBase * 100).toFixed(0);
 
         servicosHtml += `
@@ -3361,9 +3399,15 @@ function criarCardObservacao(obs) {
                             <span class="author-role">${obs.criado_por_cargo || 'Administrador'}</span>
                         </div>
                     </div>
-                    <div class="observacao-actions">
+                    <div class="observacao-actions" style="display: flex; gap: 0.25rem;">
                         <button class="btn-observacao-action" title="${isImportante ? 'Remover importância' : 'Marcar como importante'}" onclick="toggleImportanteObs(${obs.id})">
                             <i class="${isImportante ? 'fas' : 'far'} fa-star ${isImportante ? 'text-warning' : ''}"></i>
+                        </button>
+                        <button class="btn-observacao-action" title="Editar observação" onclick="editarObservacao(${obs.id})" style="color: #0d6efd;">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn-observacao-action" title="Excluir observação" onclick="excluirObservacao(${obs.id})" style="color: #dc3545;">
+                            <i class="fas fa-trash"></i>
                         </button>
                     </div>
                 </div>
@@ -3704,13 +3748,18 @@ function criarModalConfirmacaoExclusao() {
             dataType: 'json',
             success: function (response) {
                 if (response.status === 'success') {
-                    carregarObservacoes(currentAssociadoIdObs);
+                    // Remover observação do array local imediatamente
+                    observacoesData = observacoesData.filter(obs => obs.id != id);
+                    
+                    // Re-renderizar a lista sem precisar fazer nova requisição
+                    renderizarObservacoes();
+                    atualizarContadorObservacoes();
 
                     // ATUALIZAR TAMBÉM AS OBSERVAÇÕES DA VISÃO GERAL
                     if (associadoAtual && associadoAtual.id) {
                         setTimeout(() => {
                             carregarObservacoesVisaoGeral(associadoAtual.id);
-                        }, 500);
+                        }, 300);
                     }
 
                     mostrarNotificacaoObs('📋 Observação excluída com sucesso!', 'success');
@@ -4175,14 +4224,25 @@ function coletarDadosFormularioModal() {
         
         // Financeiro
         'edit_tipoAssociado': 'tipoAssociado',
+        'edit_tipoAssociadoServico': 'tipoAssociadoServico',
         'edit_situacaoFinanceira': 'situacaoFinanceira',
         'edit_vinculoServidor': 'vinculoServidor',
         'edit_localDebito': 'localDebito',
         'edit_agencia': 'agencia',
         'edit_operacao': 'operacao',
         'edit_contaCorrente': 'contaCorrente',
-        'edit_doador': 'doador'
+        'edit_doador': 'doador',
+        'edit_valorSocial': 'valorSocial',
+        'edit_percentualAplicadoSocial': 'percentualAplicadoSocial',
+        'edit_valorJuridico': 'valorJuridico',
+        'edit_percentualAplicadoJuridico': 'percentualAplicadoJuridico'
     };
+    
+    // Coleta serviço jurídico (checkbox)
+    const checkJuridico = document.getElementById('edit_servicoJuridico');
+    if (checkJuridico) {
+        dados.servicoJuridico = checkJuridico.checked ? '2' : '';
+    }
     
     // Atualiza apenas os campos que foram editados
     for (const [elementId, campoNome] of Object.entries(camposEditaveis)) {
@@ -4624,10 +4684,23 @@ function buscarCepEdicao() {
 function preencherTabFinanceiroEditavel(associado) {
     const financeiroTab = document.getElementById('financeiro-tab');
     
-    // Opções de tipo de associado
-    const tiposAssociado = ['Contribuinte', 'Agregado', 'Pensionista', 'Dependente'];
+    // Opções de tipo de associado (categoria)
+    const categoriasAssociado = ['Contribuinte', 'Benemérito', 'Remido', 'Agregado', 'Especial'];
+    
+    // Opções de tipo para cálculo de serviços
+    const tiposAssociadoServico = [
+        'Contribuinte',
+        'Aluno',
+        'Soldado 1ª Classe',
+        'Soldado 2ª Classe',
+        'Agregado (Sem serviço jurídico)',
+        'Remido 50%',
+        'Remido',
+        'Benemérito (Sem serviço jurídico)'
+    ];
+    
     const situacoesFinanceiras = ['Adimplente', 'Inadimplente', 'Isento'];
-    const locaisDebito = ['SEGPLAN', 'IPASGO', 'BOLETO', 'DÉBITO EM CONTA', 'OUTRO'];
+    const locaisDebito = ['SEGPLAN', 'IPASGO', 'BOLETO', 'CEF', 'ITAU', 'Assego'];
     
     // Função auxiliar para verificar seleção
     const isSelectedFin = (valorAtual, opcao) => {
@@ -4636,17 +4709,26 @@ function preencherTabFinanceiroEditavel(associado) {
     };
     
     // Valores atuais
-    const tipoAtual = associado.tipoAssociado || associado.tipo_associado || '';
+    const categoriaAtual = associado.tipoAssociado || associado.tipo_associado || '';
+    const tipoServicoAtual = associado.tipoAssociadoServico || associado.tipo_associado_servico || '';
     const situacaoFinAtual = associado.situacaoFinanceira || associado.situacao_financeira || '';
     const localDebitoAtual = associado.localDebito || associado.local_debito || '';
     
-    // Verificar se é agregado
-    const isAgregado = tipoAtual.toLowerCase().trim() === 'agregado';
+    // Verificar se é agregado ou benemérito (sem serviço jurídico)
+    const categoriaLower = categoriaAtual.toLowerCase().trim();
+    const isAgregado = categoriaLower === 'agregado';
+    const isBenemerito = categoriaLower === 'benemérito';
+    const semJuridico = isAgregado || isBenemerito || tipoServicoAtual.includes('Sem serviço jurídico');
     
     // Adicionar valores atuais se não estiverem na lista
-    let tiposOptions = [...tiposAssociado];
-    if (tipoAtual && !tiposAssociado.some(t => isSelectedFin(tipoAtual, t))) {
-        tiposOptions.unshift(tipoAtual);
+    let categoriasOptions = [...categoriasAssociado];
+    if (categoriaAtual && !categoriasAssociado.some(t => isSelectedFin(categoriaAtual, t))) {
+        categoriasOptions.unshift(categoriaAtual);
+    }
+    
+    let tiposServicoOptions = [...tiposAssociadoServico];
+    if (tipoServicoAtual && !tiposAssociadoServico.some(t => isSelectedFin(tipoServicoAtual, t))) {
+        tiposServicoOptions.unshift(tipoServicoAtual);
     }
     
     let situacoesOptions = [...situacoesFinanceiras];
@@ -4659,26 +4741,30 @@ function preencherTabFinanceiroEditavel(associado) {
         locaisOptions.unshift(localDebitoAtual);
     }
     
-    // Calcular valor mensal (buscar do associado ou calcular)
-    const valorMensal = associado.valor_mensal || associado.valorMensal || 0;
-    const servicosAtivos = associado.total_servicos || associado.servicos_ativos || 0;
+    // Valores dos serviços
+    const valorSocial = associado.valorSocial || associado.valor_social || 0;
+    const valorJuridico = associado.valorJuridico || associado.valor_juridico || 0;
+    const percentualSocial = associado.percentualAplicadoSocial || associado.percentual_aplicado_social || 0;
+    const percentualJuridico = associado.percentualAplicadoJuridico || associado.percentual_aplicado_juridico || 0;
+    const temServicoJuridico = associado.servicoJuridico || associado.servico_juridico || false;
     
-    // Classe para desabilitar campos quando é agregado
-    const disabledAgregado = isAgregado ? 'disabled style="background: #e9ecef; cursor: not-allowed;"' : '';
-
+    // Calcular valor mensal
+    const valorMensal = parseFloat(valorSocial) + parseFloat(valorJuridico);
+    const servicosAtivos = (temServicoJuridico ? 2 : 1);
+    
     financeiroTab.innerHTML = `
-        <!-- Card Azul de Resumo (mantém visual bonito) -->
+        <!-- Card Azul de Resumo -->
         <div class="financial-summary" style="background: linear-gradient(135deg, #0056D2, #003d94); border-radius: 16px; padding: 2rem; margin-bottom: 2rem; color: white;">
             <div style="display: flex; justify-content: space-around; text-align: center; flex-wrap: wrap; gap: 1rem;">
                 <div>
                     <div style="font-size: 0.75rem; opacity: 0.8; text-transform: uppercase; letter-spacing: 1px;">VALOR MENSAL TOTAL</div>
-                    <div style="font-size: 2rem; font-weight: 700;">R$ ${parseFloat(valorMensal).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div>
-                    <div style="font-size: 0.85rem; opacity: 0.7;">${servicosAtivos} serviços ativos</div>
+                    <div style="font-size: 2rem; font-weight: 700;" id="displayValorTotal">R$ ${valorMensal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div>
+                    <div style="font-size: 0.85rem; opacity: 0.7;"><span id="displayServicosAtivos">${servicosAtivos}</span> serviços ativos</div>
                 </div>
                 <div>
-                    <div style="font-size: 0.75rem; opacity: 0.8; text-transform: uppercase; letter-spacing: 1px;">TIPO DE ASSOCIADO</div>
-                    <div style="font-size: 1.25rem; font-weight: 600;">${tipoAtual || 'Não definido'}</div>
-                    <div style="font-size: 0.85rem; opacity: 0.7;">Define percentual de cobrança</div>
+                    <div style="font-size: 0.75rem; opacity: 0.8; text-transform: uppercase; letter-spacing: 1px;">CATEGORIA</div>
+                    <div style="font-size: 1.25rem; font-weight: 600;">${categoriaAtual || 'Não definido'}</div>
+                    <div style="font-size: 0.85rem; opacity: 0.7;">Tipo do associado</div>
                 </div>
                 <div>
                     <div style="font-size: 0.75rem; opacity: 0.8; text-transform: uppercase; letter-spacing: 1px;">SITUAÇÃO FINANCEIRA</div>
@@ -4692,6 +4778,103 @@ function preencherTabFinanceiroEditavel(associado) {
             </div>
         </div>
         
+        <!-- Tipo de Associado para Serviços -->
+        <div class="detail-section modo-edicao" style="margin-bottom: 1.5rem;">
+            <div class="section-header">
+                <div class="section-icon" style="background: linear-gradient(135deg, #0056D2, #003d94); color: white;">
+                    <i class="fas fa-clipboard-list"></i>
+                </div>
+                <h3 class="section-title">Tipo de Associado (Serviços)</h3>
+            </div>
+            
+            <div class="detail-grid">
+                <div class="detail-item campo-editavel" style="grid-column: 1 / -1;">
+                    <label class="detail-label" for="edit_tipoAssociadoServico">
+                        Tipo de Associado <span style="color: red;">*</span>
+                        <i class="fas fa-info-circle" style="color: #6c757d; cursor: help;" title="Define o percentual de cobrança dos serviços"></i>
+                    </label>
+                    <select id="edit_tipoAssociadoServico" class="form-control" onchange="calcularServicosModal()" ${!permissoesUsuario.podeEditarCompleto ? 'disabled' : ''}>
+                        <option value="">Selecione o tipo de associado...</option>
+                        ${tiposServicoOptions.map(t => `<option value="${t}" ${isSelectedFin(tipoServicoAtual, t) ? 'selected' : ''}>${t}</option>`).join('')}
+                    </select>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Serviços do Associado -->
+        <div class="detail-section modo-edicao" style="margin-bottom: 1.5rem;">
+            <div class="section-header">
+                <div class="section-icon" style="background: linear-gradient(135deg, #28a745, #218838); color: white;">
+                    <i class="fas fa-clipboard-check"></i>
+                </div>
+                <h3 class="section-title">Serviços do Associado</h3>
+            </div>
+            
+            <!-- Serviço Social (Obrigatório) -->
+            <div style="background: var(--gray-100, #f8f9fa); padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                    <div>
+                        <span style="font-weight: 600; color: #28a745;">
+                            <i class="fas fa-check-circle"></i> Serviço Social
+                        </span>
+                        <span style="background: #28a745; color: white; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.7rem; margin-left: 0.5rem;">
+                            OBRIGATÓRIO
+                        </span>
+                    </div>
+                    <div style="text-align: right;">
+                        <div style="font-size: 0.8rem; color: #6c757d;">Valor Base: R$ 181,46</div>
+                        <div style="font-weight: 700; color: #28a745;">Total: R$ <span id="displayValorSocial">${parseFloat(valorSocial).toFixed(2)}</span></div>
+                    </div>
+                </div>
+                <div style="font-size: 0.8rem; color: #6c757d;">
+                    Percentual aplicado: <span id="displayPercentualSocial">${percentualSocial}</span>%
+                    <span style="margin-left: 1rem;">Contribuição social para associados</span>
+                </div>
+                <input type="hidden" id="edit_valorSocial" value="${valorSocial}">
+                <input type="hidden" id="edit_percentualAplicadoSocial" value="${percentualSocial}">
+            </div>
+            
+            <!-- Serviço Jurídico (Opcional) -->
+            <div id="servicoJuridicoContainer" style="background: var(--gray-100, #f8f9fa); padding: 1rem; border-radius: 8px; margin-bottom: 1rem; ${semJuridico ? 'opacity: 0.6;' : ''}">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <input type="checkbox" id="edit_servicoJuridico" value="2" onchange="calcularServicosModal()" 
+                            style="width: 20px; height: 20px;" ${temServicoJuridico ? 'checked' : ''} ${semJuridico ? 'disabled' : ''}>
+                        <label for="edit_servicoJuridico" style="font-weight: 600; color: #17a2b8; cursor: pointer;">
+                            <i class="fas fa-balance-scale"></i> Serviço Jurídico
+                        </label>
+                        <span style="background: #17a2b8; color: white; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.7rem;">
+                            OPCIONAL
+                        </span>
+                    </div>
+                    <div style="text-align: right;">
+                        <div style="font-size: 0.8rem; color: #6c757d;">Valor Base: R$ 45,37</div>
+                        <div style="font-weight: 700; color: #17a2b8;">Total: R$ <span id="displayValorJuridico">${parseFloat(valorJuridico).toFixed(2)}</span></div>
+                    </div>
+                </div>
+                <div style="font-size: 0.8rem; color: #6c757d;">
+                    Percentual aplicado: <span id="displayPercentualJuridico">${percentualJuridico}</span>%
+                    <span style="margin-left: 1rem;">Serviço jurídico opcional</span>
+                </div>
+                <input type="hidden" id="edit_valorJuridico" value="${valorJuridico}">
+                <input type="hidden" id="edit_percentualAplicadoJuridico" value="${percentualJuridico}">
+                ${semJuridico ? '<div style="color: #856404; background: #fff3cd; padding: 0.5rem; border-radius: 4px; margin-top: 0.5rem; font-size: 0.85rem;"><i class="fas fa-exclamation-triangle"></i> Este tipo de associado não tem direito ao serviço jurídico</div>' : ''}
+            </div>
+            
+            <!-- Total -->
+            <div style="padding: 1rem; background: #e3f2fd; border-radius: 8px; border: 2px solid #0056D2;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-weight: 700; color: #0056D2; font-size: 1.1rem;">
+                        <i class="fas fa-calculator"></i> VALOR TOTAL MENSAL
+                    </span>
+                    <span style="font-weight: 800; color: #0056D2; font-size: 1.3rem;">
+                        R$ <span id="displayTotalCalculado">${valorMensal.toFixed(2)}</span>
+                    </span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Categoria e Situação Financeira -->
         <div class="detail-section modo-edicao">
             <div class="section-header">
                 <div class="section-icon" style="background: linear-gradient(135deg, #0056D2, #003d94); color: white;">
@@ -4702,16 +4885,16 @@ function preencherTabFinanceiroEditavel(associado) {
             
             <div class="detail-grid">
                 <div class="detail-item campo-editavel">
-                    <label class="detail-label" for="edit_tipoAssociado">Tipo de Associado</label>
-                    <select id="edit_tipoAssociado" class="form-control" onchange="onTipoAssociadoChange(this.value)" ${!permissoesUsuario.podeEditarCompleto ? 'disabled' : ''}>
-                        <option value="">Selecione</option>
-                        ${tiposOptions.map(t => `<option value="${t}" ${isSelectedFin(tipoAtual, t) ? 'selected' : ''}>${t}</option>`).join('')}
+                    <label class="detail-label" for="edit_tipoAssociado">Categoria do Associado <span style="color: red;">*</span></label>
+                    <select id="edit_tipoAssociado" class="form-control" onchange="onCategoriaAssociadoChange(this.value)" ${!permissoesUsuario.podeEditarCompleto ? 'disabled' : ''}>
+                        <option value="">Selecione...</option>
+                        ${categoriasOptions.map(t => `<option value="${t}" ${isSelectedFin(categoriaAtual, t) ? 'selected' : ''}>${t}</option>`).join('')}
                     </select>
                 </div>
                 <div class="detail-item campo-editavel">
                     <label class="detail-label" for="edit_situacaoFinanceira">Situação Financeira</label>
                     <select id="edit_situacaoFinanceira" class="form-control" ${!permissoesUsuario.podeEditarCompleto ? 'disabled' : ''}>
-                        <option value="">Selecione</option>
+                        <option value="">Selecione...</option>
                         ${situacoesOptions.map(s => `<option value="${s}" ${isSelectedFin(situacaoFinAtual, s) ? 'selected' : ''}>${s}</option>`).join('')}
                     </select>
                 </div>
@@ -4764,9 +4947,72 @@ function preencherTabFinanceiroEditavel(associado) {
     `;
 }
 
-// Função para reagir à mudança do tipo de associado
-function onTipoAssociadoChange(valor) {
+// Função para calcular serviços no modal de edição
+function calcularServicosModal() {
+    const tipoSelecionado = document.getElementById('edit_tipoAssociadoServico')?.value || '';
+    const checkJuridico = document.getElementById('edit_servicoJuridico');
+    
+    // Valores base CORRETOS (valores atualizados)
+    const valorBaseSocial = 181.46;
+    const valorBaseJuridico = 45.37;
+    
+    // Mapeamento de percentuais por tipo
+    const percentuaisPorTipo = {
+        'Contribuinte': 100,
+        'Aluno': 50,
+        'Soldado 1ª Classe': 50,
+        'Soldado 2ª Classe': 50,
+        'Agregado (Sem serviço jurídico)': 50,
+        'Remido 50%': 50,
+        'Remido': 50,
+        'Benemérito (Sem serviço jurídico)': 0
+    };
+    
+    const percentual = percentuaisPorTipo[tipoSelecionado] || 100;
+    
+    // Verifica se permite serviço jurídico
+    const semJuridico = tipoSelecionado.includes('Sem serviço jurídico');
+    
+    // Desabilita jurídico se não permitido
+    if (checkJuridico) {
+        checkJuridico.disabled = semJuridico;
+        if (semJuridico) {
+            checkJuridico.checked = false;
+        }
+    }
+    
+    // Calcula valores
+    const valorSocial = (valorBaseSocial * percentual / 100);
+    const valorJuridico = (checkJuridico && checkJuridico.checked && !semJuridico) ? (valorBaseJuridico * percentual / 100) : 0;
+    const valorTotal = valorSocial + valorJuridico;
+    const servicosAtivos = (valorJuridico > 0 ? 2 : 1);
+    
+    // Atualiza displays
+    document.getElementById('displayValorSocial').textContent = valorSocial.toFixed(2);
+    document.getElementById('displayPercentualSocial').textContent = percentual;
+    document.getElementById('displayValorJuridico').textContent = valorJuridico.toFixed(2);
+    document.getElementById('displayPercentualJuridico').textContent = percentual;
+    document.getElementById('displayTotalCalculado').textContent = valorTotal.toFixed(2);
+    document.getElementById('displayValorTotal').textContent = `R$ ${valorTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+    document.getElementById('displayServicosAtivos').textContent = servicosAtivos;
+    
+    // Atualiza campos hidden
+    document.getElementById('edit_valorSocial').value = valorSocial.toFixed(2);
+    document.getElementById('edit_percentualAplicadoSocial').value = percentual;
+    document.getElementById('edit_valorJuridico').value = valorJuridico.toFixed(2);
+    document.getElementById('edit_percentualAplicadoJuridico').value = percentual;
+    
+    // Atualiza opacidade do container jurídico
+    const containerJuridico = document.getElementById('servicoJuridicoContainer');
+    if (containerJuridico) {
+        containerJuridico.style.opacity = semJuridico ? '0.6' : '1';
+    }
+}
+
+// Função para reagir à mudança da categoria do associado
+function onCategoriaAssociadoChange(valor) {
     const isAgregado = valor.toLowerCase().trim() === 'agregado';
+    const isBenemerito = valor.toLowerCase().trim() === 'benemérito';
     
     // Campos que devem ser desabilitados para agregados
     const camposAgregado = [
@@ -4790,6 +5036,22 @@ function onTipoAssociadoChange(valor) {
     if (isAgregado) {
         atualizarCamposMilitaresAgregado();
     }
+    
+    // Atualizar tipo de serviço se for agregado ou benemérito
+    const selectTipoServico = document.getElementById('edit_tipoAssociadoServico');
+    if (selectTipoServico) {
+        if (isAgregado) {
+            selectTipoServico.value = 'Agregado (Sem serviço jurídico)';
+        } else if (isBenemerito) {
+            selectTipoServico.value = 'Benemérito (Sem serviço jurídico)';
+        }
+        calcularServicosModal();
+    }
+}
+
+// Função para reagir à mudança do tipo de associado (mantida para compatibilidade)
+function onTipoAssociadoChange(valor) {
+    onCategoriaAssociadoChange(valor);
 }
 
 // Função para preencher campos militares como Agregados

@@ -208,10 +208,10 @@ function criarDadosPadrao($db) {
                 INSERT INTO Servicos (nome, descricao, valor_base, obrigatorio, ativo) 
                 VALUES (?, ?, ?, ?, ?)
             ");
-            $stmt->execute(['Social', 'Serviço social obrigatório', 173.10, 1, 1]);
+            $stmt->execute(['Social', 'Serviço social obrigatório', 181.46, 1, 1]);
             
             // Serviço Jurídico  
-            $stmt->execute(['Jurídico', 'Serviço jurídico opcional', 43.28, 0, 1]);
+            $stmt->execute(['Jurídico', 'Serviço jurídico opcional', 45.37, 0, 1]);
             
             error_log("✓ Serviços padrão criados");
         }

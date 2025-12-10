@@ -126,7 +126,7 @@ try {
         
         // Financeiro simplificado - apenas optante jurídico
         'tipoAssociadoServico' => 'Contribuinte', // Padrão
-        'valorSocial' => '173.10', // Valor padrão do serviço social
+        'valorSocial' => '181.46', // Valor padrão do serviço social (atualizado)
         'percentualAplicadoSocial' => '100',
         'valorJuridico' => '0',
         'percentualAplicadoJuridico' => '0',
@@ -138,7 +138,7 @@ try {
     // Verifica se optou pelo serviço jurídico
     if (isset($_POST['optanteJuridico']) && $_POST['optanteJuridico'] == '1') {
         $dados['servicoJuridico'] = '1';
-        $dados['valorJuridico'] = '43.28'; // Valor padrão do serviço jurídico
+        $dados['valorJuridico'] = '45.37'; // Valor padrão do serviço jurídico (atualizado)
         $dados['percentualAplicadoJuridico'] = '100';
         error_log("✓ Associado optou pelo serviço jurídico");
     }
