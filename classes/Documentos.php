@@ -252,6 +252,64 @@ class Documentos
             // Log da aprovação automática
             error_log("✅ Associado ID {$documento['associado_id']} aprovado automaticamente pela assinatura da presidência");
 
+            // ✅ SE FOR DESFILIAÇÃO, REGISTRAR APROVAÇÃO FINAL
+            error_log("DEBUG - Tipo documento: " . ($documento['tipo_documento'] ?? 'NULL'));
+            
+            if (isset($documento['tipo_documento']) && $documento['tipo_documento'] === 'ficha_desfiliacao') {
+                error_log("✅ DETECTADO documento de desfiliação - ID: $documentoId");
+                
+                // Verificar se existe registro em Aprovacoes_Desfiliacao para Presidência
+                $stmtCheck = $this->db->prepare("
+                    SELECT id FROM Aprovacoes_Desfiliacao 
+                    WHERE documento_id = ? AND departamento_id = 1
+                ");
+                $stmtCheck->execute([$documentoId]);
+                $aprovacaoExiste = $stmtCheck->fetch();
+
+                $funcionarioId = $_SESSION['funcionario_id'] ?? $_SESSION['user_id'] ?? null;
+
+                if ($aprovacaoExiste) {
+                    // UPDATE do registro existente
+                    error_log("✅ Atualizando aprovação existente ID {$aprovacaoExiste['id']} para documento $documentoId");
+                    
+                    $stmtUpdate = $this->db->prepare("
+                        UPDATE Aprovacoes_Desfiliacao 
+                        SET status_aprovacao = 'APROVADO',
+                            funcionario_id = ?,
+                            data_acao = NOW(),
+                            observacao = ?
+                        WHERE id = ?
+                    ");
+                    
+                    $stmtUpdate->execute([
+                        $funcionarioId,
+                        "Desfiliação aprovada e assinada pela Presidência",
+                        $aprovacaoExiste['id']
+                    ]);
+                    
+                    error_log("✅ Desfiliação documento $documentoId ATUALIZADA para APROVADO");
+                } else {
+                    // INSERT novo registro
+                    error_log("✅ Criando nova aprovação de presidência para documento $documentoId");
+                    
+                    $stmtAprovacao = $this->db->prepare("
+                        INSERT INTO Aprovacoes_Desfiliacao 
+                        (documento_id, departamento_id, ordem_aprovacao, status_aprovacao, funcionario_id, data_acao, observacao)
+                        VALUES (?, 1, 3, 'APROVADO', ?, NOW(), ?)
+                    ");
+                    
+                    $stmtAprovacao->execute([
+                        $documentoId,
+                        $funcionarioId,
+                        "Desfiliação aprovada e assinada pela Presidência"
+                    ]);
+                    
+                    error_log("✅ Desfiliação documento $documentoId INSERIDA como APROVADO");
+                }
+            } else {
+                error_log("ℹ️ Documento $documentoId NÃO é desfiliação");
+            }
+
             // Registrar no histórico
             $this->registrarHistoricoFluxo(
                 $documentoId,
@@ -1358,12 +1416,11 @@ class Documentos
                         a.situacao as agregado_situacao,
                         a.data_pre_cadastro as agregado_data_criacao,
                         m.corporacao,
-                        titular.nome as titular_nome,
-                        titular.cpf as titular_cpf
+                        NULL as titular_nome,
+                        NULL as titular_cpf
                     FROM Documentos_Associado d
                     INNER JOIN Associados a ON d.associado_id = a.id
                     LEFT JOIN Militar m ON a.id = m.associado_id
-                    LEFT JOIN Associados titular ON a.associado_titular_id = titular.id
                     WHERE m.corporacao = 'Agregados'
                     AND (d.id = ? OR d.associado_id = ?)
                     ORDER BY d.id DESC
@@ -1389,10 +1446,9 @@ class Documentos
                         a.data_pre_cadastro as data_criacao,
                         a.data_atualizacao,
                         m.corporacao,
-                        titular.nome as socio_titular_nome
+                        NULL as socio_titular_nome
                     FROM Associados a
                     LEFT JOIN Militar m ON a.id = m.associado_id
-                    LEFT JOIN Associados titular ON a.associado_titular_id = titular.id
                     WHERE m.corporacao = 'Agregados' AND a.id = ?
                 ");
                 $stmt->execute([$documentoId]);

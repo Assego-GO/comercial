@@ -170,6 +170,7 @@ try {
                 ELSE NULL
             END as parentesco,
             CASE 
+                WHEN da.tipo_documento = 'ficha_desfiliacao' THEN 'Ficha de Desfiliação'
                 WHEN m.corporacao = 'Agregados' THEN 'Ficha de Sócio Agregado'
                 ELSE 'Ficha de Filiação'
             END as tipo_descricao,

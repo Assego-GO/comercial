@@ -516,7 +516,7 @@ $headerComponent = HeaderComponent::create([
                         <label class="filter-label">Situação</label>
                         <select class="filter-select" id="filterSituacao">
                             <option value="">Todos</option>
-                            <option value="Filiado">Filiado</option>
+                            <option value="Filiado" selected>Filiado</option>
                             <option value="Desfiliado">Desfiliado</option>
                         </select>
                     </div>
@@ -655,7 +655,24 @@ $headerComponent = HeaderComponent::create([
                             </div>
                         </div>
                     </div>
-                    <button class="modal-close-custom" onclick="fecharModal()">
+                    <div class="modal-header-actions">
+                        <!-- Botão de Edição (só aparece se tiver permissão) -->
+                        <button class="btn-modal-edit" id="btnEditarModal" onclick="toggleModoEdicao()" title="Editar informações" style="display: none;">
+                            <i class="fas fa-edit"></i>
+                            <span>Editar</span>
+                        </button>
+                        <!-- Botão de Salvar (aparece no modo edição) -->
+                        <button class="btn-modal-save" id="btnSalvarModal" onclick="salvarEdicaoModal()" title="Salvar alterações" style="display: none;">
+                            <i class="fas fa-save"></i>
+                            <span>Salvar</span>
+                        </button>
+                        <!-- Botão de Cancelar (aparece no modo edição) -->
+                        <button class="btn-modal-cancel" id="btnCancelarModal" onclick="cancelarEdicaoModal()" title="Cancelar edição" style="display: none;">
+                            <i class="fas fa-times"></i>
+                            <span>Cancelar</span>
+                        </button>
+                    </div>
+                    <button class="modal-close-custom" onclick="event.stopPropagation(); fecharModal();">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
@@ -1058,6 +1075,140 @@ $headerComponent = HeaderComponent::create([
 
     <!-- CSS e JavaScript inline -->
     <style>
+        /* === ESTILOS PARA BOTÕES DE EDIÇÃO NO MODAL === */
+        .modal-header-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-right: 6rem;
+            z-index: 10;
+        }
+
+        .btn-modal-edit,
+        .btn-modal-save,
+        .btn-modal-cancel {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+        }
+
+        .btn-modal-edit {
+            background: linear-gradient(135deg, #0056D2, #003d94);
+            color: white;
+        }
+
+        .btn-modal-edit:hover {
+            background: linear-gradient(135deg, #003d94, #002d6d);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 86, 210, 0.4);
+        }
+
+        .btn-modal-save {
+            background: linear-gradient(135deg, #00c853, #00a847);
+            color: white;
+        }
+
+        .btn-modal-save:hover {
+            background: linear-gradient(135deg, #00a847, #008836);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 200, 83, 0.4);
+        }
+
+        .btn-modal-cancel {
+            background: linear-gradient(135deg, #6c757d, #5a6268);
+            color: white;
+        }
+
+        .btn-modal-cancel:hover {
+            background: linear-gradient(135deg, #5a6268, #4a5258);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(108, 117, 125, 0.4);
+        }
+
+        /* Estilos para campos editáveis */
+        .campo-editavel {
+            transition: all 0.3s ease;
+        }
+
+        .campo-editavel.modo-edicao {
+            background: #f8f9fa;
+            border: 2px solid #0056D2;
+            border-radius: 6px;
+            padding: 0.5rem;
+        }
+
+        .campo-editavel input,
+        .campo-editavel select,
+        .campo-editavel textarea {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 0.875rem;
+            transition: all 0.2s ease;
+        }
+
+        .campo-editavel input:focus,
+        .campo-editavel select:focus,
+        .campo-editavel textarea:focus {
+            border-color: #0056D2;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(0, 86, 210, 0.15);
+        }
+
+        .campo-editavel input:disabled,
+        .campo-editavel select:disabled {
+            background: #e9ecef;
+            cursor: not-allowed;
+        }
+
+        /* Indicador de modo edição */
+        .modal-edit-mode .modal-header-custom {
+            border-bottom: 3px solid #0056D2;
+        }
+
+        .modal-edit-mode .modal-content-custom {
+            box-shadow: 0 0 0 3px rgba(0, 86, 210, 0.2);
+        }
+
+        /* Badge de modo edição */
+        .edit-mode-badge {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: #0056D2;
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            display: none;
+            z-index: 100;
+        }
+
+        .modal-edit-mode .edit-mode-badge {
+            display: block;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        /* Estilo para labels em modo edição */
+        .modo-edicao .overview-label,
+        .modo-edicao .detail-label {
+            color: #0056D2;
+            font-weight: 600;
+        }
+
         /* === ESTILOS COMPLETOS DOS CARDS COM GRÁFICOS DE PIZZA RESPONSIVOS === */
 
         /* Card Principal */

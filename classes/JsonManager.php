@@ -421,7 +421,7 @@ class JsonManager {
     }
     
     private function obterValorBaseServico($servicoId) {
-        $valores = [1 => 173.10, 2 => 43.28];
+        $valores = [1 => 181.46, 2 => 45.37];
         return $valores[$servicoId] ?? 0;
     }
     

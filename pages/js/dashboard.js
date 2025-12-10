@@ -20,6 +20,12 @@ let imagensCarregadas = new Set();
 // Variável global para armazenar o associado atual
 let associadoAtual = null;
 
+// Variável para controlar se os event listeners do modal já foram adicionados
+let modalEventListenersAdded = false;
+
+// Flag para prevenir múltiplas execuções de fecharModal
+let modalFechando = false;
+
 // Variáveis de paginação
 let paginaAtual = 1;
 let registrosPorPagina = 25;
@@ -512,17 +518,20 @@ function irParaPagina(pagina) {
 
 // Renderiza tabela
 function renderizarTabela(dados) {
-    console.log(`Renderizando ${dados.length} registros...`);
+    console.log(`📊 Renderizando ${dados.length} registros...`);
+    console.log('📋 Primeiros dados a renderizar:', dados.slice(0, 2));
+    
     const tbody = document.getElementById('tableBody');
 
     if (!tbody) {
-        console.error('Elemento tableBody não encontrado!');
+        console.error('❌ Elemento tableBody não encontrado!');
         return;
     }
 
     tbody.innerHTML = '';
 
     if (dados.length === 0) {
+        console.log('⚠️ Nenhum dado para renderizar');
         tbody.innerHTML = `
             <tr>
                 <td colspan="10" class="text-center py-5">
@@ -597,12 +606,6 @@ function renderizarTabela(dados) {
                         </button>
                     ` : ''}
                     
-                    ${(permissoesUsuario.podeEditarContato || permissoesUsuario.podeEditarCompleto) ? `
-                        <button class="btn-icon edit" onclick="editarAssociadoNovo(${associado.id})" title="Editar">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                    ` : ''}
-                    
                     ${permissoesUsuario.podeExcluir ? `
                         <button class="btn-icon delete" onclick="excluirAssociado(${associado.id})" title="Excluir">
                             <i class="fas fa-trash"></i>
@@ -613,42 +616,44 @@ function renderizarTabela(dados) {
         `;
         tbody.appendChild(row);
     });
+    
+    console.log(`✅ Renderização concluída: ${dados.length} linhas adicionadas à tabela`);
 }
 
-// Aplica filtros
+// Função UNIFICADA para aplicar filtros (incluindo busca local)
 function aplicarFiltros() {
-    console.log('Aplicando filtros...');
+    console.log('🔍 Aplicando filtros...');
 
-    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+    const searchTerm = document.getElementById('searchInput').value.trim().toLowerCase();
     const filterSituacao = document.getElementById('filterSituacao').value;
-    const filterTipoAssociado = document.getElementById('filterTipoAssociado')?.value || ''; // NOVO
+    const filterTipoAssociado = document.getElementById('filterTipoAssociado')?.value || '';
     const filterCorporacao = document.getElementById('filterCorporacao').value;
     const filterPatente = document.getElementById('filterPatente').value;
 
-    associadosFiltrados = todosAssociados.filter(associado => {
-        // Filtro de busca
-        const matchSearch = !searchTerm ||
+    // Define base de dados: se tem resultados do servidor, usa eles. Senão, usa todosAssociados
+    let dadosBase = resultadosServidor && resultadosServidor.length > 0 ? resultadosServidor : todosAssociados;
+    
+    console.log(`📊 Base de dados: ${dadosBase.length} registros (${resultadosServidor ? 'servidor' : 'local'})`);
+
+    associadosFiltrados = dadosBase.filter(associado => {
+        // Filtro de busca LOCAL (só aplica se não veio do servidor)
+        const matchSearch = !searchTerm || resultadosServidor ||
             (associado.nome && associado.nome.toLowerCase().includes(searchTerm)) ||
-            (associado.cpf && associado.cpf.includes(searchTerm)) ||
+            (associado.cpf && associado.cpf.replace(/\D/g, '').includes(searchTerm.replace(/\D/g, ''))) ||
             (associado.rg && associado.rg.includes(searchTerm)) ||
-            (associado.telefone && associado.telefone.includes(searchTerm));
+            (associado.telefone && associado.telefone.replace(/\D/g, '').includes(searchTerm.replace(/\D/g, '')));
 
-        // Filtro de situação (apenas Filiado/Desfiliado)
+        // Outros filtros
         const matchSituacao = !filterSituacao || associado.situacao === filterSituacao;
-
-        // NOVO: Filtro de tipo de associado (Contribuinte, Agregado, etc)
         const matchTipoAssociado = !filterTipoAssociado || associado.tipo_associado === filterTipoAssociado;
-
-        // Filtro de corporação
         const matchCorporacao = !filterCorporacao || associado.corporacao === filterCorporacao;
-
-        // Filtro de patente
         const matchPatente = !filterPatente || associado.patente === filterPatente;
 
         return matchSearch && matchSituacao && matchTipoAssociado && matchCorporacao && matchPatente;
     });
 
-    console.log(`Filtros aplicados: ${associadosFiltrados.length} de ${todosAssociados.length} registros`);
+    console.log(`✅ Filtros aplicados: ${associadosFiltrados.length} de ${dadosBase.length} registros`);
+    console.log(`📋 Primeiros resultados:`, associadosFiltrados.slice(0, 3));
 
     paginaAtual = 1;
     calcularPaginacao();
@@ -676,10 +681,32 @@ function limparFiltros() {
     renderizarPagina();
 }
 
-// Função para visualizar associado
+// Função para visualizar associado - VERSÃO CORRIGIDA
 function visualizarAssociado(id) {
     console.log('👁️ Visualizando associado:', id);
 
+    // NOVO: Se o modal já está aberto, fecha ele primeiro e aguarda
+    const modal = document.getElementById('modalAssociado');
+    if (modal.classList.contains('show')) {
+        console.log('🔄 Modal já aberto, fechando para reabrir...');
+        modal.classList.remove('show');
+        document.body.style.overflow = 'auto';
+        
+        // Aguarda a animação de fechamento antes de abrir novamente
+        setTimeout(() => {
+            visualizarAssociadoInterno(id);
+        }, 300); // Tempo da animação CSS
+        return;
+    }
+    
+    // Se modal não está aberto, abre normalmente
+    visualizarAssociadoInterno(id);
+}
+
+// Função interna separada para evitar repetição de código
+function visualizarAssociadoInterno(id) {
+    console.log('📋 Carregando associado:', id);
+    
     // CORREÇÃO: Procurar primeiro em associadosFiltrados (resultados da busca)
     // depois em todosAssociados (cache local)
     let associado = associadosFiltrados.find(a => a.id == id) ||
@@ -774,6 +801,10 @@ function visualizarAssociado(id) {
             abrirModalAssociadoCompleto(associado);
         });
     } else {
+        // Tem detalhes, abre direto
+        const modal = document.getElementById('modalAssociado');
+        modal.classList.add('show');
+        document.body.style.overflow = 'hidden';
         abrirModalAssociadoCompleto(associado);
     }
 }
@@ -1252,6 +1283,44 @@ function preencherTabFinanceiro(associado) {
                 if (dados.historico && dados.historico.length > 0) {
                     historicoHtml = gerarHtmlHistorico(dados.historico);
                 }
+                
+                // CORREÇÃO: Salvar dados dos serviços no associadoAtual para uso na edição
+                if (associadoAtual && associadoAtual.id === associado.id) {
+                    associadoAtual.tipoAssociadoServico = tipoAssociadoServico;
+                    associadoAtual.tipo_associado_servico = tipoAssociadoServico;
+                    
+                    if (dados.servicos.social) {
+                        associadoAtual.valorSocial = parseFloat(dados.servicos.social.valor_aplicado) || 0;
+                        associadoAtual.percentualAplicadoSocial = parseFloat(dados.servicos.social.percentual_aplicado) || 0;
+                        associadoAtual.valor_social = associadoAtual.valorSocial;
+                        associadoAtual.percentual_aplicado_social = associadoAtual.percentualAplicadoSocial;
+                    }
+                    
+                    if (dados.servicos.juridico) {
+                        associadoAtual.servicoJuridico = true;
+                        associadoAtual.servico_juridico = true;
+                        associadoAtual.valorJuridico = parseFloat(dados.servicos.juridico.valor_aplicado) || 0;
+                        associadoAtual.percentualAplicadoJuridico = parseFloat(dados.servicos.juridico.percentual_aplicado) || 0;
+                        associadoAtual.valor_juridico = associadoAtual.valorJuridico;
+                        associadoAtual.percentual_aplicado_juridico = associadoAtual.percentualAplicadoJuridico;
+                    } else {
+                        associadoAtual.servicoJuridico = false;
+                        associadoAtual.servico_juridico = false;
+                        associadoAtual.valorJuridico = 0;
+                        associadoAtual.percentualAplicadoJuridico = 0;
+                        associadoAtual.valor_juridico = 0;
+                        associadoAtual.percentual_aplicado_juridico = 0;
+                    }
+                    
+                    console.log('✅ Dados dos serviços salvos no associadoAtual:', {
+                        tipoAssociadoServico: associadoAtual.tipoAssociadoServico,
+                        valorSocial: associadoAtual.valorSocial,
+                        percentualSocial: associadoAtual.percentualAplicadoSocial,
+                        valorJuridico: associadoAtual.valorJuridico,
+                        percentualJuridico: associadoAtual.percentualAplicadoJuridico,
+                        temJuridico: associadoAtual.servicoJuridico
+                    });
+                }
             } else {
                 servicosHtml = `
                     <div class="empty-state" style="padding: 2rem; text-align: center; color: var(--gray-500);">
@@ -1483,7 +1552,7 @@ function gerarHtmlServicosCompleto(servicos, valorTotal) {
     if (servicos.social) {
         const social = servicos.social;
         const dataAdesao = new Date(social.data_adesao).toLocaleDateString('pt-BR');
-        const valorBase = parseFloat(social.valor_base || 173.10);
+        const valorBase = parseFloat(social.valor_base || 181.46);
         const desconto = ((valorBase - parseFloat(social.valor_aplicado)) / valorBase * 100).toFixed(0);
 
         servicosHtml += `
@@ -1546,7 +1615,7 @@ function gerarHtmlServicosCompleto(servicos, valorTotal) {
     if (servicos.juridico) {
         const juridico = servicos.juridico;
         const dataAdesao = new Date(juridico.data_adesao).toLocaleDateString('pt-BR');
-        const valorBase = parseFloat(juridico.valor_base || 43.28);
+        const valorBase = parseFloat(juridico.valor_base || 45.37);
         const desconto = ((valorBase - parseFloat(juridico.valor_aplicado)) / valorBase * 100).toFixed(0);
 
         servicosHtml += `
@@ -2243,6 +2312,7 @@ function abrirModalUploadDocumento(associadoId, associadoNome) {
                                 <select class="form-select" id="tipoDocumento" name="tipo_documento" required>
                                     <option value="">Selecione o tipo</option>
                                     <option value="FICHA_FILIACAO">Ficha de Filiação</option>
+                                    <option value="FICHA_DESFILIACAO">Ficha de Desfiliação</option>
                                     <option value="RG">RG (Cópia)</option>
                                     <option value="CPF">CPF (Cópia)</option>
                                     <option value="COMPROVANTE_RESIDENCIA">Comprovante de Residência</option>
@@ -2270,7 +2340,7 @@ function abrirModalUploadDocumento(associadoId, associadoNome) {
                                 ">
                                     <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
                                     <p class="mb-2"><strong>Clique para selecionar</strong> o arquivo</p>
-                                    <small class="text-muted">PDF, JPG, PNG até 5MB</small>
+                                    <small class="text-muted">PDF, JPG, PNG até 10MB</small>
                                     <input type="file" id="arquivoDocumento" name="arquivo" accept=".pdf,.jpg,.jpeg,.png" required style="display: none;" onchange="updateFileInfo(this)">
                                 </div>
                                 <div id="fileInfo" class="mt-2" style="display: none;"></div>
@@ -2365,9 +2435,9 @@ function enviarDocumento() {
         return;
     }
 
-    // Check file size (5MB max)
-    if (arquivo.size > 5 * 1024 * 1024) {
-        alert('Arquivo muito grande. Máximo: 5MB');
+    // Check file size (10MB max)
+    if (arquivo.size > 10 * 1024 * 1024) {
+        alert('Arquivo muito grande. Máximo: 10MB');
         return;
     }
 
@@ -2426,26 +2496,55 @@ function enviarDocumento() {
         uploadProgress.style.display = 'none';
     });
 
-    xhr.open('POST', '../api/documentos/documentos_upload.php');
+    xhr.open('POST', '/api/documentos/documentos_upload.php');
     xhr.send(formData);
 }
 
 function fecharModal() {
     const modal = document.getElementById('modalAssociado');
+    
+    // CORREÇÃO: Verificar se já está fechando ou já está fechado
+    if (modalFechando || !modal.classList.contains('show')) {
+        console.log('⚠️ Modal já está fechando ou fechado, ignorando chamada duplicada');
+        return;
+    }
 
-    // Remover IMEDIATAMENTE sem delays
+    console.log('🔒 Fechando modal...');
+    
+    // Marcar que está fechando
+    modalFechando = true;
+
+    // Remover classe show imediatamente (inicia animação CSS)
     modal.classList.remove('show');
+    modal.classList.remove('modal-edit-mode');
     document.body.style.overflow = 'auto';
+    
+    // Resetar estado de edição
+    if (typeof modoEdicaoAtivo !== 'undefined') {
+        modoEdicaoAtivo = false;
+    }
+    if (typeof dadosOriginaisAssociado !== 'undefined') {
+        dadosOriginaisAssociado = null;
+    }
+    
+    // Resetar botões
+    const btnEditar = document.getElementById('btnEditarModal');
+    const btnSalvar = document.getElementById('btnSalvarModal');
+    const btnCancelar = document.getElementById('btnCancelarModal');
+    
+    if (btnEditar) btnEditar.style.display = 'none';
+    if (btnSalvar) btnSalvar.style.display = 'none';
+    if (btnCancelar) btnCancelar.style.display = 'none';
 
-    // Limpar dados DEPOIS da animação de fechamento
+    // Aguardar animação CSS (300ms) antes de limpar dados
     setTimeout(() => {
         associadoAtual = null;
-
-        // Reset de observações mais tarde
-        setTimeout(() => {
-            resetarObservacoes();
-        }, 100);
-    }, 200);
+        resetarObservacoes();
+        
+        // Liberar flag de fechamento
+        modalFechando = false;
+        console.log('✅ Modal fechado completamente');
+    }, 300);
 }
 
 // FUNÇÃO CORRIGIDA: Trocar de tab com carregamento de observações na visão geral
@@ -2482,13 +2581,10 @@ function abrirTab(tabName) {
     // Se for a aba de observações, carregar dados completos
     if (tabName === 'observacoes' && associadoAtual && associadoAtual.id) {
         const associadoId = associadoAtual.id;
-        // Só carrega se ainda não carregou para este associado
-        if (currentAssociadoIdObs !== associadoId || observacoesData.length === 0) {
-            carregarObservacoes(associadoId);
-        } else {
-            // Se já tem dados, apenas renderiza novamente
-            renderizarObservacoes();
-        }
+        // Sempre força o carregamento ao clicar na aba
+        setTimeout(() => {
+            carregarObservacoes(associadoId, true);
+        }, 50);
     }
 }
 
@@ -2547,19 +2643,41 @@ function excluirAssociado(id) {
     });
 }
 
-// Fecha modal ao clicar fora
-window.addEventListener('click', function (event) {
-    const modal = document.getElementById('modalAssociado');
-    if (event.target === modal) {
-        fecharModal();
+// NOVA FUNÇÃO: Inicializar event listeners do modal (só executa uma vez)
+function inicializarEventListenersModal() {
+    if (modalEventListenersAdded) {
+        console.log('⚠️ Event listeners do modal já foram adicionados');
+        return;
     }
-});
 
-// Tecla ESC fecha o modal
-document.addEventListener('keydown', function (event) {
-    if (event.key === 'Escape') {
-        fecharModal();
-    }
+    console.log('✅ Inicializando event listeners do modal...');
+
+    // Fecha modal ao clicar fora (no backdrop)
+    window.addEventListener('click', function (event) {
+        const modal = document.getElementById('modalAssociado');
+        // Só fecha se clicar EXATAMENTE no modal (backdrop), não nos elementos internos
+        if (event.target === modal && modal.classList.contains('show')) {
+            console.log('👆 Clique fora do modal detectado');
+            fecharModal();
+        }
+    });
+
+    // Tecla ESC fecha o modal
+    document.addEventListener('keydown', function (event) {
+        const modal = document.getElementById('modalAssociado');
+        if (event.key === 'Escape' && modal.classList.contains('show')) {
+            console.log('⌨️ ESC pressionado, fechando modal');
+            fecharModal();
+        }
+    });
+
+    modalEventListenersAdded = true;
+    console.log('✅ Event listeners do modal inicializados com sucesso');
+}
+
+// Inicializa os event listeners quando o documento estiver pronto
+$(document).ready(function() {
+    inicializarEventListenersModal();
 });
 
 // FUNÇÃO CORRIGIDA: Carregar observações na visão geral
@@ -2907,150 +3025,113 @@ function salvarContatoEditado() {
     });
 }
 
-async function buscarNoServidor(termo) {
-    try {
-        const response = await fetch(`../api/buscar_associados.php?termo=${encodeURIComponent(termo)}`);
-        const resultado = await response.json();
-
-        if (resultado.status === 'success') {
-            associadosFiltrados = resultado.dados;
-            paginaAtual = 1;
-            calcularPaginacao();
-            renderizarPagina();
-        }
-    } catch (error) {
-        console.error('Search error:', error);
-        // Fallback to local search
-        aplicarFiltros();
-    }
-}
-
 // ========================================
-// ADD THESE FUNCTIONS TO YOUR dashboard.js
+// FUNÇÕES DE BUSCA UNIFICADAS
 // ========================================
 
+// Variável global para timeout de busca e controle
 let searchTimeout;
+let ultimaBuscaServidor = '';
+let resultadosServidor = null; // Armazena resultados da busca do servidor
+let todosAssociadosOriginal = []; // Backup dos dados originais
 
-// New search input handler
+// Handler para input de busca (com debounce)
 function handleSearchInput(e) {
     const termo = e.target.value.trim();
+    
+    console.log('🔍 handleSearchInput chamado, termo:', termo);
 
-    // Clear previous timeout
+    // Limpa timeout anterior
     clearTimeout(searchTimeout);
 
-    // If empty, show local data
+    // Se vazio, restaura dados originais
     if (!termo) {
-        console.log('Search cleared, showing local data');
-        associadosFiltrados = [...todosAssociados];
-        aplicarFiltrosLocais(); // Apply other filters
+        console.log('🔄 Busca limpa, mostrando todos os dados');
+        ultimaBuscaServidor = '';
+        resultadosServidor = null; // Limpa resultados do servidor
+        aplicarFiltros(); // Reaplica outros filtros
         return;
     }
 
-    // If too short, wait
-    if (termo.length < 2) {
+    // Se muito curto (menos de 3 chars), apenas busca local imediata
+    if (termo.length < 3) {
+        console.log('💻 Busca local (termo curto):', termo);
+        resultadosServidor = null; // Limpa resultados do servidor para usar busca local
+        aplicarFiltros(); // Usa a busca local integrada
         return;
     }
 
-    // Debounce search
-    searchTimeout = setTimeout(() => {
-        buscarNoServidor(termo);
-    }, 300);
-}
-
-// Server search function (searches ALL 6000+ records)
-async function buscarNoServidor(termo) {
-    console.log('Searching server for:', termo);
-
-    // Show search indicator
+    // Mostra indicador de carregamento
     mostrarIndicadorBusca(true);
 
+    // Debounce: aguarda 400ms antes de buscar no servidor
+    searchTimeout = setTimeout(() => {
+        buscarNoServidor(termo);
+    }, 400);
+}
+
+// Busca no servidor (busca em TODOS os registros do banco)
+async function buscarNoServidor(termo) {
+    console.log('🌐 Buscando no servidor:', termo);
+    console.log('📍 URL da API:', `../api/buscar_associados.php?termo=${encodeURIComponent(termo)}&limit=500`);
+    
+    ultimaBuscaServidor = termo;
+
     try {
-        const response = await fetch(`../api/buscar_associados.php?termo=${encodeURIComponent(termo)}&limit=200`);
+        const url = `../api/buscar_associados.php?termo=${encodeURIComponent(termo)}&limit=500`;
+        console.log('🔗 Fazendo fetch para:', url);
+        
+        const response = await fetch(url);
+        
+        console.log('📡 Response status:', response.status);
+        console.log('📡 Response ok:', response.ok);
 
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}`);
         }
 
         const resultado = await response.json();
+        console.log('📦 Resposta do servidor:', resultado);
+
+        // Verifica se o usuário ainda está buscando pelo mesmo termo
+        const termoAtual = document.getElementById('searchInput').value.trim();
+        if (termoAtual !== termo) {
+            console.log('⚠️ Termo mudou durante a busca, ignorando resultado');
+            return;
+        }
 
         if (resultado.status === 'success') {
-            console.log(`Found ${resultado.dados.length} results on server`);
+            console.log(`✅ Encontrados ${resultado.dados.length} resultados no servidor`);
+            console.log('📋 Primeiros dados recebidos:', resultado.dados.slice(0, 2));
 
-            // Use server results
-            associadosFiltrados = resultado.dados;
+            // Armazena resultados do servidor
+            resultadosServidor = resultado.dados;
+            
+            // Aplica outros filtros (situação, corporação, etc) nos resultados do servidor
+            aplicarFiltros();
 
-            // Update pagination
-            paginaAtual = 1;
-            calcularPaginacao();
-            renderizarPagina();
-
-            // Show results info
             if (resultado.total_aproximado && resultado.total_aproximado > resultado.dados.length) {
-                console.log(`Showing ${resultado.dados.length} of ~${resultado.total_aproximado} total matches`);
+                console.log(`ℹ️ Mostrando ${resultado.dados.length} de ~${resultado.total_aproximado} resultados`);
             }
 
         } else {
-            console.warn('Server search error:', resultado.message);
-            buscarLocal(termo); // Fallback
+            console.warn('⚠️ Erro na busca do servidor:', resultado.message);
+            resultadosServidor = null;
+            // Fallback para busca local
+            aplicarFiltros();
         }
 
     } catch (error) {
-        console.error('Search error:', error);
-        buscarLocal(termo); // Fallback to local search
-
+        console.error('❌ Erro na busca do servidor:', error);
+        resultadosServidor = null;
+        // Fallback para busca local
+        aplicarFiltros();
     } finally {
         mostrarIndicadorBusca(false);
     }
 }
 
-// Apply filters without search
-function aplicarFiltrosLocais() {
-    console.log('Applying local filters only...');
-
-    const filterSituacao = document.getElementById('filterSituacao')?.value || '';
-    const filterCorporacao = document.getElementById('filterCorporacao')?.value || '';
-    const filterPatente = document.getElementById('filterPatente')?.value || '';
-
-    // Start with current data (could be search results or all data)
-    let dadosParaFiltrar = associadosFiltrados.length > 0 ? associadosFiltrados : todosAssociados;
-
-    associadosFiltrados = dadosParaFiltrar.filter(associado => {
-        const matchSituacao = !filterSituacao || associado.situacao === filterSituacao;
-        const matchCorporacao = !filterCorporacao || associado.corporacao === filterCorporacao;
-        const matchPatente = !filterPatente || associado.patente === filterPatente;
-
-        return matchSituacao && matchCorporacao && matchPatente;
-    });
-
-    paginaAtual = 1;
-    calcularPaginacao();
-    renderizarPagina();
-}
-
-// Enhanced local search (fallback)
-function buscarLocal(termo) {
-    console.log('Local search (fallback):', termo);
-
-    const termoLower = termo.toLowerCase();
-
-    associadosFiltrados = todosAssociados.filter(associado => {
-        return (associado.nome && associado.nome.toLowerCase().includes(termoLower)) ||
-            (associado.cpf && associado.cpf.includes(termo)) ||
-            (associado.rg && associado.rg.includes(termo)) ||
-            (associado.telefone && associado.telefone.includes(termo));
-    });
-
-    paginaAtual = 1;
-    calcularPaginacao();
-    renderizarPagina();
-
-    // Warning if few results
-    if (associadosFiltrados.length < 3 && termo.length >= 3) {
-        console.warn('Few local results. Person might not be in loaded data.');
-    }
-}
-
-// Visual search indicator
+// Indicador visual de busca
 function mostrarIndicadorBusca(mostrar) {
     const searchIcon = document.querySelector('.search-box .search-icon');
     if (!searchIcon) return;
@@ -3064,26 +3145,44 @@ function mostrarIndicadorBusca(mostrar) {
     }
 }
 
-// Event listeners - só adiciona UMA VEZ
+// Event listeners - INICIALIZAÇÃO ÚNICA
 document.addEventListener('DOMContentLoaded', function () {
+    console.log('📋 Inicializando event listeners da busca...');
+    
     // Adiciona listeners aos filtros
     const searchInput = document.getElementById('searchInput');
     const filterSituacao = document.getElementById('filterSituacao');
-    const filterTipoAssociado = document.getElementById('filterTipoAssociado'); // NOVO
+    const filterTipoAssociado = document.getElementById('filterTipoAssociado');
     const filterCorporacao = document.getElementById('filterCorporacao');
     const filterPatente = document.getElementById('filterPatente');
 
-
     if (searchInput) {
+        console.log('✅ Campo de busca encontrado, registrando listener');
         // Remove old listener first
         searchInput.removeEventListener('input', aplicarFiltros);
         // Add new server search listener
         searchInput.addEventListener('input', handleSearchInput);
+        console.log('✅ Listener handleSearchInput registrado');
+    } else {
+        console.error('❌ Campo searchInput não encontrado!');
     }
-    if (filterSituacao) filterSituacao.addEventListener('change', aplicarFiltros);
-    if (filterTipoAssociado) filterTipoAssociado.addEventListener('change', aplicarFiltros); // NOVO
-    if (filterCorporacao) filterCorporacao.addEventListener('change', aplicarFiltros);
-    if (filterPatente) filterPatente.addEventListener('change', aplicarFiltros);
+    
+    if (filterSituacao) {
+        filterSituacao.addEventListener('change', aplicarFiltros);
+        console.log('✅ Listener filterSituacao registrado');
+    }
+    if (filterTipoAssociado) {
+        filterTipoAssociado.addEventListener('change', aplicarFiltros);
+        console.log('✅ Listener filterTipoAssociado registrado');
+    }
+    if (filterCorporacao) {
+        filterCorporacao.addEventListener('change', aplicarFiltros);
+        console.log('✅ Listener filterCorporacao registrado');
+    }
+    if (filterPatente) {
+        filterPatente.addEventListener('change', aplicarFiltros);
+        console.log('✅ Listener filterPatente registrado');
+    }
 
     // Paginação
     const perPageSelect = document.getElementById('perPageSelect');
@@ -3128,20 +3227,33 @@ let currentFilterObs = 'all';
 let currentAssociadoIdObs = null;
 
 function carregarObservacoes(associadoId, forceReload = false) {
-    // Evitar carregar se já estiver carregando
-    if (window.carregandoObservacoes) {
-        console.log('Já está carregando observações, ignorando...');
+    // Se não tem associado, não faz nada
+    if (!associadoId) {
+        console.log('ID do associado não fornecido');
         return;
+    }
+
+    // Evitar carregar se já estiver carregando (com timeout de segurança)
+    if (window.carregandoObservacoes) {
+        // Timeout de segurança: se travou por mais de 5 segundos, libera
+        if (window.carregandoObservacoesTimeout && (Date.now() - window.carregandoObservacoesTimeout > 5000)) {
+            console.log('Timeout de carregamento, liberando...');
+            window.carregandoObservacoes = false;
+        } else {
+            console.log('Já está carregando observações, ignorando...');
+            return;
+        }
     }
 
     // Evitar recarregar se já carregou para este associado E não for reload forçado
     if (!forceReload && currentAssociadoIdObs === associadoId && observacoesData.length > 0) {
-        console.log('Observações já carregadas para este associado');
+        console.log('Observações já carregadas para este associado, renderizando...');
         renderizarObservacoes();
         return;
     }
 
     window.carregandoObservacoes = true;
+    window.carregandoObservacoesTimeout = Date.now();
     currentAssociadoIdObs = associadoId;
 
     // Mostrar loading
@@ -3297,9 +3409,15 @@ function criarCardObservacao(obs) {
                             <span class="author-role">${obs.criado_por_cargo || 'Administrador'}</span>
                         </div>
                     </div>
-                    <div class="observacao-actions">
+                    <div class="observacao-actions" style="display: flex; gap: 0.25rem;">
                         <button class="btn-observacao-action" title="${isImportante ? 'Remover importância' : 'Marcar como importante'}" onclick="toggleImportanteObs(${obs.id})">
                             <i class="${isImportante ? 'fas' : 'far'} fa-star ${isImportante ? 'text-warning' : ''}"></i>
+                        </button>
+                        <button class="btn-observacao-action" title="Editar observação" onclick="editarObservacao(${obs.id})" style="color: #0d6efd;">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn-observacao-action" title="Excluir observação" onclick="excluirObservacao(${obs.id})" style="color: #dc3545;">
+                            <i class="fas fa-trash"></i>
                         </button>
                     </div>
                 </div>
@@ -3317,10 +3435,14 @@ function criarCardObservacao(obs) {
                     ${obs.tags ? obs.tags.split(',').map(tag => criarTagObs(tag.trim())).join('') : ''}
                 </div>
             ` : ''}
-            ${obs.editado == '1' ? `
-                <div class="observacao-edited" style="font-size: 0.625rem; color: var(--gray-500); font-style: italic; margin-top: 0.5rem;">
-                    <i class="fas fa-edit"></i>
-                    Editado em ${obs.data_edicao_formatada || 'Data não disponível'}
+            ${obs.historico_edicoes && obs.historico_edicoes.length > 0 ? `
+                <div class="observacao-historico-edicoes" style="margin-top: 0.5rem; border-top: 1px solid #e0e0e0; padding-top: 0.5rem;">
+                    ${obs.historico_edicoes.map((edicao, index) => `
+                        <div class="edicao-item" style="font-size: 0.7rem; color: var(--gray-600); font-style: italic; background: ${index === obs.historico_edicoes.length - 1 ? '#e8f4fd' : '#f5f5f5'}; padding: 0.3rem 0.6rem; border-radius: 4px; margin-bottom: 0.25rem;">
+                            <i class="fas fa-edit" style="color: ${index === obs.historico_edicoes.length - 1 ? '#0d6efd' : '#6c757d'};"></i>
+                            Editado por <strong>${edicao.editado_por_nome || 'Usuário'}</strong> em ${edicao.data_edicao_formatada || 'Data não disponível'}
+                        </div>
+                    `).join('')}
                 </div>
             ` : ''}
         </div>
@@ -3640,13 +3762,18 @@ function criarModalConfirmacaoExclusao() {
             dataType: 'json',
             success: function (response) {
                 if (response.status === 'success') {
-                    carregarObservacoes(currentAssociadoIdObs);
+                    // Remover observação do array local imediatamente
+                    observacoesData = observacoesData.filter(obs => obs.id != id);
+                    
+                    // Re-renderizar a lista sem precisar fazer nova requisição
+                    renderizarObservacoes();
+                    atualizarContadorObservacoes();
 
                     // ATUALIZAR TAMBÉM AS OBSERVAÇÕES DA VISÃO GERAL
                     if (associadoAtual && associadoAtual.id) {
                         setTimeout(() => {
                             carregarObservacoesVisaoGeral(associadoAtual.id);
-                        }, 500);
+                        }, 300);
                     }
 
                     mostrarNotificacaoObs('📋 Observação excluída com sucesso!', 'success');
@@ -3834,3 +3961,1371 @@ $(document).ready(function () {
 });
 
 console.log('✓ Sistema de Observações carregado com sucesso!');
+
+// =====================================================
+// SISTEMA DE EDIÇÃO DENTRO DO MODAL DE VISUALIZAÇÃO
+// =====================================================
+
+// Variável global para controlar o modo de edição
+let modoEdicaoAtivo = false;
+let dadosOriginaisAssociado = null;
+
+// Função para inicializar o botão de edição baseado nas permissões
+function inicializarBotaoEdicao() {
+    const btnEditar = document.getElementById('btnEditarModal');
+    
+    if (!btnEditar) return;
+    
+    // Verifica permissões para mostrar ou esconder o botão
+    if (permissoesUsuario.podeEditarCompleto || permissoesUsuario.podeEditarContato) {
+        btnEditar.style.display = 'flex';
+    } else {
+        btnEditar.style.display = 'none';
+    }
+}
+
+// Função para alternar o modo de edição
+function toggleModoEdicao() {
+    if (!associadoAtual) {
+        alert('Nenhum associado selecionado!');
+        return;
+    }
+
+    modoEdicaoAtivo = !modoEdicaoAtivo;
+
+    const btnEditar = document.getElementById('btnEditarModal');
+    const btnSalvar = document.getElementById('btnSalvarModal');
+    const btnCancelar = document.getElementById('btnCancelarModal');
+    const modal = document.getElementById('modalAssociado');
+
+    if (modoEdicaoAtivo) {
+        // Salva os dados originais para poder cancelar
+        dadosOriginaisAssociado = JSON.parse(JSON.stringify(associadoAtual));
+        
+        // Atualiza botões
+        btnEditar.style.display = 'none';
+        btnSalvar.style.display = 'flex';
+        btnCancelar.style.display = 'flex';
+        
+        // Adiciona classe de modo edição
+        modal.classList.add('modal-edit-mode');
+        
+        // Transforma campos em editáveis
+        ativarModoEdicao();
+        
+        console.log('🖊️ Modo edição ativado');
+    } else {
+        // Desativa modo edição
+        desativarModoEdicao();
+    }
+}
+
+// Função para ativar modo de edição nos campos
+function ativarModoEdicao() {
+    // Renderiza novamente as tabs com campos editáveis
+    preencherTabVisaoGeralEditavel(associadoAtual);
+    preencherTabMilitarEditavel(associadoAtual);
+    preencherTabFinanceiroEditavel(associadoAtual);
+    preencherTabContatoEditavel(associadoAtual);
+    preencherTabDependentesEditavel(associadoAtual);
+}
+
+// Função para desativar modo edição
+function desativarModoEdicao() {
+    modoEdicaoAtivo = false;
+    
+    const btnEditar = document.getElementById('btnEditarModal');
+    const btnSalvar = document.getElementById('btnSalvarModal');
+    const btnCancelar = document.getElementById('btnCancelarModal');
+    const modal = document.getElementById('modalAssociado');
+    
+    btnEditar.style.display = 'flex';
+    btnSalvar.style.display = 'none';
+    btnCancelar.style.display = 'none';
+    
+    modal.classList.remove('modal-edit-mode');
+    
+    // Re-renderiza as tabs no modo visualização
+    preencherTabVisaoGeral(associadoAtual);
+    preencherTabMilitar(associadoAtual);
+    preencherTabFinanceiro(associadoAtual);
+    preencherTabContato(associadoAtual);
+    preencherTabDependentes(associadoAtual);
+    
+    console.log('👁️ Modo visualização ativado');
+}
+
+// Função para cancelar edição
+function cancelarEdicaoModal() {
+    if (dadosOriginaisAssociado) {
+        // Restaura dados originais
+        associadoAtual = dadosOriginaisAssociado;
+        dadosOriginaisAssociado = null;
+    }
+    
+    desativarModoEdicao();
+}
+
+// Função para salvar edição
+function salvarEdicaoModal() {
+    if (!associadoAtual || !associadoAtual.id) {
+        alert('Erro: Nenhum associado selecionado!');
+        return;
+    }
+
+    // Coleta dados dos campos editáveis e mescla com dados existentes
+    const dadosAtualizados = coletarDadosFormularioModal();
+    
+    if (!dadosAtualizados) {
+        return; // Erro na validação
+    }
+
+    // Mostra loading
+    const btnSalvar = document.getElementById('btnSalvarModal');
+    const textoOriginal = btnSalvar.innerHTML;
+    btnSalvar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
+    btnSalvar.disabled = true;
+
+    // Cria FormData para enviar como POST (API espera $_POST, não JSON)
+    const formData = new FormData();
+    
+    // Adiciona todos os dados ao FormData
+    for (const [key, value] of Object.entries(dadosAtualizados)) {
+        if (key === 'dependentes' && Array.isArray(value)) {
+            // Dependentes precisam ser enviados como array
+            value.forEach((dep, index) => {
+                for (const [depKey, depValue] of Object.entries(dep)) {
+                    formData.append(`dependentes[${index}][${depKey}]`, depValue || '');
+                }
+            });
+        } else {
+            formData.append(key, value ?? '');
+        }
+    }
+
+    // Faz requisição para API usando FormData
+    $.ajax({
+        url: `../api/atualizar_associado.php?id=${associadoAtual.id}`,
+        method: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        dataType: 'json',
+        success: function(response) {
+            if (response.status === 'success') {
+                // Atualiza dados locais
+                Object.assign(associadoAtual, dadosAtualizados);
+                
+                // Atualiza também no array principal
+                const index = todosAssociados.findIndex(a => a.id == associadoAtual.id);
+                if (index !== -1) {
+                    Object.assign(todosAssociados[index], dadosAtualizados);
+                }
+                
+                // Atualiza também em associadosFiltrados
+                const indexFiltrado = associadosFiltrados.findIndex(a => a.id == associadoAtual.id);
+                if (indexFiltrado !== -1) {
+                    Object.assign(associadosFiltrados[indexFiltrado], dadosAtualizados);
+                }
+                
+                // Atualiza header do modal
+                atualizarHeaderModal(associadoAtual);
+                
+                // Desativa modo edição
+                desativarModoEdicao();
+                
+                // Re-renderiza tabela
+                renderizarPagina();
+                
+                // Mostra mensagem de sucesso
+                mostrarNotificacao('Dados atualizados com sucesso!', 'success');
+                
+                console.log('✅ Associado atualizado com sucesso');
+            } else {
+                alert('Erro ao salvar: ' + (response.message || 'Erro desconhecido'));
+            }
+        },
+        error: function(xhr, status, error) {
+            console.error('Erro ao salvar:', error);
+            console.error('Response:', xhr.responseText);
+            alert('Erro ao salvar as alterações. Tente novamente.');
+        },
+        complete: function() {
+            btnSalvar.innerHTML = textoOriginal;
+            btnSalvar.disabled = false;
+        }
+    });
+}
+
+// Função para coletar dados do formulário do modal
+// Mescla dados editados com dados existentes do associado
+function coletarDadosFormularioModal() {
+    // Começa com todos os dados atuais do associado (para não perder campos não editados)
+    const dados = {
+        // Campos obrigatórios - usa dados existentes como fallback
+        nome: associadoAtual.nome || '',
+        cpf: (associadoAtual.cpf || '').replace(/\D/g, ''),
+        rg: associadoAtual.rg || 'N/I', // RG pode ser "N/I" (Não Informado) se vazio
+        telefone: (associadoAtual.telefone || '').replace(/\D/g, ''),
+        situacao: associadoAtual.situacao || 'Filiado',
+        
+        // Dados pessoais
+        nasc: associadoAtual.nasc || '',
+        sexo: associadoAtual.sexo || '',
+        estadoCivil: associadoAtual.estadoCivil || '',
+        escolaridade: associadoAtual.escolaridade || '',
+        email: associadoAtual.email || '',
+        
+        // Dados militares
+        corporacao: associadoAtual.corporacao || '',
+        patente: associadoAtual.patente || '',
+        categoria: associadoAtual.categoria || '',
+        lotacao: associadoAtual.lotacao || '',
+        unidade: associadoAtual.unidade || '',
+        
+        // Endereço
+        cep: (associadoAtual.cep || '').replace(/\D/g, ''),
+        endereco: associadoAtual.endereco || '',
+        numero: associadoAtual.numero || '',
+        complemento: associadoAtual.complemento || '',
+        bairro: associadoAtual.bairro || '',
+        cidade: associadoAtual.cidade || '',
+        
+        // Dados financeiros
+        tipoAssociado: associadoAtual.tipoAssociado || '',
+        situacaoFinanceira: associadoAtual.situacaoFinanceira || '',
+        vinculoServidor: associadoAtual.vinculoServidor || '',
+        localDebito: associadoAtual.localDebito || '',
+        agencia: associadoAtual.agencia || '',
+        operacao: associadoAtual.operacao || '',
+        contaCorrente: associadoAtual.contaCorrente || '',
+        doador: associadoAtual.doador || '0',
+        tipoAssociadoServico: associadoAtual.tipoAssociadoServico || '',
+        
+        // Outros
+        indicacao: associadoAtual.indicacao || '',
+        dataFiliacao: associadoAtual.data_filiacao || '',
+        observacoes: associadoAtual.observacoes || ''
+    };
+    
+    // Sobrescreve com valores dos campos editados (se existirem)
+    const camposEditaveis = {
+        // Dados Pessoais
+        'edit_nome': 'nome',
+        'edit_rg': 'rg',
+        'edit_nasc': 'nasc',
+        'edit_sexo': 'sexo',
+        'edit_estadoCivil': 'estadoCivil',
+        'edit_escolaridade': 'escolaridade',
+        'edit_situacao': 'situacao',
+        
+        // Dados Militares
+        'edit_corporacao': 'corporacao',
+        'edit_patente': 'patente',
+        'edit_categoria': 'categoria',
+        'edit_lotacao': 'lotacao',
+        'edit_unidade': 'unidade',
+        
+        // Contato
+        'edit_telefone': 'telefone',
+        'edit_email': 'email',
+        'edit_cep': 'cep',
+        'edit_endereco': 'endereco',
+        'edit_numero': 'numero',
+        'edit_complemento': 'complemento',
+        'edit_bairro': 'bairro',
+        'edit_cidade': 'cidade',
+        
+        // Financeiro
+        'edit_tipoAssociado': 'tipoAssociado',
+        'edit_tipoAssociadoServico': 'tipoAssociadoServico',
+        'edit_situacaoFinanceira': 'situacaoFinanceira',
+        'edit_vinculoServidor': 'vinculoServidor',
+        'edit_localDebito': 'localDebito',
+        'edit_agencia': 'agencia',
+        'edit_operacao': 'operacao',
+        'edit_contaCorrente': 'contaCorrente',
+        'edit_doador': 'doador',
+        'edit_valorSocial': 'valorSocial',
+        'edit_percentualAplicadoSocial': 'percentualAplicadoSocial',
+        'edit_valorJuridico': 'valorJuridico',
+        'edit_percentualAplicadoJuridico': 'percentualAplicadoJuridico'
+    };
+    
+    // Coleta serviço jurídico (checkbox)
+    const checkJuridico = document.getElementById('edit_servicoJuridico');
+    if (checkJuridico) {
+        dados.servicoJuridico = checkJuridico.checked ? '2' : '';
+    }
+    
+    // Atualiza apenas os campos que foram editados
+    for (const [elementId, campoNome] of Object.entries(camposEditaveis)) {
+        const elemento = document.getElementById(elementId);
+        if (elemento) {
+            let valor = elemento.value;
+            
+            // Limpa formatação de campos específicos
+            if (['telefone', 'cep', 'cpf'].includes(campoNome)) {
+                valor = valor.replace(/\D/g, '');
+            } else {
+                valor = valor.trim();
+            }
+            
+            dados[campoNome] = valor;
+        }
+    }
+    
+    // Coleta dependentes se existirem
+    dados.dependentes = coletarDependentesEditados();
+    
+    // Validações básicas
+    if (!dados.nome || dados.nome.length < 3) {
+        alert('Nome deve ter pelo menos 3 caracteres');
+        return null;
+    }
+    
+    // CPF: Não validamos pois o campo não é editável
+    // Apenas garantimos que o CPF do associado atual seja mantido
+    if (associadoAtual && associadoAtual.cpf) {
+        dados.cpf = (associadoAtual.cpf || '').replace(/\D/g, '');
+    }
+    
+    if (!dados.telefone || dados.telefone.length < 10) {
+        alert('Telefone inválido');
+        return null;
+    }
+    
+    return dados;
+}
+
+// Função para coletar dependentes editados
+function coletarDependentesEditados() {
+    const dependentes = [];
+    const container = document.getElementById('dependentesEditaveis');
+    
+    if (!container) return dependentes;
+    
+    const linhas = container.querySelectorAll('.dependente-item');
+    linhas.forEach(linha => {
+        const nome = linha.querySelector('[name="dep_nome"]')?.value?.trim();
+        const dataNascimento = linha.querySelector('[name="dep_data_nascimento"]')?.value;
+        const parentesco = linha.querySelector('[name="dep_parentesco"]')?.value;
+        const sexo = linha.querySelector('[name="dep_sexo"]')?.value;
+        
+        if (nome) {
+            dependentes.push({
+                nome: nome,
+                data_nascimento: dataNascimento || '',
+                parentesco: parentesco || '',
+                sexo: sexo || ''
+            });
+        }
+    });
+    
+    return dependentes;
+}
+
+// Função para preencher Tab Visão Geral no modo editável
+function preencherTabVisaoGeralEditavel(associado) {
+    const overviewTab = document.getElementById('overview-tab');
+    
+    // Calcula idade
+    let idade = '-';
+    if (associado.nasc && associado.nasc !== '0000-00-00') {
+        const hoje = new Date();
+        const nascimento = new Date(associado.nasc);
+        idade = Math.floor((hoje - nascimento) / (365.25 * 24 * 60 * 60 * 1000));
+        idade = idade + ' anos';
+    }
+
+    // Data de nascimento formatada para input date
+    let dataNascInput = '';
+    if (associado.nasc && associado.nasc !== '0000-00-00') {
+        dataNascInput = associado.nasc;
+    }
+
+    overviewTab.innerHTML = `
+        <!-- Badge de modo edição -->
+        <div class="edit-mode-badge" style="display: block; position: relative; margin: 1rem 2rem 0;">
+            <i class="fas fa-edit"></i> Modo Edição Ativo
+        </div>
+        
+        <!-- Stats Section (apenas visualização) -->
+        <div class="stats-section">
+            <div class="stat-item">
+                <div class="stat-value">${associado.total_servicos || 0}</div>
+                <div class="stat-label">Serviços Ativos</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">${associado.total_dependentes || 0}</div>
+                <div class="stat-label">Dependentes</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">${associado.total_documentos || 0}</div>
+                <div class="stat-label">Documentos</div>
+            </div>
+        </div>
+        
+        <!-- Overview Grid Editável -->
+        <div class="overview-grid">
+            <!-- Dados Pessoais Editáveis -->
+            <div class="overview-card modo-edicao">
+                <div class="overview-card-header">
+                    <div class="overview-card-icon blue">
+                        <i class="fas fa-user-edit"></i>
+                    </div>
+                    <h4 class="overview-card-title">Dados Pessoais</h4>
+                </div>
+                <div class="overview-card-content">
+                    <div class="overview-item campo-editavel">
+                        <label class="overview-label" for="edit_nome">Nome Completo</label>
+                        <input type="text" id="edit_nome" class="form-control" value="${associado.nome || ''}" ${!permissoesUsuario.podeEditarCompleto ? 'disabled' : ''}>
+                    </div>
+                    <div class="overview-item campo-editavel">
+                        <label class="overview-label" for="edit_cpf">CPF</label>
+                        <input type="text" id="edit_cpf" class="form-control" value="${formatarCPF(associado.cpf)}" disabled>
+                        <small class="text-muted">CPF não pode ser alterado</small>
+                    </div>
+                    <div class="overview-item campo-editavel">
+                        <label class="overview-label" for="edit_rg">RG</label>
+                        <input type="text" id="edit_rg" class="form-control" value="${associado.rg || ''}" ${!permissoesUsuario.podeEditarCompleto ? 'disabled' : ''}>
+                    </div>
+                    <div class="overview-item campo-editavel">
+                        <label class="overview-label" for="edit_nasc">Data de Nascimento</label>
+                        <input type="date" id="edit_nasc" class="form-control" value="${dataNascInput}" ${!permissoesUsuario.podeEditarCompleto ? 'disabled' : ''}>
+                    </div>
+                    <div class="overview-item campo-editavel">
+                        <label class="overview-label" for="edit_sexo">Sexo</label>
+                        <select id="edit_sexo" class="form-control" ${!permissoesUsuario.podeEditarCompleto ? 'disabled' : ''}>
+                            <option value="">Selecione</option>
+                            <option value="M" ${associado.sexo === 'M' ? 'selected' : ''}>Masculino</option>
+                            <option value="F" ${associado.sexo === 'F' ? 'selected' : ''}>Feminino</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Informações de Filiação Editáveis -->
+            <div class="overview-card modo-edicao">
+                <div class="overview-card-header">
+                    <div class="overview-card-icon green">
+                        <i class="fas fa-id-card"></i>
+                    </div>
+                    <h4 class="overview-card-title">Informações de Filiação</h4>
+                </div>
+                <div class="overview-card-content">
+                    <div class="overview-item campo-editavel">
+                        <label class="overview-label" for="edit_situacao">Situação</label>
+                        <select id="edit_situacao" class="form-control" ${!permissoesUsuario.podeEditarCompleto ? 'disabled' : ''}>
+                            <option value="Filiado" ${associado.situacao === 'Filiado' ? 'selected' : ''}>Filiado</option>
+                            <option value="Desfiliado" ${associado.situacao === 'Desfiliado' ? 'selected' : ''}>Desfiliado</option>
+                            <option value="Falecido" ${associado.situacao === 'Falecido' ? 'selected' : ''}>Falecido</option>
+                        </select>
+                    </div>
+                    <div class="overview-item">
+                        <span class="overview-label">Data de Filiação</span>
+                        <span class="overview-value">${formatarData(associado.data_filiacao)}</span>
+                    </div>
+                    <div class="overview-item campo-editavel">
+                        <label class="overview-label" for="edit_escolaridade">Escolaridade</label>
+                        <select id="edit_escolaridade" class="form-control" ${!permissoesUsuario.podeEditarCompleto ? 'disabled' : ''}>
+                            <option value="">Selecione</option>
+                            <option value="Fundamental Incompleto" ${associado.escolaridade === 'Fundamental Incompleto' ? 'selected' : ''}>Fundamental Incompleto</option>
+                            <option value="Fundamental Completo" ${associado.escolaridade === 'Fundamental Completo' ? 'selected' : ''}>Fundamental Completo</option>
+                            <option value="Médio Incompleto" ${associado.escolaridade === 'Médio Incompleto' ? 'selected' : ''}>Médio Incompleto</option>
+                            <option value="Médio Completo" ${associado.escolaridade === 'Médio Completo' ? 'selected' : ''}>Médio Completo</option>
+                            <option value="Superior Incompleto" ${associado.escolaridade === 'Superior Incompleto' ? 'selected' : ''}>Superior Incompleto</option>
+                            <option value="Superior Completo" ${associado.escolaridade === 'Superior Completo' ? 'selected' : ''}>Superior Completo</option>
+                            <option value="Pós-graduação" ${associado.escolaridade === 'Pós-graduação' ? 'selected' : ''}>Pós-graduação</option>
+                            <option value="Mestrado" ${associado.escolaridade === 'Mestrado' ? 'selected' : ''}>Mestrado</option>
+                            <option value="Doutorado" ${associado.escolaridade === 'Doutorado' ? 'selected' : ''}>Doutorado</option>
+                        </select>
+                    </div>
+                    <div class="overview-item campo-editavel">
+                        <label class="overview-label" for="edit_estadoCivil">Estado Civil</label>
+                        <select id="edit_estadoCivil" class="form-control" ${!permissoesUsuario.podeEditarCompleto ? 'disabled' : ''}>
+                            <option value="">Selecione</option>
+                            <option value="Solteiro(a)" ${associado.estadoCivil === 'Solteiro(a)' ? 'selected' : ''}>Solteiro(a)</option>
+                            <option value="Casado(a)" ${associado.estadoCivil === 'Casado(a)' ? 'selected' : ''}>Casado(a)</option>
+                            <option value="Divorciado(a)" ${associado.estadoCivil === 'Divorciado(a)' ? 'selected' : ''}>Divorciado(a)</option>
+                            <option value="Viúvo(a)" ${associado.estadoCivil === 'Viúvo(a)' ? 'selected' : ''}>Viúvo(a)</option>
+                            <option value="União Estável" ${associado.estadoCivil === 'União Estável' ? 'selected' : ''}>União Estável</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Informações Adicionais (apenas visualização) -->
+            <div class="overview-card">
+                <div class="overview-card-header">
+                    <div class="overview-card-icon purple">
+                        <i class="fas fa-info-circle"></i>
+                    </div>
+                    <h4 class="overview-card-title">Informações Adicionais</h4>
+                </div>
+                <div class="overview-card-content">
+                    <div class="overview-item">
+                        <span class="overview-label">Indicação</span>
+                        <span class="overview-value">${associado.indicacao || '-'}</span>
+                    </div>
+                    <div class="overview-item">
+                        <span class="overview-label">Tipo de Associado</span>
+                        <span class="overview-value">${associado.tipoAssociado || '-'}</span>
+                    </div>
+                    <div class="overview-item">
+                        <span class="overview-label">Situação Financeira</span>
+                        <span class="overview-value">${associado.situacaoFinanceira || '-'}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// Função para preencher Tab Militar no modo editável
+function preencherTabMilitarEditavel(associado) {
+    const militarTab = document.getElementById('militar-tab');
+    
+    // Arrays de opções - USAR VALORES DO BANCO DE DADOS
+    const corporacoes = [
+        'Polícia Militar',
+        'Bombeiro Militar', 
+        'Polícia Civil',
+        'Polícia Penal',
+        'Outro',
+        'Agregados'
+    ];
+    
+    // Patentes - incluir todas as variações possíveis
+    const patentes = [
+        'Soldado', 'Cabo', 
+        '3º Sargento', '2º Sargento', '1º Sargento', 'Sargento',
+        'Subtenente', 'Aspirante', 
+        '2º Tenente', '1º Tenente', 
+        'Capitão', 'Major', 'Tenente Coronel', 'Coronel',
+        // Patentes de bombeiros/outras corporações que podem ter nomes diferentes
+        'Tenente', 'Tenente-Coronel',
+        'Agregados'
+    ];
+    
+    const categorias = ['Ativa', 'Reserva', 'Pensionista', 'Agregados'];
+    
+    // Função para verificar se o valor está selecionado (case insensitive e normalizado)
+    const isSelected = (valorAtual, opcao) => {
+        if (!valorAtual) return false;
+        const valorNorm = valorAtual.toString().toLowerCase().trim();
+        const opcaoNorm = opcao.toString().toLowerCase().trim();
+        return valorNorm === opcaoNorm;
+    };
+    
+    // Verificar se o valor atual existe nas opções, senão adicionar
+    const corporacaoAtual = associado.corporacao || '';
+    const patenteAtual = associado.patente || '';
+    const categoriaAtual = associado.categoria || '';
+    
+    // Se a corporação atual não está na lista e não está vazia, adicionar
+    let corporacoesOptions = [...corporacoes];
+    if (corporacaoAtual && !corporacoes.some(c => isSelected(corporacaoAtual, c))) {
+        corporacoesOptions.unshift(corporacaoAtual);
+    }
+    
+    // Se a patente atual não está na lista e não está vazia, adicionar
+    let patentesOptions = [...patentes];
+    if (patenteAtual && !patentes.some(p => isSelected(patenteAtual, p))) {
+        patentesOptions.unshift(patenteAtual);
+    }
+    
+    // Se a categoria atual não está na lista e não está vazia, adicionar
+    let categoriasOptions = [...categorias];
+    if (categoriaAtual && !categorias.some(c => isSelected(categoriaAtual, c))) {
+        categoriasOptions.unshift(categoriaAtual);
+    }
+
+    militarTab.innerHTML = `
+        <div class="detail-section modo-edicao">
+            <div class="section-header">
+                <div class="section-icon">
+                    <i class="fas fa-shield-alt"></i>
+                </div>
+                <h3 class="section-title">Informações Militares</h3>
+                <span class="badge bg-primary ms-2">Editando</span>
+            </div>
+            
+            <div class="detail-grid">
+                <div class="detail-item campo-editavel">
+                    <label class="detail-label" for="edit_corporacao">Corporação</label>
+                    <select id="edit_corporacao" class="form-control" ${!permissoesUsuario.podeEditarCompleto ? 'disabled' : ''}>
+                        <option value="">Selecione</option>
+                        ${corporacoesOptions.map(c => `<option value="${c}" ${isSelected(corporacaoAtual, c) ? 'selected' : ''}>${c}</option>`).join('')}
+                    </select>
+                </div>
+                <div class="detail-item campo-editavel">
+                    <label class="detail-label" for="edit_patente">Patente</label>
+                    <select id="edit_patente" class="form-control" ${!permissoesUsuario.podeEditarCompleto ? 'disabled' : ''}>
+                        <option value="">Selecione</option>
+                        ${patentesOptions.map(p => `<option value="${p}" ${isSelected(patenteAtual, p) ? 'selected' : ''}>${p}</option>`).join('')}
+                    </select>
+                </div>
+                <div class="detail-item campo-editavel">
+                    <label class="detail-label" for="edit_categoria">Categoria</label>
+                    <select id="edit_categoria" class="form-control" ${!permissoesUsuario.podeEditarCompleto ? 'disabled' : ''}>
+                        <option value="">Selecione</option>
+                        ${categoriasOptions.map(c => `<option value="${c}" ${isSelected(categoriaAtual, c) ? 'selected' : ''}>${c}</option>`).join('')}
+                    </select>
+                </div>
+                <div class="detail-item campo-editavel">
+                    <label class="detail-label" for="edit_lotacao">Lotação</label>
+                    <input type="text" id="edit_lotacao" class="form-control" value="${associado.lotacao || ''}" ${!permissoesUsuario.podeEditarCompleto ? 'disabled' : ''}>
+                </div>
+                <div class="detail-item campo-editavel">
+                    <label class="detail-label" for="edit_unidade">Unidade</label>
+                    <input type="text" id="edit_unidade" class="form-control" value="${associado.unidade || ''}" ${!permissoesUsuario.podeEditarCompleto ? 'disabled' : ''}>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// Função para preencher Tab Contato no modo editável
+function preencherTabContatoEditavel(associado) {
+    const contatoTab = document.getElementById('contato-tab');
+
+    contatoTab.innerHTML = `
+        <div class="detail-section modo-edicao">
+            <div class="section-header">
+                <div class="section-icon">
+                    <i class="fas fa-phone-alt"></i>
+                </div>
+                <h3 class="section-title">Informações de Contato</h3>
+                <span class="badge bg-primary ms-2">Editando</span>
+            </div>
+            
+            <div class="detail-grid">
+                <div class="detail-item campo-editavel">
+                    <label class="detail-label" for="edit_telefone">Telefone</label>
+                    <input type="text" id="edit_telefone" class="form-control" value="${associado.telefone || ''}" placeholder="(00) 00000-0000">
+                </div>
+                <div class="detail-item campo-editavel">
+                    <label class="detail-label" for="edit_email">E-mail</label>
+                    <input type="email" id="edit_email" class="form-control" value="${associado.email || ''}" placeholder="email@exemplo.com">
+                </div>
+            </div>
+        </div>
+        
+        <div class="detail-section modo-edicao" style="margin-top: 2rem;">
+            <div class="section-header">
+                <div class="section-icon">
+                    <i class="fas fa-map-marker-alt"></i>
+                </div>
+                <h3 class="section-title">Endereço</h3>
+            </div>
+            
+            <div class="detail-grid">
+                <div class="detail-item campo-editavel">
+                    <label class="detail-label" for="edit_cep">CEP</label>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <input type="text" id="edit_cep" class="form-control" value="${associado.cep || ''}" placeholder="00000-000" style="flex: 1;">
+                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="buscarCepEdicao()">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="detail-item campo-editavel" style="grid-column: span 2;">
+                    <label class="detail-label" for="edit_endereco">Endereço</label>
+                    <input type="text" id="edit_endereco" class="form-control" value="${associado.endereco || ''}" placeholder="Rua, Avenida...">
+                </div>
+                <div class="detail-item campo-editavel">
+                    <label class="detail-label" for="edit_numero">Número</label>
+                    <input type="text" id="edit_numero" class="form-control" value="${associado.numero || ''}" placeholder="Nº">
+                </div>
+                <div class="detail-item campo-editavel">
+                    <label class="detail-label" for="edit_complemento">Complemento</label>
+                    <input type="text" id="edit_complemento" class="form-control" value="${associado.complemento || ''}" placeholder="Apto, Bloco...">
+                </div>
+                <div class="detail-item campo-editavel">
+                    <label class="detail-label" for="edit_bairro">Bairro</label>
+                    <input type="text" id="edit_bairro" class="form-control" value="${associado.bairro || ''}" placeholder="Bairro">
+                </div>
+                <div class="detail-item campo-editavel">
+                    <label class="detail-label" for="edit_cidade">Cidade</label>
+                    <input type="text" id="edit_cidade" class="form-control" value="${associado.cidade || ''}" placeholder="Cidade">
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// Função para buscar CEP no modo edição
+function buscarCepEdicao() {
+    const cep = document.getElementById('edit_cep').value.replace(/\D/g, '');
+    
+    if (cep.length !== 8) {
+        alert('CEP inválido. Digite 8 números.');
+        return;
+    }
+    
+    // Mostra loading
+    const btnCep = document.querySelector('[onclick="buscarCepEdicao()"]');
+    const textoOriginal = btnCep.innerHTML;
+    btnCep.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    btnCep.disabled = true;
+    
+    fetch(`https://viacep.com.br/ws/${cep}/json/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.erro) {
+                alert('CEP não encontrado!');
+                return;
+            }
+            
+            document.getElementById('edit_endereco').value = data.logradouro || '';
+            document.getElementById('edit_bairro').value = data.bairro || '';
+            document.getElementById('edit_cidade').value = data.localidade || '';
+            
+            // Foca no campo número
+            document.getElementById('edit_numero').focus();
+        })
+        .catch(error => {
+            console.error('Erro ao buscar CEP:', error);
+            alert('Erro ao buscar CEP. Tente novamente.');
+        })
+        .finally(() => {
+            btnCep.innerHTML = textoOriginal;
+            btnCep.disabled = false;
+        });
+}
+
+// Função para preencher Tab Financeiro no modo editável
+function preencherTabFinanceiroEditavel(associado) {
+    const financeiroTab = document.getElementById('financeiro-tab');
+    
+    // Opções de tipo de associado (categoria)
+    const categoriasAssociado = ['Contribuinte', 'Benemérito', 'Remido', 'Agregado', 'Especial'];
+    
+    // Opções de tipo para cálculo de serviços
+    const tiposAssociadoServico = [
+        'Contribuinte',
+        'Aluno',
+        'Soldado 1ª Classe',
+        'Soldado 2ª Classe',
+        'Agregado (Sem serviço jurídico)',
+        'Remido 50%',
+        'Remido',
+        'Benemérito (Sem serviço jurídico)'
+    ];
+    
+    const situacoesFinanceiras = ['Adimplente', 'Inadimplente', 'Isento'];
+    const locaisDebito = ['SEGPLAN', 'IPASGO', 'BOLETO', 'CEF', 'ITAU', 'Assego'];
+    
+    // Função auxiliar para verificar seleção
+    const isSelectedFin = (valorAtual, opcao) => {
+        if (!valorAtual) return false;
+        return valorAtual.toString().toLowerCase().trim() === opcao.toString().toLowerCase().trim();
+    };
+    
+    // Valores atuais
+    const categoriaAtual = associado.tipoAssociado || associado.tipo_associado || '';
+    const tipoServicoAtual = associado.tipoAssociadoServico || associado.tipo_associado_servico || '';
+    const situacaoFinAtual = associado.situacaoFinanceira || associado.situacao_financeira || '';
+    const localDebitoAtual = associado.localDebito || associado.local_debito || '';
+    
+    // Verificar se é agregado ou benemérito (sem serviço jurídico)
+    const categoriaLower = categoriaAtual.toLowerCase().trim();
+    const isAgregado = categoriaLower === 'agregado';
+    const isBenemerito = categoriaLower === 'benemérito';
+    const semJuridico = isAgregado || isBenemerito || tipoServicoAtual.includes('Sem serviço jurídico');
+    
+    // Adicionar valores atuais se não estiverem na lista
+    let categoriasOptions = [...categoriasAssociado];
+    if (categoriaAtual && !categoriasAssociado.some(t => isSelectedFin(categoriaAtual, t))) {
+        categoriasOptions.unshift(categoriaAtual);
+    }
+    
+    let tiposServicoOptions = [...tiposAssociadoServico];
+    if (tipoServicoAtual && !tiposAssociadoServico.some(t => isSelectedFin(tipoServicoAtual, t))) {
+        tiposServicoOptions.unshift(tipoServicoAtual);
+    }
+    
+    let situacoesOptions = [...situacoesFinanceiras];
+    if (situacaoFinAtual && !situacoesFinanceiras.some(s => isSelectedFin(situacaoFinAtual, s))) {
+        situacoesOptions.unshift(situacaoFinAtual);
+    }
+    
+    let locaisOptions = [...locaisDebito];
+    if (localDebitoAtual && !locaisDebito.some(l => isSelectedFin(localDebitoAtual, l))) {
+        locaisOptions.unshift(localDebitoAtual);
+    }
+    
+    // Valores dos serviços
+    const valorSocial = associado.valorSocial || associado.valor_social || 0;
+    const valorJuridico = associado.valorJuridico || associado.valor_juridico || 0;
+    const percentualSocial = associado.percentualAplicadoSocial || associado.percentual_aplicado_social || 0;
+    const percentualJuridico = associado.percentualAplicadoJuridico || associado.percentual_aplicado_juridico || 0;
+    const temServicoJuridico = associado.servicoJuridico || associado.servico_juridico || false;
+    
+    // Calcular valor mensal
+    const valorMensal = parseFloat(valorSocial) + parseFloat(valorJuridico);
+    const servicosAtivos = (temServicoJuridico ? 2 : 1);
+    
+    financeiroTab.innerHTML = `
+        <!-- Card Azul de Resumo -->
+        <div class="financial-summary" style="background: linear-gradient(135deg, #0056D2, #003d94); border-radius: 16px; padding: 2rem; margin-bottom: 2rem; color: white;">
+            <div style="display: flex; justify-content: space-around; text-align: center; flex-wrap: wrap; gap: 1rem;">
+                <div>
+                    <div style="font-size: 0.75rem; opacity: 0.8; text-transform: uppercase; letter-spacing: 1px;">VALOR MENSAL TOTAL</div>
+                    <div style="font-size: 2rem; font-weight: 700;" id="displayValorTotal">R$ ${valorMensal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div>
+                    <div style="font-size: 0.85rem; opacity: 0.7;"><span id="displayServicosAtivos">${servicosAtivos}</span> serviços ativos</div>
+                </div>
+                <div>
+                    <div style="font-size: 0.75rem; opacity: 0.8; text-transform: uppercase; letter-spacing: 1px;">CATEGORIA</div>
+                    <div style="font-size: 1.25rem; font-weight: 600;">${categoriaAtual || 'Não definido'}</div>
+                    <div style="font-size: 0.85rem; opacity: 0.7;">Tipo do associado</div>
+                </div>
+                <div>
+                    <div style="font-size: 0.75rem; opacity: 0.8; text-transform: uppercase; letter-spacing: 1px;">SITUAÇÃO FINANCEIRA</div>
+                    <div style="font-size: 1.25rem; font-weight: 600;">${situacaoFinAtual || 'Não definida'}</div>
+                    <div style="font-size: 0.85rem; opacity: 0.7;">Status atual</div>
+                </div>
+            </div>
+            <div style="text-align: center; margin-top: 1rem;">
+                <span class="badge bg-primary" style="font-size: 0.8rem; padding: 0.5rem 1rem;"><i class="fas fa-edit"></i> Editando</span>
+                ${isAgregado ? '<br><span class="badge bg-warning text-dark mt-2" style="font-size: 0.75rem;"><i class="fas fa-info-circle"></i> Agregado - Dados bancários não necessários</span>' : ''}
+            </div>
+        </div>
+        
+        <!-- Tipo de Associado para Serviços -->
+        <div class="detail-section modo-edicao" style="margin-bottom: 1.5rem;">
+            <div class="section-header">
+                <div class="section-icon" style="background: linear-gradient(135deg, #0056D2, #003d94); color: white;">
+                    <i class="fas fa-clipboard-list"></i>
+                </div>
+                <h3 class="section-title">Tipo de Associado (Serviços)</h3>
+            </div>
+            
+            <div class="detail-grid">
+                <div class="detail-item campo-editavel" style="grid-column: 1 / -1;">
+                    <label class="detail-label" for="edit_tipoAssociadoServico">
+                        Tipo de Associado <span style="color: red;">*</span>
+                        <i class="fas fa-info-circle" style="color: #6c757d; cursor: help;" title="Define o percentual de cobrança dos serviços"></i>
+                    </label>
+                    <select id="edit_tipoAssociadoServico" class="form-control" onchange="calcularServicosModal()" ${!permissoesUsuario.podeEditarCompleto ? 'disabled' : ''}>
+                        <option value="">Selecione o tipo de associado...</option>
+                        ${tiposServicoOptions.map(t => `<option value="${t}" ${isSelectedFin(tipoServicoAtual, t) ? 'selected' : ''}>${t}</option>`).join('')}
+                    </select>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Serviços do Associado -->
+        <div class="detail-section modo-edicao" style="margin-bottom: 1.5rem;">
+            <div class="section-header">
+                <div class="section-icon" style="background: linear-gradient(135deg, #28a745, #218838); color: white;">
+                    <i class="fas fa-clipboard-check"></i>
+                </div>
+                <h3 class="section-title">Serviços do Associado</h3>
+            </div>
+            
+            <!-- Serviço Social (Obrigatório) -->
+            <div style="background: var(--gray-100, #f8f9fa); padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                    <div>
+                        <span style="font-weight: 600; color: #28a745;">
+                            <i class="fas fa-check-circle"></i> Serviço Social
+                        </span>
+                        <span style="background: #28a745; color: white; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.7rem; margin-left: 0.5rem;">
+                            OBRIGATÓRIO
+                        </span>
+                    </div>
+                    <div style="text-align: right;">
+                        <div style="font-size: 0.8rem; color: #6c757d;">Valor Base: R$ 181,46</div>
+                        <div style="font-weight: 700; color: #28a745;">Total: R$ <span id="displayValorSocial">${parseFloat(valorSocial).toFixed(2)}</span></div>
+                    </div>
+                </div>
+                <div style="font-size: 0.8rem; color: #6c757d;">
+                    Percentual aplicado: <span id="displayPercentualSocial">${percentualSocial}</span>%
+                    <span style="margin-left: 1rem;">Contribuição social para associados</span>
+                </div>
+                <input type="hidden" id="edit_valorSocial" value="${valorSocial}">
+                <input type="hidden" id="edit_percentualAplicadoSocial" value="${percentualSocial}">
+            </div>
+            
+            <!-- Serviço Jurídico (Opcional) -->
+            <div id="servicoJuridicoContainer" style="background: var(--gray-100, #f8f9fa); padding: 1rem; border-radius: 8px; margin-bottom: 1rem; ${semJuridico ? 'opacity: 0.6;' : ''}">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <input type="checkbox" id="edit_servicoJuridico" value="2" onchange="calcularServicosModal()" 
+                            style="width: 20px; height: 20px;" ${temServicoJuridico ? 'checked' : ''} ${semJuridico ? 'disabled' : ''}>
+                        <label for="edit_servicoJuridico" style="font-weight: 600; color: #17a2b8; cursor: pointer;">
+                            <i class="fas fa-balance-scale"></i> Serviço Jurídico
+                        </label>
+                        <span style="background: #17a2b8; color: white; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.7rem;">
+                            OPCIONAL
+                        </span>
+                    </div>
+                    <div style="text-align: right;">
+                        <div style="font-size: 0.8rem; color: #6c757d;">Valor Base: R$ 45,37</div>
+                        <div style="font-weight: 700; color: #17a2b8;">Total: R$ <span id="displayValorJuridico">${parseFloat(valorJuridico).toFixed(2)}</span></div>
+                    </div>
+                </div>
+                <div style="font-size: 0.8rem; color: #6c757d;">
+                    Percentual aplicado: <span id="displayPercentualJuridico">${percentualJuridico}</span>%
+                    <span style="margin-left: 1rem;">Serviço jurídico opcional</span>
+                </div>
+                <input type="hidden" id="edit_valorJuridico" value="${valorJuridico}">
+                <input type="hidden" id="edit_percentualAplicadoJuridico" value="${percentualJuridico}">
+                ${semJuridico ? '<div style="color: #856404; background: #fff3cd; padding: 0.5rem; border-radius: 4px; margin-top: 0.5rem; font-size: 0.85rem;"><i class="fas fa-exclamation-triangle"></i> Este tipo de associado não tem direito ao serviço jurídico</div>' : ''}
+            </div>
+            
+            <!-- Total -->
+            <div style="padding: 1rem; background: #e3f2fd; border-radius: 8px; border: 2px solid #0056D2;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-weight: 700; color: #0056D2; font-size: 1.1rem;">
+                        <i class="fas fa-calculator"></i> VALOR TOTAL MENSAL
+                    </span>
+                    <span style="font-weight: 800; color: #0056D2; font-size: 1.3rem;">
+                        R$ <span id="displayTotalCalculado">${valorMensal.toFixed(2)}</span>
+                    </span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Categoria e Situação Financeira -->
+        <div class="detail-section modo-edicao">
+            <div class="section-header">
+                <div class="section-icon" style="background: linear-gradient(135deg, #0056D2, #003d94); color: white;">
+                    <i class="fas fa-dollar-sign"></i>
+                </div>
+                <h3 class="section-title">Dados Financeiros</h3>
+            </div>
+            
+            <div class="detail-grid">
+                <div class="detail-item campo-editavel">
+                    <label class="detail-label" for="edit_tipoAssociado">Categoria do Associado <span style="color: red;">*</span></label>
+                    <select id="edit_tipoAssociado" class="form-control" onchange="onCategoriaAssociadoChange(this.value)" ${!permissoesUsuario.podeEditarCompleto ? 'disabled' : ''}>
+                        <option value="">Selecione...</option>
+                        ${categoriasOptions.map(t => `<option value="${t}" ${isSelectedFin(categoriaAtual, t) ? 'selected' : ''}>${t}</option>`).join('')}
+                    </select>
+                </div>
+                <div class="detail-item campo-editavel">
+                    <label class="detail-label" for="edit_situacaoFinanceira">Situação Financeira</label>
+                    <select id="edit_situacaoFinanceira" class="form-control" ${!permissoesUsuario.podeEditarCompleto ? 'disabled' : ''}>
+                        <option value="">Selecione...</option>
+                        ${situacoesOptions.map(s => `<option value="${s}" ${isSelectedFin(situacaoFinAtual, s) ? 'selected' : ''}>${s}</option>`).join('')}
+                    </select>
+                </div>
+                <div class="detail-item campo-editavel campo-agregado">
+                    <label class="detail-label" for="edit_vinculoServidor">Vínculo Servidor</label>
+                    <input type="text" id="edit_vinculoServidor" class="form-control" value="${associado.vinculoServidor || associado.vinculo_servidor || ''}" ${!permissoesUsuario.podeEditarCompleto || isAgregado ? 'disabled style="background: #e9ecef; cursor: not-allowed;"' : ''}>
+                    ${isAgregado ? '<small class="text-muted">Não aplicável para agregados</small>' : ''}
+                </div>
+                <div class="detail-item campo-editavel campo-agregado">
+                    <label class="detail-label" for="edit_localDebito">Local de Débito</label>
+                    <select id="edit_localDebito" class="form-control" ${!permissoesUsuario.podeEditarCompleto || isAgregado ? 'disabled style="background: #e9ecef; cursor: not-allowed;"' : ''}>
+                        <option value="">Selecione</option>
+                        ${locaisOptions.map(l => `<option value="${l}" ${isSelectedFin(localDebitoAtual, l) ? 'selected' : ''}>${l}</option>`).join('')}
+                    </select>
+                    ${isAgregado ? '<small class="text-muted">Não aplicável para agregados</small>' : ''}
+                </div>
+            </div>
+        </div>
+        
+        <div class="detail-section modo-edicao" style="margin-top: 2rem; ${isAgregado ? 'opacity: 0.6;' : ''}">
+            <div class="section-header">
+                <div class="section-icon" style="background: linear-gradient(135deg, ${isAgregado ? '#9ca3af, #6b7280' : '#6366f1, #4f46e5'}); color: white;">
+                    <i class="fas fa-university"></i>
+                </div>
+                <h3 class="section-title">Dados Bancários ${isAgregado ? '<span class="badge bg-secondary ms-2">Não necessário</span>' : ''}</h3>
+            </div>
+            
+            <div class="detail-grid">
+                <div class="detail-item campo-editavel campo-agregado">
+                    <label class="detail-label" for="edit_agencia">Agência</label>
+                    <input type="text" id="edit_agencia" class="form-control" value="${associado.agencia || ''}" ${!permissoesUsuario.podeEditarCompleto || isAgregado ? 'disabled style="background: #e9ecef; cursor: not-allowed;"' : ''}>
+                </div>
+                <div class="detail-item campo-editavel campo-agregado">
+                    <label class="detail-label" for="edit_operacao">Operação</label>
+                    <input type="text" id="edit_operacao" class="form-control" value="${associado.operacao || ''}" ${!permissoesUsuario.podeEditarCompleto || isAgregado ? 'disabled style="background: #e9ecef; cursor: not-allowed;"' : ''}>
+                </div>
+                <div class="detail-item campo-editavel campo-agregado">
+                    <label class="detail-label" for="edit_contaCorrente">Conta Corrente</label>
+                    <input type="text" id="edit_contaCorrente" class="form-control" value="${associado.contaCorrente || associado.conta_corrente || ''}" ${!permissoesUsuario.podeEditarCompleto || isAgregado ? 'disabled style="background: #e9ecef; cursor: not-allowed;"' : ''}>
+                </div>
+                <div class="detail-item campo-editavel">
+                    <label class="detail-label" for="edit_doador">É Doador?</label>
+                    <select id="edit_doador" class="form-control" ${!permissoesUsuario.podeEditarCompleto ? 'disabled' : ''}>
+                        <option value="0" ${!associado.doador || associado.doador === '0' || associado.doador === 0 ? 'selected' : ''}>Não</option>
+                        <option value="1" ${associado.doador === '1' || associado.doador === 1 || associado.doador === true ? 'selected' : ''}>Sim</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// Função para calcular serviços no modal de edição
+function calcularServicosModal() {
+    const tipoSelecionado = document.getElementById('edit_tipoAssociadoServico')?.value || '';
+    const checkJuridico = document.getElementById('edit_servicoJuridico');
+    
+    // Valores base CORRETOS (valores atualizados)
+    const valorBaseSocial = 181.46;
+    const valorBaseJuridico = 45.37;
+    
+    // Mapeamento de percentuais por tipo
+    const percentuaisPorTipo = {
+        'Contribuinte': 100,
+        'Aluno': 50,
+        'Soldado 1ª Classe': 50,
+        'Soldado 2ª Classe': 50,
+        'Agregado (Sem serviço jurídico)': 50,
+        'Remido 50%': 50,
+        'Remido': 50,
+        'Benemérito (Sem serviço jurídico)': 0
+    };
+    
+    const percentual = percentuaisPorTipo[tipoSelecionado] || 100;
+    
+    // Verifica se permite serviço jurídico
+    const semJuridico = tipoSelecionado.includes('Sem serviço jurídico');
+    
+    // Desabilita jurídico se não permitido
+    if (checkJuridico) {
+        checkJuridico.disabled = semJuridico;
+        if (semJuridico) {
+            checkJuridico.checked = false;
+        }
+    }
+    
+    // Calcula valores
+    const valorSocial = (valorBaseSocial * percentual / 100);
+    const valorJuridico = (checkJuridico && checkJuridico.checked && !semJuridico) ? (valorBaseJuridico * percentual / 100) : 0;
+    const valorTotal = valorSocial + valorJuridico;
+    const servicosAtivos = (valorJuridico > 0 ? 2 : 1);
+    
+    // Atualiza displays
+    document.getElementById('displayValorSocial').textContent = valorSocial.toFixed(2);
+    document.getElementById('displayPercentualSocial').textContent = percentual;
+    document.getElementById('displayValorJuridico').textContent = valorJuridico.toFixed(2);
+    document.getElementById('displayPercentualJuridico').textContent = percentual;
+    document.getElementById('displayTotalCalculado').textContent = valorTotal.toFixed(2);
+    document.getElementById('displayValorTotal').textContent = `R$ ${valorTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+    document.getElementById('displayServicosAtivos').textContent = servicosAtivos;
+    
+    // Atualiza campos hidden
+    document.getElementById('edit_valorSocial').value = valorSocial.toFixed(2);
+    document.getElementById('edit_percentualAplicadoSocial').value = percentual;
+    document.getElementById('edit_valorJuridico').value = valorJuridico.toFixed(2);
+    document.getElementById('edit_percentualAplicadoJuridico').value = percentual;
+    
+    // Atualiza opacidade do container jurídico
+    const containerJuridico = document.getElementById('servicoJuridicoContainer');
+    if (containerJuridico) {
+        containerJuridico.style.opacity = semJuridico ? '0.6' : '1';
+    }
+}
+
+// Função para reagir à mudança da categoria do associado
+function onCategoriaAssociadoChange(valor) {
+    const isAgregado = valor.toLowerCase().trim() === 'agregado';
+    const isBenemerito = valor.toLowerCase().trim() === 'benemérito';
+    
+    // Campos que devem ser desabilitados para agregados
+    const camposAgregado = [
+        'edit_vinculoServidor',
+        'edit_localDebito', 
+        'edit_agencia',
+        'edit_operacao',
+        'edit_contaCorrente'
+    ];
+    
+    camposAgregado.forEach(id => {
+        const campo = document.getElementById(id);
+        if (campo) {
+            campo.disabled = isAgregado;
+            campo.style.background = isAgregado ? '#e9ecef' : '';
+            campo.style.cursor = isAgregado ? 'not-allowed' : '';
+        }
+    });
+    
+    // Atualizar campos militares se for agregado
+    if (isAgregado) {
+        atualizarCamposMilitaresAgregado();
+    }
+    
+    // Atualizar tipo de serviço se for agregado ou benemérito
+    const selectTipoServico = document.getElementById('edit_tipoAssociadoServico');
+    if (selectTipoServico) {
+        if (isAgregado) {
+            selectTipoServico.value = 'Agregado (Sem serviço jurídico)';
+        } else if (isBenemerito) {
+            selectTipoServico.value = 'Benemérito (Sem serviço jurídico)';
+        }
+        calcularServicosModal();
+    }
+}
+
+// Função para reagir à mudança do tipo de associado (mantida para compatibilidade)
+function onTipoAssociadoChange(valor) {
+    onCategoriaAssociadoChange(valor);
+}
+
+// Função para preencher campos militares como Agregados
+function atualizarCamposMilitaresAgregado() {
+    const camposMilitares = {
+        'edit_corporacao': 'Agregados',
+        'edit_patente': 'Agregados',
+        'edit_categoria': 'Agregados'
+    };
+    
+    for (const [id, valor] of Object.entries(camposMilitares)) {
+        const campo = document.getElementById(id);
+        if (campo) {
+            // Verifica se a opção Agregados existe, senão adiciona
+            let optionExists = false;
+            for (let option of campo.options) {
+                if (option.value.toLowerCase() === 'agregados') {
+                    optionExists = true;
+                    option.selected = true;
+                    break;
+                }
+            }
+            
+            if (!optionExists) {
+                const newOption = document.createElement('option');
+                newOption.value = 'Agregados';
+                newOption.text = 'Agregados';
+                newOption.selected = true;
+                campo.add(newOption);
+            }
+        }
+    }
+}
+
+// Função para preencher Tab Dependentes no modo editável
+function preencherTabDependentesEditavel(associado) {
+    const dependentesTab = document.getElementById('dependentes-tab');
+    
+    // Opções de parentesco
+    const parentescos = ['Cônjuge', 'Filho(a)', 'Pai', 'Mãe', 'Irmão(ã)', 'Avô(ó)', 'Neto(a)', 'Outro'];
+    
+    // Gera HTML dos dependentes existentes
+    let dependentesHtml = '';
+    const dependentes = associado.dependentes || [];
+    
+    dependentes.forEach((dep, index) => {
+        dependentesHtml += gerarHtmlDependenteEditavel(dep, index, parentescos);
+    });
+
+    dependentesTab.innerHTML = `
+        <div class="detail-section modo-edicao">
+            <div class="section-header">
+                <div class="section-icon">
+                    <i class="fas fa-users"></i>
+                </div>
+                <h3 class="section-title">Dependentes (${dependentes.length})</h3>
+                <span class="badge bg-primary ms-2">Editando</span>
+                <button type="button" class="btn btn-success btn-sm ms-auto" onclick="adicionarDependente()">
+                    <i class="fas fa-plus"></i> Adicionar Dependente
+                </button>
+            </div>
+            
+            <div id="dependentesEditaveis" class="dependentes-container">
+                ${dependentesHtml || `
+                    <div class="empty-state text-center p-4">
+                        <i class="fas fa-users" style="font-size: 2rem; color: #ccc;"></i>
+                        <p class="text-muted mt-2">Nenhum dependente cadastrado</p>
+                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="adicionarDependente()">
+                            <i class="fas fa-plus"></i> Adicionar Primeiro Dependente
+                        </button>
+                    </div>
+                `}
+            </div>
+        </div>
+    `;
+}
+
+// Função auxiliar para gerar HTML de um dependente editável
+function gerarHtmlDependenteEditavel(dep, index, parentescos) {
+    return `
+        <div class="dependente-item" style="background: #f8f9fa; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; border: 1px solid #dee2e6;">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h6 class="m-0"><i class="fas fa-user"></i> Dependente ${index + 1}</h6>
+                <button type="button" class="btn btn-outline-danger btn-sm" onclick="removerDependente(this)">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+            <div class="row g-2">
+                <div class="col-md-6">
+                    <label class="form-label small">Nome</label>
+                    <input type="text" name="dep_nome" class="form-control form-control-sm" value="${dep.nome || ''}" required>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small">Data de Nascimento</label>
+                    <input type="date" name="dep_data_nascimento" class="form-control form-control-sm" value="${dep.data_nascimento || ''}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small">Sexo</label>
+                    <select name="dep_sexo" class="form-control form-control-sm">
+                        <option value="">Selecione</option>
+                        <option value="M" ${dep.sexo === 'M' ? 'selected' : ''}>Masculino</option>
+                        <option value="F" ${dep.sexo === 'F' ? 'selected' : ''}>Feminino</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label small">Parentesco</label>
+                    <select name="dep_parentesco" class="form-control form-control-sm">
+                        <option value="">Selecione</option>
+                        ${parentescos.map(p => `<option value="${p}" ${dep.parentesco === p ? 'selected' : ''}>${p}</option>`).join('')}
+                    </select>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// Função para adicionar novo dependente
+function adicionarDependente() {
+    const container = document.getElementById('dependentesEditaveis');
+    
+    // Remove empty state se existir
+    const emptyState = container.querySelector('.empty-state');
+    if (emptyState) {
+        emptyState.remove();
+    }
+    
+    const parentescos = ['Cônjuge', 'Filho(a)', 'Pai', 'Mãe', 'Irmão(ã)', 'Avô(ó)', 'Neto(a)', 'Outro'];
+    const index = container.querySelectorAll('.dependente-item').length;
+    
+    const novoHtml = gerarHtmlDependenteEditavel({}, index, parentescos);
+    container.insertAdjacentHTML('beforeend', novoHtml);
+    
+    // Foca no campo nome do novo dependente
+    const novoItem = container.lastElementChild;
+    novoItem.querySelector('[name="dep_nome"]').focus();
+    
+    // Atualiza contador no header
+    atualizarContadorDependentes();
+}
+
+// Função para remover dependente
+function removerDependente(botao) {
+    if (confirm('Deseja realmente remover este dependente?')) {
+        const item = botao.closest('.dependente-item');
+        item.remove();
+        
+        // Renumera os dependentes restantes
+        renumerarDependentes();
+        
+        // Atualiza contador
+        atualizarContadorDependentes();
+        
+        // Se não há mais dependentes, mostra empty state
+        const container = document.getElementById('dependentesEditaveis');
+        if (container.querySelectorAll('.dependente-item').length === 0) {
+            container.innerHTML = `
+                <div class="empty-state text-center p-4">
+                    <i class="fas fa-users" style="font-size: 2rem; color: #ccc;"></i>
+                    <p class="text-muted mt-2">Nenhum dependente cadastrado</p>
+                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="adicionarDependente()">
+                        <i class="fas fa-plus"></i> Adicionar Primeiro Dependente
+                    </button>
+                </div>
+            `;
+        }
+    }
+}
+
+// Função para renumerar dependentes
+function renumerarDependentes() {
+    const container = document.getElementById('dependentesEditaveis');
+    const items = container.querySelectorAll('.dependente-item');
+    
+    items.forEach((item, index) => {
+        const titulo = item.querySelector('h6');
+        if (titulo) {
+            titulo.innerHTML = `<i class="fas fa-user"></i> Dependente ${index + 1}`;
+        }
+    });
+}
+
+// Função para atualizar contador de dependentes no header
+function atualizarContadorDependentes() {
+    const container = document.getElementById('dependentesEditaveis');
+    const count = container.querySelectorAll('.dependente-item').length;
+    
+    const header = document.querySelector('#dependentes-tab .section-title');
+    if (header) {
+        header.textContent = `Dependentes (${count})`;
+    }
+}
+
+// Função auxiliar para mostrar notificações
+function mostrarNotificacao(mensagem, tipo = 'success') {
+    // Remove notificações existentes
+    document.querySelectorAll('.notificacao-toast').forEach(el => el.remove());
+    
+    const toast = document.createElement('div');
+    toast.className = 'notificacao-toast';
+    toast.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 1rem 1.5rem;
+        border-radius: 8px;
+        color: white;
+        font-weight: 600;
+        z-index: 10000;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        animation: slideIn 0.3s ease;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    `;
+    
+    if (tipo === 'success') {
+        toast.style.background = 'linear-gradient(135deg, #00c853, #00a847)';
+        toast.innerHTML = `<i class="fas fa-check-circle"></i> ${mensagem}`;
+    } else if (tipo === 'error') {
+        toast.style.background = 'linear-gradient(135deg, #dc3545, #c82333)';
+        toast.innerHTML = `<i class="fas fa-times-circle"></i> ${mensagem}`;
+    } else {
+        toast.style.background = 'linear-gradient(135deg, #0056D2, #003d94)';
+        toast.innerHTML = `<i class="fas fa-info-circle"></i> ${mensagem}`;
+    }
+    
+    document.body.appendChild(toast);
+    
+    // Remove após 4 segundos
+    setTimeout(() => {
+        toast.style.animation = 'slideOut 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+    }, 4000);
+}
+
+// Adiciona estilo da animação
+const styleNotificacao = document.createElement('style');
+styleNotificacao.textContent = `
+    @keyframes slideIn {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
+    @keyframes slideOut {
+        from { transform: translateX(0); opacity: 1; }
+        to { transform: translateX(100%); opacity: 0; }
+    }
+`;
+document.head.appendChild(styleNotificacao);
+
+// Atualiza a função abrirModalAssociadoCompleto para inicializar botão de edição
+const originalAbrirModalAssociadoCompleto = abrirModalAssociadoCompleto;
+abrirModalAssociadoCompleto = function(associado) {
+    // Chama função original
+    originalAbrirModalAssociadoCompleto(associado);
+    
+    // Inicializa botão de edição
+    setTimeout(() => {
+        inicializarBotaoEdicao();
+    }, 100);
+};
+
+console.log('✓ Sistema de Edição no Modal carregado com sucesso!');
