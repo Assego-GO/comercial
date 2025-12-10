@@ -949,8 +949,8 @@ function preencherSelectTiposAssociado() {
 
 function useHardcodedData() {
     servicosData = [
-        { id: "1", nome: "Social", valor_base: "173.10" },
-        { id: "2", nome: "Jurídico", valor_base: "43.28" }
+        { id: "1", nome: "Social", valor_base: "181.46" },
+        { id: "2", nome: "Jurídico", valor_base: "45.37" }
     ];
 
     regrasContribuicao = [
@@ -1082,7 +1082,7 @@ function calcularServicos() {
     if (regrasSocial.length > 0) {
         const regra = regrasSocial[0];
         const servicoSocial = servicosData.find(s => s.id == 1);
-        const valorBase = parseFloat(servicoSocial?.valor_base || 173.10);
+        const valorBase = parseFloat(servicoSocial?.valor_base || 181.46);
         const percentual = parseFloat(regra.percentual_valor);
         const valorFinal = (valorBase * percentual) / 100;
 
@@ -1098,7 +1098,7 @@ function calcularServicos() {
     if (servicoJuridicoChecked && regrasJuridico.length > 0) {
         const regra = regrasJuridico[0];
         const servicoJuridico = servicosData.find(s => s.id == 2);
-        const valorBase = parseFloat(servicoJuridico?.valor_base || 43.28);
+        const valorBase = parseFloat(servicoJuridico?.valor_base || 45.37);
         const percentual = parseFloat(regra.percentual_valor);
         const valorFinal = (valorBase * percentual) / 100;
 
