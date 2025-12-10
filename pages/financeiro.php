@@ -4,7 +4,7 @@
  * pages/financeiro.php
  * VERSÃO COM SISTEMA DE PERMISSÕES RBAC/ACL INTEGRADO
  * Sistema de navegação interno com componentes dinâmicos
- * ATUALIZADO COM VERIFICADOR DE ASSOCIADOS VIA CSV, IMPORTAR QUITAÇÃO E DESFILIAÇÕES
+ * ATUALIZADO COM VERIFICADOR DE ASSOCIADOS VIA CSV E IMPORTAR QUITAÇÃO
  */
 
 // Tratamento de erros para debug
@@ -76,10 +76,6 @@ $permissoesDetalhadas = [
         'visualizar' => $permissoes->hasPermission('FINANCEIRO_PAGAMENTOS', 'VIEW'),
         'registrar' => $permissoes->hasPermission('FINANCEIRO_PAGAMENTOS_REGISTRAR', 'CREATE'),
         'estornar' => $permissoes->hasPermission('FINANCEIRO_PAGAMENTOS_ESTORNAR', 'DELETE')
-    ],
-    'desfiliacao' => [
-        'visualizar' => $permissoes->hasPermission('FINANCEIRO_DESFILIACAO', 'VIEW'),
-        'aprovar' => $permissoes->hasPermission('FINANCEIRO_DESFILIACAO_APROVAR', 'APPROVE')
     ]
 ];
 
@@ -95,12 +91,6 @@ $isPresidencia = $permissoes->hasRole('PRESIDENTE') || $permissoes->hasRole('SUP
 
 $isDiretor = $permissoes->isDiretor();
 $departamentoUsuario = $usuarioLogado['departamento_id'] ?? null;
-
-// Se não tem permissão específica de desfiliação mas é do financeiro, concede acesso
-if ($isFinanceiro && !$permissoesDetalhadas['desfiliacao']['visualizar']) {
-    $permissoesDetalhadas['desfiliacao']['visualizar'] = true;
-    $permissoesDetalhadas['desfiliacao']['aprovar'] = true;
-}
 
 // Log de debug das permissões
 error_log("=== DEBUG PERMISSÕES FINANCEIRAS RBAC/ACL ===");
@@ -621,24 +611,13 @@ $headerComponent = HeaderComponent::create([
             font-weight: 900;
         }
 
-        /* Importar Quitação */
+        /* NOVO: Importar Quitação */
         .financial-nav-tabs .nav-tab .nav-tab-btn[data-target="importar-quitacao"] .nav-tab-icon {
             background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
         }
 
         .financial-nav-tabs .nav-tab .nav-tab-btn[data-target="importar-quitacao"] .nav-tab-icon::before {
             content: "\f560";
-            font-family: "Font Awesome 6 Pro", "Font Awesome 6 Free";
-            font-weight: 900;
-        }
-
-        /* Desfiliações Icon */
-        .financial-nav-tabs .nav-tab .nav-tab-btn[data-target="desfiliacao-pendentes"] .nav-tab-icon {
-            background: #9333ea !important;
-        }
-
-        .financial-nav-tabs .nav-tab .nav-tab-btn[data-target="desfiliacao-pendentes"] .nav-tab-icon::before {
-            content: "\f15b";
             font-family: "Font Awesome 6 Pro", "Font Awesome 6 Free";
             font-weight: 900;
         }
@@ -686,8 +665,7 @@ $headerComponent = HeaderComponent::create([
         #neoconsig,
         #importar-asaas,
         #verificar-associados,
-        #importar-quitacao,
-        #desfiliacao-pendentes {
+        #importar-quitacao {
             padding: 0 !important;
             margin: 0 !important;
             min-height: auto !important;
@@ -702,8 +680,7 @@ $headerComponent = HeaderComponent::create([
         #neoconsig>*,
         #importar-asaas>*,
         #verificar-associados>*,
-        #importar-quitacao>*,
-        #desfiliacao-pendentes>* {
+        #importar-quitacao>* {
             margin-top: 0 !important;
             padding-top: 0 !important;
         }
@@ -1060,23 +1037,12 @@ $headerComponent = HeaderComponent::create([
                             </li>
                         <?php endif; ?>
 
+                        <!-- NOVA ABA: Importar Quitação (usa permissão do neoconsig) -->
                         <?php if ($permissoesDetalhadas['neoconsig']['visualizar']): ?>
                             <li class="nav-tab">
                                 <button class="nav-tab-btn" data-target="importar-quitacao">
                                     <div class="nav-tab-icon"></div>
                                     <span class="nav-tab-label">Importar Quitação</span>
-                                </button>
-                            </li>
-                        <?php endif; ?>
-
-                        <?php if ($permissoesDetalhadas['desfiliacao']['visualizar']): ?>
-                            <li class="nav-tab">
-                                <button class="nav-tab-btn" data-target="desfiliacao-pendentes">
-                                    <div class="nav-tab-icon"></div>
-                                    <span class="nav-tab-label">
-                                        Desfiliações
-                                        <span id="desfiliacao-badge" class="badge bg-danger" style="display: none; margin-left: 0.5rem;">0</span>
-                                    </span>
                                 </button>
                             </li>
                         <?php endif; ?>
@@ -1130,20 +1096,12 @@ $headerComponent = HeaderComponent::create([
                         </div>
                     <?php endif; ?>
 
+                    <!-- NOVA ABA: Importar Quitação -->
                     <?php if ($permissoesDetalhadas['neoconsig']['visualizar']): ?>
                         <div id="importar-quitacao" class="content-panel">
                             <div class="loading-spinner">
                                 <div class="spinner"></div>
                                 <p class="text-muted">Carregando importador de quitação...</p>
-                            </div>
-                        </div>
-                    <?php endif; ?>
-
-                    <?php if ($permissoesDetalhadas['desfiliacao']['visualizar']): ?>
-                        <div id="desfiliacao-pendentes" class="content-panel">
-                            <div class="loading-spinner">
-                                <div class="spinner"></div>
-                                <p class="text-muted">Carregando desfiliações pendentes...</p>
                             </div>
                         </div>
                     <?php endif; ?>
@@ -1220,8 +1178,7 @@ $headerComponent = HeaderComponent::create([
             'neoconsig': './rend/js/neoconsig.js?v=' + Date.now(),
             'importar-asaas': './rend/js/importar_asaas.js?v=' + Date.now(),
             'verificar-associados': './rend/js/verificar_associados.js?v=' + Date.now(),
-            'importar-quitacao': './rend/js/importar_quitacao.js?v=' + Date.now(),
-            'desfiliacao-pendentes': './rend/js/desfiliacao_financeiro.js?v=' + Date.now()
+            'importar-quitacao': './rend/js/importar_quitacao.js?v=' + Date.now()
         };
 
         // ===== HELPER PARA CARREGAR SCRIPTS =====
@@ -1265,7 +1222,6 @@ $headerComponent = HeaderComponent::create([
                 if (permissoesUsuario.asaas?.visualizar) return 'importar-asaas';
                 if (permissoesUsuario.peculio?.visualizar) return 'gestao-peculio';
                 if (permissoesUsuario.verificador?.visualizar) return 'verificar-associados';
-                if (permissoesUsuario.desfiliacao?.visualizar) return 'desfiliacao-pendentes';
                 return null;
             }
 
@@ -1303,8 +1259,7 @@ $headerComponent = HeaderComponent::create([
                     'importar-asaas': permissoesUsuario.asaas?.visualizar,
                     'gestao-peculio': permissoesUsuario.peculio?.visualizar,
                     'verificar-associados': permissoesUsuario.verificador?.visualizar,
-                    'importar-quitacao': permissoesUsuario.neoconsig?.visualizar,
-                    'desfiliacao-pendentes': permissoesUsuario.desfiliacao?.visualizar
+                    'importar-quitacao': permissoesUsuario.neoconsig?.visualizar // Usa permissão do neoconsig
                 };
 
                 if (!tabPermissions[tabId]) {
@@ -1351,8 +1306,7 @@ $headerComponent = HeaderComponent::create([
                     'importar-asaas': 'Importar ASAAS',
                     'gestao-peculio': 'Gestão de Pecúlio',
                     'verificar-associados': 'Verificador de Associados',
-                    'importar-quitacao': 'Importar Quitação',
-                    'desfiliacao-pendentes': 'Desfiliações Pendentes'
+                    'importar-quitacao': 'Importar Quitação'
                 };
                 return names[tabId] || tabId;
             }
@@ -1369,33 +1323,12 @@ $headerComponent = HeaderComponent::create([
                 try {
                     console.log(`Carregando conteúdo da aba: ${tabId}`);
 
-                    // Tratamento especial para desfiliacao-pendentes
-                    if (tabId === 'desfiliacao-pendentes') {
-                        console.log('Carregando componente HTML de desfiliações...');
-                        const response = await fetch('./rend/desfiliacao_financeiro_content.php');
-                        if (!response.ok) {
-                            throw new Error(`HTTP ${response.status} - ${response.statusText}`);
-                        }
-                        const htmlContent = await response.text();
-                        if (spinner) spinner.style.display = 'none';
-                        panel.innerHTML = htmlContent;
-                        
-                        // Carregar o script JavaScript
-                        await loadScriptOnce(TAB_SCRIPTS[tabId]);
-                        
-                        // Executar função após script carregar
-                        if (typeof carregarDesfiliaçõesFinanceiro === 'function') {
-                            console.log('Executando carregarDesfiliaçõesFinanceiro()');
-                            carregarDesfiliaçõesFinanceiro();
-                        } else {
-                            console.warn('Função carregarDesfiliaçõesFinanceiro não encontrada');
-                        }
-                        return;
+                    let partialUrl;
+                    if (tabId === 'gestao-peculio') {
+                        partialUrl = '../pages/rend/gestao_peculio_content.php';
+                    } else {
+                        partialUrl = `./rend/${tabId.replace(/-/g, '_')}_content.php`;
                     }
-
-                    const partialUrl = tabId === 'gestao-peculio'
-                        ? '../pages/rend/gestao_peculio_content.php'
-                        : `./rend/${tabId.replace(/-/g, '_')}_content.php`;
 
                     console.log(`Buscando partial: ${partialUrl}`);
 
@@ -1517,6 +1450,7 @@ $headerComponent = HeaderComponent::create([
                             }
                             break;
 
+                        // NOVA ABA: Importar Quitação
                         case 'importar-quitacao':
                             if (window.ImportarQuitacao) {
                                 console.log('Inicializando módulo Importar Quitação com permissões...');
