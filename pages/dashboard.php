@@ -103,17 +103,13 @@ $headerComponent = HeaderComponent::create([
             </div>
 
             <?php
-            // Configuração de permissões para KPIs
-            $departamentoComercialId = 10;
+            // Configuração de permissões para KPIs - APENAS PRESIDÊNCIA
             $departamentoPresidenciaId = 1;
 
-            // Verificar se pode ver KPIs baseado em permissões ou departamento
-            $podeVerKPIs = Permissoes::getInstance()->isDiretor() ||
-                Permissoes::getInstance()->isPresidente() ||
-                Permissoes::getInstance()->isSuperAdmin() ||
+            // Verificar se pode ver KPIs - SOMENTE PRESIDÊNCIA
+            $podeVerKPIs = Permissoes::getInstance()->isPresidente() ||
                 (isset($usuarioLogado['departamento_id']) &&
-                    ($usuarioLogado['departamento_id'] == $departamentoComercialId ||
-                        $usuarioLogado['departamento_id'] == $departamentoPresidenciaId));
+                    $usuarioLogado['departamento_id'] == $departamentoPresidenciaId);
 
             if ($podeVerKPIs): ?>
                 <!-- Stats Grid com Gráficos de Pizza de 3 Fatias -->
@@ -529,7 +525,7 @@ $headerComponent = HeaderComponent::create([
                             <!-- Será preenchido dinamicamente -->
                         </select>
                     </div>
-                    
+
                     <div class="filter-group">
                         <label class="filter-label">Corporação</label>
                         <select class="filter-select" id="filterCorporacao">
@@ -657,17 +653,20 @@ $headerComponent = HeaderComponent::create([
                     </div>
                     <div class="modal-header-actions">
                         <!-- Botão de Edição (só aparece se tiver permissão) -->
-                        <button class="btn-modal-edit" id="btnEditarModal" onclick="toggleModoEdicao()" title="Editar informações" style="display: none;">
+                        <button class="btn-modal-edit" id="btnEditarModal" onclick="toggleModoEdicao()"
+                            title="Editar informações" style="display: none;">
                             <i class="fas fa-edit"></i>
                             <span>Editar</span>
                         </button>
                         <!-- Botão de Salvar (aparece no modo edição) -->
-                        <button class="btn-modal-save" id="btnSalvarModal" onclick="salvarEdicaoModal()" title="Salvar alterações" style="display: none;">
+                        <button class="btn-modal-save" id="btnSalvarModal" onclick="salvarEdicaoModal()"
+                            title="Salvar alterações" style="display: none;">
                             <i class="fas fa-save"></i>
                             <span>Salvar</span>
                         </button>
                         <!-- Botão de Cancelar (aparece no modo edição) -->
-                        <button class="btn-modal-cancel" id="btnCancelarModal" onclick="cancelarEdicaoModal()" title="Cancelar edição" style="display: none;">
+                        <button class="btn-modal-cancel" id="btnCancelarModal" onclick="cancelarEdicaoModal()"
+                            title="Cancelar edição" style="display: none;">
                             <i class="fas fa-times"></i>
                             <span>Cancelar</span>
                         </button>
@@ -1198,8 +1197,15 @@ $headerComponent = HeaderComponent::create([
         }
 
         @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.7; }
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.7;
+            }
         }
 
         /* Estilo para labels em modo edição */
