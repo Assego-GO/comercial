@@ -3173,7 +3173,11 @@ function gerarRelatorioAniversariantes($parametros) {
                 
             FROM Associados a
             LEFT JOIN Militar m ON a.id = m.associado_id
-            LEFT JOIN Endereco e ON a.id = e.associado_id
+            LEFT JOIN (
+                SELECT associado_id, cidade, cep, endereco, numero, bairro, complemento
+                FROM Endereco 
+                WHERE id IN (SELECT MAX(id) FROM Endereco GROUP BY associado_id)
+            ) e ON a.id = e.associado_id
             LEFT JOIN Contrato c ON a.id = c.associado_id
             WHERE a.situacao = 'Filiado' 
             AND a.nasc IS NOT NULL
@@ -3230,6 +3234,12 @@ function gerarRelatorioAniversariantes($parametros) {
         if (!empty($parametros['corporacao'])) {
             $conditions[] = "m.corporacao = ?";
             $params[] = $parametros['corporacao'];
+        }
+        
+        // Filtro por cidade
+        if (!empty($parametros['cidade'])) {
+            $conditions[] = "e.cidade = ?";
+            $params[] = $parametros['cidade'];
         }
         
         // Filtro por situação (permitir override)
@@ -3323,7 +3333,7 @@ function gerarRelatorioAniversariantes($parametros) {
         
         // Filtrar campos conforme solicitado
         $campos = $parametros['campos'] ?? [
-            'nome', 'data_nascimento', 'idade', 'telefone', 'email', 'corporacao', 'patente'
+            'nome', 'data_nascimento', 'idade', 'cidade', 'telefone', 'email', 'corporacao', 'patente'
         ];
         
         $dadosFiltrados = [];

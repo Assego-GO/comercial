@@ -36,6 +36,7 @@ try {
     $corporacao = $_GET['corporacao'] ?? '';
     $patente = $_GET['patente'] ?? '';
     $busca = $_GET['busca'] ?? '';
+    $cidade = $_GET['cidade'] ?? '';
     
     error_log("=== RELATÓRIO $tipo ===");
     error_log("Data: $dataInicio até $dataFim");
@@ -50,7 +51,7 @@ try {
             $resultado = relatorioNovosCadastros($db, $dataInicio, $dataFim, $corporacao, $patente, $busca);
             break;
         case 'aniversariantes':
-            $resultado = relatorioAniversariantes($db, $dataInicio, $dataFim, $corporacao, $patente, $busca);
+            $resultado = relatorioAniversariantes($db, $dataInicio, $dataFim, $corporacao, $patente, $busca, $cidade);
             break;
         case 'indicacoes':
             $resultado = relatorioIndicacoes($db, $dataInicio, $dataFim, $corporacao, $patente, $busca);
@@ -250,7 +251,7 @@ function relatorioNovosCadastros($db, $dataInicio, $dataFim, $corporacao, $paten
 // ============================================
 // ANIVERSARIANTES
 // ============================================
-function relatorioAniversariantes($db, $dataInicio, $dataFim, $corporacao, $patente, $busca) {
+function relatorioAniversariantes($db, $dataInicio, $dataFim, $corporacao, $patente, $busca, $cidade = '') {
     $mesInicio = (int)date('m', strtotime($dataInicio));
     $mesFim = (int)date('m', strtotime($dataFim));
     $diaInicio = (int)date('d', strtotime($dataInicio));
@@ -265,9 +266,19 @@ function relatorioAniversariantes($db, $dataInicio, $dataFim, $corporacao, $pate
             COALESCE(a.email, '') as email,
             COALESCE(m.patente, '') as patente,
             COALESCE(m.corporacao, '') as corporacao,
+            COALESCE(e.cidade, '') as cidade,
             YEAR(CURDATE()) - YEAR(a.nasc) as idade
         FROM Associados a
-        LEFT JOIN Militar m ON a.id = m.associado_id
+        LEFT JOIN (
+            SELECT associado_id, patente, corporacao, lotacao
+            FROM Militar 
+            WHERE id IN (SELECT MAX(id) FROM Militar GROUP BY associado_id)
+        ) m ON a.id = m.associado_id
+        LEFT JOIN (
+            SELECT associado_id, cidade
+            FROM Endereco 
+            WHERE id IN (SELECT MAX(id) FROM Endereco GROUP BY associado_id)
+        ) e ON a.id = e.associado_id
         WHERE (
             UPPER(a.situacao) LIKE '%ATIV%'
             OR UPPER(a.situacao) LIKE '%FILIAD%'
@@ -311,6 +322,11 @@ function relatorioAniversariantes($db, $dataInicio, $dataFim, $corporacao, $pate
     if ($patente) {
         $sql .= " AND m.patente = ?";
         $params[] = $patente;
+    }
+    
+    if ($cidade) {
+        $sql .= " AND e.cidade = ?";
+        $params[] = $cidade;
     }
     
     if ($busca) {

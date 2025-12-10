@@ -285,24 +285,17 @@ if ($isEdit && !empty($associadoData['cpf'])) {
     error_log("🔍 Verificando se é agregado - CPF: " . $cpfAgregado);
     
     try {
-        // Busca se o associado é agregado e seus dados do titular
-        // Agregados são identificados por Militar.corporacao = 'Agregados'
+        // Busca se o associado é agregado baseado na corporação 'Agregados'
+        // Nota: associado_titular_id ainda não está implementado no banco
         $stmt = $db->prepare('
             SELECT 
                 a.id,
                 a.nome,
                 a.cpf,
-                a.associado_titular_id,
                 m.corporacao,
-                m.patente,
-                titular.id as titular_id,
-                titular.nome as titular_nome,
-                titular.cpf as titular_cpf,
-                titular.situacao as titular_situacao,
-                titular.telefone as titular_telefone
+                m.patente
             FROM Associados a
             LEFT JOIN Militar m ON a.id = m.associado_id
-            LEFT JOIN Associados titular ON a.associado_titular_id = titular.id
             WHERE REPLACE(REPLACE(REPLACE(a.cpf, ".", ""), "-", ""), " ", "") = ?
             AND m.corporacao = "Agregados"
             LIMIT 1
@@ -311,42 +304,13 @@ if ($isEdit && !empty($associadoData['cpf'])) {
         $stmt->execute([$cpfAgregado]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         
-        if ($row && !empty($row['associado_titular_id'])) {
+        if ($row) {
             $isSocioAgregado = true;
             $relacionamentoAgregado = $row;
-            
-            // Nome do responsável
-            $nomeResponsavelAgregado = !empty($row['titular_nome']) ? 
-                $row['titular_nome'] : 'Titular não identificado';
-            
-            // CPF do titular
-            $cpfTitular = !empty($row['titular_cpf']) ? 
-                preg_replace('/\D/', '', $row['titular_cpf']) : '';
-            
-            // Formata CPF do titular
-            if ($cpfTitular && strlen($cpfTitular) === 11) {
-                $cpfTitularFormatado = substr($cpfTitular, 0, 3) . '.' . 
-                                       substr($cpfTitular, 3, 3) . '.' . 
-                                       substr($cpfTitular, 6, 3) . '-' . 
-                                       substr($cpfTitular, 9, 2);
-            } else {
-                $cpfTitularFormatado = 'CPF não disponível';
-            }
-            
-            // Monta array com dados do titular
-            $dadosTitular = [
-                'id' => $row['titular_id'],
-                'nome' => $nomeResponsavelAgregado,
-                'cpf' => $cpfTitular,
-                'cpf_formatado' => $cpfTitularFormatado,
-                'situacao' => !empty($row['titular_situacao']) ? $row['titular_situacao'] : 'Não identificada',
-                'telefone' => !empty($row['titular_telefone']) ? $row['titular_telefone'] : ''
-            ];
+            $nomeResponsavelAgregado = 'Titular não identificado';
             
             error_log("✅ AGREGADO DETECTADO!");
             error_log("   - Agregado: " . $associadoData['nome'] . " (CPF: " . $cpfAgregado . ")");
-            error_log("   - Titular: " . $nomeResponsavelAgregado . " (CPF: " . $cpfTitularFormatado . ")");
-            error_log("   - Situação do Titular: " . $dadosTitular['situacao']);
             
         } else {
             error_log("ℹ️ Associado NÃO é agregado - CPF verificado: " . $cpfAgregado);
@@ -1085,7 +1049,7 @@ $headerComponent = HeaderComponent::create([
             <!-- Form Content -->
             <form id="formAssociado" class="form-content" enctype="multipart/form-data">
                 <?php if ($isEdit): ?>
-                    <input type="hidden" name="id" value="<?php echo $associadoId; ?>">
+                    <input type="hidden" id="associadoId" name="id" value="<?php echo $associadoId; ?>">
                 <?php endif; ?>
 
                 <!-- Step 1: Dados Pessoais -->

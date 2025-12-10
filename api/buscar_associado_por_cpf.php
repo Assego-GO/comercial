@@ -20,6 +20,7 @@ $db = Database::getInstance(DB_NAME_CADASTRO)->getConnection();
 
 // Busca associado por CPF (inclui agregados)
 // Agregados estão na mesma tabela, mas com corporacao = 'Agregados'
+// Nota: associado_titular_id ainda não existe no banco
 $sql = "SELECT 
     a.id as titular_id,
     a.nome as titular_nome,
@@ -30,16 +31,15 @@ $sql = "SELECT
     a.situacao as titular_situacao,
     m.corporacao,
     m.patente,
-    titular.id as vinculo_titular_id,
-    titular.nome as vinculo_titular_nome,
-    titular.cpf as vinculo_titular_cpf,
+    NULL as vinculo_titular_id,
+    NULL as vinculo_titular_nome,
+    NULL as vinculo_titular_cpf,
     CASE 
         WHEN m.corporacao = 'Agregados' THEN 1
         ELSE 0
     END as eh_agregado
 FROM Associados a
 LEFT JOIN Militar m ON a.id = m.associado_id
-LEFT JOIN Associados titular ON a.associado_titular_id = titular.id
 WHERE TRIM(LEADING '0' FROM REPLACE(REPLACE(REPLACE(a.cpf, '.', ''), '-', ''), ' ', '')) = ?
    OR REPLACE(REPLACE(REPLACE(a.cpf, '.', ''), '-', ''), ' ', '') = ?
    OR a.cpf = ?

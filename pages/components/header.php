@@ -2449,6 +2449,19 @@ class HeaderComponent
             ];
         }
 
+        // JURÍDICO - Verifica permissão ou departamento 3 (Jurídico)
+        if (($this->permissoes && $this->permissoes->hasPermission('JURIDICO_DASHBOARD', 'VIEW'))
+            || $this->departamento_id == 3
+            || $this->isDiretor) {
+            $items[] = [
+                'id' => 'juridico',
+                'label' => 'Jurídico',
+                'icon' => 'fas fa-balance-scale',
+                'href' => 'juridico.php',
+                'badge' => null
+            ];
+        }
+
         // DOCUMENTOS - Verifica permissão
         if ($this->permissoes->hasPermission('DOCUMENTOS_DASHBOARD', 'VIEW')) {
             $items[] = [
@@ -2558,6 +2571,8 @@ class HeaderComponent
     {
         ?>
         <script>
+            // Exporta BASE_URL do PHP para o JS global
+            window.BASE_URL = "<?php echo addslashes(BASE_URL); ?>";
             document.addEventListener('DOMContentLoaded', function () {
                 // Adiciona classe ao body para garantir padding
                 document.body.classList.add('has-header');
