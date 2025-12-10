@@ -1,0 +1,136 @@
+[2025-12-10 13:23:15] === INICIANDO REQUISIÇÃO ===
+Array
+(
+    [method] => GET
+    [action] => listar_historico
+    [files] => no
+)
+
+--------------------------------------------------------------------------------
+[2025-12-10 13:23:15] Funcionário autenticado: 14
+--------------------------------------------------------------------------------
+[2025-12-10 13:23:15] Carregando config do banco: /var/www/html/matheus/comercial/api/financeiro/../../config/database.php
+--------------------------------------------------------------------------------
+[2025-12-10 13:23:15] PHP Error
+Array
+(
+    [errno] => 2
+    [error] => ini_set(): Session ini settings cannot be changed when a session is active
+    [file] => database.php
+    [line] => 23
+)
+
+--------------------------------------------------------------------------------
+[2025-12-10 13:23:15] Resposta JSON enviada (HTTP 500)
+Array
+(
+    [success] => 
+    [message] => Erro PHP
+    [erro] => ini_set(): Session ini settings cannot be changed when a session is active
+    [arquivo] => database.php
+    [linha] => 23
+)
+
+--------------------------------------------------------------------------------
+[2025-12-10 13:23:25] === INICIANDO REQUISIÇÃO ===
+Array
+(
+    [method] => POST
+    [action] => processar_csv
+    [files] => yes
+)
+
+--------------------------------------------------------------------------------
+[2025-12-10 13:23:25] Funcionário autenticado: 14
+--------------------------------------------------------------------------------
+[2025-12-10 13:23:25] Carregando config do banco: /var/www/html/matheus/comercial/api/financeiro/../../config/database.php
+--------------------------------------------------------------------------------
+[2025-12-10 13:23:25] PHP Error
+Array
+(
+    [errno] => 2
+    [error] => ini_set(): Session ini settings cannot be changed when a session is active
+    [file] => database.php
+    [line] => 23
+)
+
+--------------------------------------------------------------------------------
+[2025-12-10 13:23:25] Resposta JSON enviada (HTTP 500)
+Array
+(
+    [success] => 
+    [message] => Erro PHP
+    [erro] => ini_set(): Session ini settings cannot be changed when a session is active
+    [arquivo] => database.php
+    [linha] => 23
+)
+
+--------------------------------------------------------------------------------
+[2025-12-10 13:23:36] === INICIANDO REQUISIÇÃO ===
+Array
+(
+    [method] => GET
+    [action] => listar_historico
+    [files] => no
+)
+
+--------------------------------------------------------------------------------
+[2025-12-10 13:23:36] Funcionário autenticado: 14
+--------------------------------------------------------------------------------
+[2025-12-10 13:23:36] Carregando config do banco: /var/www/html/matheus/comercial/api/financeiro/../../config/database.php
+--------------------------------------------------------------------------------
+[2025-12-10 13:23:36] PHP Error
+Array
+(
+    [errno] => 2
+    [error] => ini_set(): Session ini settings cannot be changed when a session is active
+    [file] => database.php
+    [line] => 23
+)
+
+--------------------------------------------------------------------------------
+[2025-12-10 13:23:36] Resposta JSON enviada (HTTP 500)
+Array
+(
+    [success] => 
+    [message] => Erro PHP
+    [erro] => ini_set(): Session ini settings cannot be changed when a session is active
+    [arquivo] => database.php
+    [linha] => 23
+)
+
+--------------------------------------------------------------------------------
+[2025-12-10 13:23:52] === INICIANDO REQUISIÇÃO ===
+Array
+(
+    [method] => POST
+    [action] => processar_csv
+    [files] => yes
+)
+
+--------------------------------------------------------------------------------
+[2025-12-10 13:23:52] Funcionário autenticado: 14
+--------------------------------------------------------------------------------
+[2025-12-10 13:23:52] Carregando config do banco: /var/www/html/matheus/comercial/api/financeiro/../../config/database.php
+--------------------------------------------------------------------------------
+[2025-12-10 13:23:52] PHP Error
+Array
+(
+    [errno] => 2
+    [error] => ini_set(): Session ini settings cannot be changed when a session is active
+    [file] => database.php
+    [line] => 23
+)
+
+--------------------------------------------------------------------------------
+[2025-12-10 13:23:52] Resposta JSON enviada (HTTP 500)
+Array
+(
+    [success] => 
+    [message] => Erro PHP
+    [erro] => ini_set(): Session ini settings cannot be changed when a session is active
+    [arquivo] => database.php
+    [linha] => 23
+)
+
+--------------------------------------------------------------------------------
