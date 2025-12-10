@@ -183,8 +183,8 @@ try {
     // ===== BUSCAR DOCUMENTOS PAGINADOS =====
     $query = "
         SELECT 
-            da.id,
-            da.tipo_documento as tipo_documento_real,
+            df.id,
+            df.tipo_documento as tipo_documento_real,
 
             CASE 
                 WHEN m.corporacao = 'Agregados' THEN 'AGREGADO'
@@ -204,12 +204,12 @@ try {
                 ELSE NULL
             END as parentesco,
             CASE 
-                WHEN da.tipo_documento = 'ficha_desfiliacao' THEN 'Ficha de Desfiliação'
+                WHEN df.tipo_documento = 'ficha_desfiliacao' THEN 'Ficha de Desfiliação'
                 WHEN m.corporacao = 'Agregados' THEN 'Ficha de Sócio Agregado'
                 ELSE 'Ficha de Filiação'
             END as tipo_descricao,
-            da.status_fluxo,
-            CASE da.status_fluxo
+            df.status_fluxo,
+            CASE df.status_fluxo
 
                 WHEN 'DIGITALIZADO' THEN 'Aguardando Envio'
                 WHEN 'AGUARDANDO_ASSINATURA' THEN 'Na Presidência'
