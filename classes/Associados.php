@@ -862,6 +862,15 @@ class Associados
 
             foreach ($camposPermitidos as $campo) {
                 if (isset($dados[$campo])) {
+                    // Validação especial para campos de data
+                    if ($campo === 'nasc') {
+                        $dataNasc = $dados[$campo];
+                        // Ignora valores inválidos
+                        if (empty($dataNasc) || $dataNasc === 'NaN-NaN-01' || $dataNasc === '0000-00-00' || strtotime($dataNasc) === false) {
+                            continue; // Não atualiza se a data for inválida
+                        }
+                    }
+                    
                     $campos[] = "$campo = ?";
                     $valores[] = $dados[$campo];
                 }
@@ -1110,13 +1119,23 @@ class Associados
             $valores = [];
 
             if (isset($dados['dataFiliacao'])) {
-                $campos[] = "dataFiliacao = ?";
-                $valores[] = $dados['dataFiliacao'];
+                // Valida data antes de inserir
+                $dataFiliacao = $dados['dataFiliacao'];
+                if (!empty($dataFiliacao) && $dataFiliacao !== 'NaN-NaN-01' && strtotime($dataFiliacao) !== false) {
+                    $campos[] = "dataFiliacao = ?";
+                    $valores[] = $dataFiliacao;
+                }
             }
 
             if (isset($dados['dataDesfiliacao'])) {
-                $campos[] = "dataDesfiliacao = ?";
-                $valores[] = $dados['dataDesfiliacao'];
+                // Valida data antes de inserir (pode ser NULL)
+                $dataDesfiliacao = $dados['dataDesfiliacao'];
+                if ($dataDesfiliacao === null || $dataDesfiliacao === '' || $dataDesfiliacao === 'NaN-NaN-01') {
+                    $campos[] = "dataDesfiliacao = NULL";
+                } elseif (strtotime($dataDesfiliacao) !== false) {
+                    $campos[] = "dataDesfiliacao = ?";
+                    $valores[] = $dataDesfiliacao;
+                }
             }
 
             if (!empty($campos)) {
@@ -1126,15 +1145,28 @@ class Associados
                 $stmt->execute($valores);
             }
         } else {
-            // Insere
+            // Insere - valida datas antes
+            $dataFiliacao = $dados['dataFiliacao'] ?? null;
+            $dataDesfiliacao = $dados['dataDesfiliacao'] ?? null;
+            
+            // Valida dataFiliacao
+            if (!empty($dataFiliacao) && ($dataFiliacao === 'NaN-NaN-01' || strtotime($dataFiliacao) === false)) {
+                $dataFiliacao = null;
+            }
+            
+            // Valida dataDesfiliacao
+            if (!empty($dataDesfiliacao) && ($dataDesfiliacao === 'NaN-NaN-01' || strtotime($dataDesfiliacao) === false)) {
+                $dataDesfiliacao = null;
+            }
+            
             $stmt = $this->db->prepare("
                 INSERT INTO Contrato (associado_id, dataFiliacao, dataDesfiliacao)
                 VALUES (?, ?, ?)
             ");
             $stmt->execute([
                 $associadoId,
-                $dados['dataFiliacao'] ?? null,
-                $dados['dataDesfiliacao'] ?? null
+                $dataFiliacao,
+                $dataDesfiliacao
             ]);
         }
     }

@@ -173,13 +173,21 @@ try {
     // Determina a data de desfiliação
     $dataDesfiliacao = null;
     if ($ficouDesfiliado && $mudouSituacao) {
-        $dataDesfiliacao = date('Y-m-d H:i:s');
+        $dataDesfiliacao = date('Y-m-d'); // Formato DATE para a coluna do banco
         error_log("✅ Definindo data_desfiliacao = NOW() para nova desfiliação");
     } elseif ($saiuDeDesfiliado) {
         $dataDesfiliacao = null;
         error_log("✅ Limpando data_desfiliacao (reativação)");
     } else {
-        $dataDesfiliacao = $_POST['dataDesfiliacao'] ?? $associadoAtual['data_desfiliacao'];
+        // Valida se a data recebida é válida
+        $dataRecebida = $_POST['dataDesfiliacao'] ?? $associadoAtual['data_desfiliacao'];
+        
+        // Verifica se não é uma data inválida (NaN, vazio, etc)
+        if (!empty($dataRecebida) && $dataRecebida !== 'NaN-NaN-01' && strtotime($dataRecebida) !== false) {
+            $dataDesfiliacao = $dataRecebida;
+        } else {
+            $dataDesfiliacao = $associadoAtual['data_desfiliacao'] ?? null;
+        }
     }
 
     // INICIA TRANSAÇÃO
@@ -187,10 +195,28 @@ try {
     $transacaoAtiva = true;
 
     try {
+        // Valida dataFiliacao antes de usar
+        $dataFiliacaoRecebida = $_POST['dataFiliacao'] ?? $associadoAtual['data_filiacao'];
+        $dataFiliacao = null;
+        
+        if (!empty($dataFiliacaoRecebida) && $dataFiliacaoRecebida !== 'NaN-NaN-01' && strtotime($dataFiliacaoRecebida) !== false) {
+            $dataFiliacao = $dataFiliacaoRecebida;
+        } else {
+            $dataFiliacao = $associadoAtual['data_filiacao'] ?? null;
+        }
+        
+        // Valida data de nascimento
+        $dataNascRecebida = $_POST['nasc'] ?? null;
+        $dataNasc = null;
+        
+        if (!empty($dataNascRecebida) && $dataNascRecebida !== 'NaN-NaN-01' && $dataNascRecebida !== '0000-00-00' && strtotime($dataNascRecebida) !== false) {
+            $dataNasc = $dataNascRecebida;
+        }
+        
         // 1. ATUALIZA OS DADOS BÁSICOS DO ASSOCIADO
         $dados = [
             'nome' => trim($_POST['nome']),
-            'nasc' => $_POST['nasc'] ?? null,
+            'nasc' => $dataNasc,
             'sexo' => $_POST['sexo'] ?? null,
             'rg' => trim($_POST['rg']),
             'cpf' => preg_replace('/[^0-9]/', '', $_POST['cpf']),
@@ -200,7 +226,7 @@ try {
             'estadoCivil' => $_POST['estadoCivil'] ?? null,
             'telefone' => preg_replace('/[^0-9]/', '', $_POST['telefone']),
             'indicacao' => $indicacaoNome,
-            'dataFiliacao' => $_POST['dataFiliacao'] ?? $associadoAtual['data_filiacao'],
+            'dataFiliacao' => $dataFiliacao,
             'dataDesfiliacao' => $dataDesfiliacao,
             'corporacao' => $_POST['corporacao'] ?? null,
             'patente' => $_POST['patente'] ?? null,
