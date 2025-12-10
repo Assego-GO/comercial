@@ -6,15 +6,48 @@ let açãoSelecionada = null;
 async function carregarDesfiliaçõesFinanceiro() {
   const container = document.getElementById('desfiliacao-container');
   if (!container) {
-    console.error('Container desfiliacao-container não encontrado');
+    console.error('❌ Container desfiliacao-container não encontrado');
     return;
   }
 
   container.innerHTML = '<div class="loading-spinner-desfiliacao"><div class="spinner"></div><p class="text-muted">Carregando desfiliações...</p></div>';
 
   try {
-    const response = await fetch('../../api/desfiliacao_listar_financeiro.php');
-    const resultado = await response.json();
+    // 🔍 DEBUG: Mostrar onde estamos
+    console.log('📍 URL atual da página:', window.location.href);
+    console.log('📍 Base URL:', window.location.origin);
+    console.log('📍 Pathname:', window.location.pathname);
+    
+    // ✅ CAMINHO RELATIVO (de pages/ para api/)
+    const apiUrl = '../api/desfiliacao_listar_financeiro.php';
+    console.log('🔍 DEBUG - Caminho relativo:', apiUrl);
+    
+    // Construir URL completa para ver para onde vai
+    const urlCompleta = new URL(apiUrl, window.location.href);
+    console.log('🌐 URL completa construída:', urlCompleta.href);
+    
+    const response = await fetch(apiUrl);
+    
+    console.log('📡 Status da resposta:', response.status);
+    console.log('📡 URL final requisitada:', response.url);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const textoResposta = await response.text();
+    console.log('📄 Conteúdo recebido (primeiros 500 chars):', textoResposta.substring(0, 500));
+
+    let resultado;
+    try {
+      resultado = JSON.parse(textoResposta);
+    } catch (e) {
+      console.error('❌ Erro ao fazer parse do JSON:', e);
+      console.error('📄 Conteúdo completo:', textoResposta);
+      throw new Error('Resposta da API não é um JSON válido. Verifique o console para ver o conteúdo HTML retornado.');
+    }
+
+    console.log('✅ Dados recebidos:', resultado);
 
     if (resultado.status === 'error') {
       container.innerHTML = `<div class="alert alert-danger">${resultado.message}</div>`;
@@ -46,9 +79,7 @@ async function carregarDesfiliaçõesFinanceiro() {
     
     data.desfiliações.forEach(desf => {
       const dataUpload = new Date(desf.data_upload).toLocaleDateString('pt-BR');
-      const etapaAtual = desf.fluxo.find(f => f.ordem_aprovacao === 1);
       
-      // Renderizar fluxo
       let fluxoHtml = '<div class="fluxo-timeline">';
       desf.fluxo.forEach((etapa, idx) => {
         if (idx > 0) fluxoHtml += '<span class="fluxo-arrow">→</span>';
@@ -107,14 +138,22 @@ async function carregarDesfiliaçõesFinanceiro() {
     container.innerHTML = html;
 
   } catch (error) {
-    console.error('Erro:', error);
-    container.innerHTML = `<div class="alert alert-danger">Erro ao carregar desfiliações. Tente novamente.</div>`;
+    console.error('❌ Erro completo:', error);
+    container.innerHTML = `
+      <div class="alert alert-danger">
+        <h5><i class="fas fa-exclamation-triangle"></i> Erro ao carregar desfiliações</h5>
+        <p><strong>Mensagem:</strong> ${error.message}</p>
+        <p class="mt-2"><small>Verifique o Console (F12) para mais detalhes</small></p>
+        <button class="btn btn-primary mt-2" onclick="carregarDesfiliaçõesFinanceiro()">
+          <i class="fas fa-redo"></i> Tentar Novamente
+        </button>
+      </div>
+    `;
   }
 }
 
 function visualizarDocumento(documentoId, caminho) {
-  // Abre o documento em nova aba
-  window.open(`/${caminho}`, '_blank');
+  window.open(`../${caminho}`, '_blank');
 }
 
 function abrirModalAçao(documentoId, ação, nomeAssociado) {
@@ -127,7 +166,6 @@ function abrirModalAçao(documentoId, ação, nomeAssociado) {
   const btnConfirmar = document.getElementById('btnConfirmarAcao');
   const observacao = document.getElementById('observacaoInput');
   
-  // Limpar
   observacao.value = '';
   
   if (ação === 'APROVADO') {
@@ -140,6 +178,7 @@ function abrirModalAçao(documentoId, ação, nomeAssociado) {
     `;
     btnConfirmar.textContent = '✓ Aprovar';
     btnConfirmar.className = 'btn btn-success';
+    observacao.placeholder = 'Adicione uma observação (opcional)...';
   } else {
     titulo.textContent = '✗ Rejeitar Desfiliação';
     titulo.style.color = '#dc3545';
@@ -150,7 +189,7 @@ function abrirModalAçao(documentoId, ação, nomeAssociado) {
     `;
     btnConfirmar.textContent = '✗ Rejeitar';
     btnConfirmar.className = 'btn btn-danger';
-    document.getElementById('observacaoInput').placeholder = 'Motivo da rejeição (obrigatório)...';
+    observacao.placeholder = 'Motivo da rejeição (obrigatório)...';
   }
   
   modal.classList.add('show');
@@ -166,46 +205,51 @@ async function confirmarAçao() {
   if (!documentoSelecionado || !açãoSelecionada) return;
   
   const observacao = document.getElementById('observacaoInput').value;
-  const acao = açãoSelecionada; // Armazenar em variável local para não perder referência
+  const acao = açãoSelecionada;
   
-  // Validar observação em rejeição
   if (acao === 'REJEITADO' && !observacao.trim()) {
     alert('Por favor, indique o motivo da rejeição');
     return;
   }
   
   try {
-    const response = await fetch('../../api/desfiliacao_aprovar.php', {
+    console.log('🔍 DEBUG - Enviando aprovação...');
+    const response = await fetch('../api/desfiliacao_aprovar.php', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         documento_id: documentoSelecionado,
-        departamento_id: 2, // Financeiro (ID 2, não 1)
+        departamento_id: 2,
         status: acao,
         observacao: observacao
       })
     });
     
+    console.log('📡 URL final (aprovar):', response.url);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    
     const resultado = await response.json();
+    console.log('✅ Resposta da aprovação:', resultado);
     
     if (resultado.status === 'error') {
       alert(`Erro: ${resultado.message}`);
       return;
     }
     
-    // Sucesso
     fecharModal();
     const mensagem = acao === 'APROVADO' 
       ? 'Desfiliação aprovada com sucesso!' 
       : 'Desfiliação rejeitada com sucesso!';
     alert(mensagem);
     
-    // Recarregar lista
-    carregarDesfiliaçõesFinanceiro();
+    await carregarDesfiliaçõesFinanceiro();
     
   } catch (error) {
-    console.error('Erro:', error);
-    alert('Erro ao processar a ação. Tente novamente.');
+    console.error('❌ Erro:', error);
+    alert(`Erro ao processar a ação: ${error.message}`);
   }
 }
 

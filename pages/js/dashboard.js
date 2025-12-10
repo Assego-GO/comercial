@@ -69,7 +69,9 @@ function preloadImage(url) {
 function formatarData(dataStr) {
     if (!dataStr || dataStr === "0000-00-00" || dataStr === "") return "-";
     try {
-        const [ano, mes, dia] = dataStr.split("-");
+        // Remove a parte da hora se existir (ex: 2025-06-27 00:00:00 -> 2025-06-27)
+        const dataLimpa = dataStr.split(" ")[0];
+        const [ano, mes, dia] = dataLimpa.split("-");
         return `${dia}/${mes}/${ano}`;
     } catch (e) {
         return "-";
@@ -1124,7 +1126,7 @@ function preencherTabVisaoGeral(associado) {
                     </div>
                     <div class="overview-item">
                         <span class="overview-label">Data de Desfiliação</span>
-                        <span class="overview-value">${formatarData(associado.data_desfiliacao)}</span>
+                        <span class="overview-value">${associado.data_desfiliacao && associado.data_desfiliacao !== '0000-00-00' ? formatarData(associado.data_desfiliacao) : '-'}</span>
                     </div>
                     <div class="overview-item">
                         <span class="overview-label">Escolaridade</span>
@@ -2469,11 +2471,11 @@ function enviarDocumento() {
                     const modal = bootstrap.Modal.getInstance(document.getElementById('uploadDocumentoModal'));
                     modal.hide();
 
-                    // Reload documents tab
-                    const associadoId = document.getElementById('modalId').textContent.replace('Matrícula: ', '').trim();
-                    const associado = todosAssociados.find(a => a.id == associadoId);
-                    if (associado) {
-                        preencherTabDocumentos(associado);
+                    // Reload documents tab usando associadoAtual
+                    if (associadoAtual && associadoAtual.id) {
+                        console.log('🔄 Recarregando documentos para associado:', associadoAtual.id);
+                        // Força recarregar os documentos da API
+                        preencherTabDocumentos(associadoAtual);
                     }
                 } else {
                     alert('Erro: ' + response.message);
@@ -2496,7 +2498,7 @@ function enviarDocumento() {
         uploadProgress.style.display = 'none';
     });
 
-    xhr.open('POST', '/api/documentos/documentos_upload.php');
+    xhr.open('POST', '../api/documentos/documentos_upload.php');
     xhr.send(formData);
 }
 
@@ -2860,16 +2862,19 @@ function editarAssociadoNovo(id) {
 function removerDocumento(documentoId) {
     // Mostrar loading no botão
     const botaoRemover = document.querySelector(`button[onclick*="removerDocumento(${documentoId})"]`);
-    if (botaoRemover) {
-        const textoOriginal = botaoRemover.innerHTML;
-        botaoRemover.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Removendo...';
-        botaoRemover.disabled = true;
-
-        // Restaurar botão em caso de erro
-        const restaurarBotao = () => {
+    let textoOriginal = '';
+    
+    const restaurarBotao = () => {
+        if (botaoRemover) {
             botaoRemover.innerHTML = textoOriginal;
             botaoRemover.disabled = false;
-        };
+        }
+    };
+    
+    if (botaoRemover) {
+        textoOriginal = botaoRemover.innerHTML;
+        botaoRemover.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Removendo...';
+        botaoRemover.disabled = true;
     }
 
     // Fazer requisição AJAX para remover
@@ -2884,15 +2889,14 @@ function removerDocumento(documentoId) {
                 // Mostrar mensagem de sucesso
                 mostrarNotificacaoDoc('Documento removido com sucesso!', 'success');
 
-                // Recarregar a aba de documentos
-                const associadoId = document.getElementById('modalId').textContent.replace('Matrícula: ', '').trim();
-                const associado = todosAssociados.find(a => a.id == associadoId);
-                if (associado) {
-                    preencherTabDocumentos(associado);
+                // Recarregar a aba de documentos usando associadoAtual
+                if (associadoAtual && associadoAtual.id) {
+                    console.log('🔄 Recarregando documentos após remoção:', associadoAtual.id);
+                    preencherTabDocumentos(associadoAtual);
                 }
             } else {
                 alert('Erro ao remover documento: ' + (response.message || 'Erro desconhecido'));
-                if (botaoRemover) restaurarBotao();
+                restaurarBotao();
             }
         },
         error: function (xhr, status, error) {
@@ -2908,7 +2912,7 @@ function removerDocumento(documentoId) {
             }
 
             alert(mensagem + '. Tente novamente.');
-            if (botaoRemover) restaurarBotao();
+            restaurarBotao();
         }
     });
 }

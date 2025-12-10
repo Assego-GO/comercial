@@ -140,7 +140,10 @@ try {
                                     'departamento_id', ad2.departamento_id,
                                     'departamento_nome', ad2.departamento_nome,
                                     'status_aprovacao', ad2.status_aprovacao,
-                                    'ordem_aprovacao', ad2.ordem_aprovacao
+                                    'ordem_aprovacao', ad2.ordem_aprovacao,
+                                    'data_acao', ad2.data_acao,
+                                    'funcionario_nome', ad2.funcionario_nome,
+                                    'observacao', ad2.observacao
                                 )
                             )
                             FROM Aprovacoes_Desfiliacao ad2 

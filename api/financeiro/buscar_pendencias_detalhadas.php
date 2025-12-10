@@ -1,26 +1,20 @@
 <?php
 /**
  * API: Buscar Pendências Financeiras DETALHADAS do Associado
- * Retorna lista de pendências por mês para o modal de pendências
- * VERSÃO 1.0 - Baseado no padrão buscar_pendencias.php
+ * VERSÃO ATUALIZADA - Mostra pendentes E quitadas
+ * ✅ AGORA MOSTRA DÍVIDAS JÁ QUITADAS COM VISUAL DIFERENTE
  */
 
-// CRÍTICO: Capturar QUALQUER erro antes de qualquer coisa
 ob_start();
-
-// Desabilitar exibição de erros HTML completamente
 error_reporting(0);
 ini_set('display_errors', 0);
-ini_set('display_startup_errors', 0);
 ini_set('log_errors', 1);
 
-// Handler de erro customizado
 set_error_handler(function($errno, $errstr, $errfile, $errline) {
     error_log("PHP Error [$errno]: $errstr in $errfile on line $errline");
     return true;
 });
 
-// Handler de exceção
 set_exception_handler(function($e) {
     ob_end_clean();
     header('Content-Type: application/json; charset=utf-8');
@@ -33,7 +27,6 @@ set_exception_handler(function($e) {
     exit;
 });
 
-// Handler de shutdown para erros fatais
 register_shutdown_function(function() {
     $error = error_get_last();
     if ($error !== null && in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR])) {
@@ -42,24 +35,20 @@ register_shutdown_function(function() {
         http_response_code(500);
         echo json_encode([
             'status' => 'error',
-            'message' => 'Erro fatal do PHP',
-            'debug' => $error['message'] . ' in ' . $error['file'] . ' on line ' . $error['line']
+            'message' => 'Erro fatal do PHP'
         ]);
         exit;
     }
 });
 
-// Limpar qualquer output anterior
 ob_end_clean();
 ob_start();
 
-// Headers JSON
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET');
 header('Access-Control-Allow-Headers: Content-Type');
 
-// Função para resposta JSON limpa
 function sendJson($data, $code = 200) {
     ob_end_clean();
     http_response_code($code);
@@ -67,17 +56,14 @@ function sendJson($data, $code = 200) {
     exit;
 }
 
-// Iniciar sessão com verificação
 if (session_status() === PHP_SESSION_NONE) {
     @session_start();
 }
 
-// Verificar autenticação
 if (!isset($_SESSION['funcionario_id']) && !isset($_SESSION['user_id'])) {
     sendJson(['status' => 'error', 'message' => 'Não autorizado'], 401);
 }
 
-// Validar ID
 $associadoId = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 
 if ($associadoId <= 0) {
@@ -85,55 +71,11 @@ if ($associadoId <= 0) {
 }
 
 try {
-    // ========================================
-    // CONEXÃO COM BANCO
-    // ========================================
+    require_once __DIR__ . '/../../config/config.php';
+    require_once __DIR__ . '/../../config/database.php';
+    require_once __DIR__ . '/../../classes/Database.php';
     
-    $conn = null;
-    
-    // Tentar incluir config de forma segura
-    $configPath = __DIR__ . '/../../config/database.php';
-    
-    if (file_exists($configPath)) {
-        ob_start();
-        @include_once $configPath;
-        ob_end_clean();
-    }
-    
-    // Verificar se $conn foi criado pelo include
-    if (!isset($conn) || $conn === null || (is_object($conn) && $conn->connect_error)) {
-        
-        $host = defined('DB_HOST') ? DB_HOST : 'localhost';
-        $user = defined('DB_USER') ? DB_USER : 'wwasse';
-        $pass = defined('DB_PASS') ? DB_PASS : '';
-        $dbname = defined('DB_NAME_CADASTRO') ? DB_NAME_CADASTRO : 'wwasse_cadastro';
-        
-        if ($pass === '') {
-            $configPath2 = __DIR__ . '/../../config/config.php';
-            if (file_exists($configPath2)) {
-                ob_start();
-                @include_once $configPath2;
-                ob_end_clean();
-                
-                $host = defined('DB_HOST') ? DB_HOST : 'localhost';
-                $user = defined('DB_USER') ? DB_USER : 'wwasse';
-                $pass = defined('DB_PASS') ? DB_PASS : '';
-                $dbname = defined('DB_NAME_CADASTRO') ? DB_NAME_CADASTRO : 'wwasse_cadastro';
-            }
-        }
-        
-        $conn = @new mysqli($host, $user, $pass, $dbname);
-        
-        if ($conn->connect_error) {
-            sendJson([
-                'status' => 'error',
-                'message' => 'Erro de conexão com banco de dados',
-                'debug' => 'Connection failed'
-            ], 500);
-        }
-    }
-    
-    $conn->set_charset("utf8mb4");
+    $db = Database::getInstance(DB_NAME_CADASTRO)->getConnection();
     
     // ========================================
     // 1. BUSCAR DADOS DO ASSOCIADO
@@ -143,213 +85,213 @@ try {
                 a.id,
                 a.nome,
                 a.cpf,
-                c.dataFiliacao,
                 a.situacao
             FROM Associados a 
-            LEFT JOIN Contrato c ON a.id = c.associado_id 
-            WHERE a.id = ? 
+            WHERE a.id = :id
             LIMIT 1";
     
-    $stmt = $conn->prepare($sql);
-    if (!$stmt) {
-        sendJson(['status' => 'error', 'message' => 'Erro na query', 'debug' => $conn->error], 500);
-    }
-    
-    $stmt->bind_param('i', $associadoId);
+    $stmt = $db->prepare($sql);
+    $stmt->bindValue(':id', $associadoId, PDO::PARAM_INT);
     $stmt->execute();
-    $result = $stmt->get_result();
-    $associado = $result->fetch_assoc();
-    $stmt->close();
+    $associado = $stmt->fetch(PDO::FETCH_ASSOC);
     
     if (!$associado) {
         sendJson(['status' => 'error', 'message' => 'Associado não encontrado'], 404);
     }
-    
-    if (!$associado['dataFiliacao']) {
-        sendJson([
-            'status' => 'success',
-            'data' => [
-                'associado' => [
-                    'id' => $associadoId,
-                    'nome' => $associado['nome'],
-                    'cpf' => $associado['cpf']
-                ],
-                'pendencias' => [],
-                'total_debito' => 0,
-                'meses_atraso' => 0,
-                'valor_mensal' => 181.46,
-                'mensagem' => 'Data de filiação não encontrada'
-            ]
-        ]);
-    }
-    
-    $dataFiliacao = new DateTime($associado['dataFiliacao']);
     
     // ========================================
     // 2. BUSCAR DADOS FINANCEIROS
     // ========================================
     
     $sql = "SELECT tipoAssociado, situacaoFinanceira, vinculoServidor, localDebito 
-            FROM Financeiro WHERE associado_id = ?";
+            FROM Financeiro WHERE associado_id = :id";
     
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param('i', $associadoId);
+    $stmt = $db->prepare($sql);
+    $stmt->bindValue(':id', $associadoId, PDO::PARAM_INT);
     $stmt->execute();
-    $result = $stmt->get_result();
-    $dadosFinanceiros = $result->fetch_assoc() ?: [];
-    $stmt->close();
+    $dadosFinanceiros = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
     
     // ========================================
-    // 3. BUSCAR SERVIÇOS CONTRATADOS (para detalhar pendências)
+    // 3. BUSCAR DATA DE FILIAÇÃO
+    // ========================================
+    
+    $sql = "SELECT dataFiliacao FROM Contrato WHERE associado_id = :id LIMIT 1";
+    $stmt = $db->prepare($sql);
+    $stmt->bindValue(':id', $associadoId, PDO::PARAM_INT);
+    $stmt->execute();
+    $contrato = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    if (!$contrato || !$contrato['dataFiliacao']) {
+        sendJson(['status' => 'error', 'message' => 'Data de filiação não encontrada'], 400);
+    }
+    
+    // ========================================
+    // 4. CALCULAR VALOR MENSAL
+    // ========================================
+    
+    $sql = "SELECT COALESCE(SUM(valor_aplicado), 181.46) as valor_mensal
+            FROM Servicos_Associado
+            WHERE associado_id = :id AND ativo = 1";
+    
+    $stmt = $db->prepare($sql);
+    $stmt->bindValue(':id', $associadoId, PDO::PARAM_INT);
+    $stmt->execute();
+    $servicos = $stmt->fetch(PDO::FETCH_ASSOC);
+    $valorMensal = (float)($servicos['valor_mensal'] ?? 181.46);
+    
+    // ========================================
+    // 5. BUSCAR TODOS OS PAGAMENTOS (CONFIRMADOS E PENDENTES)
     // ========================================
     
     $sql = "SELECT 
-                sa.id,
-                sa.servico_id,
-                s.nome as servico_nome,
-                sa.valor_aplicado,
-                sa.data_adesao,
-                sa.data_cancelamento,
-                sa.ativo
-            FROM Servicos_Associado sa
-            INNER JOIN Servicos s ON sa.servico_id = s.id
-            WHERE sa.associado_id = ? AND sa.ativo = 1
-            ORDER BY s.nome ASC";
+                p.id,
+                p.mes_referencia,
+                p.valor_pago as valor,
+                p.data_vencimento,
+                p.data_pagamento,
+                p.status_pagamento,
+                p.forma_pagamento,
+                p.origem_importacao,
+                p.observacoes,
+                p.data_registro,
+                p.funcionario_registro
+            FROM Pagamentos_Associado p
+            WHERE p.associado_id = :id
+            ORDER BY p.mes_referencia ASC";
     
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param('i', $associadoId);
+    $stmt = $db->prepare($sql);
+    $stmt->bindValue(':id', $associadoId, PDO::PARAM_INT);
     $stmt->execute();
-    $result = $stmt->get_result();
     
-    $servicosContratados = [];
-    $valorMensalTotal = 0;
-    
-    while ($row = $result->fetch_assoc()) {
-        $servicosContratados[] = $row;
-        $valorMensalTotal += (float)$row['valor_aplicado'];
-    }
-    $stmt->close();
-    
-    // Valor padrão se não tem serviços
-    if ($valorMensalTotal <= 0) {
-        $valorMensalTotal = 181.46;
-        // Serviço padrão
-        $servicosContratados = [
-            ['servico_nome' => 'Contribuição social', 'valor_aplicado' => 181.46]
-        ];
+    $pagamentosExistentes = [];
+    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+        $mesKey = date('Y-m', strtotime($row['mes_referencia']));
+        $pagamentosExistentes[$mesKey] = $row;
     }
     
     // ========================================
-    // 4. BUSCAR PAGAMENTOS CONFIRMADOS
+    // 6. GERAR LISTA COMPLETA DE MESES (Filiação até Hoje)
     // ========================================
     
-    $sql = "SELECT mes_referencia, valor_pago, data_pagamento 
-            FROM Pagamentos_Associado 
-            WHERE associado_id = ? AND status_pagamento = 'CONFIRMADO' 
-            ORDER BY mes_referencia ASC";
-    
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param('i', $associadoId);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    
-    $mesesPagos = [];
-    $ultimoPagamento = null;
-    
-    while ($row = $result->fetch_assoc()) {
-        $mesRef = date('Y-m', strtotime($row['mes_referencia']));
-        $mesesPagos[$mesRef] = [
-            'valor' => (float)$row['valor_pago'],
-            'data_pagamento' => $row['data_pagamento']
-        ];
-        $ultimoPagamento = $row;
-    }
-    $stmt->close();
-    
-    // ========================================
-    // 5. GERAR LISTA DE PENDÊNCIAS DETALHADAS
-    // ========================================
+    $dataFiliacao = new DateTime($contrato['dataFiliacao']);
+    $dataFiliacao->modify('first day of this month');
     
     $mesAtual = new DateTime('first day of this month');
-    $primeiroMesCobranca = new DateTime($dataFiliacao->format('Y-m-01'));
+    $mesIterador = clone $dataFiliacao;
     
-    // Último mês a verificar: mês ANTERIOR ao atual
-    $ultimoMesVerificar = clone $mesAtual;
-    $ultimoMesVerificar->modify('-1 month');
+    $todasDividas = [];
+    $totalDebito = 0;
+    $totalQuitado = 0;
+    $idCounter = 1;
     
-    // Se filiação é recente, sem pendências
-    if ($primeiroMesCobranca > $ultimoMesVerificar) {
-        sendJson([
-            'status' => 'success',
-            'data' => [
-                'associado' => [
-                    'id' => $associadoId,
-                    'nome' => $associado['nome'],
-                    'cpf' => $associado['cpf']
-                ],
-                'pendencias' => [],
-                'total_debito' => 0,
-                'meses_atraso' => 0,
-                'valor_mensal' => round($valorMensalTotal, 2),
-                'tipo_associado' => $dadosFinanceiros['tipoAssociado'] ?? 'Contribuinte',
-                'vinculo_servidor' => $dadosFinanceiros['vinculoServidor'] ?? null,
-                'local_debito' => $dadosFinanceiros['localDebito'] ?? null,
-                'ultimo_pagamento' => null,
-                'servicos' => $servicosContratados
-            ]
-        ]);
-    }
-    
-    // Percorrer meses e gerar pendências detalhadas
-    $pendencias = [];
-    $valorTotalDebito = 0;
-    $mesIterador = clone $primeiroMesCobranca;
-    $idPendencia = 1;
-    
-    while ($mesIterador <= $ultimoMesVerificar) {
+    while ($mesIterador < $mesAtual) {
         $mesKey = $mesIterador->format('Y-m');
+        $mesRef = $mesIterador->format('Y-m-01');
+        $mesFormatado = $mesIterador->format('m/Y');
         
-        // Se o mês NÃO foi pago
-        if (!isset($mesesPagos[$mesKey])) {
+        // Verificar se existe pagamento para este mês
+        $pagamento = $pagamentosExistentes[$mesKey] ?? null;
+        
+        if ($pagamento) {
+            // ✅ DÍVIDA QUITADA
+            $isQuitado = ($pagamento['status_pagamento'] === 'CONFIRMADO');
+            $isPendente = ($pagamento['status_pagamento'] === 'PENDENTE');
             
-            // Gerar uma pendência para cada serviço contratado
-            foreach ($servicosContratados as $servico) {
-                $pendencias[] = [
-                    'id' => $idPendencia++,
-                    'tipo' => $servico['servico_nome'] ?: 'Contribuição',
-                    'mes' => $mesIterador->format('m/Y'),
-                    'mes_referencia' => $mesIterador->format('Y-m-01'),
-                    'valor' => round((float)$servico['valor_aplicado'], 2),
-                    'status' => 'sem_retorno',
-                    'status_texto' => 'sem retorno(assego)',
-                    'data_vencimento' => $mesIterador->format('Y-m-10')
-                ];
-                
-                $valorTotalDebito += (float)$servico['valor_aplicado'];
+            if ($isQuitado) {
+                $totalQuitado += (float)$pagamento['valor'];
+            } else {
+                $totalDebito += (float)$pagamento['valor'];
             }
+            
+            $todasDividas[] = [
+                'id' => $idCounter++,
+                'id_pagamento' => (int)$pagamento['id'],
+                'tipo' => 'Contribuição social',
+                'mes' => $mesFormatado,
+                'mes_referencia' => $mesRef,
+                'valor' => round((float)$pagamento['valor'], 2),
+                'data_vencimento' => $pagamento['data_vencimento'],
+                'status' => $isQuitado ? 'quitado' : 'pendente',
+                'status_texto' => $isQuitado ? 'QUITADO' : 'Pendente',
+                'origem' => $pagamento['origem_importacao'],
+                'is_historica' => ($pagamento['origem_importacao'] === 'DIVIDA_HISTORICA'),
+                
+                // ✅ NOVOS CAMPOS PARA QUITADAS
+                'ja_quitado' => $isQuitado,
+                'data_quitacao' => $pagamento['data_pagamento'],
+                'forma_pagamento_quitacao' => $pagamento['forma_pagamento'],
+                'funcionario_quitacao' => $pagamento['funcionario_registro'],
+                'observacoes' => $pagamento['observacoes'],
+                'data_registro' => $pagamento['data_registro']
+            ];
+            
+        } else {
+            // ⚠️ DÍVIDA PENDENTE (SEM PAGAMENTO)
+            $totalDebito += $valorMensal;
+            
+            $todasDividas[] = [
+                'id' => $idCounter++,
+                'id_pagamento' => null,
+                'tipo' => 'Contribuição social',
+                'mes' => $mesFormatado,
+                'mes_referencia' => $mesRef,
+                'valor' => round($valorMensal, 2),
+                'data_vencimento' => $mesIterador->format('Y-m-10'),
+                'status' => 'pendente',
+                'status_texto' => 'sem retorno(assego)',
+                'origem' => null,
+                'is_historica' => false,
+                
+                // ✅ CAMPOS PARA PENDENTES
+                'ja_quitado' => false,
+                'data_quitacao' => null,
+                'forma_pagamento_quitacao' => null,
+                'funcionario_quitacao' => null,
+                'observacoes' => null,
+                'data_registro' => null
+            ];
         }
         
         $mesIterador->modify('+1 month');
     }
     
-    // Inverter para mostrar os mais recentes primeiro
-    $pendencias = array_reverse($pendencias);
-    
-    // Recalcular IDs após inversão
-    $idPendencia = 1;
-    foreach ($pendencias as &$p) {
-        $p['id'] = $idPendencia++;
-    }
-    unset($p);
-    
-    $mesesAtraso = count(array_unique(array_column($pendencias, 'mes')));
-    
     // ========================================
-    // 6. CALCULAR TEMPO RELATIVO DO ÚLTIMO PAGAMENTO
+    // 7. BUSCAR ÚLTIMO PAGAMENTO CONFIRMADO
     // ========================================
     
+    $sql = "SELECT mes_referencia, valor_pago, data_pagamento 
+            FROM Pagamentos_Associado 
+            WHERE associado_id = :id
+            AND status_pagamento = 'CONFIRMADO' 
+            ORDER BY mes_referencia DESC 
+            LIMIT 1";
+    
+    $stmt = $db->prepare($sql);
+    $stmt->bindValue(':id', $associadoId, PDO::PARAM_INT);
+    $stmt->execute();
+    $ultimoPagamento = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    // ========================================
+    // 8. CALCULAR ESTATÍSTICAS
+    // ========================================
+    
+    // Separar pendentes e quitadas
+    $dividasPendentes = array_filter($todasDividas, function($d) {
+        return !$d['ja_quitado'];
+    });
+    
+    $dividasQuitadas = array_filter($todasDividas, function($d) {
+        return $d['ja_quitado'];
+    });
+    
+    $totalPendencias = count($dividasPendentes);
+    $totalQuitadas = count($dividasQuitadas);
+    
+    $mesesAtraso = $totalPendencias;
+    
+    // Tempo relativo do último pagamento
     $tempoRelativo = null;
-    if ($ultimoPagamento && isset($ultimoPagamento['mes_referencia'])) {
+    if ($ultimoPagamento) {
         $dataRef = new DateTime($ultimoPagamento['mes_referencia']);
         $hoje = new DateTime();
         $diff = $hoje->diff($dataRef);
@@ -363,8 +305,36 @@ try {
         }
     }
     
+    // Separar históricas
+    $dividasHistoricas = array_filter($todasDividas, function($d) {
+        return $d['is_historica'];
+    });
+    
     // ========================================
-    // 7. RESPOSTA FINAL
+    // 9. BUSCAR NOME DO FUNCIONÁRIO QUE QUITOU (se houver)
+    // ========================================
+    
+    $funcionariosCache = [];
+    foreach ($dividasQuitadas as &$divida) {
+        if ($divida['funcionario_quitacao']) {
+            $funcId = $divida['funcionario_quitacao'];
+            
+            if (!isset($funcionariosCache[$funcId])) {
+                $sql = "SELECT nome FROM Funcionarios WHERE id = :id LIMIT 1";
+                $stmt = $db->prepare($sql);
+                $stmt->bindValue(':id', $funcId, PDO::PARAM_INT);
+                $stmt->execute();
+                $func = $stmt->fetch(PDO::FETCH_ASSOC);
+                $funcionariosCache[$funcId] = $func['nome'] ?? 'Sistema';
+            }
+            
+            $divida['funcionario_quitacao_nome'] = $funcionariosCache[$funcId];
+        }
+    }
+    unset($divida);
+    
+    // ========================================
+    // 10. RESPOSTA FINAL
     // ========================================
     
     sendJson([
@@ -375,14 +345,28 @@ try {
                 'nome' => $associado['nome'],
                 'cpf' => $associado['cpf']
             ],
-            'pendencias' => $pendencias,
-            'total_debito' => round($valorTotalDebito, 2),
+            
+            // ✅ TODAS AS DÍVIDAS (PENDENTES + QUITADAS)
+            'pendencias' => $todasDividas,
+            'pendencias_ativas' => array_values($dividasPendentes),
+            'pendencias_quitadas' => array_values($dividasQuitadas),
+            'pendencias_historicas' => array_values($dividasHistoricas),
+            
+            // Totais
+            'total_debito' => round($totalDebito, 2),
+            'total_quitado' => round($totalQuitado, 2),
+            'total_geral' => round($totalDebito + $totalQuitado, 2),
+            
             'meses_atraso' => $mesesAtraso,
-            'valor_mensal' => round($valorMensalTotal, 2),
+            'meses_quitados' => $totalQuitadas,
+            'meses_pendentes' => $totalPendencias,
+            
+            'valor_mensal' => round($valorMensal, 2),
             'tipo_associado' => $dadosFinanceiros['tipoAssociado'] ?? 'Contribuinte',
             'vinculo_servidor' => $dadosFinanceiros['vinculoServidor'] ?? null,
             'local_debito' => $dadosFinanceiros['localDebito'] ?? null,
-            'situacao_financeira' => $mesesAtraso > 0 ? 'Inadimplente' : 'Adimplente',
+            'situacao_financeira' => $totalPendencias > 0 ? 'Inadimplente' : 'Adimplente',
+            
             'ultimo_pagamento' => $ultimoPagamento ? [
                 'mes_referencia' => $ultimoPagamento['mes_referencia'],
                 'mes_formatado' => date('m/Y', strtotime($ultimoPagamento['mes_referencia'])),
@@ -390,13 +374,17 @@ try {
                 'data' => $ultimoPagamento['data_pagamento'],
                 'tempo_relativo' => $tempoRelativo
             ] : null,
-            'servicos_contratados' => $servicosContratados,
-            'data_filiacao' => $dataFiliacao->format('d/m/Y'),
-            'mes_atual' => date('m/Y')
+            
+            'mes_atual' => date('m/Y'),
+            'fonte_dados' => 'Pagamentos_Associado_COMPLETO',
+            
+            // ✅ NOVA ESTATÍSTICA
+            'percentual_quitado' => $totalQuitadas > 0 ? round(($totalQuitadas / ($totalQuitadas + $totalPendencias)) * 100, 1) : 0
         ]
     ]);
 
 } catch (Exception $e) {
+    error_log("Erro em buscar_pendencias_detalhadas: " . $e->getMessage());
     sendJson([
         'status' => 'error',
         'message' => 'Erro ao processar',
