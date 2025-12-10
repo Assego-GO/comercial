@@ -306,6 +306,29 @@ class Documentos
                     
                     error_log("✅ Desfiliação documento $documentoId INSERIDA como APROVADO");
                 }
+
+                // ✅ VERIFICAR SE TODAS AS ETAPAS FORAM APROVADAS E MUDAR SITUAÇÃO DO ASSOCIADO
+                $stmtVerificar = $this->db->prepare("
+                    SELECT 
+                        COUNT(*) as total,
+                        SUM(CASE WHEN status_aprovacao = 'APROVADO' THEN 1 ELSE 0 END) as aprovadas
+                    FROM Aprovacoes_Desfiliacao
+                    WHERE documento_id = ?
+                ");
+                $stmtVerificar->execute([$documentoId]);
+                $stats = $stmtVerificar->fetch(PDO::FETCH_ASSOC);
+
+                // Se todas as etapas foram aprovadas, mudar situação para "Desfiliado"
+                if ($stats['total'] > 0 && $stats['aprovadas'] == $stats['total']) {
+                    $stmtDesfiliar = $this->db->prepare("
+                        UPDATE Associados 
+                        SET situacao = 'Desfiliado'
+                        WHERE id = ?
+                    ");
+                    $stmtDesfiliar->execute([$documento['associado_id']]);
+                    
+                    error_log("✅ Associado ID {$documento['associado_id']} marcado como DESFILIADO após aprovação completa");
+                }
             } else {
                 error_log("ℹ️ Documento $documentoId NÃO é desfiliação");
             }

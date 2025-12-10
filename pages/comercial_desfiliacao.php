@@ -85,15 +85,16 @@ $headerComponent = HeaderComponent::create([
         }
 
         .content-area {
-            padding: 2rem 0;
+            padding: 4rem 0 2rem 0;
         }
 
         .page-header {
             background: linear-gradient(135deg, var(--primary) 0%, #084298 100%);
             color: white;
-            padding: 2rem;
+            padding: 3rem 2rem;
             border-radius: 12px;
             margin-bottom: 2rem;
+            margin-top: 1rem;
             box-shadow: 0 10px 30px rgba(0, 86, 210, 0.2);
         }
 

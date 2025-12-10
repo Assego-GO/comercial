@@ -193,9 +193,9 @@ try {
             $novoStatus = 'FINALIZADO';  // Usar ENUM válido
             $mensagemFinalizacao = "Desfiliação aprovada por todos os departamentos - Processo finalizado";
         }
-        // Se ainda há pendentes, manter como ASSINADO (fluxo em andamento)
+        // Se ainda há pendentes, manter como AGUARDANDO_ASSINATURA (fluxo em andamento)
         elseif ($stats['pendentes'] > 0) {
-            $novoStatus = 'ASSINADO';  // Usar ENUM válido
+            $novoStatus = 'AGUARDANDO_ASSINATURA';  // Usar ENUM válido
             
             // Buscar próximo departamento na sequência
             $stmt = $db->prepare("
