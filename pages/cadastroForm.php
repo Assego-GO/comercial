@@ -123,11 +123,17 @@ if (!$temPermissaoFinanceiro) {
 }
 
 // ============================================
-// VERIFICAÇÃO SE É MODO EDIÇÃO
+// VERIFICAÇÃO SE É MODO EDIÇÃO OU REFILIAÇÃO
 // ============================================
 $isEdit = isset($_GET['id']) && !empty($_GET['id']);
+$isRefiliacao = isset($_GET['refiliacao']) && $_GET['refiliacao'] === 'true';
 $associadoId = $isEdit ? intval($_GET['id']) : null;
 $associadoData = [];
+
+// Log de debug
+if ($isRefiliacao) {
+    error_log("🔄 MODO REFILIAÇÃO ATIVADO - Associado ID: " . $associadoId);
+}
 
 if ($isEdit) {
     try {
@@ -267,7 +273,12 @@ if ($isEdit) {
     exit;
     }
 
-    $page_title = 'Editar Associado - ASSEGO (Setor Financeiro)';
+    // NOVO: Ajusta o título dependendo se é refiliação ou edição normal
+    if ($isRefiliacao) {
+        $page_title = 'Refiliação de Associado - ASSEGO (Setor Financeiro)';
+    } else {
+        $page_title = 'Editar Associado - ASSEGO (Setor Financeiro)';
+    }
 }
 
 // ============================================
@@ -973,7 +984,7 @@ $headerComponent = HeaderComponent::create([
                 <li class="separator"><i class="fas fa-chevron-right"></i></li>
                 <li><a href="dashboard.php">Setor Financeiro</a></li>
                 <li class="separator"><i class="fas fa-chevron-right"></i></li>
-                <li class="active"><?php echo $isEdit ? 'Editar' : 'Nova Filiação'; ?></li>
+                <li class="active"><?php echo $isRefiliacao ? 'Refiliação' : ($isEdit ? 'Editar' : 'Nova Filiação'); ?></li>
             </ol>
         </nav>
     </div>
@@ -983,11 +994,18 @@ $headerComponent = HeaderComponent::create([
         <!-- Page Header Simples -->
         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2rem;">
             <div>
-                <h1 style="font-size: 1.75rem; font-weight: 700; color: #343a40; margin: 0 0 0.5rem 0;">
-                    <?php echo $isEdit ? 'Editar Associado' : 'Filiar Novo Associado'; ?>
-                </h1>
+                <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem;">
+                    <h1 style="font-size: 1.75rem; font-weight: 700; color: #343a40; margin: 0;">
+                        <?php echo $isRefiliacao ? 'Refiliação de Associado' : ($isEdit ? 'Editar Associado' : 'Filiar Novo Associado'); ?>
+                    </h1>
+                    <?php if ($isRefiliacao): ?>
+                        <span style="background: #0d6efd; color: white; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase;">
+                            <i class="fas fa-sync-alt"></i> Re-filiação
+                        </span>
+                    <?php endif; ?>
+                </div>
                 <p style="color: #6c757d; margin: 0; font-size: 0.95rem;">
-                    <?php echo $isEdit ? 'Atualize os dados do associado' : 'Preencha todos os campos obrigatórios para filiar um novo associado'; ?>
+                    <?php echo $isRefiliacao ? 'Complete o processo de refiliação deste associado' : ($isEdit ? 'Atualize os dados do associado' : 'Preencha todos os campos obrigatórios para filiar um novo associado'); ?>
                 </p>
             </div>
             <button type="button" class="btn-dashboard" onclick="window.location.href='dashboard.php'">

@@ -370,6 +370,21 @@ class Documentos
                 $documentoId
             ]);
 
+            // NOVO: Atualizar status do associado para "Filiado" na tabela Associados
+            if (!empty($documento['associado_id'])) {
+                error_log("🔄 Atualizando status do associado " . $documento['associado_id'] . " para Filiado");
+                
+                $stmtAssociado = $this->db->prepare("
+                    UPDATE Associados 
+                    SET situacao = 'Filiado'
+                    WHERE id = ?
+                ");
+                
+                $stmtAssociado->execute([$documento['associado_id']]);
+                
+                error_log("✅ Status do associado " . $documento['associado_id'] . " atualizado para Filiado");
+            }
+
             // Registrar no histórico
             $this->registrarHistoricoFluxo(
                 $documentoId,
