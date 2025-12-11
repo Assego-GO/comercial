@@ -146,16 +146,17 @@ try {
         error_log("[FINALIZAR_AGREGADO] Documento atualizado para FINALIZADO - Doc ID: {$documento['id']}");
 
         // =====================================================
-        // 3.5. ATUALIZAR PRE_CADASTRO NA TABELA ASSOCIADOS
+        // 3.5. ATUALIZAR PRE_CADASTRO E SITUACAO NA TABELA ASSOCIADOS
         // =====================================================
         $stmt = $db->prepare("
             UPDATE Associados 
-            SET pre_cadastro = 0 
+            SET pre_cadastro = 0,
+                situacao = 'Filiado'
             WHERE id = ?
         ");
         $stmt->execute([$agregadoId]);
 
-        error_log("[FINALIZAR_AGREGADO] pre_cadastro alterado de 1 para 0 - Agregado ID: {$agregadoId}");
+        error_log("[FINALIZAR_AGREGADO] Agregado atualizado - pre_cadastro: 0, situacao: Filiado - ID: {$agregadoId}");
 
         // =====================================================
         // 4. COMMIT
