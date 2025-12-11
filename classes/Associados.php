@@ -1497,8 +1497,8 @@ class Associados
                 f.foto as criado_por_foto,
                 fe.nome as editado_por_nome,
                 fe.cargo as editado_por_cargo,
-                DATE_FORMAT(CONVERT_TZ(o.data_criacao, '+00:00', '-03:00'), '%d/%m/%Y às %H:%i') as data_formatada,
-                DATE_FORMAT(CONVERT_TZ(o.data_edicao, '+00:00', '-03:00'), '%d/%m/%Y às %H:%i') as data_edicao_formatada,
+                DATE_FORMAT(o.data_criacao, '%d/%m/%Y às %H:%i') as data_formatada,
+                DATE_FORMAT(o.data_edicao, '%d/%m/%Y às %H:%i') as data_edicao_formatada,
                 CASE 
                     WHEN o.data_criacao >= DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 
                     ELSE 0 
@@ -1543,7 +1543,7 @@ class Associados
                     h.*,
                     f.nome as editado_por_nome,
                     f.cargo as editado_por_cargo,
-                    DATE_FORMAT(CONVERT_TZ(h.data_edicao, '+00:00', '-03:00'), '%d/%m/%Y às %H:%i') as data_edicao_formatada
+                    DATE_FORMAT(h.data_edicao, '%d/%m/%Y às %H:%i') as data_edicao_formatada
                 FROM Historico_Edicao_Observacoes h
                 LEFT JOIN Funcionarios f ON h.editado_por = f.id
                 WHERE h.observacao_id = ?
