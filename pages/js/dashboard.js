@@ -2321,6 +2321,7 @@ function abrirModalUploadDocumento(associadoId, associadoNome) {
                                     <option value="FOTO_3X4">Foto 3x4</option>
                                     <option value="CERTIDAO_NASCIMENTO">Certidão de Nascimento</option>
                                     <option value="CERTIDAO_CASAMENTO">Certidão de Casamento</option>
+                                    <option value="CERTIDAO_OBITO">Certidão de Óbito</option>
                                     <option value="OUTROS">Outros</option>
                                 </select>
                             </div>
@@ -4075,6 +4076,46 @@ function salvarEdicaoModal() {
     if (!associadoAtual || !associadoAtual.id) {
         alert('Erro: Nenhum associado selecionado!');
         return;
+    }
+
+    // NOVO: Detecta mudança de status de Desfiliado para Filiado (REFILIAÇÃO)
+    const statusAnterior = dadosOriginaisAssociado?.situacao || associadoAtual.situacao;
+    
+    // Tenta buscar o valor do select de situação (modo edição)
+    const selectSituacao = document.getElementById('edit_situacao');
+    const statusAtual = selectSituacao ? selectSituacao.value : associadoAtual.situacao;
+    
+    const ehRefiliacaoEsperada = statusAnterior === 'Desfiliado' && statusAtual === 'Filiado';
+    
+    console.log('🔍 Detecção de refiliação:');
+    console.log('  Status anterior:', statusAnterior);
+    console.log('  Status atual:', statusAtual);
+    console.log('  É refiliação esperada?', ehRefiliacaoEsperada);
+    
+    if (ehRefiliacaoEsperada) {
+        console.log('🔄 DETECÇÃO DE REFILIAÇÃO: Mudança de Desfiliado → Filiado');
+        console.log('🔄 Associado ID:', associadoAtual.id);
+        console.log('🔄 Nome:', associadoAtual.nome);
+        
+        // CRÍTICO: Captura o ID ANTES de fechar o modal (associadoAtual pode ser zerado)
+        const associadoIdParaRefiliacao = associadoAtual.id;
+        const associadoNomeParaRefiliacao = associadoAtual.nome;
+        
+        // Fecha o modal
+        fecharModal();
+        
+        // Aguarda um pouco para fechar e depois redireciona para o cadastroForm em modo de refiliação
+        setTimeout(() => {
+            mostrarNotificacao('Iniciando processo de refiliação... Redirecionando...', 'info');
+            
+            setTimeout(() => {
+                // Redireciona para o cadastroForm.php com o ID do associado
+                console.log('🚀 Redirecionando para cadastroForm.php?id=' + associadoIdParaRefiliacao + '&refiliacao=true');
+                window.location.href = `cadastroForm.php?id=${associadoIdParaRefiliacao}&refiliacao=true`;
+            }, 1500);
+        }, 300);
+        
+        return; // Interrompe o fluxo normal de salvamento
     }
 
     // Coleta dados dos campos editáveis e mescla com dados existentes

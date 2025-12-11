@@ -19,6 +19,7 @@ class Documentos
         'contra_cheque' => 'Contra-cheque',
         'certidao_nascimento' => 'Certidão de Nascimento',
         'certidao_casamento' => 'Certidão de Casamento',
+        'certidao_obito' => 'Certidão de Óbito',
         'foto_3x4' => 'Foto 3x4',
         'outros' => 'Outros'
     ];
@@ -369,6 +370,21 @@ class Documentos
                 $obsAdicional,
                 $documentoId
             ]);
+
+            // NOVO: Atualizar status do associado para "Filiado" na tabela Associados
+            if (!empty($documento['associado_id'])) {
+                error_log("🔄 Atualizando status do associado " . $documento['associado_id'] . " para Filiado");
+                
+                $stmtAssociado = $this->db->prepare("
+                    UPDATE Associados 
+                    SET situacao = 'Filiado'
+                    WHERE id = ?
+                ");
+                
+                $stmtAssociado->execute([$documento['associado_id']]);
+                
+                error_log("✅ Status do associado " . $documento['associado_id'] . " atualizado para Filiado");
+            }
 
             // Registrar no histórico
             $this->registrarHistoricoFluxo(
