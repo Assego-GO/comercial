@@ -197,7 +197,7 @@ try {
             $resultados = $stmtNumerico->fetchAll();
         }
         
-        // ESTRATÉGIA 2: Se não encontrou pelo número OU é texto, busca por nome (APENAS FILIADOS)
+        // ESTRATÉGIA 2: Se não encontrou pelo número OU é texto, busca por nome (TODOS OS STATUS)
         if (count($resultados) < $limit) {
             $termoLike = '%' . $termo . '%';
             
@@ -214,7 +214,6 @@ try {
             LEFT JOIN Militar m ON a.id = m.associado_id
             LEFT JOIN Contrato c ON a.id = c.associado_id
             WHERE a.pre_cadastro = 0 
-            AND a.situacao = 'Filiado'
             AND a.nome LIKE ?
             ORDER BY prioridade, a.nome
             LIMIT " . intval($limit) . "
