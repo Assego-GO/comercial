@@ -980,6 +980,9 @@ function abrirModalAssociadoCompleto(associado) {
     // Atualiza o header do modal
     atualizarHeaderModal(associado);
 
+    // Controlar visibilidade das abas baseado em permissões
+    controlarVisibilidadeAbas();
+
     // Preenche as tabs
     preencherTabVisaoGeral(associado);
     preencherTabMilitar(associado);
@@ -993,6 +996,41 @@ function abrirModalAssociadoCompleto(associado) {
 
     // Modal já está aberto, apenas força active na tab overview
     // abrirTab('overview');
+}
+
+// Função para controlar a visibilidade das abas baseado em permissões
+function controlarVisibilidadeAbas() {
+    // Ocultar todas as abas se o usuário só tem permissão de contato
+    const apenasContato = permissoesUsuario.podeEditarContato && !permissoesUsuario.podeVisualizar && !permissoesUsuario.podeEditarCompleto;
+    
+    if (apenasContato) {
+        // Ocultar abas que não são de contato
+        const abas = ['overview', 'militar', 'financeiro', 'dependentes', 'documentos', 'observacoes'];
+        const botoesAba = document.querySelectorAll('.modal-tabs .tab-button');
+        
+        botoesAba.forEach((botao, index) => {
+            if (abas.includes(botao.getAttribute('onclick')?.match(/'([^']+)'/)?.[1])) {
+                botao.style.display = 'none';
+            }
+        });
+        
+        // Mostrar apenas a aba de contato
+        const botaoContato = Array.from(botoesAba).find(btn => 
+            btn.getAttribute('onclick')?.includes("abrirTab('contato')")
+        );
+        if (botaoContato) {
+            botaoContato.style.display = 'block';
+        }
+        
+        // Forçar abertura da aba de contato
+        setTimeout(() => abrirTab('contato'), 100);
+    } else {
+        // Mostrar todas as abas
+        const botoesAba = document.querySelectorAll('.modal-tabs .tab-button');
+        botoesAba.forEach(botao => {
+            botao.style.display = 'block';
+        });
+    }
 }
 
 // Função para resetar observações ao trocar de associado

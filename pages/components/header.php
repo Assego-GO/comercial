@@ -24,6 +24,7 @@ class HeaderComponent
     private $activePage;
     private $notificationCount;
     private $funcionario_id;
+    private $id; // ID do funcionário
     private $departamento_id;
     private $cargo;
     private $permissoes;
@@ -35,6 +36,7 @@ class HeaderComponent
     {
         // Pega dados da sessão
         $this->funcionario_id = $_SESSION['funcionario_id'] ?? null;
+        $this->id = $this->funcionario_id; // Alias para facilitar uso
         $this->departamento_id = $_SESSION['departamento_id'] ?? null;
         $this->cargo = $_SESSION['funcionario_cargo'] ?? null;
 
@@ -2450,9 +2452,16 @@ class HeaderComponent
         }
 
         // JURÍDICO - Verifica permissão ou departamento 3 (Jurídico)
-        if (($this->permissoes && $this->permissoes->hasPermission('JURIDICO_DASHBOARD', 'VIEW'))
+        // Exceção: usuários view-only do Comercial não devem ver Jurídico
+        $usuariosViewOnlyComercial = [148, 149, 150, 151, 152, 153, 154, 155, 156];
+        $mostrarJuridico = (
+            (($this->permissoes && $this->permissoes->hasPermission('JURIDICO_DASHBOARD', 'VIEW'))
             || $this->departamento_id == 3
-            || $this->isDiretor) {
+            || $this->isDiretor)
+            && !in_array($this->id, $usuariosViewOnlyComercial)
+        );
+        
+        if ($mostrarJuridico) {
             $items[] = [
                 'id' => 'juridico',
                 'label' => 'Jurídico',
