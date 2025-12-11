@@ -19,6 +19,7 @@ class Documentos
         'contra_cheque' => 'Contra-cheque',
         'certidao_nascimento' => 'Certidão de Nascimento',
         'certidao_casamento' => 'Certidão de Casamento',
+        'certidao_obito' => 'Certidão de Óbito',
         'foto_3x4' => 'Foto 3x4',
         'outros' => 'Outros'
     ];
