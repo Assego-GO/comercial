@@ -112,7 +112,7 @@ async function carregarDesfiliaçõesJuridico() {
 }
 
 function visualizarDocumento(documentoId, caminho) {
-  window.open(`../../${caminho}`, '_blank');
+  window.open(`${window.BASE_URL}/${caminho}`, '_blank');
 }
 
 function abrirModalAçao(documentoId, ação, nomeAssociado) {
