@@ -240,13 +240,18 @@ try {
     // ============================================
     $dados = [];
     foreach ($resultados as $row) {
+        $situacaoRaw = $row['situacao'] ?? '';
+        $situacaoNormalizada = (strcasecmp($situacaoRaw, 'filiado') === 0)
+            ? 'Filiado'
+            : ($situacaoRaw ?: 'Desfiliado');
+
         $item = [
             'id' => intval($row['id']),
             'nome' => $row['nome'] ?? '',
             'cpf' => $row['cpf'] ?? '',
             'rg' => $row['rg'] ?? '',
             'telefone' => $row['telefone'] ?? '',
-            'situacao' => $row['situacao'],
+            'situacao' => $situacaoNormalizada,
             'corporacao' => normalizarCorporacao($row['corporacao']),
             'patente' => $row['patente'] ?? '',
             'data_filiacao' => $row['data_filiacao'] ?? '',
@@ -255,7 +260,7 @@ try {
         ];
         
         // Se for agregado, adiciona info do associado titular
-        if ($row['situacao'] === 'Agregado' && isset($row['associado_id'])) {
+        if (strcasecmp($situacaoRaw, 'Agregado') === 0 && isset($row['associado_id'])) {
             $item['agregado_de'] = [
                 'id' => $row['associado_id'],
                 'nome' => $row['associado_nome'] ?? ''
