@@ -2257,7 +2257,9 @@ $headerComponent = HeaderComponent::create([
             const trintaDiasAtras = new Date(agora.getTime() - (30 * 24 * 60 * 60 * 1000));
             const novos = todosAssociados.filter(a => {
                 if (!a.data_filiacao || a.data_filiacao === '0000-00-00') return false;
-                const dataFiliacao = new Date(a.data_filiacao);
+                // Tratar data como local, não UTC
+                let dataStr = a.data_filiacao.replace(' ', 'T');
+                const dataFiliacao = new Date(dataStr);
                 return dataFiliacao >= trintaDiasAtras;
             }).length;
             document.getElementById('novosAssociados').textContent =
@@ -2379,7 +2381,15 @@ $headerComponent = HeaderComponent::create([
             if (!dataStr) return 'Data não informada';
 
             try {
-                const data = new Date(dataStr);
+                // Corrigir interpretação de timezone: adicionar 'Z' apenas se não tiver timezone
+                let dataParseada = dataStr;
+                if (!dataStr.includes('Z') && !dataStr.includes('+') && !dataStr.includes('-', 10)) {
+                    // Data vem do MySQL sem timezone, então tratamos como horário local de Brasília
+                    // Substituir espaço por 'T' para formato ISO
+                    dataParseada = dataStr.replace(' ', 'T');
+                }
+                
+                const data = new Date(dataParseada);
                 const agora = new Date();
                 const diffMs = agora - data;
                 const diffMins = Math.floor(diffMs / 60000);
