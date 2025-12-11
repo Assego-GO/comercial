@@ -637,25 +637,37 @@ function aplicarFiltros() {
     const filterCorporacao = document.getElementById('filterCorporacao').value;
     const filterPatente = document.getElementById('filterPatente').value;
 
-    // Se tem filtro de situação específico (não é "Todos"), busca do servidor
+    // Se tem filtro de situação específico E não tem busca por termo, busca do servidor
     if (filterSituacao && !searchTerm) {
         console.log(`🔄 Buscando ${filterSituacao} do servidor...`);
-        carregarAssociadosPorSituacao(filterSituacao, filterTipoAssociado, filterCorporacao, filterPatente);
+        carregarAssociadosPorFiltros(filterSituacao, filterTipoAssociado, filterCorporacao, filterPatente, '');
         return;
     }
 
-    // Define base de dados: se tem resultados do servidor, usa eles. Senão, usa todosAssociados
+    // Se tem termo de busca com 3+ caracteres, busca do servidor com filtros
+    if (searchTerm && searchTerm.length >= 3) {
+        console.log(`🔄 Buscando "${searchTerm}" do servidor...`);
+        // A busca já é feita pelo handleSearchInput, apenas aplica filtros locais
+    }
+
+    // Define base de dados
     let dadosBase = resultadosServidor && resultadosServidor.length > 0 ? resultadosServidor : todosAssociados;
     
-    console.log(`📊 Base de dados: ${dadosBase.length} registros (${resultadosServidor ? 'servidor' : 'local'})`);
+    console.log(`📊 Base de dados: ${dadosBase.length} registros`);
+
+    // Prepara o termo de busca uma vez só (performance)
+    const searchTermClean = searchTerm.replace(/\D/g, '');
 
     associadosFiltrados = dadosBase.filter(associado => {
-        // Filtro de busca LOCAL (só aplica se não veio do servidor)
-        const matchSearch = !searchTerm || resultadosServidor ||
-            (associado.nome && associado.nome.toLowerCase().includes(searchTerm)) ||
-            (associado.cpf && associado.cpf.replace(/\D/g, '').includes(searchTerm.replace(/\D/g, ''))) ||
-            (associado.rg && associado.rg.includes(searchTerm)) ||
-            (associado.telefone && associado.telefone.replace(/\D/g, '').includes(searchTerm.replace(/\D/g, '')));
+        // Filtro de busca LOCAL
+        let matchSearch = true;
+        if (searchTerm && !resultadosServidor) {
+            const nomeMatch = associado.nome && associado.nome.toLowerCase().includes(searchTerm);
+            const cpfMatch = associado.cpf && associado.cpf.replace(/\D/g, '').includes(searchTermClean);
+            const rgMatch = associado.rg && associado.rg.toLowerCase().includes(searchTerm);
+            const telMatch = associado.telefone && associado.telefone.replace(/\D/g, '').includes(searchTermClean);
+            matchSearch = nomeMatch || cpfMatch || rgMatch || telMatch;
+        }
 
         // Outros filtros
         const matchSituacao = !filterSituacao || associado.situacao === filterSituacao;
@@ -666,16 +678,23 @@ function aplicarFiltros() {
         return matchSearch && matchSituacao && matchTipoAssociado && matchCorporacao && matchPatente;
     });
 
-    console.log(`✅ Filtros aplicados: ${associadosFiltrados.length} de ${dadosBase.length} registros`);
-    console.log(`📋 Primeiros resultados:`, associadosFiltrados.slice(0, 3));
+    console.log(`✅ Filtros aplicados: ${associadosFiltrados.length} registros`);
 
     paginaAtual = 1;
     calcularPaginacao();
     renderizarPagina();
 }
 
-// NOVA FUNÇÃO: Carregar associados por situação do servidor
-function carregarAssociadosPorSituacao(situacao, tipoAssociado, corporacao, patente) {
+// Variável para controlar requisição em andamento
+let requisicaoEmAndamento = null;
+
+// FUNÇÃO UNIFICADA: Carregar associados com filtros do servidor
+function carregarAssociadosPorFiltros(situacao, tipoAssociado, corporacao, patente, termo) {
+    // Cancela requisição anterior se existir
+    if (requisicaoEmAndamento) {
+        requisicaoEmAndamento.abort();
+    }
+
     // Mostra loading
     const tbody = document.getElementById('tableBody');
     if (tbody) {
@@ -684,21 +703,22 @@ function carregarAssociadosPorSituacao(situacao, tipoAssociado, corporacao, pate
                 <td colspan="9" class="text-center py-5">
                     <div class="d-flex flex-column align-items-center">
                         <div class="loading-spinner mb-3"></div>
-                        <span class="text-muted">Carregando ${situacao}s...</span>
+                        <span class="text-muted">Carregando...</span>
                     </div>
                 </td>
             </tr>
         `;
     }
 
-    $.ajax({
+    // Monta parâmetros
+    const params = { load_type: 'all' };
+    if (situacao) params.situacao = situacao;
+    if (tipoAssociado) params.tipo_associado = tipoAssociado;
+
+    requisicaoEmAndamento = $.ajax({
         url: '../api/carregar_associados.php',
         method: 'GET',
-        data: { 
-            load_type: 'all',
-            situacao: situacao,
-            tipo_associado: tipoAssociado || ''
-        },
+        data: params,
         dataType: 'json',
         cache: false,
         timeout: 60000,
@@ -717,7 +737,7 @@ function carregarAssociadosPorSituacao(situacao, tipoAssociado, corporacao, pate
                 associadosFiltrados = dados;
                 resultadosServidor = dados;
                 
-                console.log(`✅ Carregados ${dados.length} associados ${situacao}`);
+                console.log(`✅ Carregados ${dados.length} associados`);
                 
                 paginaAtual = 1;
                 calcularPaginacao();
@@ -728,8 +748,13 @@ function carregarAssociadosPorSituacao(situacao, tipoAssociado, corporacao, pate
             }
         },
         error: function(xhr, status, error) {
-            console.error('Erro na requisição:', error);
-            renderizarTabela([]);
+            if (status !== 'abort') {
+                console.error('Erro na requisição:', error);
+                renderizarTabela([]);
+            }
+        },
+        complete: function() {
+            requisicaoEmAndamento = null;
         }
     });
 }
@@ -3113,8 +3138,9 @@ let searchTimeout;
 let ultimaBuscaServidor = '';
 let resultadosServidor = null; // Armazena resultados da busca do servidor
 let todosAssociadosOriginal = []; // Backup dos dados originais
+let buscaEmAndamento = null; // Controle de requisição de busca
 
-// Handler para input de busca (com debounce)
+// Handler para input de busca (com debounce otimizado)
 function handleSearchInput(e) {
     const termo = e.target.value.trim();
     
@@ -3122,92 +3148,98 @@ function handleSearchInput(e) {
 
     // Limpa timeout anterior
     clearTimeout(searchTimeout);
+    
+    // Cancela busca anterior se existir
+    if (buscaEmAndamento) {
+        buscaEmAndamento.abort();
+        buscaEmAndamento = null;
+    }
 
     // Se vazio, restaura dados originais
     if (!termo) {
         console.log('🔄 Busca limpa, mostrando todos os dados');
         ultimaBuscaServidor = '';
-        resultadosServidor = null; // Limpa resultados do servidor
-        aplicarFiltros(); // Reaplica outros filtros
+        resultadosServidor = null;
+        mostrarIndicadorBusca(false);
+        aplicarFiltros();
         return;
     }
 
     // Se muito curto (menos de 3 chars), apenas busca local imediata
     if (termo.length < 3) {
         console.log('💻 Busca local (termo curto):', termo);
-        resultadosServidor = null; // Limpa resultados do servidor para usar busca local
-        aplicarFiltros(); // Usa a busca local integrada
+        resultadosServidor = null;
+        aplicarFiltros();
         return;
     }
 
     // Mostra indicador de carregamento
     mostrarIndicadorBusca(true);
 
-    // Debounce: aguarda 400ms antes de buscar no servidor
+    // Debounce: aguarda 300ms antes de buscar no servidor
     searchTimeout = setTimeout(() => {
         buscarNoServidor(termo);
-    }, 400);
+    }, 300);
 }
 
-// Busca no servidor (busca em TODOS os registros do banco)
-async function buscarNoServidor(termo) {
+// Busca no servidor usando jQuery AJAX (mais confiável que fetch)
+function buscarNoServidor(termo) {
     console.log('🌐 Buscando no servidor:', termo);
-    console.log('📍 URL da API:', `../api/buscar_associados.php?termo=${encodeURIComponent(termo)}&limit=500`);
     
     ultimaBuscaServidor = termo;
+    
+    // Pega filtro de situação atual
+    const filterSituacao = document.getElementById('filterSituacao')?.value || '';
 
-    try {
-        const url = `../api/buscar_associados.php?termo=${encodeURIComponent(termo)}&limit=500`;
-        console.log('🔗 Fazendo fetch para:', url);
-        
-        const response = await fetch(url);
-        
-        console.log('📡 Response status:', response.status);
-        console.log('📡 Response ok:', response.ok);
+    // Cancela busca anterior
+    if (buscaEmAndamento) {
+        buscaEmAndamento.abort();
+    }
 
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
-        }
-
-        const resultado = await response.json();
-        console.log('📦 Resposta do servidor:', resultado);
-
-        // Verifica se o usuário ainda está buscando pelo mesmo termo
-        const termoAtual = document.getElementById('searchInput').value.trim();
-        if (termoAtual !== termo) {
-            console.log('⚠️ Termo mudou durante a busca, ignorando resultado');
-            return;
-        }
-
-        if (resultado.status === 'success') {
-            console.log(`✅ Encontrados ${resultado.dados.length} resultados no servidor`);
-            console.log('📋 Primeiros dados recebidos:', resultado.dados.slice(0, 2));
-
-            // Armazena resultados do servidor
-            resultadosServidor = resultado.dados;
-            
-            // Aplica outros filtros (situação, corporação, etc) nos resultados do servidor
-            aplicarFiltros();
-
-            if (resultado.total_aproximado && resultado.total_aproximado > resultado.dados.length) {
-                console.log(`ℹ️ Mostrando ${resultado.dados.length} de ~${resultado.total_aproximado} resultados`);
+    buscaEmAndamento = $.ajax({
+        url: '../api/buscar_associados.php',
+        method: 'GET',
+        data: { 
+            termo: termo,
+            limit: 500
+        },
+        dataType: 'json',
+        timeout: 30000,
+        success: function(resultado) {
+            // Verifica se o usuário ainda está buscando pelo mesmo termo
+            const termoAtual = document.getElementById('searchInput').value.trim();
+            if (termoAtual !== termo) {
+                console.log('⚠️ Termo mudou durante a busca, ignorando resultado');
+                return;
             }
 
-        } else {
-            console.warn('⚠️ Erro na busca do servidor:', resultado.message);
-            resultadosServidor = null;
-            // Fallback para busca local
-            aplicarFiltros();
-        }
+            if (resultado.status === 'success') {
+                console.log(`✅ Encontrados ${resultado.dados.length} resultados no servidor`);
 
-    } catch (error) {
-        console.error('❌ Erro na busca do servidor:', error);
-        resultadosServidor = null;
-        // Fallback para busca local
-        aplicarFiltros();
-    } finally {
-        mostrarIndicadorBusca(false);
-    }
+                // Armazena resultados do servidor
+                resultadosServidor = resultado.dados;
+                
+                // Aplica outros filtros (situação, corporação, etc) nos resultados do servidor
+                aplicarFiltros();
+
+            } else {
+                console.warn('⚠️ Erro na busca do servidor:', resultado.message);
+                resultadosServidor = null;
+                aplicarFiltros();
+            }
+        },
+        error: function(xhr, status, error) {
+            if (status !== 'abort') {
+                console.error('❌ Erro na busca do servidor:', error);
+                resultadosServidor = null;
+                aplicarFiltros();
+            }
+        },
+        complete: function() {
+            mostrarIndicadorBusca(false);
+            buscaEmAndamento = null;
+        }
+    });
 }
 
 // Indicador visual de busca
