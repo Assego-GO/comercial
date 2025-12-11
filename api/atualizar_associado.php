@@ -104,8 +104,8 @@ try {
     error_log("Usuário Nome: " . $usuarioLogado['nome']);
     error_log("Funcionário ID: " . $funcionarioId);
 
-    // Validação básica dos campos
-    $camposObrigatorios = ['nome', 'cpf', 'rg', 'telefone', 'situacao'];
+    // Validação básica dos campos (telefone é opcional)
+    $camposObrigatorios = ['nome', 'cpf', 'rg', 'situacao'];
     foreach ($camposObrigatorios as $campo) {
         if (empty($_POST[$campo])) {
             throw new Exception("Campo '$campo' é obrigatório");

@@ -474,6 +474,11 @@ body {
     color: var(--danger);
 }
 
+.status-badge.deceased {
+    background: #f3e5f5;
+    color: #7b1fa2;
+}
+
 .status-badge i {
     font-size: 0.5rem;
 }
