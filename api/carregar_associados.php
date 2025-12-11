@@ -112,8 +112,9 @@ try {
     $limit = isset($_GET['limit']) ? min(500, max(10, intval($_GET['limit']))) : 100;
     $loadType = $_GET['load_type'] ?? 'initial';
     
-    // NOVO: Parâmetro de filtro por tipo_associado
+    // Parâmetros de filtro
     $filterTipoAssociado = isset($_GET['tipo_associado']) ? trim($_GET['tipo_associado']) : '';
+    $filterSituacao = isset($_GET['situacao']) ? trim($_GET['situacao']) : '';
     
     $offset = ($page - 1) * $limit;
 
@@ -129,6 +130,12 @@ try {
         $joinServicos = "INNER JOIN Servicos_Associado sa ON a.id = sa.associado_id AND sa.ativo = 1";
         $whereConditions[] = "sa.tipo_associado = :tipo_associado";
         $params[':tipo_associado'] = $filterTipoAssociado;
+    }
+    
+    // Se tiver filtro de situação, adiciona na WHERE
+    if (!empty($filterSituacao)) {
+        $whereConditions[] = "a.situacao = :situacao";
+        $params[':situacao'] = $filterSituacao;
     }
     
     $whereClause = implode(' AND ', $whereConditions);

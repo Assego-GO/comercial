@@ -549,9 +549,14 @@ function renderizarTabela(dados) {
     }
 
     dados.forEach(associado => {
-        const situacaoBadge = associado.situacao === 'Filiado'
-            ? '<span class="status-badge active"><i class="fas fa-check-circle"></i> Filiado</span>'
-            : '<span class="status-badge inactive"><i class="fas fa-times-circle"></i> Desfiliado</span>';
+        let situacaoBadge;
+        if (associado.situacao === 'Filiado') {
+            situacaoBadge = '<span class="status-badge active"><i class="fas fa-check-circle"></i> Filiado</span>';
+        } else if (associado.situacao === 'Falecido') {
+            situacaoBadge = '<span class="status-badge deceased"><i class="fas fa-cross"></i> Falecido</span>';
+        } else {
+            situacaoBadge = '<span class="status-badge inactive"><i class="fas fa-times-circle"></i> Desfiliado</span>';
+        }
 
         const row = document.createElement('tr');
         row.onclick = (e) => {
@@ -632,6 +637,13 @@ function aplicarFiltros() {
     const filterCorporacao = document.getElementById('filterCorporacao').value;
     const filterPatente = document.getElementById('filterPatente').value;
 
+    // Se tem filtro de situação específico (não é "Todos"), busca do servidor
+    if (filterSituacao && !searchTerm) {
+        console.log(`🔄 Buscando ${filterSituacao} do servidor...`);
+        carregarAssociadosPorSituacao(filterSituacao, filterTipoAssociado, filterCorporacao, filterPatente);
+        return;
+    }
+
     // Define base de dados: se tem resultados do servidor, usa eles. Senão, usa todosAssociados
     let dadosBase = resultadosServidor && resultadosServidor.length > 0 ? resultadosServidor : todosAssociados;
     
@@ -662,6 +674,66 @@ function aplicarFiltros() {
     renderizarPagina();
 }
 
+// NOVA FUNÇÃO: Carregar associados por situação do servidor
+function carregarAssociadosPorSituacao(situacao, tipoAssociado, corporacao, patente) {
+    // Mostra loading
+    const tbody = document.getElementById('tableBody');
+    if (tbody) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="9" class="text-center py-5">
+                    <div class="d-flex flex-column align-items-center">
+                        <div class="loading-spinner mb-3"></div>
+                        <span class="text-muted">Carregando ${situacao}s...</span>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }
+
+    $.ajax({
+        url: '../api/carregar_associados.php',
+        method: 'GET',
+        data: { 
+            load_type: 'all',
+            situacao: situacao,
+            tipo_associado: tipoAssociado || ''
+        },
+        dataType: 'json',
+        cache: false,
+        timeout: 60000,
+        success: function(response) {
+            if (response && response.status === 'success') {
+                let dados = response.dados || [];
+                
+                // Aplica filtros locais de corporação e patente
+                if (corporacao) {
+                    dados = dados.filter(a => a.corporacao === corporacao);
+                }
+                if (patente) {
+                    dados = dados.filter(a => a.patente === patente);
+                }
+                
+                associadosFiltrados = dados;
+                resultadosServidor = dados;
+                
+                console.log(`✅ Carregados ${dados.length} associados ${situacao}`);
+                
+                paginaAtual = 1;
+                calcularPaginacao();
+                renderizarPagina();
+            } else {
+                console.error('Erro ao carregar:', response?.message);
+                renderizarTabela([]);
+            }
+        },
+        error: function(xhr, status, error) {
+            console.error('Erro na requisição:', error);
+            renderizarTabela([]);
+        }
+    });
+}
+
 // Limpa filtros
 function limparFiltros() {
     console.log('Limpando filtros...');
@@ -677,6 +749,8 @@ function limparFiltros() {
         filterTipoAssociado.value = '';
     }
 
+    // Limpa resultados do servidor e volta para os dados locais
+    resultadosServidor = null;
     associadosFiltrados = [...todosAssociados];
     paginaAtual = 1;
     calcularPaginacao();
@@ -4335,8 +4409,9 @@ function coletarDadosFormularioModal() {
         dados.cpf = (associadoAtual.cpf || '').replace(/\D/g, '');
     }
     
-    if (!dados.telefone || dados.telefone.length < 10) {
-        alert('Telefone inválido');
+    // Telefone é opcional - apenas valida se foi preenchido
+    if (dados.telefone && dados.telefone.length > 0 && dados.telefone.length < 10) {
+        alert('Telefone inválido (deve ter pelo menos 10 dígitos)');
         return null;
     }
     
