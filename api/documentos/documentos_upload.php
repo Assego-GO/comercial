@@ -181,6 +181,7 @@ try {
         'FOTO_3X4' => 'Foto 3x4',
         'CERTIDAO_NASCIMENTO' => 'Certidão de Nascimento',
         'CERTIDAO_CASAMENTO' => 'Certidão de Casamento',
+        'CERTIDAO_OBITO' => 'Certidão de Óbito',
         'DECLARACAO_DEPENDENTES' => 'Declaração de Dependentes',
         'OUTROS' => $outroTipo ?: 'Outros'
     ];
