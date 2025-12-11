@@ -549,10 +549,12 @@ function renderizarTabela(dados) {
     }
 
     dados.forEach(associado => {
+        const situacaoNormalizada = (associado.situacao || '').toLowerCase();
+
         let situacaoBadge;
-        if (associado.situacao === 'Filiado') {
+        if (situacaoNormalizada === 'filiado') {
             situacaoBadge = '<span class="status-badge active"><i class="fas fa-check-circle"></i> Filiado</span>';
-        } else if (associado.situacao === 'Falecido') {
+        } else if (situacaoNormalizada === 'falecido') {
             situacaoBadge = '<span class="status-badge deceased"><i class="fas fa-cross"></i> Falecido</span>';
         } else {
             situacaoBadge = '<span class="status-badge inactive"><i class="fas fa-times-circle"></i> Desfiliado</span>';
@@ -1096,7 +1098,8 @@ function atualizarHeaderModal(associado) {
 
     // Status
     const statusPill = document.getElementById('modalStatusPill');
-    if (associado.situacao === 'Filiado') {
+    const situacaoNormalizada = (associado.situacao || '').toLowerCase();
+    if (situacaoNormalizada === 'filiado') {
         statusPill.innerHTML = `
             <div class="status-pill active">
                 <i class="fas fa-check-circle"></i>

@@ -2248,8 +2248,8 @@ $headerComponent = HeaderComponent::create([
         function calcularEstatisticasLocal() {
             if (typeof todosAssociados === 'undefined' || !todosAssociados || todosAssociados.length === 0) return;
 
-            // Associados ativos
-            const ativos = todosAssociados.filter(a => a.situacao === 'Filiado').length;
+            // Associados ativos (case-insensitive)
+            const ativos = todosAssociados.filter(a => (a.situacao || '').toLowerCase() === 'filiado').length;
             document.getElementById('associadosAtivos').textContent =
                 new Intl.NumberFormat('pt-BR').format(ativos);
 
