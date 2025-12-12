@@ -181,7 +181,7 @@ try {
         'rg' => trim($_POST['rg']),
         'cpf' => preg_replace('/[^0-9]/', '', $_POST['cpf']),
         'email' => trim($_POST['email'] ?? '') ?: null,
-        'situacao' => $_POST['situacao'],
+        'situacao' => 'Filiado',
         'escolaridade' => $_POST['escolaridade'] ?? null,
         'estadoCivil' => $_POST['estadoCivil'] ?? null,
         'telefone' => preg_replace('/[^0-9]/', '', $_POST['telefone']),

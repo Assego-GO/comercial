@@ -115,13 +115,14 @@ try {
     // Parâmetros de filtro
     $filterTipoAssociado = isset($_GET['tipo_associado']) ? trim($_GET['tipo_associado']) : '';
     $filterSituacao = isset($_GET['situacao']) ? trim($_GET['situacao']) : '';
+    $filterPreCadastro = isset($_GET['pre_cadastro']) ? trim($_GET['pre_cadastro']) : '';
     
     $offset = ($page - 1) * $limit;
 
     // CORREÇÃO PRINCIPAL: A query agora usa JOIN para filtrar corretamente por tipo_associado
     // quando o filtro está ativo
     
-    $whereConditions = ["a.pre_cadastro = 0"];
+    $whereConditions = ["1=1"]; // ✅ ALTERADO: Permite pré-cadastros aparecerem
     $joinServicos = "";
     $params = [];
     
@@ -136,6 +137,12 @@ try {
     if (!empty($filterSituacao)) {
         $whereConditions[] = "a.situacao = :situacao";
         $params[':situacao'] = $filterSituacao;
+    }
+    
+    // ✅ NOVO: Filtro de pré-cadastro
+    if ($filterPreCadastro !== '') {
+        $whereConditions[] = "a.pre_cadastro = :pre_cadastro";
+        $params[':pre_cadastro'] = intval($filterPreCadastro);
     }
     
     $whereClause = implode(' AND ', $whereConditions);
@@ -173,6 +180,7 @@ try {
         a.telefone,
         a.foto,
         COALESCE(a.situacao, 'Desfiliado') as situacao,
+        a.pre_cadastro,
         m.corporacao,
         m.patente,
         c.dataFiliacao as data_filiacao,
@@ -215,6 +223,7 @@ try {
             'rg' => $row['rg'] ?? '',
             'telefone' => $row['telefone'] ?? '',
             'situacao' => $row['situacao'],
+            'pre_cadastro' => intval($row['pre_cadastro'] ?? 0),
             'corporacao' => normalizarCorporacao($row['corporacao']),
             'patente' => $row['patente'] ?? '',
             'data_filiacao' => $row['data_filiacao'] ?? '',

@@ -130,13 +130,13 @@ try {
         SELECT DISTINCT
             a.id, a.nome, a.cpf, a.rg, a.telefone, a.foto,
             COALESCE(a.situacao, 'Desfiliado') as situacao,
+            a.pre_cadastro,
             m.corporacao, m.patente, c.dataFiliacao as data_filiacao,
             1 as prioridade
         FROM Associados a
         LEFT JOIN Militar m ON a.id = m.associado_id
         LEFT JOIN Contrato c ON a.id = c.associado_id
-        WHERE a.pre_cadastro = 0 
-        AND a.situacao = 'Filiado'
+        WHERE a.situacao = 'Filiado'
         ORDER BY a.nome
         LIMIT " . intval($limit) . "
         ";
@@ -162,13 +162,13 @@ try {
             SELECT DISTINCT
                 a.id, a.nome, a.cpf, a.rg, a.telefone, a.foto,
                 COALESCE(a.situacao, 'Desfiliado') as situacao,
+                a.pre_cadastro,
                 m.corporacao, m.patente, c.dataFiliacao as data_filiacao,
                 1 as prioridade
             FROM Associados a
             LEFT JOIN Militar m ON a.id = m.associado_id
             LEFT JOIN Contrato c ON a.id = c.associado_id
-            WHERE a.pre_cadastro = 0 
-            AND a.situacao = 'Filiado'
+            WHERE a.situacao = 'Filiado'
             AND (
                 -- Busca por prefixo do CPF
                 ($cpfLikeClause)
@@ -205,6 +205,7 @@ try {
             SELECT DISTINCT
                 a.id, a.nome, a.cpf, a.rg, a.telefone, a.foto,
                 COALESCE(a.situacao, 'Desfiliado') as situacao,
+                a.pre_cadastro,
                 m.corporacao, m.patente, c.dataFiliacao as data_filiacao,
                 CASE
                     WHEN a.nome LIKE CONCAT(?, '%') THEN 2
@@ -213,8 +214,7 @@ try {
             FROM Associados a
             LEFT JOIN Militar m ON a.id = m.associado_id
             LEFT JOIN Contrato c ON a.id = c.associado_id
-            WHERE a.pre_cadastro = 0 
-            AND a.nome LIKE ?
+            WHERE a.nome LIKE ?
             ORDER BY prioridade, a.nome
             LIMIT " . intval($limit) . "
             ";
@@ -252,6 +252,7 @@ try {
             'rg' => $row['rg'] ?? '',
             'telefone' => $row['telefone'] ?? '',
             'situacao' => $situacaoNormalizada,
+            'pre_cadastro' => intval($row['pre_cadastro'] ?? 0),
             'corporacao' => normalizarCorporacao($row['corporacao']),
             'patente' => $row['patente'] ?? '',
             'data_filiacao' => $row['data_filiacao'] ?? '',
