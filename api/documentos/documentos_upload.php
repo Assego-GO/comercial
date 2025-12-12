@@ -177,11 +177,11 @@ try {
         'FICHA_DESFILIACAO' => 'Ficha de Desfiliação',
         'RG' => 'RG (Cópia)',
         'CPF' => 'CPF (Cópia)',
-        'COMPROVANTE_RESIDENCIA' => 'Comprovante de Residência',
         'FOTO_3X4' => 'Foto 3x4',
         'CERTIDAO_NASCIMENTO' => 'Certidão de Nascimento',
         'CERTIDAO_CASAMENTO' => 'Certidão de Casamento',
         'CERTIDAO_OBITO' => 'Certidão de Óbito',
+        'RECADASTRAMENTO' => 'Recadastramento',
         'DECLARACAO_DEPENDENTES' => 'Declaração de Dependentes',
         'OUTROS' => $outroTipo ?: 'Outros'
     ];
