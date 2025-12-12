@@ -2457,11 +2457,11 @@ function abrirModalUploadDocumento(associadoId, associadoNome) {
                                     <option value="FICHA_DESFILIACAO">Ficha de Desfiliação</option>
                                     <option value="RG">RG (Cópia)</option>
                                     <option value="CPF">CPF (Cópia)</option>
-                                    <option value="COMPROVANTE_RESIDENCIA">Comprovante de Residência</option>
                                     <option value="FOTO_3X4">Foto 3x4</option>
                                     <option value="CERTIDAO_NASCIMENTO">Certidão de Nascimento</option>
                                     <option value="CERTIDAO_CASAMENTO">Certidão de Casamento</option>
                                     <option value="CERTIDAO_OBITO">Certidão de Óbito</option>
+                                    <option value="RECADASTRAMENTO">Recadastramento</option>
                                     <option value="OUTROS">Outros</option>
                                 </select>
                             </div>
