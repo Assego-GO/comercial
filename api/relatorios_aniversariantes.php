@@ -18,7 +18,7 @@ function gerarRelatorioAniversariantes($parametros) {
                 YEAR(CURDATE()) - YEAR(a.nasc) - (DATE_FORMAT(CURDATE(), '%m%d') < DATE_FORMAT(a.nasc, '%m%d')) as idade,
                 a.telefone,
                 a.email,
-                a.situacao,
+                COALESCE(a.situacao, 'Filiado') as situacao,
                 m.corporacao,
                 m.patente,
                 m.categoria,
@@ -42,12 +42,17 @@ function gerarRelatorioAniversariantes($parametros) {
             FROM Associados a
             LEFT JOIN Militar m ON a.id = m.associado_id
             LEFT JOIN Endereco e ON a.id = e.associado_id
-            WHERE a.situacao = 'Filiado' 
-            AND a.nasc IS NOT NULL
+            WHERE a.nasc IS NOT NULL
         ";
         
         $params = [];
         $conditions = [];
+        
+        // Filtro por situação (opcional - se vazio, mostra todos)
+        if (isset($parametros['situacao']) && $parametros['situacao'] !== '') {
+            $conditions[] = "a.situacao = ?";
+            $params[] = $parametros['situacao'];
+        }
         
         // Filtro por período de aniversário
         $periodo = $parametros['periodo_aniversario'] ?? 'hoje';
@@ -94,14 +99,6 @@ function gerarRelatorioAniversariantes($parametros) {
             $params[] = $parametros['cidade'];
         }
         
-        // Filtro por situação (sempre ativo por padrão, mas permite override)
-        if (isset($parametros['situacao']) && $parametros['situacao'] !== '') {
-            // Remove a condição padrão se um filtro específico foi aplicado
-            $sql = str_replace("AND a.situacao = 'Filiado'", "", $sql);
-            $conditions[] = "a.situacao = ?";
-            $params[] = $parametros['situacao'];
-        }
-        
         // Aplicar condições adicionais
         if (!empty($conditions)) {
             $sql .= " AND " . implode(" AND ", $conditions);
@@ -135,7 +132,7 @@ function gerarRelatorioAniversariantes($parametros) {
         
         // Filtrar campos conforme solicitado
         $campos = $parametros['campos'] ?? [
-            'nome', 'data_nascimento', 'idade', 'telefone', 'email', 'corporacao', 'patente'
+            'nome', 'data_nascimento', 'idade', 'cidade', 'situacao', 'patente', 'corporacao', 'telefone'
         ];
         
         $dadosFiltrados = [];
