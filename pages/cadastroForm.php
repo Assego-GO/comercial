@@ -1405,6 +1405,11 @@ $headerComponent = HeaderComponent::create([
                                 <option value="">Selecione...</option>
                                 <option value="Polícia Militar" <?php echo (isset($associadoData['corporacao']) && $associadoData['corporacao'] == 'Polícia Militar') ? 'selected' : ''; ?>>Polícia Militar</option>
                                 <option value="Bombeiro Militar" <?php echo (isset($associadoData['corporacao']) && $associadoData['corporacao'] == 'Bombeiro Militar') ? 'selected' : ''; ?>>Bombeiro Militar</option>
+                                <option value="Polícia Civil" <?php echo (isset($associadoData['corporacao']) && $associadoData['corporacao'] == 'Polícia Civil') ? 'selected' : ''; ?>>Polícia Civil</option>
+                                <option value="Polícia Penal" <?php echo (isset($associadoData['corporacao']) && $associadoData['corporacao'] == 'Polícia Penal') ? 'selected' : ''; ?>>Polícia Penal</option>
+                                <option value="Exército" <?php echo (isset($associadoData['corporacao']) && $associadoData['corporacao'] == 'Exército') ? 'selected' : ''; ?>>Exército</option>
+                                <option value="Outro" <?php echo (isset($associadoData['corporacao']) && $associadoData['corporacao'] == 'Outro') ? 'selected' : ''; ?>>Outro</option>
+                                <option value="Agregados" <?php echo (isset($associadoData['corporacao']) && $associadoData['corporacao'] == 'Agregados') ? 'selected' : ''; ?>>Agregados</option>
                             </select>
                         </div>
 
