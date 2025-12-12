@@ -479,6 +479,11 @@ body {
     color: #7b1fa2;
 }
 
+.status-badge.warning {
+    background: #fff3cd;
+    color: #856404;
+}
+
 .status-badge i {
     font-size: 0.5rem;
 }
@@ -811,6 +816,11 @@ body {
 .status-pill.inactive {
     background: rgba(255, 59, 48, 0.2);
     color: #ff6b6b;
+}
+
+.status-pill.warning {
+    background: rgba(255, 193, 7, 0.2);
+    color: #ffc107;
 }
 
 .modal-close-custom {

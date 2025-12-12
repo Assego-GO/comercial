@@ -1930,6 +1930,31 @@ body {
             const tipoLabel = isSocio ? 'Sócio' : 'Agregado';
             const tipoIcon = isSocio ? 'fa-user-tie' : 'fa-users';
             
+            // ✅ NOVA LÓGICA: Verificar se está em pré-cadastro
+            const preCadastro = parseInt(doc.pre_cadastro) === 1;
+            const situacaoReal = doc.situacao || 'Filiado';
+            
+            // Badge de situação: se pre_cadastro = 1, mostra "Pré-cadastro", senão mostra situação real
+            let badgeSituacao = '';
+            if (preCadastro) {
+                badgeSituacao = `
+                    <span class="badge bg-warning text-dark d-flex align-items-center gap-1" style="font-size: 0.75rem; padding: 0.4rem 0.8rem; font-weight: 600;">
+                        <i class="fas fa-clock"></i>
+                        Pré-cadastro
+                    </span>
+                `;
+            } else {
+                const badgeClass = situacaoReal === 'Filiado' ? 'success' : 
+                                  situacaoReal === 'Desfiliado' ? 'danger' : 'secondary';
+                const badgeIcon = situacaoReal === 'Filiado' ? 'check-circle' : 'times-circle';
+                badgeSituacao = `
+                    <span class="badge bg-${badgeClass} d-flex align-items-center gap-1" style="font-size: 0.75rem; padding: 0.4rem 0.8rem; font-weight: 600;">
+                        <i class="fas fa-${badgeIcon}"></i>
+                        ${situacaoReal}
+                    </span>
+                `;
+            }
+            
             // Informações do titular (apenas para agregados)
             const titularInfo = !isSocio && doc.titular_nome ? `
                 <div class="titular-info">
@@ -1958,6 +1983,10 @@ body {
                                     <i class="fas ${tipoIcon}"></i>
                                     ${tipoLabel}
                                 </span>
+                                
+                                <!-- ✅ Badge de situação do associado -->
+                                ${badgeSituacao}
+                                
                                 <span class="status-badge ${statusClass}">
                                     <i class="fas fa-${getStatusIcon(doc.status_fluxo)}"></i>
                                     ${doc.status_descricao}
@@ -1984,6 +2013,12 @@ body {
                                 <i class="fas fa-calendar"></i>
                                 <span>${formatarData(doc.data_upload)}</span>
                             </div>
+                            ${preCadastro ? `
+                            <div class="meta-item">
+                                <i class="fas fa-info-circle text-warning"></i>
+                                <span class="text-warning"><strong>Status: Filiado | Benefícios Ativos</strong></span>
+                            </div>
+                            ` : ''}
                             ${doc.dias_em_processo > 0 ? `
                             <div class="meta-item">
                                 <i class="fas fa-hourglass-half"></i>

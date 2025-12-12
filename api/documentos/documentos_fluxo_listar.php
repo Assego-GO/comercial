@@ -87,6 +87,8 @@ try {
                 a.nome AS associado_nome,
                 a.cpf AS associado_cpf,
                 a.email AS associado_email,
+                a.situacao,
+                a.pre_cadastro,
                 
                 -- CORRIGIDO: Se está na tabela Militar = SOCIO, se não está = AGREGADO
                 CASE 
