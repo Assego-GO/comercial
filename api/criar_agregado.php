@@ -22,6 +22,7 @@ require_once '../config/config.php';
 require_once '../config/database.php';
 require_once '../classes/Database.php';
 require_once '../classes/Associados.php';
+require_once '../classes/Documentos.php';
 
 function logError($message, $data = null) {
     $logMessage = date('Y-m-d H:i:s') . " - CRIAR_AGREGADO - " . $message;
@@ -83,7 +84,10 @@ try {
     logError("=== INÍCIO CRIAR/ATUALIZAR AGREGADO (TABELA ASSOCIADOS) ===");
     
     $dadosRecebidos = $_POST;
+    logError("Dados recebidos (POST)", $dadosRecebidos); // ✅ DEBUG
+    
     $dados = limparDados($dadosRecebidos);
+    logError("Dados limpos", $dados); // ✅ DEBUG
     
     // Compatibilidade de campos
     if (empty($dados['nasc']) && !empty($dados['dataNascimento'])) {
@@ -179,6 +183,38 @@ try {
     logError("✓ Titular validado", ['id' => $titularId, 'nome' => $titular['nome']]);
     
     // =============================
+    // ✅ PREENCHER CAMPOS COM VALORES PADRÃO PARA AGREGADOS
+    // =============================
+    if (empty($dados['estadoCivil'])) {
+        $dados['estadoCivil'] = 'Solteiro(a)';
+        logError("➕ Estado civil preenchido automaticamente");
+    }
+    
+    if (empty($dados['dataFiliacao'])) {
+        $dados['dataFiliacao'] = date('Y-m-d');
+        logError("➕ Data de filiação preenchida automaticamente");
+    }
+    
+    if (empty($dados['endereco'])) {
+        $dados['endereco'] = 'Mesmo do titular';
+        logError("➕ Endereço preenchido automaticamente");
+    }
+    
+    if (empty($dados['numero'])) {
+        $dados['numero'] = 'S/N';
+        logError("➕ Número preenchido automaticamente");
+    }
+    
+    if (empty($dados['bairro'])) {
+        $dados['bairro'] = 'Mesmo do titular';
+        logError("➕ Bairro preenchido automaticamente");
+    }
+    
+    if (empty($dados['cidade'])) {
+        $dados['cidade'] = 'Mesmo do titular';
+        logError("➕ Cidade preenchida automaticamente");
+    }
+    
     // VALIDAÇÕES OBRIGATÓRIAS
     // =============================
     
@@ -186,13 +222,7 @@ try {
         'nome' => 'Nome completo',
         'nasc' => 'Data de nascimento',
         'telefone' => 'Telefone',
-        'cpf' => 'CPF',
-        'estadoCivil' => 'Estado civil',
-        'dataFiliacao' => 'Data de filiação',
-        'endereco' => 'Endereço',
-        'numero' => 'Número',
-        'bairro' => 'Bairro',
-        'cidade' => 'Cidade'
+        'cpf' => 'CPF'
     ];
     
     $errosValidacao = [];
@@ -212,14 +242,18 @@ try {
     }
     
     if (!empty($errosValidacao)) {
+        logError("❌ Validação falhou", $errosValidacao); // ✅ DEBUG
         http_response_code(400);
         echo json_encode([
             'status' => 'error',
             'message' => 'Dados inválidos',
-            'errors' => $errosValidacao
+            'errors' => $errosValidacao,
+            'debug' => 'Campos recebidos: ' . implode(', ', array_keys($dados))
         ]);
         exit;
     }
+    
+    logError("✓ Todas as validações passaram");
     
     // =============================
     // VERIFICA SE AGREGADO JÁ EXISTE
@@ -270,6 +304,7 @@ try {
         'cpf' => $cpfAgregado,
         'email' => $dados['email'] ?? null,
         'situacao' => 'Filiado', // Agregado inicia como Filiado
+        'pre_cadastro' => 1, // Marca como pré-cadastro até assinatura
         'escolaridade' => $dados['escolaridade'] ?? null,
         'estadoCivil' => $dados['estadoCivil'],
         'telefone' => preg_replace('/\D/', '', $dados['telefone']),
@@ -367,29 +402,26 @@ try {
         } else {
             // INSERT em Associados (sem campos de endereço - vão em Endereco)
             // Nota: associado_titular_id ainda não existe no banco
-            $sql = "INSERT INTO Associados (
-                nome, nasc, sexo, rg, cpf, email, situacao, escolaridade,
-                estadoCivil, telefone
-            ) VALUES (
-                :nome, :nasc, :sexo, :rg, :cpf, :email, :situacao, :escolaridade,
-                :estadoCivil, :telefone
-            )";
-            
-            $stmt = $db->prepare($sql);
-            $stmt->execute([
-                ':nome' => $dadosAssociado['nome'],
-                ':nasc' => $dadosAssociado['nasc'],
-                ':sexo' => $dadosAssociado['sexo'],
-                ':rg' => $dadosAssociado['rg'],
-                ':cpf' => $dadosAssociado['cpf'],
-                ':email' => $dadosAssociado['email'],
-                ':situacao' => $dadosAssociado['situacao'],
-                ':escolaridade' => $dadosAssociado['escolaridade'],
-                ':estadoCivil' => $dadosAssociado['estadoCivil'],
-                ':telefone' => $dadosAssociado['telefone']
-            ]);
-            
-            $agregadoId = $db->lastInsertId();
+    $sql = "INSERT INTO Associados (
+        nome, nasc, sexo, rg, cpf, email, situacao, pre_cadastro, escolaridade,
+        estadoCivil, telefone
+    ) VALUES (
+        :nome, :nasc, :sexo, :rg, :cpf, :email, :situacao, :pre_cadastro, :escolaridade,
+        :estadoCivil, :telefone
+    )";            $stmt = $db->prepare($sql);
+    $stmt->execute([
+        ':nome' => $dadosAssociado['nome'],
+        ':nasc' => $dadosAssociado['nasc'],
+        ':sexo' => $dadosAssociado['sexo'],
+        ':rg' => $dadosAssociado['rg'],
+        ':cpf' => $dadosAssociado['cpf'],
+        ':email' => $dadosAssociado['email'],
+        ':situacao' => $dadosAssociado['situacao'],
+        ':pre_cadastro' => $dadosAssociado['pre_cadastro'],
+        ':escolaridade' => $dadosAssociado['escolaridade'],
+        ':estadoCivil' => $dadosAssociado['estadoCivil'],
+        ':telefone' => $dadosAssociado['telefone']
+    ]);            $agregadoId = $db->lastInsertId();
             
             // INSERT em Endereco
             $stmtEnd = $db->prepare("
@@ -438,6 +470,27 @@ try {
                 $dadosAssociado['dataFiliacao']
             ]);
             
+            // INSERT de Serviços - Agregado só tem serviço social obrigatório
+            $tipoAssociadoServico = $dados['tipoAssociadoServico'] ?? 'Agregado';
+            $valorBaseSocial = 173.10; // Valor base padrão
+            $percentualAgregado = 50; // Agregado paga 50%
+            $valorSocial = $valorBaseSocial * ($percentualAgregado / 100);
+            
+            $stmtServSocial = $db->prepare("
+                INSERT INTO Servicos_Associado (
+                    associado_id, servico_id, tipo_associado, percentual_aplicado,
+                    valor_aplicado, ativo, data_adesao
+                ) VALUES (?, 1, ?, ?, ?, 1, NOW())
+            ");
+            $stmtServSocial->execute([
+                $agregadoId,
+                $tipoAssociadoServico,
+                $percentualAgregado,
+                $valorSocial
+            ]);
+            
+            logError("✅ Serviço Social criado para Agregado - Valor: R$ " . number_format($valorSocial, 2, ',', '.'));
+            
             logError("✅ Agregado criado na tabela Associados - ID: " . $agregadoId);
         }
         
@@ -449,7 +502,30 @@ try {
     }
     
     // =============================
-    // SALVA DOCUMENTO (se enviado)
+    // SALVA FOTO (se enviado) - USANDO FUNÇÃO PADRONIZADA
+    // =============================
+    
+    if (isset($_FILES['foto']) && $_FILES['foto']['error'] === UPLOAD_ERR_OK) {
+        try {
+            logError("=== PROCESSANDO FOTO DO AGREGADO ===");
+            
+            $uploadResult = processarUploadFoto($_FILES['foto'], $dadosAssociado['cpf']);
+            if ($uploadResult['success']) {
+                // Atualiza a foto no associado
+                $stmtFoto = $db->prepare("UPDATE Associados SET foto = ? WHERE id = ?");
+                $stmtFoto->execute([$uploadResult['path'], $agregadoId]);
+                
+                logError("✅ Foto salva: " . $uploadResult['path']);
+            } else {
+                logError("⚠ Erro ao processar foto: " . $uploadResult['error']);
+            }
+        } catch (Exception $e) {
+            logError("⚠ Erro ao salvar foto: " . $e->getMessage());
+        }
+    }
+    
+    // =============================
+    // SALVA DOCUMENTO (se enviado) - USANDO CLASSE DOCUMENTOS
     // =============================
     
     $documentoId = null;
@@ -457,49 +533,48 @@ try {
     
     if (isset($_FILES['ficha_assinada']) && $_FILES['ficha_assinada']['error'] === UPLOAD_ERR_OK) {
         try {
-            $pastaBase = '../uploads/documentos/associados/';
-            $pastaAgregado = $pastaBase . $agregadoId . '/';
+            logError("=== PROCESSANDO FICHA ASSINADA DO AGREGADO ===");
             
-            if (!file_exists($pastaAgregado)) {
-                mkdir($pastaAgregado, 0755, true);
-            }
+            $documentos = new Documentos();
             
-            $arquivo = $_FILES['ficha_assinada'];
-            $extensao = pathinfo($arquivo['name'], PATHINFO_EXTENSION);
-            $nomeArquivo = 'ficha_filiacao_' . date('Ymd_His') . '.' . $extensao;
-            $caminhoCompleto = $pastaAgregado . $nomeArquivo;
+            $documentoId = $documentos->uploadDocumentoAssociacao(
+                $agregadoId,
+                $_FILES['ficha_assinada'],
+                'FISICO',
+                'Ficha de filiação do Agregado - Anexada durante cadastro'
+            );
             
-            if (move_uploaded_file($arquivo['tmp_name'], $caminhoCompleto)) {
-                $caminhoRelativo = str_replace('../', '', $pastaAgregado) . $nomeArquivo;
-                $caminhoDocumento = $caminhoRelativo;
+            logError("✅ Ficha assinada anexada com ID: " . $documentoId);
+            
+            // Se tem documento, já envia automaticamente para assinatura
+            try {
+                $documentos->enviarParaAssinatura(
+                    $documentoId,
+                    "Agregado criado - Enviado automaticamente para assinatura"
+                );
                 
-                // Usa tabela Documentos_Associado (unificada) com status AGUARDANDO_ASSINATURA
-                $stmtDoc = $db->prepare("
-                    INSERT INTO Documentos_Associado (
-                        associado_id, tipo_documento, tipo_origem, nome_arquivo,
-                        caminho_arquivo, data_upload, observacao, status_fluxo, verificado
-                    ) VALUES (?, 'FICHA_FILIACAO', 'FISICO', ?, ?, NOW(), 'Agregado', 'AGUARDANDO_ASSINATURA', 0)
-                ");
+                $associados = new Associados();
+                $associados->enviarParaPresidencia(
+                    $agregadoId, 
+                    "Agregado criado - Aguardando aprovação da presidência"
+                );
                 
-                $stmtDoc->execute([
-                    $agregadoId,
-                    $nomeArquivo,
-                    $caminhoRelativo
-                ]);
+                logError("✅ Documento enviado para presidência assinar");
                 
-                $documentoId = $db->lastInsertId();
-                logError("✅ Documento salvo com status AGUARDANDO_ASSINATURA - ID: " . $documentoId);
+            } catch (Exception $e) {
+                logError("⚠ Aviso ao enviar ficha para presidência: " . $e->getMessage());
             }
             
         } catch (Exception $e) {
-            logError("⚠ Erro ao salvar documento: " . $e->getMessage());
+            logError("⚠ Erro ao processar ficha assinada: " . $e->getMessage());
         }
     } else {
         // =============================
         // CRIA DOCUMENTO VIRTUAL SE NÃO HOUVER UPLOAD
         // =============================
         try {
-            // Criar registro de documento virtual para controle de assinatura
+            logError("=== CRIANDO DOCUMENTO VIRTUAL PARA AGREGADO ===");
+            
             $stmtDoc = $db->prepare("
                 INSERT INTO Documentos_Associado (
                     associado_id, tipo_documento, tipo_origem, nome_arquivo,
@@ -515,6 +590,118 @@ try {
             
         } catch (Exception $e) {
             logError("⚠ Erro ao criar documento virtual: " . $e->getMessage());
+        }
+    }
+    
+    // =============================
+    // PROCESSAR DEPENDENTES DO AGREGADO - APÓS COMMIT
+    // =============================
+    if (!$isUpdate && isset($agregadoId)) {
+        logError("=== PROCESSANDO DEPENDENTES DO AGREGADO ===");
+        logError("📋 Chaves recebidas em \$_POST: " . implode(', ', array_keys($_POST)));
+        
+        // ✅ FORMATO CORRETO: dependentes[0][nome], dependentes[0][data_nascimento], etc
+        $dependentesArray = [];
+        
+        if (isset($_POST['dependentes']) && is_array($_POST['dependentes'])) {
+            logError("✅ Array 'dependentes' encontrado em \$_POST com " . count($_POST['dependentes']) . " entradas");
+            
+            foreach ($_POST['dependentes'] as $index => $dep) {
+                $nomeDep = trim($dep['nome'] ?? '');
+                $nascDep = $dep['data_nascimento'] ?? '';
+                $parentescoDep = $dep['parentesco'] ?? '';
+                $sexoDep = $dep['sexo'] ?? '';
+                
+                logError("🔍 Dependente [{$index}]: nome='{$nomeDep}', nasc='{$nascDep}', parentesco='{$parentescoDep}', sexo='{$sexoDep}'");
+                
+                if (!empty($nomeDep)) {
+                    // Validar e converter data
+                    $nascFormatado = null;
+                    if (!empty($nascDep) && 
+                        $nascDep !== '0000-00-00' && 
+                        $nascDep !== '0000-00-00 00:00:00' &&
+                        $nascDep !== 'NaN-NaN-01' &&
+                        strtotime($nascDep) !== false &&
+                        strtotime($nascDep) > 0) {
+                        try {
+                            $nascFormatado = converterDataParaMySQL($nascDep);
+                            logError("📅 Data convertida: {$nascDep} -> {$nascFormatado}");
+                        } catch (Exception $e) {
+                            logError("⚠️ Erro ao converter data: " . $e->getMessage());
+                        }
+                    }
+                    
+                    $dependentesArray[] = [
+                        'nome' => $nomeDep,
+                        'data_nascimento' => $nascFormatado,
+                        'parentesco' => $parentescoDep,
+                        'sexo' => $sexoDep
+                    ];
+                    
+                    logError("➕ Dependente preparado: {$nomeDep}");
+                } else {
+                    logError("⚠️ Dependente [{$index}] pulado: nome vazio");
+                }
+            }
+        } else {
+            logError("⚠️ Array 'dependentes' NÃO encontrado em \$_POST");
+            
+            // FALLBACK: Tentar formato antigo dependente_0_nome
+            $indicesDependentes = [];
+            foreach ($_POST as $key => $value) {
+                if (preg_match('/^dependente_(\d+)_/', $key, $matches)) {
+                    $indicesDependentes[$matches[1]] = true;
+                }
+            }
+            
+            if (!empty($indicesDependentes)) {
+                logError("🔄 Tentando formato alternativo (dependente_N_campo)...");
+                foreach (array_keys($indicesDependentes) as $index) {
+                    $nomeDep = trim($_POST["dependente_{$index}_nome"] ?? '');
+                    $nascDep = $_POST["dependente_{$index}_data_nascimento"] ?? '';
+                    $parentescoDep = $_POST["dependente_{$index}_parentesco"] ?? '';
+                    $sexoDep = $_POST["dependente_{$index}_sexo"] ?? '';
+                    
+                    if (!empty($nomeDep)) {
+                        $nascFormatado = null;
+                        if (!empty($nascDep) && $nascDep !== '0000-00-00') {
+                            try {
+                                $nascFormatado = converterDataParaMySQL($nascDep);
+                            } catch (Exception $e) {
+                                logError("⚠️ Erro ao converter data: " . $e->getMessage());
+                            }
+                        }
+                        
+                        $dependentesArray[] = [
+                            'nome' => $nomeDep,
+                            'data_nascimento' => $nascFormatado,
+                            'parentesco' => $parentescoDep,
+                            'sexo' => $sexoDep
+                        ];
+                        
+                        logError("➕ Dependente (formato alternativo): {$nomeDep}");
+                    }
+                }
+            }
+        }
+        
+        // Inserir dependentes usando a classe Associados
+        if (!empty($dependentesArray)) {
+            logError("💾 Salvando " . count($dependentesArray) . " dependente(s) no banco...");
+            
+            $associados = new Associados();
+            foreach ($dependentesArray as $dep) {
+                try {
+                    $associados->adicionarDependente($agregadoId, $dep);
+                    logError("✅ Dependente '{$dep['nome']}' salvo com sucesso no banco!");
+                } catch (Exception $e) {
+                    logError("❌ ERRO ao salvar dependente '{$dep['nome']}': " . $e->getMessage());
+                }
+            }
+            
+            logError("✅✅✅ Total de " . count($dependentesArray) . " dependente(s) SALVOS NO BANCO!");
+        } else {
+            logError("⚠️⚠️ NENHUM DEPENDENTE FOI PROCESSADO! Verifique o formato dos dados enviados.");
         }
     }
     
@@ -547,12 +734,69 @@ try {
     logError("=== SUCESSO - AGREGADO SALVO NA TABELA ASSOCIADOS ===");
     
 } catch (Exception $e) {
-    logError("❌ ERRO: " . $e->getMessage());
+    logError("❌ ERRO EXCEPTION: " . $e->getMessage());
+    logError("Stack trace: " . $e->getTraceAsString());
     
     http_response_code(500);
     echo json_encode([
         'status' => 'error',
-        'message' => 'Erro: ' . $e->getMessage()
+        'message' => 'Erro ao processar requisição: ' . $e->getMessage(),
+        'debug' => 'Linha: ' . $e->getLine() . ' | Arquivo: ' . basename($e->getFile())
     ]);
+}
+
+/**
+ * Função para processar upload de foto
+ */
+function processarUploadFoto($arquivo, $cpf)
+{
+    $resultado = [
+        'success' => false,
+        'path' => null,
+        'error' => null
+    ];
+
+    try {
+        if (!isset($arquivo['tmp_name']) || !is_uploaded_file($arquivo['tmp_name'])) {
+            throw new Exception('Arquivo não foi enviado corretamente');
+        }
+
+        $tamanhoMaximo = 10 * 1024 * 1024; // 10MB
+        $tiposPermitidos = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+
+        if ($arquivo['size'] > $tamanhoMaximo) {
+            throw new Exception('Arquivo muito grande. Tamanho máximo: 10MB');
+        }
+
+        if (!in_array($arquivo['type'], $tiposPermitidos)) {
+            throw new Exception('Tipo de arquivo não permitido. Use JPG, PNG ou GIF');
+        }
+
+        $imageInfo = getimagesize($arquivo['tmp_name']);
+        if ($imageInfo === false) {
+            throw new Exception('Arquivo não é uma imagem válida');
+        }
+
+        $uploadDir = '../uploads/fotos/';
+        if (!file_exists($uploadDir)) {
+            mkdir($uploadDir, 0755, true);
+        }
+
+        $extensao = pathinfo($arquivo['name'], PATHINFO_EXTENSION);
+        $cpfLimpo = preg_replace('/[^0-9]/', '', $cpf);
+        $nomeArquivo = 'foto_' . $cpfLimpo . '_' . time() . '.' . strtolower($extensao);
+        $caminhoCompleto = $uploadDir . $nomeArquivo;
+
+        if (!move_uploaded_file($arquivo['tmp_name'], $caminhoCompleto)) {
+            throw new Exception('Erro ao salvar arquivo no servidor');
+        }
+
+        $resultado['success'] = true;
+        $resultado['path'] = 'uploads/fotos/' . $nomeArquivo;
+    } catch (Exception $e) {
+        $resultado['error'] = $e->getMessage();
+    }
+
+    return $resultado;
 }
 ?>
