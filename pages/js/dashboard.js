@@ -523,6 +523,11 @@ function renderizarTabela(dados) {
     console.log(`📊 Renderizando ${dados.length} registros...`);
     console.log('📋 Primeiros dados a renderizar:', dados.slice(0, 2));
     
+    // Debug: verificar se pre_cadastro está presente
+    if (dados.length > 0 && dados[0].pre_cadastro !== undefined) {
+        console.log('✅ Campo pre_cadastro detectado:', dados[0].pre_cadastro);
+    }
+    
     const tbody = document.getElementById('tableBody');
 
     if (!tbody) {
@@ -550,9 +555,16 @@ function renderizarTabela(dados) {
 
     dados.forEach(associado => {
         const situacaoNormalizada = (associado.situacao || '').toLowerCase();
+        // Verifica pre_cadastro de múltiplas formas para garantir compatibilidade
+        const preCadastro = associado.pre_cadastro === 1 || 
+                           associado.pre_cadastro === '1' || 
+                           parseInt(associado.pre_cadastro) === 1;
 
         let situacaoBadge;
-        if (situacaoNormalizada === 'filiado') {
+        // ✅ NOVA LÓGICA: Se está em pré-cadastro, mostra badge especial
+        if (preCadastro) {
+            situacaoBadge = '<span class="status-badge warning"><i class="fas fa-clock"></i> Pré-cadastro</span>';
+        } else if (situacaoNormalizada === 'filiado') {
             situacaoBadge = '<span class="status-badge active"><i class="fas fa-check-circle"></i> Filiado</span>';
         } else if (situacaoNormalizada === 'falecido') {
             situacaoBadge = '<span class="status-badge deceased"><i class="fas fa-cross"></i> Falecido</span>';
@@ -671,8 +683,21 @@ function aplicarFiltros() {
             matchSearch = nomeMatch || cpfMatch || rgMatch || telMatch;
         }
 
-        // Outros filtros
-        const matchSituacao = !filterSituacao || associado.situacao === filterSituacao;
+        // Filtro de situação (com tratamento especial para Pré-cadastro)
+        let matchSituacao = true;
+        if (filterSituacao) {
+            if (filterSituacao === 'PreCadastro') {
+                // Pré-cadastro = Filiado + pre_cadastro = 1
+                matchSituacao = associado.situacao === 'Filiado' && parseInt(associado.pre_cadastro) === 1;
+            } else if (filterSituacao === 'Filiado') {
+                // Filiado normal = Filiado + pre_cadastro = 0
+                matchSituacao = associado.situacao === 'Filiado' && parseInt(associado.pre_cadastro) !== 1;
+            } else {
+                // Outros status (Desfiliado, Falecido)
+                matchSituacao = associado.situacao === filterSituacao;
+            }
+        }
+        
         const matchTipoAssociado = !filterTipoAssociado || associado.tipo_associado === filterTipoAssociado;
         const matchCorporacao = !filterCorporacao || associado.corporacao === filterCorporacao;
         const matchPatente = !filterPatente || associado.patente === filterPatente;
@@ -714,7 +739,18 @@ function carregarAssociadosPorFiltros(situacao, tipoAssociado, corporacao, paten
 
     // Monta parâmetros
     const params = { load_type: 'all' };
-    if (situacao) params.situacao = situacao;
+    
+    // Tratamento especial para Pré-cadastro
+    if (situacao === 'PreCadastro') {
+        params.situacao = 'Filiado'; // Busca Filiados
+        params.pre_cadastro = '1';    // Com pre_cadastro = 1
+    } else if (situacao === 'Filiado') {
+        params.situacao = 'Filiado';  // Busca Filiados
+        params.pre_cadastro = '0';    // Com pre_cadastro = 0 (normais)
+    } else if (situacao) {
+        params.situacao = situacao;
+    }
+    
     if (tipoAssociado) params.tipo_associado = tipoAssociado;
 
     requisicaoEmAndamento = $.ajax({
@@ -1137,13 +1173,28 @@ function atualizarHeaderModal(associado) {
     // Status
     const statusPill = document.getElementById('modalStatusPill');
     const situacaoNormalizada = (associado.situacao || '').toLowerCase();
+    const preCadastro = associado.pre_cadastro === 1 || 
+                       associado.pre_cadastro === '1' || 
+                       parseInt(associado.pre_cadastro) === 1;
+    
     if (situacaoNormalizada === 'filiado') {
-        statusPill.innerHTML = `
-            <div class="status-pill active">
-                <i class="fas fa-check-circle"></i>
-                Ativo
-            </div>
-        `;
+        if (preCadastro) {
+            // Filiado em pré-cadastro (aguardando assinatura)
+            statusPill.innerHTML = `
+                <div class="status-pill warning">
+                    <i class="fas fa-clock"></i>
+                    Filiado (Pré-cadastro)
+                </div>
+            `;
+        } else {
+            // Filiado normal
+            statusPill.innerHTML = `
+                <div class="status-pill active">
+                    <i class="fas fa-check-circle"></i>
+                    Ativo
+                </div>
+            `;
+        }
     } else {
         statusPill.innerHTML = `
             <div class="status-pill inactive">
@@ -1190,6 +1241,15 @@ function preencherTabVisaoGeral(associado) {
         const nascimento = new Date(associado.nasc);
         idade = Math.floor((hoje - nascimento) / (365.25 * 24 * 60 * 60 * 1000));
         idade = idade + ' anos';
+    }
+    
+    // Determinar situação com indicação de pré-cadastro
+    const preCadastro = associado.pre_cadastro === 1 || 
+                       associado.pre_cadastro === '1' || 
+                       parseInt(associado.pre_cadastro) === 1;
+    let situacaoExibicao = associado.situacao || '-';
+    if (preCadastro && situacaoExibicao.toLowerCase() === 'filiado') {
+        situacaoExibicao = 'Filiado (Pré-cadastro)';
     }
 
     overviewTab.innerHTML = `
@@ -1258,7 +1318,7 @@ function preencherTabVisaoGeral(associado) {
                 <div class="overview-card-content">
                     <div class="overview-item">
                         <span class="overview-label">Situação</span>
-                        <span class="overview-value">${associado.situacao || '-'}</span>
+                        <span class="overview-value">${situacaoExibicao}</span>
                     </div>
                     <div class="overview-item">
                         <span class="overview-label">Data de Filiação</span>
