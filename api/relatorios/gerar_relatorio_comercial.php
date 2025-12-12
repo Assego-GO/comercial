@@ -37,6 +37,7 @@ try {
     $patente = $_GET['patente'] ?? '';
     $busca = $_GET['busca'] ?? '';
     $cidade = $_GET['cidade'] ?? '';
+    $situacao = $_GET['situacao'] ?? '';
     
     error_log("=== RELATÓRIO $tipo ===");
     error_log("Data: $dataInicio até $dataFim");
@@ -51,7 +52,7 @@ try {
             $resultado = relatorioNovosCadastros($db, $dataInicio, $dataFim, $corporacao, $patente, $busca);
             break;
         case 'aniversariantes':
-            $resultado = relatorioAniversariantes($db, $dataInicio, $dataFim, $corporacao, $patente, $busca, $cidade);
+            $resultado = relatorioAniversariantes($db, $dataInicio, $dataFim, $corporacao, $patente, $busca, $cidade, $situacao);
             break;
         case 'indicacoes':
             $resultado = relatorioIndicacoes($db, $dataInicio, $dataFim, $corporacao, $patente, $busca);
@@ -251,7 +252,7 @@ function relatorioNovosCadastros($db, $dataInicio, $dataFim, $corporacao, $paten
 // ============================================
 // ANIVERSARIANTES
 // ============================================
-function relatorioAniversariantes($db, $dataInicio, $dataFim, $corporacao, $patente, $busca, $cidade = '') {
+function relatorioAniversariantes($db, $dataInicio, $dataFim, $corporacao, $patente, $busca, $cidade = '', $situacao = '') {
     $mesInicio = (int)date('m', strtotime($dataInicio));
     $mesFim = (int)date('m', strtotime($dataFim));
     $diaInicio = (int)date('d', strtotime($dataInicio));
@@ -264,6 +265,7 @@ function relatorioAniversariantes($db, $dataInicio, $dataFim, $corporacao, $pate
             DATE(a.nasc) as data_nascimento,
             COALESCE(a.telefone, '') as telefone,
             COALESCE(a.email, '') as email,
+            COALESCE(a.situacao, 'Filiado') as situacao,
             COALESCE(m.patente, '') as patente,
             COALESCE(m.corporacao, '') as corporacao,
             COALESCE(e.cidade, '') as cidade,
@@ -279,15 +281,17 @@ function relatorioAniversariantes($db, $dataInicio, $dataFim, $corporacao, $pate
             FROM Endereco 
             WHERE id IN (SELECT MAX(id) FROM Endereco GROUP BY associado_id)
         ) e ON a.id = e.associado_id
-        WHERE (
-            UPPER(a.situacao) LIKE '%ATIV%'
-            OR UPPER(a.situacao) LIKE '%FILIAD%'
-        )
-        AND a.nasc IS NOT NULL
+        WHERE a.nasc IS NOT NULL
         AND YEAR(a.nasc) > 1900
     ";
     
     $params = [];
+    
+    // Filtro por situação
+    if ($situacao) {
+        $sql .= " AND a.situacao = ?";
+        $params[] = $situacao;
+    }
     
     // ✅ Se é o mesmo mês E mesmo dia (filtro específico de 1 dia)
     if ($mesInicio == $mesFim && $diaInicio == $diaFim) {

@@ -1385,6 +1385,18 @@ if (empty($patentesDB)) {
                                 <?php endforeach; ?>
                             </select>
                         </div>
+
+                        <div class="col-md-3" id="campoSituacao" style="display: none;">
+                            <label class="form-label-custom">
+                                <i class="fas fa-user-check"></i>
+                                Situação
+                            </label>
+                            <select name="situacao" class="form-select form-select-custom" id="situacao">
+                                <option value="" selected>Todos</option>
+                                <option value="Filiado">Filiado</option>
+                                <option value="Desfiliado">Desfiliado</option>
+                            </select>
+                        </div>
                     </div>
 
                     <div class="row mb-3">
@@ -1524,8 +1536,10 @@ if (empty($patentesDB)) {
                 }
             });
 
-            // Mostrar/esconder campo de cidade (apenas para aniversariantes)
+            // Mostrar/esconder campos específicos de aniversariantes (cidade e situação)
             const campoCidade = document.getElementById('campoCidade');
+            const campoSituacao = document.getElementById('campoSituacao');
+            
             if (campoCidade) {
                 if (tipo === 'aniversariantes') {
                     campoCidade.style.display = 'block';
@@ -1542,6 +1556,16 @@ if (empty($patentesDB)) {
                     campoCidade.style.display = 'none';
                     // Limpar seleção
                     $('#cidade').val('').trigger('change');
+                }
+            }
+            
+            if (campoSituacao) {
+                if (tipo === 'aniversariantes') {
+                    campoSituacao.style.display = 'block';
+                } else {
+                    campoSituacao.style.display = 'none';
+                    // Resetar para padrão (Todos)
+                    $('#situacao').val('');
                 }
             }
 
@@ -1926,6 +1950,7 @@ if (empty($patentesDB)) {
                     { key: 'data_nascimento', label: 'Data Nascimento', type: 'date' },
                     { key: 'idade', label: 'Idade', type: 'number' },
                     { key: 'cidade', label: 'Cidade', type: 'text' },
+                    { key: 'situacao', label: 'Situação', type: 'text' },
                     { key: 'patente', label: 'Patente', type: 'text' },
                     { key: 'corporacao', label: 'Corporação', type: 'text' },
                     { key: 'telefone', label: 'Telefone', type: 'phone' }
