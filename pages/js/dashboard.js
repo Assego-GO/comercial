@@ -651,6 +651,17 @@ function aplicarFiltros() {
     const filterCorporacao = document.getElementById('filterCorporacao').value;
     const filterPatente = document.getElementById('filterPatente').value;
 
+    // Se todos os filtros estão vazios, limpa resultados do servidor e usa dados locais
+    if (!filterSituacao && !filterTipoAssociado && !filterCorporacao && !filterPatente && !searchTerm) {
+        console.log('🔄 Todos os filtros vazios, voltando para dados locais...');
+        resultadosServidor = null;
+        associadosFiltrados = [...todosAssociados];
+        paginaAtual = 1;
+        calcularPaginacao();
+        renderizarPagina();
+        return;
+    }
+
     // Se tem filtro de situação específico E não tem busca por termo, busca do servidor
     if (filterSituacao && !searchTerm) {
         console.log(`🔄 Buscando ${filterSituacao} do servidor...`);
@@ -810,6 +821,12 @@ function limparFiltros() {
     const filterTipoAssociado = document.getElementById('filterTipoAssociado');
     if (filterTipoAssociado) {
         filterTipoAssociado.value = '';
+    }
+
+    // Cancela qualquer requisição em andamento
+    if (requisicaoEmAndamento) {
+        requisicaoEmAndamento.abort();
+        requisicaoEmAndamento = null;
     }
 
     // Limpa resultados do servidor e volta para os dados locais
