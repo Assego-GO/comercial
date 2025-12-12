@@ -1949,8 +1949,11 @@ if (empty($patentesDB)) {
                     { key: 'nome', label: 'Nome', type: 'text' },
                     { key: 'data_nascimento', label: 'Data Nascimento', type: 'date' },
                     { key: 'idade', label: 'Idade', type: 'number' },
-                    { key: 'cidade', label: 'Cidade', type: 'text' },
                     { key: 'situacao', label: 'Situação', type: 'text' },
+                    { key: 'endereco', label: 'Endereço', type: 'text' },
+                    { key: 'numero', label: 'Nº', type: 'text' },
+                    { key: 'bairro', label: 'Bairro', type: 'text' },
+                    { key: 'cidade', label: 'Cidade', type: 'text' },
                     { key: 'patente', label: 'Patente', type: 'text' },
                     { key: 'corporacao', label: 'Corporação', type: 'text' },
                     { key: 'telefone', label: 'Telefone', type: 'phone' }
