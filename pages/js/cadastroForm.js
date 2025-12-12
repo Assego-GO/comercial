@@ -681,11 +681,13 @@ function inicializarSelect2() {
 // ===========================
 
 function inicializarUploadPreviews() {
-    console.log('Configurando uploads...');
+    console.log('📤 Configurando uploads...');
     
     const fotoInput = document.getElementById('foto');
     if (fotoInput) {
+        console.log('✓ Input de foto encontrado');
         fotoInput.addEventListener('change', function (e) {
+            console.log('📷 Foto selecionada');
             const file = e.target.files[0];
             if (file) {
                 if (file.size > 5 * 1024 * 1024) {
@@ -702,13 +704,19 @@ function inicializarUploadPreviews() {
                 reader.readAsDataURL(file);
             }
         });
+    } else {
+        console.warn('⚠️ Input de foto NÃO encontrado');
     }
 
     const fichaInput = document.getElementById('ficha_assinada');
     if (fichaInput) {
+        console.log('✓ Input de ficha encontrado');
         fichaInput.addEventListener('change', function (e) {
+            console.log('📄 Ficha selecionada!');
             const file = e.target.files[0];
             if (file) {
+                console.log('📄 Arquivo:', file.name, 'Tamanho:', (file.size / 1024 / 1024).toFixed(2), 'MB');
+                
                 if (file.size > 10 * 1024 * 1024) {
                     showAlert('Arquivo muito grande! O tamanho máximo é 10MB.', 'error');
                     e.target.value = '';
@@ -727,18 +735,22 @@ function inicializarUploadPreviews() {
                             <p style="font-size: 0.75rem; color: var(--gray-600);">${fileName}</p>
                         </div>
                     `;
+                    console.log('✓ Preview de PDF criado');
                 } else {
                     const reader = new FileReader();
                     reader.onload = function (e) {
                         preview.innerHTML = `<img src="${e.target.result}" alt="Preview" style="width: 100%; height: 100%; object-fit: cover;">`;
+                        console.log('✓ Preview de imagem criado');
                     };
                     reader.readAsDataURL(file);
                 }
             }
         });
+    } else {
+        console.error('❌ Input de ficha NÃO encontrado! ID: ficha_assinada');
     }
     
-    console.log('✓ Uploads configurados');
+    console.log('✅ Uploads configurados');
 }
 
 // ===========================
@@ -1380,9 +1392,97 @@ function salvarNovoAssociadoPrimeiroPasso() {
     salvandoStep = true;
     mostrarEstadoSalvando();
 
-    const formData = new FormData(document.getElementById('formAssociado'));
-
     const isAgregado = document.getElementById('isAgregado')?.checked;
+    
+    console.log('🚀 SALVANDO NOVO ASSOCIADO - É AGREGADO?', isAgregado);
+    
+    // ✅ Para Agregados, preencher campos obrigatórios ANTES de criar o FormData
+    if (isAgregado) {
+        console.log('🔧 PREENCHENDO CAMPOS PARA AGREGADO - VERSÃO 4.0');
+        
+        // Estado Civil
+        const estadoCivilSelect = document.getElementById('estadoCivil');
+        if (estadoCivilSelect && !estadoCivilSelect.value) {
+            estadoCivilSelect.value = 'Solteiro(a)';
+            console.log('➕ estadoCivil preenchido:', estadoCivilSelect.value);
+        }
+        
+        // Data de Filiação
+        const dataFiliacaoInput = document.getElementById('dataFiliacao');
+        if (dataFiliacaoInput && !dataFiliacaoInput.value) {
+            dataFiliacaoInput.value = new Date().toISOString().split('T')[0];
+            console.log('➕ dataFiliacao preenchida:', dataFiliacaoInput.value);
+        }
+        
+        // Endereço
+        const enderecoInput = document.getElementById('endereco');
+        if (enderecoInput && !enderecoInput.value) {
+            enderecoInput.value = 'Mesmo do titular';
+            console.log('➕ endereco preenchido');
+        }
+        
+        // Número
+        const numeroInput = document.getElementById('numero');
+        if (numeroInput && !numeroInput.value) {
+            numeroInput.value = 'S/N';
+            console.log('➕ numero preenchido');
+        }
+        
+        // Bairro
+        const bairroInput = document.getElementById('bairro');
+        if (bairroInput && !bairroInput.value) {
+            bairroInput.value = 'Mesmo do titular';
+            console.log('➕ bairro preenchido');
+        }
+        
+        // Cidade
+        const cidadeInput = document.getElementById('cidade');
+        if (cidadeInput && !cidadeInput.value) {
+            cidadeInput.value = 'Mesmo do titular';
+            console.log('➕ cidade preenchida');
+        }
+        
+        console.log('✅ Campos preenchidos para Agregado!');
+    }
+
+    // ✅ CRIAR FormData com TODOS os campos do formulário (incluindo dependentes)
+    const formData = new FormData(document.getElementById('formAssociado'));
+    
+    // ✅ GARANTIR que TODOS os dependentes sejam incluídos (mesmo de outros steps)
+    console.log('📋 Verificando dependentes no formulário...');
+    const dependentesCards = document.querySelectorAll('.dependente-card');
+    let dependentesEncontrados = 0;
+    
+    if (dependentesCards.length > 0) {
+        dependentesCards.forEach((card, index) => {
+            const inputs = card.querySelectorAll('input, select');
+            inputs.forEach(input => {
+                // Só adiciona se o input tem name e value (FormData já pode ter pegado, mas garantimos)
+                if (input.name && input.value) {
+                    // Verifica se já existe no FormData
+                    if (!formData.has(input.name)) {
+                        formData.append(input.name, input.value);
+                        console.log(`  ➕ ${input.name}: ${input.value}`);
+                    }
+                    dependentesEncontrados++;
+                }
+            });
+        });
+        
+        console.log(`✅ Total de ${dependentesEncontrados} campos de dependentes verificados`);
+    } else {
+        console.log('ℹ️ Nenhum dependente preenchido no formulário');
+    }
+    
+    // ✅ DEBUG: Mostrar TODOS os dados sendo enviados
+    console.log('=== DADOS COMPLETOS DO FORMDATA ===');
+    for (let pair of formData.entries()) {
+        if (pair[0].includes('dependente')) {
+            console.log(`  ${pair[0]}: ${pair[1]}`);
+        }
+    }
+    console.log('===================================');
+
     let url = '../api/criar_associado.php';
     if (isAgregado) {
         url = '../api/criar_agregado.php';
@@ -1390,7 +1490,70 @@ function salvarNovoAssociadoPrimeiroPasso() {
         if (cpfTitular) {
             formData.append('socioTitularCpf', cpfTitular);
         }
+        
+        console.log('💰 ADICIONANDO DADOS FINANCEIROS PADRÃO PARA AGREGADO');
+        
+        // ✅ Dados financeiros padrão para agregados
+        if (!formData.has('tipoAssociadoServico') || !formData.get('tipoAssociadoServico')) {
+            formData.set('tipoAssociadoServico', 'Agregado');
+            console.log('➕ [FormData] tipoAssociadoServico: Agregado');
+        }
+        
+        if (!formData.has('vinculoServidor') || !formData.get('vinculoServidor')) {
+            formData.set('vinculoServidor', 'Ativo');
+            console.log('➕ [FormData] vinculoServidor: Ativo');
+        }
+        
+        if (!formData.has('localDebito') || !formData.get('localDebito')) {
+            formData.set('localDebito', 'Em Folha');
+            console.log('➕ [FormData] localDebito: Em Folha');
+        }
+        
+        // Serviços: Agregado só tem serviço social obrigatório
+        formData.set('servicoSocial', '1');
+        formData.set('servicoJuridico', '0'); // Agregado não tem direito ao jurídico
+        console.log('➕ [FormData] servicoSocial: 1, servicoJuridico: 0');
+        
+        // ✅ Garantir campos de endereço que podem não estar no FormData
+        if (!formData.has('endereco') || !formData.get('endereco')) {
+            formData.set('endereco', 'Mesmo do titular');
+            console.log('➕ [FormData] endereco adicionado');
+        }
+        if (!formData.has('numero') || !formData.get('numero')) {
+            formData.set('numero', 'S/N');
+            console.log('➕ [FormData] numero adicionado');
+        }
+        if (!formData.has('bairro') || !formData.get('bairro')) {
+            formData.set('bairro', 'Mesmo do titular');
+            console.log('➕ [FormData] bairro adicionado');
+        }
+        if (!formData.has('cidade') || !formData.get('cidade')) {
+            formData.set('cidade', 'Mesmo do titular');
+            console.log('➕ [FormData] cidade adicionada');
+        }
+        
+        console.log('✅ Dados financeiros padrão adicionados!');
     }
+
+    // ✅ DEBUG: Log de TODOS os dados sendo enviados
+    console.log('=== DADOS SENDO ENVIADOS ===');
+    console.log('URL:', url);
+    console.log('É Agregado?', isAgregado);
+    
+    let countDependentes = 0;
+    for (let pair of formData.entries()) {
+        console.log(pair[0] + ': ' + pair[1]);
+        if (pair[0].startsWith('dependente_')) {
+            countDependentes++;
+        }
+    }
+    
+    if (countDependentes > 0) {
+        console.log(`👨‍👩‍👧‍👦 ${countDependentes} campos de dependentes encontrados no FormData`);
+    } else {
+        console.warn('⚠️ NENHUM DEPENDENTE ENCONTRADO NO FORMDATA!');
+    }
+    console.log('=============================');
 
     fetch(url, {
         method: 'POST',
@@ -1419,13 +1582,22 @@ function salvarNovoAssociadoPrimeiroPasso() {
             showAlert('Dados Pessoais salvos com sucesso! Associado criado.', 'success');
 
         } else {
-            showAlert(data.message || 'Erro ao criar associado!', 'error');
+            // ✅ MELHORADO: Mostra erros detalhados
+            let mensagemErro = data.message || 'Erro ao criar associado!';
+            if (data.errors && data.errors.length > 0) {
+                mensagemErro += '\n\nDetalhes:\n' + data.errors.join('\n');
+            }
+            if (data.debug) {
+                console.error('Debug do servidor:', data.debug);
+            }
+            showAlert(mensagemErro, 'error');
         }
     })
     .catch(error => {
         esconderEstadoSalvando();
         salvandoStep = false;
-        showAlert('Erro de comunicação com o servidor!', 'error');
+        console.error('Erro completo:', error);
+        showAlert(`Erro de comunicação com o servidor: ${error.message}\nVerifique sua conexão ou tente novamente.`, 'error');
     });
 }
 
@@ -1968,11 +2140,23 @@ function salvarAssociado() {
         console.log('Status da resposta:', response.status);
         console.log('Response OK:', response.ok);
         
-        if (!response.ok) {
-            throw new Error(`Erro HTTP ${response.status}: ${response.statusText}`);
-        }
-        
-        return response.text();
+        // ✅ Captura o texto da resposta SEMPRE (mesmo em erro)
+        return response.text().then(text => {
+            console.log('Resposta bruta do servidor:', text);
+            
+            if (!response.ok) {
+                // Tenta fazer parse do JSON de erro
+                try {
+                    const errorData = JSON.parse(text);
+                    throw new Error(errorData.message || `Erro HTTP ${response.status}: ${response.statusText}`);
+                } catch (parseError) {
+                    // Se não for JSON, lança com o texto bruto
+                    throw new Error(`Erro HTTP ${response.status}: ${text.substring(0, 200)}`);
+                }
+            }
+            
+            return text;
+        });
     })
     .then(text => {
         console.log('Resposta recebida (primeiros 500 chars):', text.substring(0, 500));

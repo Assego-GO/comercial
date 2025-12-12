@@ -641,6 +641,9 @@ function renderizarTabela(dados) {
     console.log(`✅ Renderização concluída: ${dados.length} linhas adicionadas à tabela`);
 }
 
+// Flag específica para requisições de filtro de situação
+let requisicaoFiltroSituacaoEmAndamento = false;
+
 // Função UNIFICADA para aplicar filtros (incluindo busca local)
 function aplicarFiltros() {
     console.log('🔍 Aplicando filtros...');
@@ -664,8 +667,20 @@ function aplicarFiltros() {
 
     // Se tem filtro de situação específico E não tem busca por termo, busca do servidor
     if (filterSituacao && !searchTerm) {
+        // ✅ PROTEÇÃO: Previne múltiplas requisições simultâneas
+        if (requisicaoFiltroSituacaoEmAndamento) {
+            console.warn('⚠️ Requisição de filtro já em andamento, ignorando duplicata');
+            return;
+        }
+        
+        requisicaoFiltroSituacaoEmAndamento = true;
         console.log(`🔄 Buscando ${filterSituacao} do servidor...`);
         carregarAssociadosPorFiltros(filterSituacao, filterTipoAssociado, filterCorporacao, filterPatente, '');
+        
+        // Libera após um pequeno delay
+        setTimeout(() => { 
+            requisicaoFiltroSituacaoEmAndamento = false; 
+        }, 300);
         return;
     }
 
