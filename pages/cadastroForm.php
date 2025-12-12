@@ -1917,8 +1917,8 @@ $headerComponent = HeaderComponent::create([
     <?php $headerComponent->renderJS(); ?>
 
     <!-- Scripts separados para melhor organização -->
-    <script src="js/cadastroForm.js"></script>
-    <script src="js/cadastroFormAutocomplete.js"></script>
+    <script src="js/cadastroForm.js?v=<?php echo time(); ?>"></script>
+    <script src="js/cadastroFormAutocomplete.js?v=<?php echo time(); ?>"></script>
 
     <script>
     // Função para definir valor do select após carregar
