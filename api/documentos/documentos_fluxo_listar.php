@@ -68,7 +68,7 @@ try {
                     WHEN 'ficha_desfiliacao' THEN 'Ficha de Desfiliação'
                     WHEN 'cpf' THEN 'CPF'
                     WHEN 'rg' THEN 'RG'
-                    WHEN 'comprovante_residencia' THEN 'Comprovante de Residência'
+                    WHEN 'recadastramento' THEN 'Recadastramento'
                     ELSE UPPER(REPLACE(da.tipo_documento, '_', ' '))
                 END AS tipo_descricao,
                 da.nome_arquivo,
