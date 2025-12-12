@@ -4762,6 +4762,7 @@ function preencherTabMilitarEditavel(associado) {
         'Bombeiro Militar', 
         'Polícia Civil',
         'Polícia Penal',
+        'Exército',
         'Outro',
         'Agregados'
     ];
