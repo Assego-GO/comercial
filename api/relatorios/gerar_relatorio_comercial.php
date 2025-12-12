@@ -268,6 +268,11 @@ function relatorioAniversariantes($db, $dataInicio, $dataFim, $corporacao, $pate
             COALESCE(a.situacao, 'Filiado') as situacao,
             COALESCE(m.patente, '') as patente,
             COALESCE(m.corporacao, '') as corporacao,
+            COALESCE(e.cep, '') as cep,
+            COALESCE(e.endereco, '') as endereco,
+            COALESCE(e.numero, '') as numero,
+            COALESCE(e.complemento, '') as complemento,
+            COALESCE(e.bairro, '') as bairro,
             COALESCE(e.cidade, '') as cidade,
             YEAR(CURDATE()) - YEAR(a.nasc) as idade
         FROM Associados a
@@ -277,7 +282,7 @@ function relatorioAniversariantes($db, $dataInicio, $dataFim, $corporacao, $pate
             WHERE id IN (SELECT MAX(id) FROM Militar GROUP BY associado_id)
         ) m ON a.id = m.associado_id
         LEFT JOIN (
-            SELECT associado_id, cidade
+            SELECT associado_id, cep, endereco, numero, complemento, bairro, cidade
             FROM Endereco 
             WHERE id IN (SELECT MAX(id) FROM Endereco GROUP BY associado_id)
         ) e ON a.id = e.associado_id
