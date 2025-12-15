@@ -4784,14 +4784,14 @@ function preencherTabMilitarEditavel(associado) {
     
     // Patentes - incluir todas as variações possíveis
     const patentes = [
-        'Soldado', 'Cabo', 
+        'Soldado 1ª Classe', 'Soldado 2ª Classe', 'Cabo', 
         '3º Sargento', '2º Sargento', '1º Sargento', 'Sargento',
         'Subtenente', 'Aspirante', 
         '2º Tenente', '1º Tenente', 
         'Capitão', 'Major', 'Tenente Coronel', 'Coronel',
         // Patentes de bombeiros/outras corporações que podem ter nomes diferentes
         'Tenente', 'Tenente-Coronel',
-        'Agregados'
+        'Agregado'
     ];
     
     const categorias = ['Ativa', 'Reserva', 'Pensionista', 'Agregados'];
