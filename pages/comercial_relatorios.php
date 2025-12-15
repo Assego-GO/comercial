@@ -1838,13 +1838,27 @@ if (empty($patentesDB)) {
                                 'novos_cadastros': 'Novos Cadastros',
                                 'indicacoes': 'Indicações'
                             };
-                            const dataAtual = new Date().toLocaleDateString('pt-BR');
+                            
+                            // Pega as datas selecionadas pelo usuário
+                            const dataInicio = document.getElementById('dataInicio').value;
+                            const dataFim = document.getElementById('dataFim').value;
+                            
+                            let periodoTexto = '';
+                            if (dataInicio && dataFim) {
+                                // Formata as datas para dd/mm/yyyy
+                                const inicioFormatado = dataInicio.split('-').reverse().join('/');
+                                const fimFormatado = dataFim.split('-').reverse().join('/');
+                                periodoTexto = `${inicioFormatado} até ${fimFormatado}`;
+                            } else {
+                                periodoTexto = new Date().toLocaleDateString('pt-BR');
+                            }
+                            
                             // ✅ TÍTULO BONITO EM AZUL
                             return `<h2 style="text-align: center; margin-bottom: 25px; color: #0056d2; font-weight: bold; font-size: 22px;">
                                         Relatório de ${tipoTexto[tipoRelatorio] || 'Relatório'}
                                     </h2>
                                     <p style="text-align: center; margin-bottom: 20px; color: #666; font-size: 14px;">
-                                        ${dataAtual}
+                                        ${periodoTexto}
                                     </p>`;
                         },
                         customize: function(win) {
@@ -1950,6 +1964,7 @@ if (empty($patentesDB)) {
                     { key: 'data_nascimento', label: 'Data Nascimento', type: 'date' },
                     { key: 'idade', label: 'Idade', type: 'number' },
                     { key: 'situacao', label: 'Situação', type: 'text' },
+                    { key: 'rg', label: 'RG', type: 'text' },
                     { key: 'endereco', label: 'Endereço', type: 'text' },
                     { key: 'numero', label: 'Nº', type: 'text' },
                     { key: 'bairro', label: 'Bairro', type: 'text' },

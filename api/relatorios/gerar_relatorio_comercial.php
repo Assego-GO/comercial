@@ -263,6 +263,7 @@ function relatorioAniversariantes($db, $dataInicio, $dataFim, $corporacao, $pate
             a.id,
             a.nome,
             DATE(a.nasc) as data_nascimento,
+            COALESCE(a.rg, '') as rg,
             COALESCE(a.telefone, '') as telefone,
             COALESCE(a.email, '') as email,
             COALESCE(a.situacao, 'Filiado') as situacao,
