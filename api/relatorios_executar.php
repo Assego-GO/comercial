@@ -3333,7 +3333,7 @@ function gerarRelatorioAniversariantes($parametros) {
         
         // Filtrar campos conforme solicitado
         $campos = $parametros['campos'] ?? [
-            'nome', 'data_nascimento', 'idade', 'cidade', 'telefone', 'email', 'corporacao', 'patente'
+            'nome', 'data_nascimento', 'idade', 'situacao', 'rg', 'endereco', 'numero', 'bairro', 'cidade', 'patente', 'corporacao', 'telefone'
         ];
         
         $dadosFiltrados = [];
@@ -3398,8 +3398,8 @@ function getSubtituloAniversariantes($periodo, $total, $parametros = []) {
             return "Aniversariantes de {$mesPortugues} de " . date('Y') . " • {$total} pessoa(s)";
         case 'customizado':
             if (!empty($parametros['data_inicio']) && !empty($parametros['data_fim'])) {
-                $inicio = date('d/m', strtotime($parametros['data_inicio']));
-                $fim = date('d/m', strtotime($parametros['data_fim']));
+                $inicio = date('d/m/Y', strtotime($parametros['data_inicio']));
+                $fim = date('d/m/Y', strtotime($parametros['data_fim']));
                 return "Aniversariantes de {$inicio} até {$fim} • {$total} pessoa(s)";
             }
             return "Aniversariantes do período selecionado • {$total} pessoa(s)";
