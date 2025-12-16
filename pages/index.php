@@ -1,8 +1,4 @@
 <?php
-// Configurar duração da sessão para 14 horas (50400 segundos)
-ini_set('session.gc_maxlifetime', 50400);
-session_set_cookie_params(50400);
-
 require_once '../config/config.php';
 require_once '../config/database.php';
 require_once '../classes/Database.php';
