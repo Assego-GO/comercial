@@ -16,6 +16,7 @@ require_once '../../config/config.php';
 require_once '../../config/database.php';
 require_once '../../classes/Database.php';
 require_once '../../classes/Auth.php';
+require_once '../../classes/Auditoria.php';
 
 // Verifica se é POST
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -373,6 +374,54 @@ try {
 
         // ===== COMMIT DA TRANSAÇÃO =====
         $db->commit();
+        
+        // ===== REGISTRAR AUDITORIA (APÓS COMMIT) =====
+        error_log("🔍 Iniciando registro de auditoria para upload - Funcionário ID: {$funcionarioId}, Documento ID: {$documentoId}");
+        
+        try {
+            $auditoria = new Auditoria();
+            error_log("✅ Instância de Auditoria criada");
+            
+            $auditoria->registrar([
+                'tabela' => 'Documentos_Associado',
+                'acao' => 'UPLOAD',
+                'registro_id' => $documentoId,
+                'associado_id' => $associadoId,
+                'funcionario_id' => $funcionarioId,
+                'alteracoes' => [
+                    [
+                        'campo' => 'tipo_documento',
+                        'valor_anterior' => null,
+                        'valor_novo' => $tipoDescricao
+                    ],
+                    [
+                        'campo' => 'nome_arquivo',
+                        'valor_anterior' => null,
+                        'valor_novo' => $nomeArquivo
+                    ],
+                    [
+                        'campo' => 'tamanho',
+                        'valor_anterior' => null,
+                        'valor_novo' => round($tamanho / (1024 * 1024), 2) . ' MB'
+                    ],
+                    [
+                        'campo' => 'status',
+                        'valor_anterior' => null,
+                        'valor_novo' => 'DIGITALIZADO'
+                    ]
+                ],
+                'detalhes' => [
+                    'tipo_mime' => $tipoMime,
+                    'upload_presidencia' => $isPresidencia,
+                    'observacao' => $observacao
+                ]
+            ]);
+            
+            error_log("✅ Auditoria registrada para upload do documento ID: {$documentoId} por funcionário ID: {$funcionarioId}");
+        } catch (Exception $e) {
+            error_log("⚠️ Erro ao registrar auditoria do upload: " . $e->getMessage());
+            // Não falha o upload por erro na auditoria
+        }
 
         // ===== RESPOSTA DE SUCESSO EXPANDIDA =====
         $responseData = [

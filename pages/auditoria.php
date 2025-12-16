@@ -1042,6 +1042,152 @@ input:checked + .slider:before {
     from { opacity: 0; }
     to { opacity: 1; }
 }
+
+/* ===== ESTILOS PARA ALTERAÇÕES AMIGÁVEIS ===== */
+.table-responsive {
+    max-height: 500px;
+    overflow-y: auto;
+    border-radius: 8px;
+}
+
+.table-bordered {
+    border: 1px solid #e5e7eb;
+}
+
+.table-bordered thead th {
+    position: sticky;
+    top: 0;
+    background: #f8f9fa !important;
+    z-index: 10;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    font-weight: 600;
+    color: #374151;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 12px 15px;
+}
+
+.table-bordered tbody tr {
+    transition: background-color 0.2s ease;
+}
+
+.table-bordered tbody tr:hover {
+    background-color: #f9fafb;
+}
+
+.table-bordered td {
+    padding: 10px 15px;
+    vertical-align: middle;
+    font-size: 0.9rem;
+    color: #1f2937;
+}
+
+.table-bordered td strong {
+    color: #111827;
+    font-weight: 600;
+}
+
+/* Valores com ícones */
+.table-bordered th i {
+    margin-right: 6px;
+}
+
+/* Estilo para valores vazios */
+.fst-italic {
+    color: #9ca3af !important;
+    font-style: italic;
+}
+
+/* Badges de status */
+.badge.bg-success {
+    background-color: #10b981 !important;
+    font-weight: 500;
+    padding: 4px 10px;
+}
+
+.badge.bg-secondary {
+    background-color: #6b7280 !important;
+    font-weight: 500;
+    padding: 4px 10px;
+}
+
+/* Alerta de informação */
+.alert {
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 0.9rem;
+}
+
+.alert i {
+    margin-right: 8px;
+}
+
+/* Details/Summary para dados técnicos */
+details {
+    cursor: pointer;
+}
+
+details summary {
+    padding: 10px;
+    background: #f3f4f6;
+    border-radius: 6px;
+    font-weight: 500;
+    color: #374151;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: background 0.2s ease;
+}
+
+details summary::-webkit-details-marker {
+    display: none;
+}
+
+details summary::before {
+    content: '▶';
+    display: inline-block;
+    transition: transform 0.3s ease;
+    font-size: 0.7em;
+}
+
+details[open] summary::before {
+    transform: rotate(90deg);
+}
+
+details summary:hover {
+    background: #e5e7eb;
+}
+
+details pre {
+    margin: 0;
+    background: #1f2937;
+    color: #10b981;
+    padding: 15px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    line-height: 1.5;
+}
+
+/* Tooltip para valores longos */
+td span[title] {
+    cursor: help;
+    border-bottom: 1px dotted #9ca3af;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .table-responsive {
+        max-height: 400px;
+    }
+    
+    .table-bordered td,
+    .table-bordered th {
+        font-size: 0.8rem;
+        padding: 8px 10px;
+    }
+}
     </style>
 </head>
 
@@ -2109,6 +2255,233 @@ input:checked + .slider:before {
             return new Intl.NumberFormat('pt-BR').format(num);
         }
 
+        /**
+         * Formata as alterações de forma amigável para usuários leigos
+         */
+        function formatarAlteracoesAmigavel(alteracoesJson) {
+            try {
+                const alteracoes = JSON.parse(alteracoesJson);
+                
+                // Se não houver alterações
+                if (!alteracoes || alteracoes.length === 0) {
+                    return '<div class="alert alert-info"><i class="fas fa-info-circle"></i> Nenhuma alteração registrada</div>';
+                }
+                
+                // Se for um array de objetos com estrutura {campo, valor_anterior, valor_novo}
+                if (Array.isArray(alteracoes) && alteracoes[0]?.campo) {
+                    let html = '<div class="table-responsive"><table class="table table-bordered table-hover table-sm">';
+                    html += '<thead class="table-light"><tr>';
+                    html += '<th width="30%"><i class="fas fa-tag"></i> Campo Alterado</th>';
+                    html += '<th width="35%"><i class="fas fa-arrow-left text-danger"></i> Valor Anterior</th>';
+                    html += '<th width="35%"><i class="fas fa-arrow-right text-success"></i> Valor Novo</th>';
+                    html += '</tr></thead><tbody>';
+                    
+                    alteracoes.forEach(alt => {
+                        const campo = formatarNomeCampo(alt.campo);
+                        const valorAnterior = formatarValorCampo(alt.valor_anterior);
+                        const valorNovo = formatarValorCampo(alt.valor_novo);
+                        
+                        html += '<tr>';
+                        html += `<td><strong>${campo}</strong></td>`;
+                        html += `<td>${valorAnterior}</td>`;
+                        html += `<td>${valorNovo}</td>`;
+                        html += '</tr>';
+                    });
+                    
+                    html += '</tbody></table></div>';
+                    return html;
+                }
+                
+                // Se for um objeto simples (formato antigo)
+                if (typeof alteracoes === 'object' && !Array.isArray(alteracoes)) {
+                    let html = '<div class="table-responsive"><table class="table table-bordered table-hover table-sm">';
+                    html += '<thead class="table-light"><tr>';
+                    html += '<th width="40%"><i class="fas fa-tag"></i> Campo</th>';
+                    html += '<th width="60%"><i class="fas fa-info-circle"></i> Valor</th>';
+                    html += '</tr></thead><tbody>';
+                    
+                    Object.entries(alteracoes).forEach(([campo, valor]) => {
+                        const campoFormatado = formatarNomeCampo(campo);
+                        const valorFormatado = formatarValorCampo(valor);
+                        
+                        html += '<tr>';
+                        html += `<td><strong>${campoFormatado}</strong></td>`;
+                        html += `<td>${valorFormatado}</td>`;
+                        html += '</tr>';
+                    });
+                    
+                    html += '</tbody></table></div>';
+                    return html;
+                }
+                
+                // Fallback: mostrar JSON formatado se não conseguir processar
+                return `<div class="alert alert-secondary">
+                    <details>
+                        <summary><i class="fas fa-code"></i> Ver dados técnicos</summary>
+                        <pre class="mt-2" style="font-size: 0.8rem; max-height: 300px; overflow-y: auto;">${JSON.stringify(alteracoes, null, 2)}</pre>
+                    </details>
+                </div>`;
+                
+            } catch (error) {
+                console.error('Erro ao formatar alterações:', error);
+                return '<div class="alert alert-danger"><i class="fas fa-exclamation-triangle"></i> Erro ao exibir alterações</div>';
+            }
+        }
+
+        /**
+         * Formata o nome do campo para ser mais legível
+         */
+        function formatarNomeCampo(campo) {
+            if (!campo) return '-';
+            
+            // Mapa de campos conhecidos
+            const mapa = {
+                'associado_id': 'ID do Associado',
+                'nome': 'Nome',
+                'cpf': 'CPF',
+                'email': 'E-mail',
+                'telefone': 'Telefone',
+                'celular': 'Celular',
+                'endereco': 'Endereço',
+                'numero': 'Número',
+                'complemento': 'Complemento',
+                'bairro': 'Bairro',
+                'cidade': 'Cidade',
+                'estado': 'Estado',
+                'cep': 'CEP',
+                'data_nascimento': 'Data de Nascimento',
+                'data_filiacao': 'Data de Filiação',
+                'data_desfiliacao': 'Data de Desfiliação',
+                'status': 'Status',
+                'observacao': 'Observação',
+                'categoria': 'Categoria',
+                'departamento': 'Departamento',
+                'cargo': 'Cargo',
+                'salario': 'Salário',
+                'valor': 'Valor',
+                'descricao': 'Descrição',
+                'tipo': 'Tipo',
+                'ativo': 'Ativo',
+                'criado_em': 'Criado em',
+                'atualizado_em': 'Atualizado em',
+                'criado_por': 'Criado por',
+                'atualizado_por': 'Atualizado por'
+            };
+            
+            // Se tiver no mapa, retorna o nome formatado
+            if (mapa[campo]) {
+                return mapa[campo];
+            }
+            
+            // Senão, formata automaticamente: remove underscore e capitaliza
+            return campo
+                .replace(/_/g, ' ')
+                .replace(/\b\w/g, c => c.toUpperCase());
+        }
+
+        /**
+         * Formata o valor do campo para exibição
+         */
+        function formatarValorCampo(valor) {
+            if (valor === null || valor === undefined || valor === '') {
+                return '<span class="text-muted fst-italic">(vazio)</span>';
+            }
+            
+            if (valor === true) {
+                return '<span class="badge bg-success">Sim</span>';
+            }
+            
+            if (valor === false) {
+                return '<span class="badge bg-secondary">Não</span>';
+            }
+            
+            // Se for um objeto ou array
+            if (typeof valor === 'object') {
+                return formatarObjetoOuArray(valor);
+            }
+            
+            // Se for um número
+            if (typeof valor === 'number') {
+                // Verifica se parece ser um valor monetário
+                if (valor > 0 && valor < 999999) {
+                    return `R$ ${valor.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+                }
+                return valor.toLocaleString('pt-BR');
+            }
+            
+            // Se for uma data
+            if (typeof valor === 'string' && /^\d{4}-\d{2}-\d{2}/.test(valor)) {
+                try {
+                    const data = new Date(valor);
+                    if (!isNaN(data.getTime())) {
+                        return data.toLocaleString('pt-BR', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        });
+                    }
+                } catch (e) {
+                    // Não é uma data válida, continua
+                }
+            }
+            
+            // Se for muito longo, trunca
+            const valorStr = String(valor);
+            if (valorStr.length > 100) {
+                return `<span title="${valorStr}">${valorStr.substring(0, 100)}...</span>`;
+            }
+            
+            return valorStr;
+        }
+
+        /**
+         * Formata objetos e arrays de forma legível
+         */
+        function formatarObjetoOuArray(obj) {
+            if (Array.isArray(obj)) {
+                if (obj.length === 0) {
+                    return '<span class="text-muted fst-italic">(lista vazia)</span>';
+                }
+                
+                // Se for array de valores simples
+                if (typeof obj[0] !== 'object') {
+                    return obj.join(', ');
+                }
+                
+                // Se for array de objetos (como dependentes)
+                let html = '<div class="mt-2">';
+                obj.forEach((item, index) => {
+                    html += `<div class="border rounded p-2 mb-2 bg-light">`;
+                    html += `<strong class="text-primary">Item ${index + 1}:</strong><br>`;
+                    html += '<small>';
+                    Object.entries(item).forEach(([key, value]) => {
+                        const nomeFormatado = formatarNomeCampo(key);
+                        const valorFormatado = typeof value === 'object' ? JSON.stringify(value) : value;
+                        html += `<span class="d-block"><strong>${nomeFormatado}:</strong> ${valorFormatado}</span>`;
+                    });
+                    html += '</small></div>';
+                });
+                html += '</div>';
+                return html;
+            }
+            
+            // Se for objeto simples
+            if (Object.keys(obj).length === 0) {
+                return '<span class="text-muted fst-italic">(objeto vazio)</span>';
+            }
+            
+            let html = '<div class="mt-2 border rounded p-2 bg-light"><small>';
+            Object.entries(obj).forEach(([key, value]) => {
+                const nomeFormatado = formatarNomeCampo(key);
+                const valorFormatado = typeof value === 'object' ? JSON.stringify(value) : value;
+                html += `<span class="d-block"><strong>${nomeFormatado}:</strong> ${valorFormatado}</span>`;
+            });
+            html += '</small></div>';
+            return html;
+        }
+
         function getDataInicioPeriodo(periodo) {
             const hoje = new Date();
             let dataInicio;
@@ -2809,7 +3182,22 @@ input:checked + .slider:before {
         function mostrarDetalhesModal(registro) {
             const modalBody = document.getElementById('detalhesModalBody');
             
+            // Seção de Dados do Associado (se existir)
+            const secaoAssociado = (registro.associado_id && registro.associado_id !== '-') ? `
+                <div class="alert alert-info mb-3">
+                    <h6 class="mb-2"><i class="fas fa-user text-primary"></i> Dados do Associado</h6>
+                    <div class="row">
+                        <div class="col-md-3"><strong>Matrícula:</strong> ${registro.associado_id}</div>
+                        <div class="col-md-4"><strong>Nome:</strong> ${registro.associado_nome || '-'}</div>
+                        <div class="col-md-2"><strong>CPF:</strong> ${registro.associado_cpf || '-'}</div>
+                        <div class="col-md-3"><strong>RG:</strong> ${registro.associado_rg || '-'}</div>
+                    </div>
+                </div>
+            ` : '';
+            
             modalBody.innerHTML = `
+                ${secaoAssociado}
+                
                 <div class="row">
                     <div class="col-md-6">
                         <h6><i class="fas fa-info-circle text-primary"></i> Informações Básicas</h6>
@@ -2828,7 +3216,6 @@ input:checked + .slider:before {
                             <tr><td><strong>IP Origem:</strong></td><td>${registro.ip_origem || '-'}</td></tr>
                             <tr><td><strong>Navegador:</strong></td><td>${registro.browser_info || '-'}</td></tr>
                             <tr><td><strong>Sessão ID:</strong></td><td>${registro.sessao_id || '-'}</td></tr>
-                            <tr><td><strong>Associado ID:</strong></td><td>${registro.associado_id || '-'}</td></tr>
                             ${!CONFIG.isPresidencia && registro.funcionario_departamento ? 
                                 `<tr><td><strong>Departamento:</strong></td><td>${registro.funcionario_departamento}</td></tr>` : ''}
                         </table>
@@ -2838,8 +3225,7 @@ input:checked + .slider:before {
                 ${registro.alteracoes ? `
                     <div class="mt-3">
                         <h6><i class="fas fa-exchange-alt text-warning"></i> Alterações Realizadas</h6>
-                        <pre class="bg-light p-3 rounded" style="font-size: 0.8rem; max-height: 300px; overflow-y: auto;">
-${JSON.stringify(JSON.parse(registro.alteracoes), null, 2)}</pre>
+                        ${formatarAlteracoesAmigavel(registro.alteracoes)}
                     </div>
                 ` : ''}
                 

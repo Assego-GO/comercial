@@ -394,6 +394,35 @@ class Auth
         try {
             $usuario_real_id = $_SESSION['real_funcionario_id'] ?? $_SESSION['funcionario_id'];
 
+            // ✅ CORREÇÃO: Estruturar dados como alterações
+            $detalhes = [
+                [
+                    'campo' => 'tipo',
+                    'valor_anterior' => null,
+                    'valor_novo' => 'IMPERSONATION'
+                ],
+                [
+                    'campo' => 'acao',
+                    'valor_anterior' => null,
+                    'valor_novo' => $acao
+                ],
+                [
+                    'campo' => 'usuario_real',
+                    'valor_anterior' => null,
+                    'valor_novo' => $usuario_real_id
+                ],
+                [
+                    'campo' => 'usuario_impersonado',
+                    'valor_anterior' => null,
+                    'valor_novo' => $usuario_impersonado_id
+                ],
+                [
+                    'campo' => 'timestamp',
+                    'valor_anterior' => null,
+                    'valor_novo' => date('Y-m-d H:i:s')
+                ]
+            ];
+
             $stmt = $this->db->prepare("
                 INSERT INTO Auditoria (
                     tabela, 
@@ -406,19 +435,12 @@ class Auth
                 ) VALUES (?, ?, ?, ?, ?, ?, ?)
             ");
 
-            $detalhes = json_encode([
-                'tipo' => 'IMPERSONATION',
-                'acao' => $acao,
-                'usuario_impersonado' => $usuario_impersonado_id,
-                'timestamp' => time()
-            ]);
-
             $stmt->execute([
                 'Funcionarios',
                 'IMPERSONATE_' . $acao,
                 $usuario_impersonado_id,
                 $usuario_real_id,
-                $detalhes,
+                json_encode($detalhes, JSON_UNESCAPED_UNICODE),
                 $_SERVER['REMOTE_ADDR'] ?? null,
                 $_SERVER['HTTP_USER_AGENT'] ?? null
             ]);
@@ -644,6 +666,40 @@ class Auth
 
         try {
             $tabela = ($tipoUsuario === 'funcionario') ? 'Funcionarios' : 'Associados';
+            
+            // ✅ CORREÇÃO: Preparar dados completos para alteracoes
+            $dadosLogin = [
+                [
+                    'campo' => 'evento',
+                    'valor_anterior' => null,
+                    'valor_novo' => 'Login realizado'
+                ],
+                [
+                    'campo' => 'tipo_usuario',
+                    'valor_anterior' => null,
+                    'valor_novo' => $tipoUsuario
+                ],
+                [
+                    'campo' => 'data_hora',
+                    'valor_anterior' => null,
+                    'valor_novo' => date('Y-m-d H:i:s')
+                ],
+                [
+                    'campo' => 'ip',
+                    'valor_anterior' => null,
+                    'valor_novo' => $_SERVER['REMOTE_ADDR'] ?? 'Unknown'
+                ],
+                [
+                    'campo' => 'user_agent',
+                    'valor_anterior' => null,
+                    'valor_novo' => $_SERVER['HTTP_USER_AGENT'] ?? 'Unknown'
+                ],
+                [
+                    'campo' => 'sessao_id',
+                    'valor_anterior' => null,
+                    'valor_novo' => session_id()
+                ]
+            ];
 
             $stmt = $this->db->prepare("
                 INSERT INTO Auditoria (
@@ -652,10 +708,11 @@ class Auth
                     registro_id, 
                     funcionario_id, 
                     associado_id,
+                    alteracoes,
                     ip_origem, 
                     browser_info,
                     sessao_id
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             ");
 
             $funcionario_id = ($tipoUsuario === 'funcionario') ? $usuario_id : null;
@@ -667,12 +724,13 @@ class Auth
                 $usuario_id,
                 $funcionario_id,
                 $associado_id,
+                json_encode($dadosLogin, JSON_UNESCAPED_UNICODE),
                 $_SERVER['REMOTE_ADDR'] ?? null,
                 $_SERVER['HTTP_USER_AGENT'] ?? null,
                 session_id()
             ]);
 
-            error_log("Login registrado com sucesso - $tipoUsuario ID: $usuario_id");
+            error_log("✅ Login registrado com sucesso - $tipoUsuario ID: $usuario_id");
         } catch (PDOException $e) {
             error_log("Erro ao registrar login: " . $e->getMessage());
         }
@@ -687,6 +745,35 @@ class Auth
 
         try {
             $tabela = ($tipoUsuario === 'funcionario') ? 'Funcionarios' : 'Associados';
+            
+            // ✅ CORREÇÃO: Preparar dados completos para alteracoes
+            $dadosLogout = [
+                [
+                    'campo' => 'evento',
+                    'valor_anterior' => null,
+                    'valor_novo' => 'Logout realizado'
+                ],
+                [
+                    'campo' => 'tipo_usuario',
+                    'valor_anterior' => null,
+                    'valor_novo' => $tipoUsuario
+                ],
+                [
+                    'campo' => 'data_hora',
+                    'valor_anterior' => null,
+                    'valor_novo' => date('Y-m-d H:i:s')
+                ],
+                [
+                    'campo' => 'duracao_sessao',
+                    'valor_anterior' => null,
+                    'valor_novo' => isset($_SESSION['login_time']) ? (time() - $_SESSION['login_time']) . ' segundos' : 'Desconhecida'
+                ],
+                [
+                    'campo' => 'ip',
+                    'valor_anterior' => null,
+                    'valor_novo' => $_SERVER['REMOTE_ADDR'] ?? 'Unknown'
+                ]
+            ];
 
             $stmt = $this->db->prepare("
                 INSERT INTO Auditoria (
@@ -695,10 +782,11 @@ class Auth
                     registro_id, 
                     funcionario_id, 
                     associado_id,
+                    alteracoes,
                     ip_origem, 
                     browser_info,
                     sessao_id
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             ");
 
             $funcionario_id = ($tipoUsuario === 'funcionario') ? $usuario_id : null;
@@ -710,12 +798,13 @@ class Auth
                 $usuario_id,
                 $funcionario_id,
                 $associado_id,
+                json_encode($dadosLogout, JSON_UNESCAPED_UNICODE),
                 $_SERVER['REMOTE_ADDR'] ?? null,
                 $_SERVER['HTTP_USER_AGENT'] ?? null,
                 session_id()
             ]);
 
-            error_log("Logout registrado com sucesso");
+            error_log("✅ Logout registrado com sucesso");
         } catch (PDOException $e) {
             error_log("Erro ao registrar logout: " . $e->getMessage());
         }
