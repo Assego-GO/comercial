@@ -188,7 +188,8 @@ try {
             f.departamento_id,
             d.nome as departamento_nome,
             ass_reg.nome as associado_nome,
-            ass_reg.cpf as associado_cpf
+            ass_reg.cpf as associado_cpf,
+            ass_reg.rg as associado_rg
             
         FROM Auditoria a
         LEFT JOIN Funcionarios f ON a.funcionario_id = f.id
@@ -260,7 +261,8 @@ try {
             'departamento_nome' => $registro['departamento_nome'],
             'associado_id' => $registro['associado_id'],
             'associado_nome' => $registro['associado_nome'],
-            'associado_cpf' => $registro['associado_cpf']
+            'associado_cpf' => $registro['associado_cpf'],
+            'associado_rg' => $registro['associado_rg']
         ];
         
         // Formatar data

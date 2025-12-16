@@ -2089,6 +2089,25 @@ class Documentos
     private function registrarAuditoria($acao, $documentoId, $associadoId)
     {
         try {
+            // Obter funcionário da sessão ou Auth
+            $funcionarioId = $_SESSION['funcionario_id'] ?? null;
+            
+            // Se não tiver na sessão, tentar obter via Auth
+            if (!$funcionarioId) {
+                try {
+                    if (file_exists(__DIR__ . '/Auth.php')) {
+                        require_once __DIR__ . '/Auth.php';
+                        $auth = new Auth();
+                        if ($auth->isLoggedIn()) {
+                            $usuario = $auth->getUser();
+                            $funcionarioId = $usuario['id'] ?? null;
+                        }
+                    }
+                } catch (Exception $e) {
+                    error_log("Erro ao obter Auth: " . $e->getMessage());
+                }
+            }
+            
             $stmt = $this->db->prepare("
                 INSERT INTO Auditoria (
                     tabela, acao, registro_id, associado_id, 
@@ -2101,7 +2120,7 @@ class Documentos
                 $acao,
                 $documentoId,
                 $associadoId,
-                $_SESSION['funcionario_id'] ?? null,
+                $funcionarioId,
                 $_SERVER['REMOTE_ADDR'] ?? null,
                 $_SERVER['HTTP_USER_AGENT'] ?? null,
                 session_id()

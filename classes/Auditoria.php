@@ -15,7 +15,7 @@ class Auditoria {
     }
     
     /**
-     * CORREÇÃO PRINCIPAL: Registra uma ação considerando usuários híbridos
+     * ✅ CORRIGIDO: Registra uma ação COM DADOS COMPLETOS
      */
     public function registrar($dados) {
         try {
@@ -27,15 +27,24 @@ class Auditoria {
             
             $funcionario_id = $dados['funcionario_id'] ?? null;
             
+            // Log do ID recebido
+            error_log("=== AUDITORIA REGISTRAR ===");
+            error_log("Funcionario ID recebido nos dados: " . ($funcionario_id ?? 'NULL'));
+            
             // Se não foi passado explicitamente, identificar da sessão
             if (!$funcionario_id) {
                 $dadosUsuario = $this->identificarUsuarioLogado();
                 $funcionario_id = $dadosUsuario['id'];
+                error_log("Funcionario ID da sessão: " . ($funcionario_id ?? 'NULL'));
                 
-                error_log("=== DEBUG AUDITORIA HÍBRIDA ===");
-                error_log("Usuário identificado: " . print_r($dadosUsuario, true));
-                error_log("Funcionario ID final: " . ($funcionario_id ?? 'NULL'));
-                error_log("===============================");
+                if (DEBUG_MODE) {
+                    error_log("=== DEBUG AUDITORIA HÍBRIDA ===");
+                    error_log("Usuário identificado: " . print_r($dadosUsuario, true));
+                    error_log("Funcionario ID final: " . ($funcionario_id ?? 'NULL'));
+                    error_log("===============================");
+                }
+            } else {
+                error_log("Usando Funcionario ID explícito: {$funcionario_id}");
             }
             
             // Prepara dados básicos
@@ -45,18 +54,25 @@ class Auditoria {
             $associado_id = $dados['associado_id'] ?? null;
             $alteracoes = $dados['alteracoes'] ?? [];
             $detalhes = $dados['detalhes'] ?? [];
+            $dados_completos = $dados['dados_completos'] ?? null;
+            
+            // ✅ CORREÇÃO CRÍTICA: Processar alterações para garantir dados completos
+            $alteracoes_processadas = $this->processarAlteracoes($acao, $alteracoes, $detalhes, $dados_completos);
             
             // Adiciona informações do ambiente
             $ip_origem = $this->getIpAddress();
             $browser_info = $_SERVER['HTTP_USER_AGENT'] ?? null;
             $sessao_id = session_id() ?: null;
             
-            // Prepara JSON das alterações
-            $alteracoes_json = null;
-            if (!empty($alteracoes)) {
-                $alteracoes_json = json_encode($alteracoes, JSON_UNESCAPED_UNICODE);
-            } elseif (!empty($detalhes)) {
-                $alteracoes_json = json_encode($detalhes, JSON_UNESCAPED_UNICODE);
+            // Prepara JSON das alterações (agora SEMPRE terá dados)
+            $alteracoes_json = json_encode($alteracoes_processadas, JSON_UNESCAPED_UNICODE);
+            
+            // Log para debug
+            if (DEBUG_MODE) {
+                error_log("=== AUDITORIA REGISTRADA ===");
+                error_log("Tabela: $tabela | Ação: $acao | Registro: $registro_id");
+                error_log("Alterações: " . $alteracoes_json);
+                error_log("============================");
             }
             
             // Insere registro principal na tabela Auditoria
@@ -84,26 +100,9 @@ class Auditoria {
             
             $auditoria_id = $this->db->lastInsertId();
             
-            // Se houver alterações detalhadas, registra em Auditoria_Detalhes
-            if (!empty($alteracoes) && is_array($alteracoes)) {
-                $stmtDetalhe = $this->db->prepare("
-                    INSERT INTO Auditoria_Detalhes (
-                        auditoria_id, campo, valor_anterior, valor_novo
-                    ) VALUES (
-                        :auditoria_id, :campo, :valor_anterior, :valor_novo
-                    )
-                ");
-                
-                foreach ($alteracoes as $alteracao) {
-                    if (isset($alteracao['campo'])) {
-                        $stmtDetalhe->execute([
-                            ':auditoria_id' => $auditoria_id,
-                            ':campo' => $alteracao['campo'],
-                            ':valor_anterior' => $this->prepararValor($alteracao['valor_anterior'] ?? null),
-                            ':valor_novo' => $this->prepararValor($alteracao['valor_novo'] ?? null)
-                        ]);
-                    }
-                }
+            // Registra detalhes se houver alterações estruturadas
+            if (!empty($alteracoes_processadas) && isset($alteracoes_processadas[0]['campo'])) {
+                $this->registrarDetalhes($auditoria_id, $alteracoes_processadas);
             }
             
             $this->db->commit();
@@ -111,9 +110,178 @@ class Auditoria {
             return $auditoria_id;
             
         } catch (Exception $e) {
-            $this->db->rollBack();
-            error_log("Erro ao registrar auditoria: " . $e->getMessage());
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
+            error_log("❌ ERRO CRÍTICO ao registrar auditoria: " . $e->getMessage());
+            error_log("Dados: " . print_r($dados, true));
             return false;
+        }
+    }
+    
+    /**
+     * ✅ NOVO: Processa alterações baseado no tipo de ação
+     */
+    private function processarAlteracoes($acao, $alteracoes, $detalhes, $dados_completos) {
+        $acao = strtoupper($acao);
+        
+        // Se já tem alterações estruturadas, usa elas
+        if (!empty($alteracoes) && is_array($alteracoes)) {
+            // Verifica se é array de alterações ou dados simples
+            if (isset($alteracoes[0]['campo'])) {
+                return $alteracoes; // Já está estruturado
+            } else {
+                // Converte para estrutura padrão
+                return $this->converterParaEstruturaPadrao($acao, $alteracoes);
+            }
+        }
+        
+        // Se tem detalhes, usa eles
+        if (!empty($detalhes) && is_array($detalhes)) {
+            return $this->converterParaEstruturaPadrao($acao, $detalhes);
+        }
+        
+        // Se tem dados completos, converte
+        if (!empty($dados_completos) && is_array($dados_completos)) {
+            return $this->converterParaEstruturaPadrao($acao, $dados_completos);
+        }
+        
+        // Caso especial: LOGIN
+        if ($acao === 'LOGIN') {
+            return [[
+                'campo' => 'evento',
+                'valor_anterior' => null,
+                'valor_novo' => 'Login realizado',
+                'timestamp' => date('Y-m-d H:i:s'),
+                'ip' => $this->getIpAddress(),
+                'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? 'Unknown'
+            ]];
+        }
+        
+        // Caso especial: LOGOUT
+        if ($acao === 'LOGOUT') {
+            return [[
+                'campo' => 'evento',
+                'valor_anterior' => null,
+                'valor_novo' => 'Logout realizado',
+                'timestamp' => date('Y-m-d H:i:s')
+            ]];
+        }
+        
+        // Se chegou aqui sem dados, retorna estrutura mínima
+        error_log("⚠️ AVISO: Auditoria sem alterações - Ação: $acao");
+        return [[
+            'campo' => '_meta',
+            'valor_anterior' => null,
+            'valor_novo' => "Ação $acao realizada sem detalhes",
+            'timestamp' => date('Y-m-d H:i:s')
+        ]];
+    }
+    
+    /**
+     * ✅ NOVO: Converte dados para estrutura padrão de auditoria
+     */
+    private function converterParaEstruturaPadrao($acao, $dados) {
+        $alteracoes = [];
+        
+        if ($acao === 'INSERT') {
+            // Para INSERT: todos os campos são novos
+            foreach ($dados as $campo => $valor) {
+                $alteracoes[] = [
+                    'campo' => $campo,
+                    'valor_anterior' => null,
+                    'valor_novo' => $this->formatarValor($valor)
+                ];
+            }
+        } elseif ($acao === 'UPDATE') {
+            // Para UPDATE: precisa ter valores antigos e novos
+            // Se não tiver, registra apenas os novos valores
+            foreach ($dados as $campo => $valor) {
+                $alteracoes[] = [
+                    'campo' => $campo,
+                    'valor_anterior' => isset($dados['_anterior'][$campo]) ? 
+                        $this->formatarValor($dados['_anterior'][$campo]) : null,
+                    'valor_novo' => $this->formatarValor($valor)
+                ];
+            }
+        } elseif ($acao === 'DELETE') {
+            // Para DELETE: todos os campos são removidos
+            foreach ($dados as $campo => $valor) {
+                $alteracoes[] = [
+                    'campo' => $campo,
+                    'valor_anterior' => $this->formatarValor($valor),
+                    'valor_novo' => null
+                ];
+            }
+        } else {
+            // Para outras ações: registra como está
+            foreach ($dados as $campo => $valor) {
+                $alteracoes[] = [
+                    'campo' => $campo,
+                    'valor_anterior' => null,
+                    'valor_novo' => $this->formatarValor($valor)
+                ];
+            }
+        }
+        
+        return $alteracoes;
+    }
+    
+    /**
+     * ✅ NOVO: Formata valor para exibição
+     */
+    private function formatarValor($valor) {
+        if (is_null($valor)) {
+            return null;
+        }
+        
+        if (is_bool($valor)) {
+            return $valor ? 'Sim' : 'Não';
+        }
+        
+        if (is_array($valor)) {
+            return json_encode($valor, JSON_UNESCAPED_UNICODE);
+        }
+        
+        if (is_object($valor)) {
+            return json_encode($valor, JSON_UNESCAPED_UNICODE);
+        }
+        
+        // Limita tamanho de strings muito grandes
+        $valorStr = (string)$valor;
+        if (strlen($valorStr) > 5000) {
+            return substr($valorStr, 0, 5000) . '... (truncado)';
+        }
+        
+        return $valorStr;
+    }
+    
+    /**
+     * ✅ NOVO: Registra detalhes em tabela separada
+     */
+    private function registrarDetalhes($auditoria_id, $alteracoes) {
+        try {
+            $stmtDetalhe = $this->db->prepare("
+                INSERT INTO Auditoria_Detalhes (
+                    auditoria_id, campo, valor_anterior, valor_novo
+                ) VALUES (
+                    :auditoria_id, :campo, :valor_anterior, :valor_novo
+                )
+            ");
+            
+            foreach ($alteracoes as $alteracao) {
+                if (isset($alteracao['campo'])) {
+                    $stmtDetalhe->execute([
+                        ':auditoria_id' => $auditoria_id,
+                        ':campo' => $alteracao['campo'],
+                        ':valor_anterior' => $this->prepararValor($alteracao['valor_anterior'] ?? null),
+                        ':valor_novo' => $this->prepararValor($alteracao['valor_novo'] ?? null)
+                    ]);
+                }
+            }
+        } catch (Exception $e) {
+            error_log("⚠️ Erro ao registrar detalhes da auditoria: " . $e->getMessage());
+            // Não falha a transação principal
         }
     }
     
