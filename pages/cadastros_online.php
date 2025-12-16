@@ -3,7 +3,7 @@
  * Página de Gerenciamento de Cadastros Online - Sistema ASSEGO
  * pages/cadastros_online.php
  * 
- * ✅ VERSÃO SIMPLIFICADA - Apenas Pré-cadastros e Todos Site
+ * ✅ VERSÃO FINAL - Modal Profissional
  */
 
 error_reporting(E_ALL);
@@ -35,19 +35,22 @@ try {
             a.id,
             a.nome,
             a.cpf,
+            a.rg,
+            a.nasc as data_nascimento,
+            a.sexo,
             a.telefone,
             a.email,
             a.data_pre_cadastro,
             a.situacao,
             a.pre_cadastro,
             a.observacao_aprovacao,
+            a.foto,
+            a.indicacao,
             m.corporacao,
             m.patente,
-            m.lotacao,
             fpc.status as status_fluxo,
-            fpc.data_envio_presidencia,
-            fpc.observacoes as fluxo_observacoes,
-            DATEDIFF(NOW(), a.data_pre_cadastro) as dias_pre_cadastro
+            DATEDIFF(NOW(), a.data_pre_cadastro) as dias_pre_cadastro,
+            TIMESTAMPDIFF(YEAR, a.nasc, CURDATE()) as idade
         FROM Associados a
         LEFT JOIN Militar m ON a.id = m.associado_id
         LEFT JOIN Fluxo_Pre_Cadastro fpc ON a.id = fpc.associado_id
@@ -69,7 +72,7 @@ try {
     $preCadastros = [];
 }
 
-// Separar origem (importados do site vs manual)
+// Separar origem
 $preCadastrosImportados = array_filter($preCadastros, function($p) {
     return strpos($p['observacao_aprovacao'] ?? '', 'Importado do cadastro online') !== false;
 });
@@ -98,7 +101,7 @@ $headerComponent = HeaderComponent::create([
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
-    <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap5.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
     
     <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
     
@@ -107,6 +110,7 @@ $headerComponent = HeaderComponent::create([
     <style>
         :root {
             --primary: #0056d2;
+            --primary-dark: #003d94;
             --success: #28a745;
             --danger: #dc3545;
             --warning: #ffc107;
@@ -207,6 +211,7 @@ $headerComponent = HeaderComponent::create([
             margin-top: 1rem;
             padding-top: 1rem;
             border-top: 1px solid var(--gray-200);
+            flex-wrap: wrap;
         }
 
         .stat-item {
@@ -355,8 +360,41 @@ $headerComponent = HeaderComponent::create([
             vertical-align: middle;
         }
 
+        .table tbody tr {
+            transition: all 0.2s;
+        }
+
         .table tbody tr:hover {
-            background: rgba(0, 86, 210, 0.05);
+            background: rgba(0, 86, 210, 0.08);
+            transform: scale(1.01);
+            cursor: pointer;
+        }
+
+        /* Foto */
+        .foto-mini {
+            width: 45px;
+            height: 45px;
+            border-radius: 8px;
+            object-fit: cover;
+            border: 2px solid var(--gray-300);
+            transition: all 0.3s;
+        }
+
+        .foto-mini:hover {
+            transform: scale(1.2);
+            border-color: var(--primary);
+            box-shadow: 0 4px 12px rgba(0, 86, 210, 0.3);
+        }
+
+        .sem-foto {
+            width: 45px;
+            height: 45px;
+            border-radius: 8px;
+            background: var(--gray-200);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--gray-600);
         }
 
         /* Badges */
@@ -408,12 +446,6 @@ $headerComponent = HeaderComponent::create([
             border: 1px solid #22c55e;
         }
 
-        .badge-rejeitado {
-            background: linear-gradient(135deg, #fee2e2, #fecaca);
-            color: #991b1b;
-            border: 1px solid #ef4444;
-        }
-
         /* Buttons */
         .btn-action {
             padding: 0.5rem 1rem;
@@ -433,7 +465,6 @@ $headerComponent = HeaderComponent::create([
         .btn-complete {
             background: linear-gradient(135deg, #ffc107, #ffb300);
             color: #000;
-            box-shadow: 0 4px 14px rgba(255, 193, 7, 0.3);
         }
 
         .btn-complete:hover {
@@ -445,37 +476,246 @@ $headerComponent = HeaderComponent::create([
         .btn-delete {
             background: linear-gradient(135deg, var(--danger), #c82333);
             color: white;
-            box-shadow: 0 4px 14px rgba(220, 53, 69, 0.3);
         }
 
         .btn-delete:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(220, 53, 69, 0.4);
             color: white;
         }
 
         .btn-import {
             background: linear-gradient(135deg, var(--success), #20c997);
             color: white;
-            box-shadow: 0 4px 14px rgba(40, 167, 69, 0.3);
         }
 
         .btn-import:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4);
             color: white;
         }
 
         .btn-view {
             background: linear-gradient(135deg, var(--info), #138496);
             color: white;
-            box-shadow: 0 4px 14px rgba(23, 162, 184, 0.3);
         }
 
         .btn-view:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(23, 162, 184, 0.4);
             color: white;
+        }
+
+        /* ✅ MODAL PROFILE PROFISSIONAL */
+        .modal-profile {
+            z-index: 10000;
+        }
+
+        .modal-profile .modal-dialog {
+            max-width: 700px;
+        }
+
+        .modal-profile .modal-content {
+            border: none;
+            border-radius: 24px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-profile .modal-header {
+            background: linear-gradient(135deg, #0056d2 0%, #003d94 100%);
+            border: none;
+            padding: 0;
+            position: relative;
+            height: 220px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-profile .modal-header::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: url('data:image/svg+xml,<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg"><defs><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="1"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
+            opacity: 0.5;
+        }
+
+        .modal-profile .btn-close {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            border-radius: 50%;
+            width: 38px;
+            height: 38px;
+            opacity: 1;
+            z-index: 10;
+            transition: all 0.3s;
+        }
+
+        .modal-profile .btn-close:hover {
+            background: rgba(255, 255, 255, 0.25);
+            transform: rotate(90deg);
+        }
+
+        .profile-photo-container {
+            position: relative;
+            z-index: 5;
+        }
+
+        .profile-photo {
+            width: 140px;
+            height: 140px;
+            border-radius: 50%;
+            border: 6px solid white;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            object-fit: cover;
+            background: white;
+        }
+
+        .profile-photo-placeholder {
+            width: 140px;
+            height: 140px;
+            border-radius: 50%;
+            border: 6px solid white;
+            background: linear-gradient(135deg, #0056d2, #003d94);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3.5rem;
+            color: white;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-profile .modal-body {
+            padding: 0 2rem 2rem 2rem;
+            background: #f8f9fa;
+        }
+
+        .profile-name {
+            text-align: center;
+            margin: 0;
+            padding: 1.5rem 0 2rem 0;
+            position: relative;
+        }
+
+        .profile-name h3 {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: #2d3748;
+            margin: 0 0 0.5rem 0;
+            line-height: 1.3;
+        }
+
+        .profile-name .profile-id {
+            color: #718096;
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .info-card {
+            background: white;
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-bottom: 1.25rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s;
+        }
+
+        .info-card:hover {
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .info-card-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1.25rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .info-card-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            color: white;
+        }
+
+        .icon-personal { background: linear-gradient(135deg, #0056d2, #003d94); }
+        .icon-military { background: linear-gradient(135deg, #dc3545, #c82333); }
+        .icon-contact { background: linear-gradient(135deg, #17a2b8, #138496); }
+        .icon-extra { background: linear-gradient(135deg, #28a745, #20c997); }
+
+        .info-card-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #2d3748;
+            margin: 0;
+        }
+
+        .info-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .info-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .info-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #a0aec0;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.25rem;
+        }
+
+        .info-value {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #2d3748;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .info-value i {
+            color: #0056d2;
+        }
+
+        .badge-modern {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            border-radius: 12px;
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+
+        .badge-pm-modern {
+            background: linear-gradient(135deg, #fee2e2, #fecaca);
+            color: #991b1b;
+        }
+
+        .badge-bm-modern {
+            background: linear-gradient(135deg, #fef3c7, #fde68a);
+            color: #92400e;
+        }
+
+        .empty-value {
+            color: #cbd5e0;
+            font-style: italic;
         }
 
         /* Empty State */
@@ -491,7 +731,6 @@ $headerComponent = HeaderComponent::create([
             margin-bottom: 1rem;
         }
 
-        /* Alert */
         .alert-origem {
             padding: 0.75rem 1rem;
             border-radius: 8px;
@@ -515,6 +754,30 @@ $headerComponent = HeaderComponent::create([
             .content-area { padding: 1rem; }
             .page-title { font-size: 1.5rem; }
             .stats-summary { flex-direction: column; }
+            .info-row { grid-template-columns: 1fr; }
+            
+            .modal-profile .modal-header { 
+                height: 180px; 
+            }
+            
+            .profile-photo, 
+            .profile-photo-placeholder { 
+                width: 110px; 
+                height: 110px;
+                border-width: 4px;
+            }
+            
+            .profile-name {
+                padding: 1rem 0 1.5rem 0;
+            }
+            
+            .profile-name h3 {
+                font-size: 1.5rem;
+            }
+            
+            .modal-profile .modal-body {
+                padding: 0 1rem 1rem 1rem;
+            }
         }
     </style>
 </head>
@@ -531,7 +794,30 @@ $headerComponent = HeaderComponent::create([
     <!-- Toast Container -->
     <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 99999;"></div>
 
-    <!-- Modal Recusar Cadastro -->
+    <!-- Modal Profile -->
+    <div class="modal fade modal-profile" id="modalDetalhes" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content animate__animated animate__zoomIn animate__faster">
+                <div class="modal-header">
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    <div class="profile-photo-container" id="photoContainer">
+                        <!-- Foto será inserida aqui -->
+                    </div>
+                </div>
+                <div class="modal-body">
+                    <div class="profile-name" id="profileName">
+                        <!-- Nome será inserido aqui -->
+                    </div>
+                    
+                    <div id="profileCards">
+                        <!-- Cards serão inseridos aqui -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Recusar -->
     <div class="modal fade" id="modalRecusar" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
@@ -545,56 +831,34 @@ $headerComponent = HeaderComponent::create([
                 <div class="modal-body">
                     <div class="alert alert-warning">
                         <i class="fas fa-exclamation-triangle me-2"></i>
-                        <strong>Atenção!</strong> Esta ação é irreversível. O cadastro será excluído permanentemente.
+                        <strong>Atenção!</strong> Esta ação é irreversível.
                     </div>
                     
                     <p><strong>Cadastro:</strong> <span id="recusarNome"></span></p>
                     <p><strong>CPF:</strong> <span id="recusarCpf"></span></p>
                     
                     <div class="mb-3">
-                        <label class="form-label fw-bold">Motivo da Recusa *</label>
+                        <label class="form-label fw-bold">Motivo *</label>
                         <select class="form-select" id="recusarMotivo" required>
                             <option value="">Selecione...</option>
                             <option value="Dados Falsos">Dados Falsos</option>
                             <option value="CPF Inválido">CPF Inválido</option>
                             <option value="Documentos Falsos">Documentos Falsos</option>
-                            <option value="Duplicado">Cadastro Duplicado</option>
+                            <option value="Duplicado">Duplicado</option>
                             <option value="Não é PM/BM">Não é PM/BM</option>
-                            <option value="Teste">Cadastro de Teste</option>
+                            <option value="Teste">Teste</option>
                             <option value="Outros">Outros</option>
                         </select>
                     </div>
                     
                     <div class="mb-3">
                         <label class="form-label fw-bold">Observações</label>
-                        <textarea class="form-control" id="recusarObservacao" rows="3" placeholder="Detalhes adicionais..."></textarea>
+                        <textarea class="form-control" id="recusarObservacao" rows="3"></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                        <i class="fas fa-times me-1"></i> Cancelar
-                    </button>
-                    <button type="button" class="btn btn-danger" onclick="confirmarRecusa()">
-                        <i class="fas fa-trash-alt me-1"></i> Confirmar Recusa
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal Ver Dados do Site -->
-    <div class="modal fade" id="modalVerDados" tabindex="-1">
-        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-            <div class="modal-content">
-                <div class="modal-header bg-primary text-white">
-                    <h5 class="modal-title">
-                        <i class="fas fa-info-circle me-2"></i>
-                        Dados Completos do Site
-                    </h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body" id="modalVerDadosBody">
-                    <!-- Conteúdo dinâmico -->
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-danger" onclick="confirmarRecusa()">Confirmar Recusa</button>
                 </div>
             </div>
         </div>
@@ -604,19 +868,15 @@ $headerComponent = HeaderComponent::create([
         <?php $headerComponent->render(); ?>
 
         <div class="content-area">
-            <!-- Action Bar -->
             <div class="action-bar">
                 <a href="comercial.php" class="btn-back">
-                    <i class="fas fa-arrow-left"></i>
-                    Voltar
+                    <i class="fas fa-arrow-left"></i> Voltar
                 </a>
                 <button class="btn-refresh" onclick="location.reload()">
-                    <i class="fas fa-sync-alt"></i>
-                    Atualizar
+                    <i class="fas fa-sync-alt"></i> Atualizar
                 </button>
             </div>
 
-            <!-- Header -->
             <div class="page-header">
                 <h1 class="page-title">
                     <i class="fas fa-laptop"></i>
@@ -648,7 +908,6 @@ $headerComponent = HeaderComponent::create([
                 </div>
             </div>
 
-            <!-- Tabs -->
             <div class="nav-tabs-custom">
                 <button class="nav-tab-custom active" onclick="trocarAba('precadastros')" id="tab-precadastros">
                     <i class="fas fa-edit"></i>
@@ -662,19 +921,19 @@ $headerComponent = HeaderComponent::create([
                 </button>
             </div>
 
-            <!-- ABA: PRÉ-CADASTROS -->
+            <!-- ABA PRÉ-CADASTROS -->
             <div class="tab-content-area active" id="content-precadastros">
                 <?php if (count($preCadastrosImportados) > 0): ?>
                 <div class="alert-origem alert-origem-site">
                     <i class="fas fa-globe me-2"></i>
-                    <strong><?php echo count($preCadastrosImportados); ?> cadastros</strong> importados do site público
+                    <strong><?php echo count($preCadastrosImportados); ?> cadastros</strong> do site público
                 </div>
                 <?php endif; ?>
 
                 <?php if (count($preCadastrosManuais) > 0): ?>
                 <div class="alert-origem alert-origem-manual">
                     <i class="fas fa-hand-paper me-2"></i>
-                    <strong><?php echo count($preCadastrosManuais); ?> cadastros</strong> criados manualmente no sistema
+                    <strong><?php echo count($preCadastrosManuais); ?> cadastros</strong> manuais
                 </div>
                 <?php endif; ?>
 
@@ -683,6 +942,7 @@ $headerComponent = HeaderComponent::create([
                         <h3 class="table-title">
                             <i class="fas fa-user-edit"></i>
                             Pré-cadastros para Completar
+                            <small class="text-muted ms-2">(Clique na linha para ver detalhes)</small>
                         </h3>
                     </div>
 
@@ -691,13 +951,13 @@ $headerComponent = HeaderComponent::create([
                         <table id="tablePreCadastros" class="table table-hover">
                             <thead>
                                 <tr>
+                                    <th>Foto</th>
                                     <th>ID</th>
                                     <th>Nome</th>
                                     <th>CPF</th>
                                     <th>Corporação</th>
                                     <th>Patente</th>
                                     <th>Telefone</th>
-                                    <th>Data</th>
                                     <th>Dias</th>
                                     <th>Status</th>
                                     <th>Origem</th>
@@ -705,11 +965,19 @@ $headerComponent = HeaderComponent::create([
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php foreach ($preCadastros as $pre): ?>
                                 <?php 
+                                foreach ($preCadastros as $pre): 
                                     $doSite = strpos($pre['observacao_aprovacao'] ?? '', 'Importado do cadastro online') !== false;
+                                    $dadosJson = htmlspecialchars(json_encode($pre), ENT_QUOTES, 'UTF-8');
                                 ?>
-                                <tr>
+                                <tr onclick="mostrarDetalhes(<?php echo $dadosJson; ?>)" style="cursor: pointer;">
+                                    <td onclick="event.stopPropagation();">
+                                        <?php if ($pre['foto']): ?>
+                                            <img src="../<?php echo htmlspecialchars($pre['foto']); ?>" class="foto-mini" alt="Foto">
+                                        <?php else: ?>
+                                            <div class="sem-foto"><i class="fas fa-user"></i></div>
+                                        <?php endif; ?>
+                                    </td>
                                     <td><strong>#<?php echo $pre['id']; ?></strong></td>
                                     <td>
                                         <div class="fw-semibold"><?php echo htmlspecialchars($pre['nome']); ?></div>
@@ -731,7 +999,6 @@ $headerComponent = HeaderComponent::create([
                                     <td>
                                         <?php if ($pre['patente']): ?>
                                             <span class="status-badge badge-patente">
-                                                <i class="fas fa-star"></i>
                                                 <?php echo htmlspecialchars($pre['patente']); ?>
                                             </span>
                                         <?php else: ?>
@@ -743,11 +1010,8 @@ $headerComponent = HeaderComponent::create([
                                             <i class="fas fa-phone text-primary"></i>
                                             <?php echo htmlspecialchars($pre['telefone']); ?>
                                         <?php else: ?>
-                                            <small class="text-muted">-</small>
+                                            -
                                         <?php endif; ?>
-                                    </td>
-                                    <td>
-                                        <small><?php echo $pre['data_pre_cadastro'] ? date('d/m/Y H:i', strtotime($pre['data_pre_cadastro'])) : '-'; ?></small>
                                     </td>
                                     <td>
                                         <?php
@@ -755,7 +1019,7 @@ $headerComponent = HeaderComponent::create([
                                         $corDias = $dias > 7 ? 'bg-danger' : ($dias > 3 ? 'bg-warning' : 'bg-success');
                                         ?>
                                         <span class="badge <?php echo $corDias; ?>">
-                                            <i class="fas fa-clock"></i> <?php echo $dias; ?> <?php echo $dias === 1 ? 'dia' : 'dias'; ?>
+                                            <?php echo $dias; ?> dia<?php echo $dias !== 1 ? 's' : ''; ?>
                                         </span>
                                     </td>
                                     <td>
@@ -763,46 +1027,37 @@ $headerComponent = HeaderComponent::create([
                                         $status = $pre['status_fluxo'] ?? 'AGUARDANDO_DOCUMENTOS';
                                         switch ($status) {
                                             case 'AGUARDANDO_DOCUMENTOS':
-                                                echo '<span class="status-badge badge-aguardando"><i class="fas fa-hourglass-half"></i> Aguardando</span>';
+                                                echo '<span class="status-badge badge-aguardando">Aguardando</span>';
                                                 break;
                                             case 'ENVIADO_PRESIDENCIA':
-                                                echo '<span class="status-badge badge-enviado"><i class="fas fa-paper-plane"></i> Enviado</span>';
+                                                echo '<span class="status-badge badge-enviado">Enviado</span>';
                                                 break;
                                             case 'ASSINADO':
                                             case 'APROVADO':
-                                                echo '<span class="status-badge badge-aprovado"><i class="fas fa-check-circle"></i> Aprovado</span>';
-                                                break;
-                                            case 'REJEITADO':
-                                                echo '<span class="status-badge badge-rejeitado"><i class="fas fa-times-circle"></i> Rejeitado</span>';
+                                                echo '<span class="status-badge badge-aprovado">Aprovado</span>';
                                                 break;
                                             default:
-                                                echo '<span class="status-badge badge-aguardando"><i class="fas fa-clock"></i> Pendente</span>';
+                                                echo '<span class="status-badge badge-aguardando">Pendente</span>';
                                         }
                                         ?>
                                     </td>
                                     <td>
                                         <?php if ($doSite): ?>
-                                            <span class="badge bg-info">
-                                                <i class="fas fa-globe"></i> Site
-                                            </span>
+                                            <span class="badge bg-info"><i class="fas fa-globe"></i> Site</span>
                                         <?php else: ?>
-                                            <span class="badge bg-secondary">
-                                                <i class="fas fa-hand-paper"></i> Manual
-                                            </span>
+                                            <span class="badge bg-secondary"><i class="fas fa-hand-paper"></i> Manual</span>
                                         <?php endif; ?>
                                     </td>
-                                    <td class="text-center">
+                                    <td class="text-center" onclick="event.stopPropagation();">
                                         <a href="cadastroForm.php?id=<?php echo $pre['id']; ?>" 
                                            class="btn-action btn-complete" 
                                            target="_blank">
-                                            <i class="fas fa-edit"></i>
-                                            Completar
+                                            <i class="fas fa-edit"></i> Completar
                                         </a>
                                         <?php if ($doSite): ?>
                                         <button class="btn-action btn-delete" 
                                                 onclick="abrirModalRecusar(<?php echo $pre['id']; ?>, '<?php echo htmlspecialchars($pre['nome'], ENT_QUOTES); ?>', '<?php echo htmlspecialchars($pre['cpf']); ?>')">
-                                            <i class="fas fa-trash-alt"></i>
-                                            Recusar
+                                            <i class="fas fa-trash-alt"></i> Recusar
                                         </button>
                                         <?php endif; ?>
                                     </td>
@@ -814,20 +1069,20 @@ $headerComponent = HeaderComponent::create([
                         <div class="empty-state">
                             <i class="fas fa-inbox"></i>
                             <h4>Nenhum pré-cadastro</h4>
-                            <p>Não há pré-cadastros pendentes no sistema.</p>
                         </div>
                         <?php endif; ?>
                     </div>
                 </div>
             </div>
 
-            <!-- ABA: TODOS SITE -->
+            <!-- ABA TODOS SITE -->
             <div class="tab-content-area" id="content-todosSite">
                 <div class="table-container">
                     <div class="table-header">
                         <h3 class="table-title">
                             <i class="fas fa-database"></i>
-                            Todos os Cadastros do Site Público
+                            Todos os Cadastros do Site
+                            <small class="text-muted ms-2">(Clique na linha para ver detalhes)</small>
                         </h3>
                     </div>
 
@@ -835,22 +1090,23 @@ $headerComponent = HeaderComponent::create([
                         <table id="tableTodosSite" class="table table-hover">
                             <thead>
                                 <tr>
+                                    <th>Foto</th>
                                     <th>ID</th>
                                     <th>Status</th>
                                     <th>Nome</th>
                                     <th>CPF</th>
-                                    <th>Corporação/Patente</th>
+                                    <th>Corp./Patente</th>
                                     <th>Telefone</th>
-                                    <th>Data Cadastro</th>
+                                    <th>Data</th>
                                     <th>Aguardando</th>
                                     <th class="text-center">Ações</th>
                                 </tr>
                             </thead>
                             <tbody id="tableBodyTodosSite">
                                 <tr>
-                                    <td colspan="9" class="text-center py-5">
+                                    <td colspan="10" class="text-center py-5">
                                         <div class="loading-spinner mx-auto mb-3"></div>
-                                        <p class="text-muted">Carregando cadastros do site...</p>
+                                        <p class="text-muted">Carregando...</p>
                                     </td>
                                 </tr>
                             </tbody>
@@ -865,8 +1121,6 @@ $headerComponent = HeaderComponent::create([
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
-    <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
-    <script src="https://cdn.datatables.net/responsive/2.5.0/js/responsive.bootstrap5.min.js"></script>
     
     <?php $headerComponent->renderJS(); ?>
 
@@ -876,17 +1130,14 @@ $headerComponent = HeaderComponent::create([
         let associadoParaRecusar = null;
 
         document.addEventListener('DOMContentLoaded', function() {
-            // Inicializar tabela de pré-cadastros
             <?php if (count($preCadastros) > 0): ?>
             dataTables.precadastros = $('#tablePreCadastros').DataTable({
-                responsive: true,
                 language: { url: 'https://cdn.datatables.net/plug-ins/1.13.6/i18n/pt-BR.json' },
-                order: [[7, 'desc']], // Ordenar por dias
+                order: [[7, 'desc']],
                 pageLength: 25
             });
             <?php endif; ?>
 
-            // Carregar cadastros do site
             carregarCadastrosSite();
         });
 
@@ -896,6 +1147,214 @@ $headerComponent = HeaderComponent::create([
             
             document.querySelectorAll('.tab-content-area').forEach(c => c.classList.remove('active'));
             document.getElementById('content-' + aba).classList.add('active');
+        }
+
+        function mostrarDetalhes(dados) {
+            const modal = new bootstrap.Modal(document.getElementById('modalDetalhes'));
+            
+            // Foto
+            const photoContainer = document.getElementById('photoContainer');
+            if (dados.foto || (dados.foto_base64 && dados.tem_foto)) {
+                let fotoSrc = '';
+                if (dados.foto) {
+                    fotoSrc = '../' + dados.foto;
+                } else if (dados.foto_base64) {
+                    fotoSrc = 'data:' + (dados.foto_mime_type || 'image/jpeg') + ';base64,' + dados.foto_base64;
+                }
+                photoContainer.innerHTML = `<img src="${fotoSrc}" class="profile-photo" alt="Foto">`;
+            } else {
+                photoContainer.innerHTML = `<div class="profile-photo-placeholder"><i class="fas fa-user"></i></div>`;
+            }
+
+            // Nome e ID
+            const profileName = document.getElementById('profileName');
+            profileName.innerHTML = `
+                <h3>${dados.nome || 'Sem nome'}</h3>
+                <p class="profile-id">ID: #${dados.id || '-'}</p>
+            `;
+
+            // Cards de informação
+            let cardsHtml = '';
+
+            // Card 1: Dados Pessoais
+            cardsHtml += `
+                <div class="info-card">
+                    <div class="info-card-header">
+                        <div class="info-card-icon icon-personal">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <h4 class="info-card-title">Dados Pessoais</h4>
+                    </div>
+                    <div class="info-row">
+                        <div class="info-item">
+                            <span class="info-label">CPF</span>
+                            <span class="info-value">
+                                <i class="fas fa-id-card"></i>
+                                ${dados.cpf || dados.cpf_formatado || '<span class="empty-value">Não informado</span>'}
+                            </span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">RG</span>
+                            <span class="info-value">
+                                <i class="fas fa-address-card"></i>
+                                ${dados.rg || '<span class="empty-value">Não informado</span>'}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="info-row">
+                        <div class="info-item">
+                            <span class="info-label">Data Nascimento</span>
+                            <span class="info-value">
+                                <i class="fas fa-calendar"></i>
+                                ${dados.data_nascimento ? new Date(dados.data_nascimento).toLocaleDateString('pt-BR') : '<span class="empty-value">-</span>'}
+                            </span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Idade</span>
+                            <span class="info-value">
+                                <i class="fas fa-birthday-cake"></i>
+                                ${dados.idade ? dados.idade + ' anos' : '<span class="empty-value">-</span>'}
+                            </span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Sexo</span>
+                            <span class="info-value">
+                                <i class="fas fa-venus-mars"></i>
+                                ${dados.sexo === 'M' ? 'Masculino' : dados.sexo === 'F' ? 'Feminino' : '<span class="empty-value">-</span>'}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Card 2: Dados Militares
+            if (dados.corporacao || dados.patente) {
+                cardsHtml += `
+                    <div class="info-card">
+                        <div class="info-card-header">
+                            <div class="info-card-icon icon-military">
+                                <i class="fas fa-shield-alt"></i>
+                            </div>
+                            <h4 class="info-card-title">Dados Militares</h4>
+                        </div>
+                        <div class="info-row">
+                            <div class="info-item">
+                                <span class="info-label">Corporação</span>
+                                <div class="info-value">
+                `;
+                
+                if (dados.corporacao) {
+                    const badgeClass = dados.corporacao === 'PM' ? 'badge-pm-modern' : 'badge-bm-modern';
+                    const icon = dados.corporacao === 'PM' ? 'fa-shield-alt' : 'fa-fire';
+                    cardsHtml += `<span class="badge-modern ${badgeClass}"><i class="fas ${icon}"></i> ${dados.corporacao}</span>`;
+                } else {
+                    cardsHtml += '<span class="empty-value">Não informado</span>';
+                }
+
+                cardsHtml += `
+                                </div>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Patente</span>
+                                <div class="info-value">
+                                    <i class="fas fa-star"></i>
+                                    ${dados.patente || '<span class="empty-value">Não informado</span>'}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Card 3: Contato
+            cardsHtml += `
+                <div class="info-card">
+                    <div class="info-card-header">
+                        <div class="info-card-icon icon-contact">
+                            <i class="fas fa-phone"></i>
+                        </div>
+                        <h4 class="info-card-title">Contato</h4>
+                    </div>
+                    <div class="info-row">
+                        <div class="info-item">
+                            <span class="info-label">Telefone</span>
+                            <span class="info-value">
+                                <i class="fas fa-mobile-alt"></i>
+                                ${dados.telefone || '<span class="empty-value">Não informado</span>'}
+                            </span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">E-mail</span>
+                            <span class="info-value">
+                                <i class="fas fa-envelope"></i>
+                                ${dados.email || '<span class="empty-value">Não informado</span>'}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Card 4: Informações Adicionais
+            cardsHtml += `
+                <div class="info-card">
+                    <div class="info-card-header">
+                        <div class="info-card-icon icon-extra">
+                            <i class="fas fa-info-circle"></i>
+                        </div>
+                        <h4 class="info-card-title">Outras Informações</h4>
+                    </div>
+                    <div class="info-row">
+                        <div class="info-item">
+                            <span class="info-label">Data Cadastro Online</span>
+                            <span class="info-value">
+                                <i class="fas fa-clock"></i>
+                                ${dados.data_cadastro || dados.data_pre_cadastro ? new Date(dados.data_cadastro || dados.data_pre_cadastro).toLocaleString('pt-BR') : '<span class="empty-value">-</span>'}
+                            </span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Aguardando há</span>
+                            <span class="info-value">
+                                <i class="fas fa-hourglass-half"></i>
+                                ${dados.dias_pre_cadastro || dados.dias_aguardando || 0} dias
+                            </span>
+                        </div>
+                    </div>
+            `;
+
+            if (dados.indicacao) {
+                cardsHtml += `
+                    <div class="info-row">
+                        <div class="info-item">
+                            <span class="info-label">Indicado por</span>
+                            <span class="info-value">
+                                <i class="fas fa-user-friends"></i>
+                                ${dados.indicacao}
+                            </span>
+                        </div>
+                    </div>
+                `;
+            }
+
+            if (dados.optante_juridico == 1) {
+                cardsHtml += `
+                    <div class="info-row">
+                        <div class="info-item">
+                            <span class="info-label">Serviço Jurídico</span>
+                            <span class="info-value">
+                                <i class="fas fa-balance-scale"></i>
+                                <span class="badge-modern" style="background: linear-gradient(135deg, #dbeafe, #bfdbfe); color: #1e40af;">
+                                    Optante pelo Serviço Jurídico
+                                </span>
+                            </span>
+                        </div>
+                    </div>
+                `;
+            }
+
+            cardsHtml += '</div>';
+
+            document.getElementById('profileCards').innerHTML = cardsHtml;
+            modal.show();
         }
 
         function carregarCadastrosSite() {
@@ -917,19 +1376,12 @@ $headerComponent = HeaderComponent::create([
                         
                         renderizarTabelaSite();
                     } else {
-                        exibirErro('Erro ao carregar dados: ' + (response.message || 'Desconhecido'));
+                        exibirErro('Erro: ' + (response.message || 'Desconhecido'));
                     }
                 },
                 error: function(xhr) {
                     hideLoading();
-                    
-                    let msg = 'Erro ao conectar com o site';
-                    try {
-                        const err = JSON.parse(xhr.responseText);
-                        msg = err.message || msg;
-                    } catch (e) {}
-                    
-                    exibirErro(msg);
+                    exibirErro('Erro ao conectar com o site');
                 }
             });
         }
@@ -939,13 +1391,7 @@ $headerComponent = HeaderComponent::create([
             tbody.empty();
 
             if (cadastrosSite.length === 0) {
-                tbody.html(`
-                    <tr><td colspan="9" class="empty-state">
-                        <i class="fas fa-inbox"></i>
-                        <h4>Nenhum cadastro</h4>
-                        <p>Não há cadastros no site ainda.</p>
-                    </td></tr>
-                `);
+                tbody.html(`<tr><td colspan="10" class="empty-state"><i class="fas fa-inbox"></i><h4>Nenhum cadastro</h4></td></tr>`);
                 return;
             }
 
@@ -954,20 +1400,24 @@ $headerComponent = HeaderComponent::create([
                     ? '<span class="status-badge badge-aprovado"><i class="fas fa-check"></i> IMPORTADO</span>'
                     : '<span class="status-badge badge-aguardando"><i class="fas fa-clock"></i> PENDENTE</span>';
 
+                let fotoHtml = '<div class="sem-foto"><i class="fas fa-user"></i></div>';
+                if (cad.tem_foto && cad.foto_base64) {
+                    const fotoSrc = 'data:' + (cad.foto_mime_type || 'image/jpeg') + ';base64,' + cad.foto_base64;
+                    fotoHtml = `<img src="${fotoSrc}" class="foto-mini" alt="Foto">`;
+                }
+
                 let dadosMilitares = '';
                 if (cad.corporacao) {
                     const badgeClass = cad.corporacao === 'PM' ? 'badge-pm' : 'badge-bm';
-                    dadosMilitares += `<span class="status-badge ${badgeClass}"><i class="fas fa-${cad.corporacao === 'PM' ? 'shield-alt' : 'fire'}"></i> ${cad.corporacao}</span>`;
+                    dadosMilitares += `<span class="status-badge ${badgeClass}">${cad.corporacao}</span>`;
                 }
                 if (cad.patente) {
-                    dadosMilitares += `<br><span class="status-badge badge-patente"><i class="fas fa-star"></i> ${cad.patente}</span>`;
+                    dadosMilitares += `<br><span class="status-badge badge-patente">${cad.patente}</span>`;
                 }
-                if (!dadosMilitares) dadosMilitares = '<small class="text-muted">-</small>';
+                if (!dadosMilitares) dadosMilitares = '-';
 
                 const dataCad = cad.data_cadastro 
-                    ? new Date(cad.data_cadastro).toLocaleString('pt-BR', {
-                        day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
-                    })
+                    ? new Date(cad.data_cadastro).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
                     : '-';
 
                 const diasAg = cad.dias_aguardando || 0;
@@ -975,44 +1425,33 @@ $headerComponent = HeaderComponent::create([
 
                 let acoes = '';
                 if (cad.importado == 1) {
-                    // Já importado
                     if (cad.observacao_importacao) {
                         const match = cad.observacao_importacao.match(/ID:\s*(\d+)/i);
                         if (match) {
-                            acoes = `<button class="btn-action btn-view" onclick="window.open('cadastroForm.php?id=${match[1]}', '_blank')">
-                                <i class="fas fa-eye"></i> Ver
-                            </button>`;
+                            acoes = `<button class="btn-action btn-view" onclick="event.stopPropagation(); window.open('cadastroForm.php?id=${match[1]}', '_blank')"><i class="fas fa-eye"></i> Ver</button>`;
                         }
                     }
                 } else {
-                    // Pendente - Importar ou Recusar
                     acoes = `
-                        <button class="btn-action btn-import" onclick="importarCadastro(${cad.id}, '${htmlEscape(cad.nome)}')">
-                            <i class="fas fa-download"></i> Importar
-                        </button>
-                        <button class="btn-action btn-delete" onclick="abrirModalRecusarSite(${cad.id}, '${htmlEscape(cad.nome)}', '${htmlEscape(cad.cpf)}')">
-                            <i class="fas fa-trash-alt"></i> Recusar
-                        </button>
+                        <button class="btn-action btn-import" onclick="event.stopPropagation(); importarCadastro(${cad.id}, '${htmlEscape(cad.nome)}')"><i class="fas fa-download"></i> Importar</button>
+                        <button class="btn-action btn-delete" onclick="event.stopPropagation(); abrirModalRecusarSite(${cad.id}, '${htmlEscape(cad.nome)}', '${htmlEscape(cad.cpf)}')"><i class="fas fa-trash-alt"></i> Recusar</button>
                     `;
                 }
 
+                const dadosJson = htmlEscape(JSON.stringify(cad));
+
                 const row = `
-                    <tr>
+                    <tr onclick="mostrarDetalhes(${dadosJson})" style="cursor: pointer;">
+                        <td onclick="event.stopPropagation();">${fotoHtml}</td>
                         <td><strong>#${cad.id}</strong></td>
                         <td>${statusBadge}</td>
-                        <td>
-                            <div class="fw-semibold">${htmlEscape(cad.nome)}</div>
-                            <small class="text-muted">RG: ${htmlEscape(cad.rg) || '-'}</small>
-                        </td>
+                        <td><div class="fw-semibold">${htmlEscape(cad.nome)}</div></td>
                         <td><code>${htmlEscape(cad.cpf_formatado || cad.cpf)}</code></td>
                         <td>${dadosMilitares}</td>
-                        <td>
-                            ${cad.telefone ? `<i class="fas fa-phone text-primary"></i> ${htmlEscape(cad.telefone)}` : '-'}
-                            ${cad.email ? `<br><small class="text-muted"><i class="fas fa-envelope"></i> ${htmlEscape(cad.email)}</small>` : ''}
-                        </td>
+                        <td>${cad.telefone ? htmlEscape(cad.telefone) : '-'}</td>
                         <td><small>${dataCad}</small></td>
-                        <td><span class="badge bg-${corDias}"><i class="fas fa-clock"></i> ${diasAg} dia${diasAg !== 1 ? 's' : ''}</span></td>
-                        <td class="text-center">${acoes}</td>
+                        <td><span class="badge bg-${corDias}">${diasAg} dia${diasAg !== 1 ? 's' : ''}</span></td>
+                        <td class="text-center" onclick="event.stopPropagation();">${acoes}</td>
                     </tr>
                 `;
                 tbody.append(row);
@@ -1020,16 +1459,14 @@ $headerComponent = HeaderComponent::create([
 
             if (dataTables.todosSite) dataTables.todosSite.destroy();
             dataTables.todosSite = $('#tableTodosSite').DataTable({
-                responsive: true,
                 language: { url: 'https://cdn.datatables.net/plug-ins/1.13.6/i18n/pt-BR.json' },
-                order: [[0, 'desc']],
+                order: [[1, 'desc']],
                 pageLength: 25
             });
         }
 
         function importarCadastro(id, nome) {
             if (!confirm(`Importar cadastro de "${nome}"?`)) return;
-
             showLoading();
 
             $.ajax({
@@ -1039,9 +1476,8 @@ $headerComponent = HeaderComponent::create([
                 contentType: 'application/json',
                 success: function(resp) {
                     hideLoading();
-
                     if (resp.status === 'success') {
-                        showToast(`✅ Importado!\nID: ${resp.associado_id}`, 'success');
+                        showToast(`✅ Importado! ID: ${resp.associado_id}`, 'success');
                         setTimeout(() => {
                             window.open(`cadastroForm.php?id=${resp.associado_id}`, '_blank');
                             location.reload();
@@ -1050,14 +1486,9 @@ $headerComponent = HeaderComponent::create([
                         showToast('❌ ' + resp.message, 'danger');
                     }
                 },
-                error: function(xhr) {
+                error: function() {
                     hideLoading();
-                    let msg = 'Erro ao importar';
-                    try {
-                        const err = JSON.parse(xhr.responseText);
-                        msg = err.message || msg;
-                    } catch (e) {}
-                    showToast('❌ ' + msg, 'danger');
+                    showToast('❌ Erro ao importar', 'danger');
                 }
             });
         }
@@ -1085,15 +1516,12 @@ $headerComponent = HeaderComponent::create([
             const obs = $('#recusarObservacao').val();
 
             if (!motivo) {
-                showToast('⚠️ Selecione o motivo da recusa', 'warning');
+                showToast('⚠️ Selecione o motivo', 'warning');
                 return;
             }
 
-            if (!associadoParaRecusar) return;
-
             const modal = bootstrap.Modal.getInstance(document.getElementById('modalRecusar'));
             modal.hide();
-
             showLoading();
 
             $.ajax({
@@ -1108,36 +1536,27 @@ $headerComponent = HeaderComponent::create([
                 contentType: 'application/json',
                 success: function(resp) {
                     hideLoading();
-
                     if (resp.status === 'success') {
-                        showToast('✅ Cadastro recusado e excluído com sucesso!', 'success');
+                        showToast('✅ Recusado e excluído!', 'success');
                         setTimeout(() => location.reload(), 1500);
                     } else {
                         showToast('❌ ' + resp.message, 'danger');
                     }
                 },
-                error: function(xhr) {
+                error: function() {
                     hideLoading();
-                    let msg = 'Erro ao recusar cadastro';
-                    try {
-                        const err = JSON.parse(xhr.responseText);
-                        msg = err.message || msg;
-                    } catch (e) {}
-                    showToast('❌ ' + msg, 'danger');
+                    showToast('❌ Erro ao recusar', 'danger');
                 }
             });
         }
 
         function exibirErro(msg) {
-            const tbody = $('#tableBodyTodosSite');
-            tbody.html(`
-                <tr><td colspan="9" class="empty-state">
+            $('#tableBodyTodosSite').html(`
+                <tr><td colspan="10" class="empty-state">
                     <i class="fas fa-exclamation-triangle text-warning"></i>
-                    <h4>Erro ao carregar</h4>
+                    <h4>Erro</h4>
                     <p class="text-danger">${msg}</p>
-                    <button class="btn-refresh" onclick="location.reload()">
-                        <i class="fas fa-sync-alt"></i> Tentar Novamente
-                    </button>
+                    <button class="btn-refresh" onclick="location.reload()">Tentar Novamente</button>
                 </td></tr>
             `);
         }
@@ -1151,10 +1570,7 @@ $headerComponent = HeaderComponent::create([
         }
 
         function showToast(message, type = 'success') {
-            const bgClass = type === 'success' ? 'bg-success' : 
-                           type === 'danger' ? 'bg-danger' : 
-                           type === 'warning' ? 'bg-warning' : 'bg-info';
-
+            const bgClass = type === 'success' ? 'bg-success' : type === 'danger' ? 'bg-danger' : type === 'warning' ? 'bg-warning' : 'bg-info';
             const toast = `
                 <div class="toast align-items-center text-white ${bgClass} border-0" role="alert">
                     <div class="d-flex">
@@ -1163,24 +1579,16 @@ $headerComponent = HeaderComponent::create([
                     </div>
                 </div>
             `;
-
             const container = document.querySelector('.toast-container');
             const el = document.createElement('div');
             el.innerHTML = toast;
             container.appendChild(el.firstElementChild);
-
-            const bsToast = new bootstrap.Toast(container.lastElementChild, { delay: type === 'success' ? 5000 : 8000 });
-            bsToast.show();
+            new bootstrap.Toast(container.lastElementChild, { delay: type === 'success' ? 5000 : 8000 }).show();
         }
 
         function htmlEscape(str) {
             if (!str) return '';
-            return String(str)
-                .replace(/&/g, '&amp;')
-                .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#39;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;');
+            return String(str).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
         }
     </script>
 </body>
