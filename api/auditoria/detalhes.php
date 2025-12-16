@@ -106,6 +106,7 @@ try {
             f.cargo as funcionario_cargo,
             COALESCE(ass.nome, 'N/A') as associado_nome,
             ass.cpf as associado_cpf,
+            ass.rg as associado_rg,
             COALESCE(d.nome, 'N/A') as departamento_nome
         FROM Auditoria a
         LEFT JOIN Funcionarios f ON a.funcionario_id = f.id

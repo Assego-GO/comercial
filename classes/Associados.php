@@ -1902,31 +1902,59 @@ class Associados
     }
 
     /**
-     * Registrar auditoria de observação
+     * ✅ CORRIGIDO: Registrar auditoria de observação COM DADOS COMPLETOS
      */
     private function registrarAuditoriaObservacao($acao, $observacaoId, $dadosNovos = [], $dadosAntigos = [])
     {
         try {
             $alteracoes = [];
-
-            if ($acao == 'UPDATE' && $dadosAntigos) {
+            
+            if ($acao == 'INSERT') {
+                // ✅ CORREÇÃO: Para INSERT, registrar TODOS os dados inseridos
+                foreach ($dadosNovos as $campo => $valor) {
+                    $alteracoes[] = [
+                        'campo' => $campo,
+                        'valor_anterior' => null,
+                        'valor_novo' => $this->formatarValorAuditoria($valor)
+                    ];
+                }
+            } elseif ($acao == 'UPDATE' && $dadosAntigos) {
+                // Para UPDATE: comparar valores antigos vs novos
                 foreach ($dadosNovos as $campo => $valorNovo) {
                     if (isset($dadosAntigos[$campo]) && $dadosAntigos[$campo] != $valorNovo) {
                         $alteracoes[] = [
                             'campo' => $campo,
-                            'valor_anterior' => $dadosAntigos[$campo],
-                            'valor_novo' => $valorNovo
+                            'valor_anterior' => $this->formatarValorAuditoria($dadosAntigos[$campo]),
+                            'valor_novo' => $this->formatarValorAuditoria($valorNovo)
                         ];
                     }
                 }
+            } elseif ($acao == 'DELETE' && $dadosAntigos) {
+                // Para DELETE: registrar dados que foram removidos
+                foreach ($dadosAntigos as $campo => $valor) {
+                    $alteracoes[] = [
+                        'campo' => $campo,
+                        'valor_anterior' => $this->formatarValorAuditoria($valor),
+                        'valor_novo' => null
+                    ];
+                }
+            }
+
+            // Se não tem alterações, cria registro mínimo
+            if (empty($alteracoes)) {
+                $alteracoes[] = [
+                    'campo' => '_acao',
+                    'valor_anterior' => null,
+                    'valor_novo' => "Ação $acao realizada no registro $observacaoId"
+                ];
             }
 
             $stmt = $this->db->prepare("
-            INSERT INTO Auditoria (
-                tabela, acao, registro_id, associado_id, funcionario_id,
-                alteracoes, ip_origem, browser_info, sessao_id, data_hora
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
-        ");
+                INSERT INTO Auditoria (
+                    tabela, acao, registro_id, associado_id, funcionario_id,
+                    alteracoes, ip_origem, browser_info, sessao_id, data_hora
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+            ");
 
             $associadoId = $dadosNovos['associado_id'] ?? $dadosAntigos['associado_id'] ?? null;
 
@@ -1936,14 +1964,44 @@ class Associados
                 $observacaoId,
                 $associadoId,
                 $_SESSION['funcionario_id'] ?? null,
-                json_encode($alteracoes),
+                json_encode($alteracoes, JSON_UNESCAPED_UNICODE),
                 $_SERVER['REMOTE_ADDR'] ?? null,
                 $_SERVER['HTTP_USER_AGENT'] ?? null,
                 session_id()
             ]);
+            
+            if (DEBUG_MODE) {
+                error_log("✅ Auditoria observação registrada: $acao - ID $observacaoId - " . count($alteracoes) . " alterações");
+            }
         } catch (PDOException $e) {
-            error_log("Erro ao registrar auditoria de observação: " . $e->getMessage());
+            error_log("❌ ERRO ao registrar auditoria de observação: " . $e->getMessage());
         }
+    }
+    
+    /**
+     * ✅ NOVO: Formatar valor para auditoria
+     */
+    private function formatarValorAuditoria($valor) {
+        if (is_null($valor)) {
+            return 'NULL';
+        }
+        
+        if (is_bool($valor)) {
+            return $valor ? 'Sim' : 'Não';
+        }
+        
+        if (is_array($valor)) {
+            return json_encode($valor, JSON_UNESCAPED_UNICODE);
+        }
+        
+        $valorStr = (string)$valor;
+        
+        // Trunca se for muito grande
+        if (strlen($valorStr) > 1000) {
+            return substr($valorStr, 0, 1000) . '... (truncado)';
+        }
+        
+        return $valorStr;
     }
 
     /**
