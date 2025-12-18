@@ -59,8 +59,18 @@ try {
     $associados = new Associados();
     $usuarioAtual = $auth->getUser();
     
+    // Log para debug
+    error_log("DEBUG Observação - Usuario: " . json_encode($usuarioAtual));
+    error_log("DEBUG Observação - Input: " . json_encode($input));
+    
     // Adicionar o ID do funcionário aos dados
-    $_SESSION['funcionario_id'] = $usuarioAtual['id'];
+    if (isset($usuarioAtual['id'])) {
+        $_SESSION['funcionario_id'] = $usuarioAtual['id'];
+    } elseif (isset($usuarioAtual['funcionario_id'])) {
+        $_SESSION['funcionario_id'] = $usuarioAtual['funcionario_id'];
+    } else {
+        error_log("ERRO: ID do funcionário não encontrado. Dados do usuário: " . print_r($usuarioAtual, true));
+    }
     
     if ($isEdicao) {
         // ========== EDITAR OBSERVAÇÃO EXISTENTE ==========

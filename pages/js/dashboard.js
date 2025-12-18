@@ -3780,9 +3780,17 @@ function salvarObservacao() {
     const editId = document.getElementById('formNovaObservacao').dataset.editId;
     const isEdicao = editId && editId !== '';
 
+    // Obter ID do associado (priorizar associadoAtual.id se disponível)
+    const associadoId = associadoAtual?.id || currentAssociadoIdObs;
+    
+    if (!associadoId) {
+        alert('Erro: Associado não identificado. Por favor, reabra o modal do associado.');
+        return;
+    }
+
     // Dados para enviar
     const dados = {
-        associado_id: currentAssociadoIdObs,
+        associado_id: associadoId,
         observacao: texto,
         categoria: categoria || 'geral',
         prioridade: prioridade || 'media',
@@ -3808,6 +3816,7 @@ function salvarObservacao() {
         contentType: 'application/json',
         dataType: 'json',
         success: function (response) {
+            console.log('📝 Resposta ao salvar observação:', response);
             if (response.status === 'success') {
                 // Fechar modal
                 const modal = bootstrap.Modal.getInstance(document.getElementById('modalNovaObservacao'));
@@ -3818,24 +3827,28 @@ function salvarObservacao() {
                 delete document.getElementById('formNovaObservacao').dataset.editId;
 
                 // CORREÇÃO PRINCIPAL: Forçar recarregamento das observações
-                carregarObservacoes(currentAssociadoIdObs, true); // true = forçar reload
-
-                // ATUALIZAR TAMBÉM AS OBSERVAÇÕES DA VISÃO GERAL
-                if (associadoAtual && associadoAtual.id) {
+                const reloadId = associadoAtual?.id || currentAssociadoIdObs;
+                if (reloadId) {
+                    carregarObservacoes(reloadId, true); // true = forçar reload
+                    
+                    // ATUALIZAR TAMBÉM AS OBSERVAÇÕES DA VISÃO GERAL
                     setTimeout(() => {
-                        carregarObservacoesVisaoGeral(associadoAtual.id);
+                        carregarObservacoesVisaoGeral(reloadId);
                     }, 500);
                 }
 
                 // Mostrar mensagem de sucesso
                 mostrarNotificacaoObs(response.message || 'Operação realizada com sucesso!', 'success');
             } else {
+                console.error('❌ Erro na resposta:', response);
                 alert('Erro: ' + (response.message || 'Erro desconhecido'));
             }
         },
-        error: function () {
+        error: function (xhr, status, error) {
+            console.error('❌ Erro na requisição AJAX:', {xhr, status, error});
+            console.error('❌ Resposta do servidor:', xhr.responseText);
             const operacao = isEdicao ? 'atualizar' : 'salvar';
-            alert(`Erro ao ${operacao} observação. Tente novamente.`);
+            alert(`Erro ao ${operacao} observação. Tente novamente.\n\nDetalhes: ${xhr.responseText || error}`);
         },
         complete: function () {
             btnSalvar.innerHTML = textoOriginal;
@@ -4229,6 +4242,57 @@ function inicializarBotaoEdicao() {
 }
 
 // Função para alternar o modo de edição
+// Função para verificar se usuário é do departamento Jurídico
+function isUsuarioJuridico() {
+    console.log('🔍 Verificando se é Jurídico:', {
+        permissoesUsuario: permissoesUsuario,
+        departamentoId: permissoesUsuario?.departamentoId,
+        isJuridico: permissoesUsuario?.departamentoId === 3
+    });
+    return permissoesUsuario && permissoesUsuario.departamentoId === 3;
+}
+
+// Função para bloquear completamente a aba Família para Jurídico
+function bloquearAbaFamiliaJuridico() {
+    const dependentesTab = document.getElementById('dependentes-tab');
+    if (!dependentesTab) return;
+    
+    // Remove qualquer conteúdo editável
+    const inputs = dependentesTab.querySelectorAll('input, select, textarea');
+    const buttons = dependentesTab.querySelectorAll('button');
+    
+    // Remove todos os botões
+    buttons.forEach(btn => btn.remove());
+    
+    // Desabilita todos os inputs
+    inputs.forEach(input => {
+        input.disabled = true;
+        input.style.pointerEvents = 'none';
+        input.style.opacity = '0.6';
+        input.style.cursor = 'not-allowed';
+    });
+    
+    // Adiciona camada de bloqueio visual
+    const overlay = document.createElement('div');
+    overlay.style.cssText = `
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(255, 255, 255, 0.01);
+        z-index: 999;
+        cursor: not-allowed;
+    `;
+    overlay.title = 'Usuários do Jurídico não podem editar dependentes';
+    
+    // Torna a tab position relative se não for
+    dependentesTab.style.position = 'relative';
+    dependentesTab.appendChild(overlay);
+    
+    console.log('🔒 Aba Família bloqueada para Jurídico');
+}
+
 function toggleModoEdicao() {
     if (!associadoAtual) {
         alert('Nenhum associado selecionado!');
@@ -4254,14 +4318,51 @@ function toggleModoEdicao() {
         // Adiciona classe de modo edição
         modal.classList.add('modal-edit-mode');
         
-        // Transforma campos em editáveis
-        ativarModoEdicao();
+        // Verifica se é usuário do Jurídico
+        const isJuridico = isUsuarioJuridico();
+        
+        if (isJuridico) {
+            // Jurídico: Apenas aba Contato editável
+            console.log('⚖️ Usuário Jurídico: Edição permitida apenas na aba Contato');
+            preencherTabVisaoGeral(associadoAtual);
+            preencherTabMilitar(associadoAtual);
+            preencherTabFinanceiro(associadoAtual);
+            preencherTabContatoEditavel(associadoAtual); // Única aba editável
+            preencherTabDependentes(associadoAtual); // SEMPRE modo leitura para Jurídico
+            preencherTabDocumentos(associadoAtual); // Modo leitura
+            
+            // Bloqueia completamente a aba de dependentes
+            setTimeout(() => {
+                bloquearAbaFamiliaJuridico();
+            }, 100);
+        } else {
+            // Usuários normais: Podem editar tudo
+            ativarModoEdicao();
+        }
         
         console.log('🖊️ Modo edição ativado');
     } else {
         // Desativa modo edição
         desativarModoEdicao();
     }
+}
+
+// Função para ocultar botões de edição de dependentes
+function ocultarBotoesEdicaoDependentes() {
+    setTimeout(() => {
+        // Ocultar botão de adicionar dependente
+        const btnAdicionar = document.querySelector('button[onclick="adicionarDependente()"]');
+        if (btnAdicionar) {
+            btnAdicionar.style.display = 'none';
+        }
+        
+        // Ocultar todos os botões de editar e excluir dependentes
+        const botoesEditar = document.querySelectorAll('button[onclick^="editarDependente"]');
+        const botoesExcluir = document.querySelectorAll('button[onclick^="excluirDependente"]');
+        
+        botoesEditar.forEach(btn => btn.style.display = 'none');
+        botoesExcluir.forEach(btn => btn.style.display = 'none');
+    }, 100);
 }
 
 // Função para ativar modo de edição nos campos
@@ -4288,6 +4389,12 @@ function desativarModoEdicao() {
     btnCancelar.style.display = 'none';
     
     modal.classList.remove('modal-edit-mode');
+    
+    // Remove overlay de bloqueio se existir
+    const overlay = document.querySelector('#dependentes-tab > div[style*="z-index: 999"]');
+    if (overlay) {
+        overlay.remove();
+    }
     
     // Re-renderiza as tabs no modo visualização
     preencherTabVisaoGeral(associadoAtual);
@@ -5431,6 +5538,22 @@ function preencherTabDependentesEditavel(associado) {
 }
 
 // Função auxiliar para gerar HTML de um dependente editável
+function removerDependente(btn) {
+    // Bloqueia para usuários do Jurídico
+    if (isUsuarioJuridico()) {
+        alert('⚖️ Departamento Jurídico não tem permissão para excluir dependentes.');
+        return;
+    }
+    
+    btn.closest('.dependente-item').remove();
+    
+    // Se não houver mais dependentes, mostra empty state
+    const container = document.getElementById('dependentesEditaveis');
+    if (container.querySelectorAll('.dependente-item').length === 0) {
+        container.innerHTML = '<div class="empty-state text-center py-4"><i class="fas fa-users fa-3x text-muted mb-2"></i><p>Nenhum dependente cadastrado</p></div>';
+    }
+}
+
 function gerarHtmlDependenteEditavel(dep, index, parentescos) {
     return `
         <div class="dependente-item" style="background: #f8f9fa; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; border: 1px solid #dee2e6;">
@@ -5471,6 +5594,12 @@ function gerarHtmlDependenteEditavel(dep, index, parentescos) {
 
 // Função para adicionar novo dependente
 function adicionarDependente() {
+    // Bloqueia para usuários do Jurídico
+    if (isUsuarioJuridico()) {
+        alert('⚖️ Departamento Jurídico não tem permissão para adicionar ou editar dependentes.\n\nApenas as abas de Contatos, Documentos e Observações podem ser editadas.');
+        return;
+    }
+    
     const container = document.getElementById('dependentesEditaveis');
     
     // Remove empty state se existir
