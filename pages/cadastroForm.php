@@ -2154,19 +2154,40 @@ $headerComponent = HeaderComponent::create([
     // Agregado: lógica JS
     function toggleAgregadoCampos() {
         const isAgregado = document.getElementById('isAgregado').checked;
+        const tipoSelect = document.getElementById('tipoAssociado');
+        
+        // Mostrar/ocultar campo CPF do titular
         document.getElementById('campoCpfTitular').style.display = isAgregado ? 'block' : 'none';
         document.getElementById('cpfTitular').required = isAgregado;
+        
         if (!isAgregado) {
+            // Limpar campos quando desmarcar
             document.getElementById('cpfTitular').value = '';
             document.getElementById('nomeTitularInfo').value = '';
             document.getElementById('associadoTitular').value = '';
             document.getElementById('erroCpfTitular').style.display = 'none';
-        }
-        
-        // Atualizar tipoAssociado para Agregado quando checkbox está marcado
-        if (isAgregado) {
-            const tipoSelect = document.getElementById('tipoAssociado');
+            
+            // Remover opção Agregado do select e limpar se estava selecionado
             if (tipoSelect) {
+                const optionAgregado = tipoSelect.querySelector('option[value="Agregado"]');
+                if (optionAgregado) {
+                    optionAgregado.remove();
+                }
+                if (tipoSelect.value === 'Agregado') {
+                    tipoSelect.value = '';
+                }
+            }
+        } else {
+            // Adicionar opção Agregado se não existir
+            if (tipoSelect) {
+                let optionAgregado = tipoSelect.querySelector('option[value="Agregado"]');
+                if (!optionAgregado) {
+                    optionAgregado = document.createElement('option');
+                    optionAgregado.value = 'Agregado';
+                    optionAgregado.textContent = 'Agregado';
+                    tipoSelect.appendChild(optionAgregado);
+                }
+                // Selecionar automaticamente
                 tipoSelect.value = 'Agregado';
                 tipoSelect.dispatchEvent(new Event('change'));
             }
