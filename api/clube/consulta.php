@@ -41,11 +41,24 @@ try {
     require_once __DIR__ . '/../../config/database.php';
     require_once __DIR__ . '/../../classes/Database.php';
 
+    // Parâmetros da requisição
+    $ultimo_id = isset($_GET['ultimo_id']) ? (int)$_GET['ultimo_id'] : 0;
+    $limite = isset($_GET['limite']) ? (int)$_GET['limite'] : 100;
+    
+    // Validações
+    if ($ultimo_id < 0) {
+        jsonResponse(false, 'Parâmetro ultimo_id inválido', null, 400);
+    }
+    
+    if ($limite < 1 || $limite > 1000) {
+        $limite = 100; // Limitar entre 1 e 1000 registros
+    }
+
     // Conectar ao banco de dados
     $db = Database::getInstance(DB_NAME_CADASTRO)->getConnection();
 
     // ============================================================
-    // BUSCAR TODOS OS ASSOCIADOS
+    // BUSCAR ASSOCIADOS ACIMA DO ÚLTIMO ID
     // ============================================================
     
     $sql = "
@@ -102,19 +115,25 @@ try {
         LEFT JOIN Militar m ON a.id = m.associado_id
         LEFT JOIN Financeiro f ON a.id = f.associado_id
         LEFT JOIN Endereco e ON a.id = e.associado_id
+        WHERE a.id > :ultimo_id
         ORDER BY a.id ASC
+        LIMIT :limite
     ";
 
     $stmt = $db->prepare($sql);
+    $stmt->bindParam(':ultimo_id', $ultimo_id, PDO::PARAM_INT);
+    $stmt->bindParam(':limite', $limite, PDO::PARAM_INT);
     $stmt->execute();
     
     $associados = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     // Se não encontrou associados
     if (empty($associados)) {
-        jsonResponse(true, 'Nenhum registro encontrado', [
+        jsonResponse(true, 'Nenhum novo registro encontrado', [
             'associados' => [],
-            'total' => 0
+            'total' => 0,
+            'ultimo_id_consultado' => $ultimo_id,
+            'proximo_id' => null
         ]);
     }
 
@@ -168,15 +187,20 @@ try {
     // PREPARAR RESPOSTA
     // ============================================================
     
+    $ultimo_id_retornado = end($associados)['id'];
     $total_registros = count($associados);
     
     $resposta = [
         'associados' => $associados,
         'total' => $total_registros,
+        'ultimo_id_consultado' => $ultimo_id,
+        'ultimo_id_retornado' => $ultimo_id_retornado,
+        'proximo_id' => $ultimo_id_retornado, // Para próxima consulta usar este ID
+        'limite_aplicado' => $limite,
         'total_dependentes' => count($dependentes)
     ];
 
-    jsonResponse(true, 'Todos os dados recuperados com sucesso', $resposta);
+    jsonResponse(true, 'Dados recuperados com sucesso', $resposta);
 
 } catch (PDOException $e) {
     error_log("Erro no banco de dados (consulta.php): " . $e->getMessage());
