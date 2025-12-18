@@ -2451,13 +2451,18 @@ class HeaderComponent
             ];
         }
 
-        // JURÍDICO - Verifica permissão ou departamento 3 (Jurídico)
+        // JURÍDICO - Apenas Presidência OU Diretor do Departamento Jurídico
         // Exceção: usuários view-only do Comercial não devem ver Jurídico
         $usuariosViewOnlyComercial = [148, 149, 150, 151, 152, 153, 154, 155, 156];
+        
+        // Verifica se é diretor do departamento Jurídico especificamente
+        $isDiretorJuridico = ($this->cargo === 'Diretor' && $this->departamento_id == 3);
+        
+        // Verifica se tem permissão de Presidência
+        $isPresidencia = ($this->permissoes && $this->permissoes->hasPermission('PRESIDENCIA_DASHBOARD', 'VIEW'));
+        
         $mostrarJuridico = (
-            (($this->permissoes && $this->permissoes->hasPermission('JURIDICO_DASHBOARD', 'VIEW'))
-            || $this->departamento_id == 3
-            || $this->isDiretor)
+            ($isPresidencia || $isDiretorJuridico)
             && !in_array($this->id, $usuariosViewOnlyComercial)
         );
         
