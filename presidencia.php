@@ -302,6 +302,29 @@ async function finalizarProcessoUnificado(docId, tipoDoc) {
     }
     
     console.log(`🎯 Finalizando documento: ${docId} (${tipoDoc})`);
-    
-    // ...resto do código de finalização...
+
+    try {
+        const resp = await fetch('../api/desfiliacao_finalizar_presidencia.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ documento_id: parseInt(docId, 10) })
+        });
+        const data = await resp.json();
+        if (data.status === 'success') {
+            Swal.fire({
+                icon: 'success',
+                title: 'Finalizado',
+                text: 'Desfiliação finalizada e associado atualizado.',
+                timer: 2000,
+                showConfirmButton: false
+            });
+            // Recarrega a lista após sucesso
+            setTimeout(() => window.location.reload(), 1200);
+        } else {
+            Swal.fire({ icon: 'error', title: 'Erro', text: data.message || 'Falha ao finalizar' });
+        }
+    } catch (e) {
+        console.error(e);
+        Swal.fire({ icon: 'error', title: 'Erro', text: 'Erro de comunicação com o servidor.' });
+    }
 }

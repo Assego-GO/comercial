@@ -2290,6 +2290,7 @@ $headerComponent = HeaderComponent::create([
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <!-- JavaScript do Header Component -->
     <?php $headerComponent->renderJS(); ?>
@@ -3164,6 +3165,19 @@ $headerComponent = HeaderComponent::create([
             .then(result => {
                 if (result.status === 'success') {
                     notifications.show(`Processo do ${tipoLabel} finalizado com sucesso!`, 'success');
+                    
+                    // Exibir feedback do Atacadão se disponível
+                    if (result.atacadao_message) {
+                        setTimeout(() => {
+                            Swal.fire({
+                                icon: result.atacadao_success ? 'success' : 'warning',
+                                title: 'Integração Atacadão',
+                                text: result.atacadao_message,
+                                confirmButtonColor: '#3085d6'
+                            });
+                        }, 500);
+                    }
+                    
                     carregarDocumentosUnificados();
                 } else {
                     throw new Error(result.message || 'Erro desconhecido');

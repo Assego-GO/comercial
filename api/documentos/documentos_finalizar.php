@@ -33,10 +33,24 @@ try {
     $documentos = new Documentos();
     $resultado = $documentos->finalizarProcesso($documentoId, $observacao);
     
-    echo json_encode([
+    // Montar resposta com feedback do Atacadão
+    $response = [
         'status' => 'success',
         'message' => 'Processo finalizado com sucesso'
-    ]);
+    ];
+    
+    // Se resultado é array (desfiliação com info do Atacadão)
+    if (is_array($resultado) && isset($resultado['atacadao'])) {
+        $response['atacadao'] = $resultado['atacadao'];
+        $response['atacadao_success'] = $resultado['atacadao']['ok'] ?? false;
+        if ($resultado['atacadao']['ok']) {
+            $response['atacadao_message'] = 'CPF inativado com sucesso no sistema de benefícios do Atacadão Dia a Dia';
+        } else {
+            $response['atacadao_message'] = 'Não foi possível inativar o CPF no Atacadão. Verifique os logs.';
+        }
+    }
+    
+    echo json_encode($response);
     
 } catch (Exception $e) {
     http_response_code(400);

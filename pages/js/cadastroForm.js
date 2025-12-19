@@ -2176,9 +2176,28 @@ function salvarAssociado() {
         
         if (data.status === 'success') {
             showAlert(data.message || 'Salvo com sucesso!', 'success');
+            
+            // Mostrar toast do Atacadão se houver feedback
+            if (data.data && data.data.atacadao) {
+                const atacadao = data.data.atacadao;
+                if (atacadao.enviado && atacadao.ok) {
+                    showToast(
+                        'Benefícios Atacadão',
+                        'CPF ativado com sucesso no sistema de benefícios do Atacadão Dia a Dia!',
+                        'success'
+                    );
+                } else if (atacadao.enviado && !atacadao.ok) {
+                    showToast(
+                        'Benefícios Atacadão',
+                        'Não foi possível ativar o CPF no Atacadão. Verifique os logs.',
+                        'warning'
+                    );
+                }
+            }
+            
             setTimeout(() => {
                 window.location.reload();
-            }, 1500);
+            }, 4000); // 4 segundos para ver os avisos
         } else {
             let erro = data.message || 'Erro ao salvar';
             if (data.errors && Array.isArray(data.errors)) {
@@ -2458,6 +2477,47 @@ function showAlert(message, type = 'info') {
         if (alert) {
             alert.style.animation = 'fadeOut 0.3s ease';
             setTimeout(() => alert.remove(), 300);
+        }
+    }, 5000);
+}
+
+/**
+ * Mostra um toast notification no canto superior direito
+ * @param {string} title - Título do toast
+ * @param {string} message - Mensagem do toast
+ * @param {string} type - Tipo: 'success' ou 'warning'
+ */
+function showToast(title, message, type = 'success') {
+    // Criar container se não existir
+    let container = document.querySelector('.toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.className = 'toast-container';
+        document.body.appendChild(container);
+    }
+    
+    const toastId = 'toast-' + Date.now();
+    const icon = type === 'success' ? 'fa-check-circle' : 'fa-exclamation-triangle';
+    
+    const toastHtml = `
+        <div id="${toastId}" class="toast-notification ${type === 'warning' ? 'warning' : ''}">
+            <div class="toast-icon">
+                <i class="fas ${icon}"></i>
+            </div>
+            <div class="toast-content">
+                <div class="toast-title">${title}</div>
+                <div class="toast-message">${message}</div>
+            </div>
+        </div>
+    `;
+    
+    container.insertAdjacentHTML('beforeend', toastHtml);
+    
+    // Remover após 5 segundos
+    setTimeout(() => {
+        const toast = document.getElementById(toastId);
+        if (toast) {
+            toast.remove();
         }
     }, 5000);
 }

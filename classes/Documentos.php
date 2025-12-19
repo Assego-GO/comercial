@@ -371,21 +371,84 @@ class Documentos
                 $documentoId
             ]);
 
-            // NOVO: Atualizar status do associado para "Filiado" e finalizar pré-cadastro
+            // NOVO: Atualizar status do associado baseado no tipo de documento
+            $atacadaoResult = null; // Para retornar feedback ao frontend
+            
             if (!empty($documento['associado_id'])) {
-                error_log("🔄 Atualizando status do associado " . $documento['associado_id'] . " para Filiado");
-                
-                $stmtAssociado = $this->db->prepare("
-                    UPDATE Associados 
-                    SET situacao = 'Filiado',
-                        pre_cadastro = 0,
-                        data_aprovacao = NOW()
-                    WHERE id = ?
-                ");
-                
-                $stmtAssociado->execute([$documento['associado_id']]);
-                
-                error_log("✅ Status do associado " . $documento['associado_id'] . " atualizado para Filiado (pré-cadastro finalizado)");
+                // Verificar se é desfiliação
+                if (isset($documento['tipo_documento']) && $documento['tipo_documento'] === 'ficha_desfiliacao') {
+                    error_log("🔄 Atualizando status do associado " . $documento['associado_id'] . " para Desfiliado (desfiliação)");
+                    
+                    // Primeiro atualiza apenas situacao e data_desfiliacao
+                    $stmtAssociado = $this->db->prepare("
+                        UPDATE Associados 
+                        SET situacao = 'Desfiliado',
+                            data_desfiliacao = NOW()
+                        WHERE id = ?
+                    ");
+                    
+                    $stmtAssociado->execute([$documento['associado_id']]);
+                    
+                    error_log("✅ Associado " . $documento['associado_id'] . " atualizado para Desfiliado");
+                    
+                    // Integrar Atacadão - inativar CPF
+                    try {
+                        require_once __DIR__ . '/../atacadao/Client.php';
+                        require_once __DIR__ . '/../atacadao/Logger.php';
+                        
+                        $stmtCpf = $this->db->prepare("SELECT cpf FROM Associados WHERE id = ?");
+                        $stmtCpf->execute([$documento['associado_id']]);
+                        $assocData = $stmtCpf->fetch(PDO::FETCH_ASSOC);
+                        $cpf = $assocData['cpf'] ?? '';
+                        
+                        if ($cpf) {
+                            $res = AtacadaoClient::ativarCliente($cpf, 'I', '58');
+                            AtacadaoLogger::logAtivacao(
+                                (int)$documento['associado_id'],
+                                $cpf, 'I', '58',
+                                $res['http'] ?? 0,
+                                $res['ok'] ?? false,
+                                $res['data'] ?? null,
+                                $res['error'] ?? null
+                            );
+                            error_log("[DESFILIACAO][ATACADAO] CPF {$cpf} inativado: http=" . ($res['http'] ?? 'N/A'));
+                            
+                            // Só atualiza ativo_atacadao=0 se API retornou 200 OK
+                            $atacadaoOk = ($res['ok'] ?? false) && (($res['http'] ?? 0) === 200);
+                            if ($atacadaoOk) {
+                                $stmtAtacadao = $this->db->prepare("UPDATE Associados SET ativo_atacadao = 0 WHERE id = ?");
+                                $stmtAtacadao->execute([$documento['associado_id']]);
+                                error_log("✅ ativo_atacadao=0 atualizado (API 200 OK)");
+                            } else {
+                                error_log("⚠️ ativo_atacadao NÃO atualizado (API não retornou 200)");
+                            }
+                            
+                            // Guardar resultado para feedback
+                            $atacadaoResult = [
+                                'ok' => $atacadaoOk,
+                                'http' => $res['http'] ?? 0
+                            ];
+                        }
+                    } catch (Exception $ataEx) {
+                        error_log("[DESFILIACAO][ATACADAO] Erro ao inativar: " . $ataEx->getMessage());
+                        $atacadaoResult = ['ok' => false, 'erro' => $ataEx->getMessage()];
+                    }
+                } else {
+                    // Fluxo normal: filiação
+                    error_log("🔄 Atualizando status do associado " . $documento['associado_id'] . " para Filiado");
+                    
+                    $stmtAssociado = $this->db->prepare("
+                        UPDATE Associados 
+                        SET situacao = 'Filiado',
+                            pre_cadastro = 0,
+                            data_aprovacao = NOW()
+                        WHERE id = ?
+                    ");
+                    
+                    $stmtAssociado->execute([$documento['associado_id']]);
+                    
+                    error_log("✅ Status do associado " . $documento['associado_id'] . " atualizado para Filiado (pré-cadastro finalizado)");
+                }
             }
 
             // Registrar no histórico
@@ -399,6 +462,11 @@ class Documentos
             );
 
             $this->db->commit();
+            
+            // Retornar array com info do Atacadão se foi desfiliação
+            if ($atacadaoResult !== null) {
+                return ['success' => true, 'atacadao' => $atacadaoResult];
+            }
             return true;
 
         } catch (Exception $e) {
