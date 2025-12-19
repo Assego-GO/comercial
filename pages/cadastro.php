@@ -825,11 +825,12 @@ if ($isEdit) {
                         <div class="form-group">
                             <label class="form-label">
                                 Indicado por
-                                <i class="fas fa-info-circle info-tooltip" title="Nome da pessoa que indicou o associado"></i>
+                                <i class="fas fa-info-circle info-tooltip" title="Selecione o Diretor/Representante que indicou o associado"></i>
                             </label>
-                            <input type="text" class="form-input" name="indicacao" id="indicacao"
-                                value="<?php echo $associadoData['indicacao'] ?? ''; ?>"
-                                placeholder="Digite o nome de quem indicou...">
+                            <select class="form-input form-select" name="indicacao" id="indicacao">
+                                <option value="">-- Selecione o Indicador --</option>
+                            </select>
+                            <input type="hidden" id="indicacao_valor_atual" value="<?php echo htmlspecialchars($associadoData['indicacao'] ?? ''); ?>">
                         </div>
 
                         <div class="form-group">
@@ -959,6 +960,7 @@ if ($isEdit) {
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/i18n/pt-BR.min.js"></script>
+    <script src="js/cadastroFormIndicadores.js?v=<?php echo time(); ?>"></script>
     
     <script>
     const isEdit = <?php echo $isEdit ? 'true' : 'false'; ?>;

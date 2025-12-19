@@ -1282,6 +1282,16 @@ if (empty($patentesDB)) {
                             <p>Associados recém cadastrados</p>
                         </div>
                     </div>
+
+                    <div class="action-card" data-type="filiacoes" onclick="selecionarRelatorio('filiacoes')">
+                        <div class="action-icon" style="background: linear-gradient(135deg, #9333ea 0%, #7c3aed 100%);">
+                            <i class="fas fa-file-invoice-dollar"></i>
+                        </div>
+                        <div class="action-content">
+                            <h5>Filiações e Desfiliações</h5>
+                            <p>Resumo completo de filiações e desfiliações</p>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -1592,7 +1602,8 @@ if (empty($patentesDB)) {
                 'desfiliacoes': 'Desfiliações',
                 'indicacoes': 'Indicações',
                 'aniversariantes': 'Aniversariantes',
-                'novos_cadastros': 'Novos Cadastros'
+                'novos_cadastros': 'Novos Cadastros',
+                'filiacoes': 'Filiações'
             };
             return nomes[tipo] || 'Relatório';
         }
@@ -1624,7 +1635,13 @@ if (empty($patentesDB)) {
             document.getElementById('tituloResultado').textContent = 'Processando...';
 
             try {
-                const response = await fetch(`../api/relatorios/gerar_relatorio_comercial.php?${params.toString()}`);
+                // Se for relatório de filiações, usa endpoint diferente
+                let apiUrl = '../api/relatorios/gerar_relatorio_comercial.php';
+                if (currentReportType === 'filiacoes') {
+                    apiUrl = '../api/relatorios/gerar_relatorio_filiacoes.php';
+                }
+                
+                const response = await fetch(`${apiUrl}?${params.toString()}`);
                 
                 if (!response.ok) {
                     throw new Error(`Erro HTTP: ${response.status}`);
@@ -1674,6 +1691,12 @@ if (empty($patentesDB)) {
             // Renderização especial para INDICAÇÕES
             if (currentReportType === 'indicacoes') {
                 renderizarRelatorioIndicacoes(data);
+                return;
+            }
+
+            // Renderização especial para FILIAÇÕES
+            if (currentReportType === 'filiacoes') {
+                renderizarRelatorioFiliacoes(response);
                 return;
             }
 
@@ -2073,6 +2096,216 @@ if (empty($patentesDB)) {
                 return phone.replace(/(\d{2})(\d{4})(\d{4})/, "($1) $2-$3");
             }
             return phone || '-';
+        }
+
+        // Renderizar relatório de FILIAÇÕES (especial com tabela de comissões)
+        function renderizarRelatorioFiliacoes(response) {
+            const container = document.getElementById('resultsContainer');
+            const data = response.data || [];
+            const totais = response.totais || {};
+            const tabelaValores = response.tabela_valores || [];
+            const periodo = response.periodo || {};
+
+            // Atualizar título
+            document.getElementById('tituloResultado').textContent = `Filiações - ${data.length} indicadores`;
+            document.getElementById('totalRegistros').textContent = data.length;
+            document.getElementById('totalRegistros').style.display = 'inline-block';
+
+            if (data.length === 0) {
+                container.innerHTML = `
+                    <div class="alert-custom alert-info-custom">
+                        <i class="fas fa-exclamation-circle fa-lg"></i>
+                        <div>
+                            <strong>Nenhuma filiação encontrada no período</strong><br>
+                            Período: ${periodo.inicio_formatado || ''} até ${periodo.fim_formatado || ''}
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            // Criar HTML do relatório
+            let html = `
+                <div class="filiacoes-report">
+                    <!-- Período do relatório -->
+                    <div class="alert alert-info mb-4">
+                        <i class="fas fa-calendar-alt me-2"></i>
+                        <strong>Período:</strong> ${periodo.inicio_formatado || ''} até ${periodo.fim_formatado || ''}
+                    </div>
+
+                    <!-- Tabela Principal - Resumo por Indicador -->
+                    <div class="card mb-4">
+                        <div class="card-header bg-dark text-white">
+                            <h5 class="mb-0">
+                                <i class="fas fa-users me-2"></i>
+                                RESUMO FILIAÇÕES POR TIPO / BÔNUS POR DIRETOR/REPRESENTANTE/VENDEDOR
+                            </h5>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-bordered table-hover mb-0" id="reportTableFiliacoes">
+                                    <thead class="table-secondary">
+                                        <tr>
+                                            <th rowspan="2" class="align-middle text-center" style="min-width: 200px;">DIRETOR / REPRESENTANTE</th>
+                                            <th colspan="4" class="text-center bg-light">TIPOS DE FILIAÇÃO</th>
+                                            <th rowspan="2" class="align-middle text-center">QTD<br>TOTAL</th>
+                                            <th rowspan="2" class="align-middle text-center" style="min-width: 120px;">COMISSÃO</th>
+                                        </tr>
+                                        <tr>
+                                            <th class="text-center">Social</th>
+                                            <th class="text-center">Jurídico<br>+Social</th>
+                                            <th class="text-center">Aluno<br>Sd</th>
+                                            <th class="text-center">Agregado</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+            `;
+
+            // Adicionar linhas de dados
+            data.forEach((row, index) => {
+                html += `
+                    <tr>
+                        <td><strong>${row.indicador_nome || 'Não identificado'}</strong></td>
+                        <td class="text-center">${row.qtd_social || 0}</td>
+                        <td class="text-center">${row.qtd_juridico_social || 0}</td>
+                        <td class="text-center">${row.qtd_aluno_sd || 0}</td>
+                        <td class="text-center">${row.qtd_agregado || 0}</td>
+                        <td class="text-center"><strong>${row.qtd_total || 0}</strong></td>
+                        <td class="text-end text-success"><strong>${row.comissao_formatada || 'R$ 0,00'}</strong></td>
+                    </tr>
+                `;
+            });
+
+            // Linha de totais
+            html += `
+                                    </tbody>
+                                    <tfoot class="table-dark">
+                                        <tr>
+                                            <td class="text-center"><strong>TOTAL</strong></td>
+                                            <td class="text-center"><strong>${totais.social || 0}</strong></td>
+                                            <td class="text-center"><strong>${totais.juridico_social || 0}</strong></td>
+                                            <td class="text-center"><strong>${totais.aluno_sd || 0}</strong></td>
+                                            <td class="text-center"><strong>${totais.agregado || 0}</strong></td>
+                                            <td class="text-center"><strong>${totais.total || 0}</strong></td>
+                                            <td class="text-end"><strong>${totais.comissao_formatada || 'R$ 0,00'}</strong></td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tabela de Valores de Referência -->
+                    <div class="card mb-4">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0">
+                                <i class="fas fa-dollar-sign me-2"></i>
+                                TABELA DE VALORES (Troca Direto de Banco)
+                            </h5>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-bordered table-hover mb-0">
+                                    <thead class="table-secondary">
+                                        <tr>
+                                            <th class="text-center" style="width: 40%;">TIPO</th>
+                                            <th class="text-center" style="width: 30%;">MENSALIDADE</th>
+                                            <th class="text-center" style="width: 30%;">COMISSÃO</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+            `;
+
+            // Adicionar valores da tabela
+            tabelaValores.forEach(item => {
+                html += `
+                    <tr>
+                        <td>${item.tipo}</td>
+                        <td class="text-end">${item.mensalidade_formatada}</td>
+                        <td class="text-end text-success"><strong>${item.comissao_formatada}</strong></td>
+                    </tr>
+                `;
+            });
+
+            html += `
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Botão de Exportar PDF -->
+                    <div class="d-flex justify-content-center mt-4">
+                        <button type="button" class="btn btn-danger btn-lg" onclick="exportarPDFFiliacoes()">
+                            <i class="fas fa-file-pdf me-2"></i>
+                            Exportar PDF do Relatório
+                        </button>
+                    </div>
+
+                    <!-- Observações -->
+                    <div class="alert alert-secondary mt-4">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Observações:</strong>
+                        <ul class="mb-0 mt-2">
+                            <li>Só Diretor/Representante pode indicar</li>
+                            <li>Se aparecer departamento, verificar dados</li>
+                        </ul>
+                    </div>
+                </div>
+            `;
+
+            container.innerHTML = html;
+
+            // Inicializar DataTable para a tabela principal
+            if ($.fn.DataTable.isDataTable('#reportTableFiliacoes')) {
+                $('#reportTableFiliacoes').DataTable().destroy();
+            }
+            
+            dataTable = $('#reportTableFiliacoes').DataTable({
+                language: {
+                    url: '//cdn.datatables.net/plug-ins/1.13.4/i18n/pt-BR.json'
+                },
+                pageLength: 25,
+                responsive: true,
+                ordering: true,
+                order: [[5, 'desc']], // Ordenar por total
+                dom: 'Bfrtip',
+                buttons: [
+                    {
+                        extend: 'copy',
+                        text: '<i class="fas fa-copy"></i> Copiar',
+                        className: 'btn btn-sm btn-secondary'
+                    },
+                    {
+                        extend: 'excel',
+                        text: '<i class="fas fa-file-excel"></i> Excel',
+                        className: 'btn btn-sm btn-success',
+                        title: `Relatorio_Filiacoes_${new Date().toISOString().split('T')[0]}`
+                    },
+                    {
+                        extend: 'print',
+                        text: '<i class="fas fa-print"></i> Imprimir',
+                        className: 'btn btn-sm btn-info'
+                    }
+                ]
+            });
+        }
+
+        // Exportar PDF do relatório de Filiações
+        function exportarPDFFiliacoes() {
+            const dataInicio = document.getElementById('dataInicio').value;
+            const dataFim = document.getElementById('dataFim').value;
+            
+            if (!dataInicio || !dataFim) {
+                showToast('Por favor, selecione as datas do período', 'warning');
+                return;
+            }
+            
+            // Abrir PDF em nova aba
+            const url = `../api/relatorios/gerar_pdf_filiacoes.php?data_inicio=${dataInicio}&data_fim=${dataFim}`;
+            window.open(url, '_blank');
+            
+            showToast('Gerando PDF do relatório...', 'success');
         }
 
         // Limpar filtros
