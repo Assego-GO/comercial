@@ -370,22 +370,30 @@ try {
         error_log("✓ Dados básicos atualizados pelo usuário: " . $usuarioLogado['nome']);
 
         // =====================================
-        // INTEGRAÇÃO ATACADÃO: reenviar se CPF alterou
+        // INTEGRAÇÃO ATACADÃO: sempre enviar CPF na atualização
         // =====================================
+        $atacadaoStatus = [
+            'enviado' => false,
+            'http' => null,
+            'ok' => false,
+            'erro' => null
+        ];
+        
         try {
-            $cpfAnterior = preg_replace('/[^0-9]/', '', $associadoAtual['cpf'] ?? '');
             $cpfNovo = preg_replace('/[^0-9]/', '', $dados['cpf'] ?? '');
-            if ($cpfAnterior !== '' && strlen($cpfAnterior) >= 11) {
-                $cpfAnterior = substr($cpfAnterior, -11);
-            }
             if ($cpfNovo !== '' && strlen($cpfNovo) >= 11) {
                 $cpfNovo = substr($cpfNovo, -11);
             }
 
-            if ($cpfNovo && $cpfNovo !== $cpfAnterior) {
-                error_log("📌 [ATACADÃO] CPF alterado: anterior={$cpfAnterior} novo={$cpfNovo}. Reenviando para Atacadão.");
+            if ($cpfNovo) {
+                error_log("📌 [ATACADÃO] Enviando CPF para Atacadão na atualização: {$cpfNovo}");
                 $resAta = AtacadaoClient::ativarCliente($cpfNovo, 'A', '58');
                 $ok = ($resAta['ok'] ?? false) && (($resAta['http'] ?? 0) === 200);
+                
+                $atacadaoStatus['enviado'] = true;
+                $atacadaoStatus['http'] = $resAta['http'] ?? null;
+                $atacadaoStatus['ok'] = $ok;
+                $atacadaoStatus['erro'] = $resAta['error'] ?? null;
 
                 // Log detalhado da resposta
                 AtacadaoLogger::logAtivacao(
@@ -410,9 +418,10 @@ try {
                     error_log("⚠ Erro ao atualizar ativo_atacadao no update: " . $e->getMessage());
                 }
             } else {
-                error_log("ℹ️ CPF não alterado ou vazio. Integração Atacadão não acionada.");
+                error_log("ℹ️ CPF vazio. Integração Atacadão não acionada.");
             }
         } catch (Exception $e) {
+            $atacadaoStatus['erro'] = $e->getMessage();
             AtacadaoLogger::logErro('ativarCliente_update', $e->getMessage(), $associadoId);
             error_log("⚠ Erro integração Atacadão no update: " . $e->getMessage());
         }
@@ -919,6 +928,14 @@ error_log("=== FIM PROCESSAMENTO DOCUMENTO ===");
             'atualizado' => $resultadoJson['sucesso'],
             'arquivo' => $resultadoJson['arquivo_individual'] ?? null,
             'erro' => $resultadoJson['sucesso'] ? null : $resultadoJson['erro']
+        ],
+        
+        // Informações do Atacadão
+        'atacadao' => [
+            'enviado' => $atacadaoStatus['enviado'],
+            'http' => $atacadaoStatus['http'],
+            'ok' => $atacadaoStatus['ok'],
+            'erro' => $atacadaoStatus['erro']
         ]
     ]
 ];

@@ -28,6 +28,8 @@ require_once '../config/database.php';
 require_once '../classes/Database.php';
 require_once '../classes/Auth.php';
 require_once '../classes/Permissoes.php';
+require_once '../atacadao/Client.php';
+require_once '../atacadao/Logger.php';
 
 function jsonResponse($status, $message, $data = null, $code = 200) {
     while (ob_get_level()) {
@@ -76,7 +78,7 @@ try {
     $db = Database::getInstance(DB_NAME_CADASTRO)->getConnection();
 
     // Verificar se documento existe
-    $stmt = $db->prepare("SELECT id, tipo_documento, status_fluxo FROM Documentos_Associado WHERE id = ?");
+    $stmt = $db->prepare("SELECT id, associado_id, tipo_documento, status_fluxo FROM Documentos_Associado WHERE id = ?");
     $stmt->execute([$documentoId]);
     $documento = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -183,19 +185,25 @@ try {
         $mensagemFinalizacao = '';
         $proximaEtapa = null;
 
+        // Normalizar contagens para inteiro
+        $totalEtapas     = intval($stats['total']);
+        $aprovadasEtapas = intval($stats['aprovadas']);
+        $rejeitadasEtapas= intval($stats['rejeitadas']);
+        $pendentesEtapas = intval($stats['pendentes']);
+
         // Se houver rejeição, finalizar como rejeitado
-        if ($stats['rejeitadas'] > 0) {
+        if ($rejeitadasEtapas > 0) {
             $novoStatus = 'FINALIZADO';  // Usar ENUM válido
             $mensagemFinalizacao = "Desfiliação rejeitada por {$departamento['nome']}";
         }
         // Se todas aprovadas, finalizar
-        elseif ($stats['pendentes'] == 0 && $stats['aprovadas'] == $stats['total']) {
+        elseif ($pendentesEtapas == 0 && $aprovadasEtapas == $totalEtapas) {
             $novoStatus = 'FINALIZADO';  // Usar ENUM válido
             $mensagemFinalizacao = "Desfiliação aprovada por todos os departamentos - Processo finalizado";
         }
-        // Se ainda há pendentes, manter como ASSINADO (fluxo em andamento)
-        elseif ($stats['pendentes'] > 0) {
-            $novoStatus = 'ASSINADO';  // Usar ENUM válido
+        // Se ainda há pendentes, manter como AGUARDANDO_ASSINATURA (fluxo em andamento)
+        elseif ($pendentesEtapas > 0) {
+            $novoStatus = 'AGUARDANDO_ASSINATURA';  // Correção: não deve virar ASSINADO nesta etapa
             
             // Buscar próximo departamento na sequência
             $stmt = $db->prepare("
@@ -243,6 +251,55 @@ try {
                 $usuario['id'],
                 $mensagemFinalizacao
             ]);
+        }
+
+        // Se todas as etapas foram aprovadas e o documento foi finalizado, atualizar situação do associado e integrar Atacadão
+        $desfiliacaoConcluida = ($novoStatus === 'FINALIZADO' && $rejeitadasEtapas === 0 && $pendentesEtapas === 0 && $aprovadasEtapas === $totalEtapas);
+
+        // Log de depuração para acompanhar finalização
+        error_log("[DESFILIACAO] DEBUG concluiu?=" . ($desfiliacaoConcluida ? 'SIM' : 'NAO') . " total={$totalEtapas} aprov={$aprovadasEtapas} pend={$pendentesEtapas} rej={$rejeitadasEtapas} novoStatus={$novoStatus}");
+
+        if ($desfiliacaoConcluida && !empty($documento['associado_id'])) {
+            try {
+                // Buscar CPF do associado
+                $stmt = $db->prepare("SELECT cpf FROM Associados WHERE id = ? LIMIT 1");
+                $stmt->execute([$documento['associado_id']]);
+                $assoc = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                // Atualizar situação (padrão do sistema: 'Desfiliado') e data - SEM alterar ativo_atacadao ainda
+                $stmt = $db->prepare("UPDATE Associados SET situacao = 'Desfiliado', data_desfiliacao = NOW() WHERE id = ?");
+                $stmt->execute([$documento['associado_id']]);
+                error_log("[DESFILIACAO] Associado ID {$documento['associado_id']} atualizado: situacao=Desfiliado");
+
+                // Integrar com Atacadão para inativar o CPF
+                $cpfAssoc = $assoc['cpf'] ?? '';
+                $resAta = AtacadaoClient::ativarCliente($cpfAssoc, 'I', '58');
+
+                AtacadaoLogger::logAtivacao(
+                    intval($documento['associado_id']),
+                    $cpfAssoc,
+                    'I',
+                    '58',
+                    $resAta['http'] ?? 0,
+                    $resAta['ok'] ?? false,
+                    $resAta['data'] ?? null,
+                    $resAta['error'] ?? null
+                );
+
+                // Só atualiza ativo_atacadao=0 se API retornou 200 OK
+                $atacadaoOk = ($resAta['ok'] ?? false) && (($resAta['http'] ?? 0) === 200);
+                if ($atacadaoOk) {
+                    $stmt = $db->prepare("UPDATE Associados SET ativo_atacadao = 0 WHERE id = ?");
+                    $stmt->execute([$documento['associado_id']]);
+                    error_log("[DESFILIACAO][ATACADAO] ativo_atacadao=0 atualizado (API 200 OK)");
+                } else {
+                    error_log("[DESFILIACAO][ATACADAO] Falha ao inativar CPF {$cpfAssoc} | http=" . ($resAta['http'] ?? 'N/A') . " | ok=" . (($resAta['ok'] ?? false) ? '1' : '0') . " | erro=" . ($resAta['error'] ?? 'N/A'));
+                    error_log("[DESFILIACAO][ATACADAO] ativo_atacadao NÃO atualizado (API não retornou 200)");
+                }
+
+            } catch (Exception $e) {
+                error_log("[DESFILIACAO] Falha ao atualizar associado/Atacadão: " . $e->getMessage());
+            }
         }
 
         $db->commit();

@@ -948,6 +948,77 @@ $headerComponent = HeaderComponent::create([
             font-weight: 600;
             margin-bottom: 1rem;
         }
+        
+        /* Toast Notification - Canto Superior Direito */
+        .toast-container {
+            position: fixed;
+            top: 250px;
+            right: 20px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .toast-notification {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            padding: 16px 24px;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(40, 167, 69, 0.3);
+            animation: slideInRight 0.4s ease, fadeOut 0.4s ease 4.6s forwards;
+            max-width: 400px;
+            font-weight: 500;
+        }
+        
+        .toast-notification.warning {
+            background: linear-gradient(135deg, #f0ad4e 0%, #ec971f 100%);
+            box-shadow: 0 8px 32px rgba(240, 173, 78, 0.3);
+        }
+        
+        .toast-notification .toast-icon {
+            font-size: 1.5rem;
+            flex-shrink: 0;
+        }
+        
+        .toast-notification .toast-content {
+            flex: 1;
+        }
+        
+        .toast-notification .toast-title {
+            font-weight: 700;
+            font-size: 0.95rem;
+            margin-bottom: 2px;
+        }
+        
+        .toast-notification .toast-message {
+            font-size: 0.85rem;
+            opacity: 0.95;
+        }
+        
+        @keyframes slideInRight {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        @keyframes fadeOut {
+            from {
+                opacity: 1;
+            }
+            to {
+                opacity: 0;
+                transform: translateX(50px);
+            }
+        }
     </style>
 
     <!-- Passar dados para o JavaScript -->
