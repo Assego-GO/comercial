@@ -1306,14 +1306,13 @@ $headerComponent = HeaderComponent::create([
                             <label class="form-label">
                                 Indicado por
                                 <i class="fas fa-info-circle info-tooltip"
-                                    title="Nome da pessoa que indicou o associado"></i>
+                                    title="Selecione o Diretor/Representante que indicou o associado"></i>
                             </label>
-                            <div class="autocomplete-container" style="position: relative;">
-                                <input type="text" class="form-input" name="indicacao" id="indicacao"
-                                    value="<?php echo $associadoData['indicacao'] ?? ''; ?>"
-                                    placeholder="Digite o nome de quem indicou..." autocomplete="off">
-                                <div id="indicacaoSuggestions" class="autocomplete-suggestions"></div>
-                            </div>
+                            <select class="form-input form-select" name="indicacao" id="indicacao">
+                                <option value="">-- Selecione o Indicador --</option>
+                                <!-- Opções serão carregadas via JavaScript -->
+                            </select>
+                            <input type="hidden" id="indicacao_valor_atual" value="<?php echo htmlspecialchars($associadoData['indicacao'] ?? ''); ?>">
                         </div>
 
                         <div class="form-group">
@@ -1994,7 +1993,8 @@ $headerComponent = HeaderComponent::create([
 
     <!-- Scripts separados para melhor organização -->
     <script src="js/cadastroForm.js?v=<?php echo time(); ?>"></script>
-    <script src="js/cadastroFormAutocomplete.js?v=<?php echo time(); ?>"></script>
+    <!-- <script src="js/cadastroFormAutocomplete.js?v=<?php echo time(); ?>"></script> -->
+    <script src="js/cadastroFormIndicadores.js?v=<?php echo time(); ?>"></script>
 
     <script>
     // Função para definir valor do select após carregar

@@ -152,20 +152,23 @@ class Indicacoes
     }
     
     /**
-     * Obtém ou cria um indicador
+     * Obtém um indicador existente - NÃO cria novos
+     * Os indicadores devem ser gerenciados pela administração
      * 
      * @param string $nome Nome completo do indicador
-     * @param string|null $patente Patente do indicador
-     * @param string|null $corporacao Corporação do indicador
+     * @param string|null $patente Patente do indicador (para atualização)
+     * @param string|null $corporacao Corporação do indicador (para atualização)
      * @return int ID do indicador
+     * @throws Exception Se o indicador não existir
      */
     private function obterOuCriarIndicador($nome, $patente = null, $corporacao = null) 
     {
-        // Busca indicador existente pelo nome
+        // Busca indicador existente pelo nome (case insensitive)
         $stmt = $this->db->prepare("
             SELECT id, patente, corporacao 
             FROM Indicadores 
-            WHERE nome_completo = ?
+            WHERE LOWER(nome_completo) = LOWER(?)
+            AND ativo = 1
             LIMIT 1
         ");
         $stmt->execute([$nome]);
@@ -201,24 +204,10 @@ class Indicacoes
             
             return $indicador['id'];
         } else {
-            // Cria novo indicador
-            $stmt = $this->db->prepare("
-                INSERT INTO Indicadores (
-                    nome_completo, 
-                    patente, 
-                    corporacao,
-                    ativo,
-                    total_indicacoes,
-                    data_cadastro
-                ) VALUES (?, ?, ?, 1, 0, NOW())
-            ");
-            
-            $stmt->execute([$nome, $patente, $corporacao]);
-            $indicadorId = $this->db->lastInsertId();
-            
-            error_log("✓ Novo indicador criado - ID: $indicadorId | Nome: $nome");
-            
-            return $indicadorId;
+            // Indicador não encontrado - lança exceção
+            // Novos indicadores devem ser cadastrados pela administração
+            error_log("✗ Indicador não encontrado: $nome - Indicadores só podem ser criados pela administração");
+            throw new Exception("Indicador não cadastrado no sistema: '$nome'. Os indicadores devem ser selecionados da lista de Diretores/Representantes cadastrados.");
         }
     }
     
