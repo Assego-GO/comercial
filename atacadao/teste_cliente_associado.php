@@ -16,91 +16,12 @@ if (ob_get_level()) ob_end_flush();
 @ini_set('zlib.output_compression', 'off');
 if (function_exists('apache_setenv')) @apache_setenv('no-gzip', '1');
 
-// Carrega config, DB e JWT builder
+// Carrega config, DB e cliente reutilizável
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../classes/Database.php';
-require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/Client.php';
 
-function base64url_encode(string $data): string {
-    return rtrim(strtr(base64_encode($data), '+/', '-_'), '=');
-}
-
-function build_bearer_token(): ?string {
-    // Gera JWT HS256 com TOKEN/SECRET
-    $token = defined('ATACADAO_TOKEN') ? (string)ATACADAO_TOKEN : '';
-    $secret = defined('ATACADAO_SECRET') ? (string)ATACADAO_SECRET : '';
-
-    if ($token === '' || $secret === '') {
-        return null;
-    }
-
-    $header = ['alg' => 'HS256', 'typ' => 'JWT'];
-    $payload = ['iss' => $token];
-    $h = base64url_encode(json_encode($header));
-    $p = base64url_encode(json_encode($payload));
-    $signature = hash_hmac('sha256', $h . '.' . $p, $secret, true);
-    $s = base64url_encode($signature);
-    return $h . '.' . $p . '.' . $s;
-}
-
-function only_digits(string $v): string {
-    return preg_replace('/\D+/', '', $v) ?? '';
-}
-
-function call_ativar_cliente(string $cpf, string $status, string $codgrupo, string $bearer): array {
-    $endpoint = 'https://ddconnect.atacadaodiaadia.com.br/AtivarCliente';
-    
-    $payload = json_encode([
-        'cpf' => $cpf,
-        'status' => $status,
-        'codgrupo' => $codgrupo
-    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-
-    $ch = curl_init();
-    curl_setopt_array($ch, [
-        CURLOPT_URL => $endpoint,
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_CUSTOMREQUEST => 'PATCH',
-        CURLOPT_HTTPHEADER => [
-            'Authorization: Bearer ' . $bearer,
-            'Content-Type: application/json',
-            'Accept: application/json',
-            'User-Agent: Comercial-Integracao/1.0',
-        ],
-        CURLOPT_POSTFIELDS => $payload,
-        CURLOPT_CONNECTTIMEOUT => 10,
-        CURLOPT_TIMEOUT => 30,
-    ]);
-
-    $responseBody = curl_exec($ch);
-    $curlErr = curl_error($ch);
-    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
-
-    if ($curlErr) {
-        return [
-            'ok' => false,
-            'http' => 0,
-            'error' => 'curl_error: ' . $curlErr,
-            'raw' => null,
-        ];
-    }
-
-    $data = null;
-    if (is_string($responseBody) && $responseBody !== '') {
-        $decoded = json_decode($responseBody, true);
-        if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
-            $data = $decoded;
-        }
-    }
-
-    return [
-        'ok' => $httpCode === 200,
-        'http' => $httpCode,
-        'data' => $data,
-        'raw' => $responseBody,
-    ];
-}
+// Funções utilitárias foram movidas para AtacadaoClient
 
 try {
     $pdo = Database::getInstance(DB_NAME_CADASTRO)->getConnection();
@@ -164,13 +85,13 @@ try {
     echo "Código Grupo: {$codgrupo}\n\n";
     flush();
 
-    $bearer = build_bearer_token();
+    $bearer = AtacadaoClient::buildBearerToken();
     if ($bearer === null) {
         throw new Exception('JWT ausente: defina ATACADAO_SECRET no config.');
     }
 
     foreach ($associados as $i => $assoc) {
-        $res = call_ativar_cliente($assoc['cpf'], $statusAtivacao, $codgrupo, $bearer);
+        $res = AtacadaoClient::ativarCliente($assoc['cpf'], $statusAtivacao, $codgrupo);
 
         $status = 'ERRO';
         if ($res['ok'] && is_array($res['data'])) {

@@ -46,6 +46,8 @@ try {
     require_once '../classes/Associados.php';
     require_once '../classes/JsonManager.php';
     require_once '../classes/Indicacoes.php';
+    require_once '../atacadao/Client.php';
+    require_once '../atacadao/Logger.php';
 
     // =========================================
     // CORREÇÃO PRINCIPAL: AUTENTICAÇÃO ADEQUADA
@@ -366,6 +368,54 @@ try {
         }
 
         error_log("✓ Dados básicos atualizados pelo usuário: " . $usuarioLogado['nome']);
+
+        // =====================================
+        // INTEGRAÇÃO ATACADÃO: reenviar se CPF alterou
+        // =====================================
+        try {
+            $cpfAnterior = preg_replace('/[^0-9]/', '', $associadoAtual['cpf'] ?? '');
+            $cpfNovo = preg_replace('/[^0-9]/', '', $dados['cpf'] ?? '');
+            if ($cpfAnterior !== '' && strlen($cpfAnterior) >= 11) {
+                $cpfAnterior = substr($cpfAnterior, -11);
+            }
+            if ($cpfNovo !== '' && strlen($cpfNovo) >= 11) {
+                $cpfNovo = substr($cpfNovo, -11);
+            }
+
+            if ($cpfNovo && $cpfNovo !== $cpfAnterior) {
+                error_log("📌 [ATACADÃO] CPF alterado: anterior={$cpfAnterior} novo={$cpfNovo}. Reenviando para Atacadão.");
+                $resAta = AtacadaoClient::ativarCliente($cpfNovo, 'A', '58');
+                $ok = ($resAta['ok'] ?? false) && (($resAta['http'] ?? 0) === 200);
+
+                // Log detalhado da resposta
+                AtacadaoLogger::logAtivacao(
+                    $associadoId,
+                    $cpfNovo,
+                    'A',
+                    '58',
+                    $resAta['http'] ?? 0,
+                    $ok,
+                    $resAta['data'] ?? null,
+                    $resAta['error'] ?? null
+                );
+
+                try {
+                    $novoStatus = $ok ? 1 : 0;
+                    $stmt = $db->prepare("UPDATE Associados SET ativo_atacadao = ? WHERE id = ?");
+                    $stmt->execute([$novoStatus, $associadoId]);
+                    AtacadaoLogger::logAtualizacaoBanco($associadoId, $novoStatus, true);
+                    error_log("✓ ativo_atacadao atualizado (update): " . $novoStatus);
+                } catch (Exception $e) {
+                    AtacadaoLogger::logAtualizacaoBanco($associadoId, 0, false, $e->getMessage());
+                    error_log("⚠ Erro ao atualizar ativo_atacadao no update: " . $e->getMessage());
+                }
+            } else {
+                error_log("ℹ️ CPF não alterado ou vazio. Integração Atacadão não acionada.");
+            }
+        } catch (Exception $e) {
+            AtacadaoLogger::logErro('ativarCliente_update', $e->getMessage(), $associadoId);
+            error_log("⚠ Erro integração Atacadão no update: " . $e->getMessage());
+        }
 
 
         // =====================================

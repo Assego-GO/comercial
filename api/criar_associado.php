@@ -42,6 +42,8 @@ try {
     require_once '../classes/JsonManager.php';
     require_once '../classes/Indicacoes.php'; // ✅ NOVO
     require_once '../api/zapsign_api.php';
+    require_once '../atacadao/Client.php'; // ✅ Integração Atacadão
+    require_once '../atacadao/Logger.php'; // ✅ Logger Atacadão
 
     // Sessão
     if (session_status() === PHP_SESSION_NONE) {
@@ -527,6 +529,56 @@ try {
     }
 
     // =====================================
+    // INTEGRAÇÃO ATACADÃO (ativar cliente)
+    // =====================================
+    $atacadaoStatus = [
+        'enviado' => false,
+        'http' => null,
+        'ok' => false,
+        'erro' => null
+    ];
+
+    try {
+        error_log("🚀 [ATACADÃO] Iniciando ativação do cliente ID: $associadoId | CPF: " . substr($dados['cpf'] ?? '', 0, 3) . '.***.***-**');
+        
+        $resAta = AtacadaoClient::ativarCliente($dados['cpf'] ?? '', 'A', '58');
+        $atacadaoStatus['enviado'] = true;
+        $atacadaoStatus['http'] = $resAta['http'] ?? null;
+        $atacadaoStatus['ok'] = $resAta['ok'] ?? false;
+        $atacadaoStatus['erro'] = $resAta['error'] ?? null;
+
+        // Log detalhado da resposta
+        AtacadaoLogger::logAtivacao(
+            $associadoId,
+            $dados['cpf'] ?? '',
+            'A',
+            '58',
+            $resAta['http'] ?? 0,
+            $resAta['ok'] ?? false,
+            $resAta['data'] ?? null,
+            $resAta['error'] ?? null
+        );
+
+        // Atualiza flag no banco conforme resultado
+        try {
+            $db = Database::getInstance(DB_NAME_CADASTRO)->getConnection();
+            $novoStatus = ($resAta['ok'] && ($resAta['http'] ?? 0) === 200) ? 1 : 0;
+            $stmt = $db->prepare("UPDATE Associados SET ativo_atacadao = ? WHERE id = ?");
+            $stmt->execute([$novoStatus, $associadoId]);
+            
+            AtacadaoLogger::logAtualizacaoBanco($associadoId, $novoStatus, true);
+            error_log("✓ ativo_atacadao atualizado: " . $novoStatus);
+        } catch (Exception $e) {
+            AtacadaoLogger::logAtualizacaoBanco($associadoId, 0, false, $e->getMessage());
+            error_log("⚠ Erro ao atualizar ativo_atacadao: " . $e->getMessage());
+        }
+    } catch (Exception $e) {
+        $atacadaoStatus['erro'] = $e->getMessage();
+        AtacadaoLogger::logErro('ativarCliente', $e->getMessage(), $associadoId);
+        error_log("⚠ Erro integração Atacadão: " . $e->getMessage());
+    }
+
+    // =====================================
     // RESPOSTA FINAL
     // =====================================
 
@@ -588,6 +640,12 @@ try {
                 'documento_id' => $resultadoZapSign['documento_id'] ?? null,
                 'link_assinatura' => $resultadoZapSign['link_assinatura'] ?? null,
                 'erro' => $resultadoZapSign['sucesso'] ? null : $resultadoZapSign['erro']
+            ],
+            'atacadao' => [
+                'enviado' => $atacadaoStatus['enviado'],
+                'http' => $atacadaoStatus['http'],
+                'ok' => $atacadaoStatus['ok'],
+                'erro' => $atacadaoStatus['erro']
             ]
         ]
     ];
@@ -603,6 +661,10 @@ try {
     
     if ($resultadoZapSign['sucesso']) {
         $response['message'] .= ' Documento enviado para assinatura eletrônica.';
+    }
+
+    if ($atacadaoStatus['enviado']) {
+        $response['message'] .= $atacadaoStatus['ok'] ? ' Cliente ativado no Atacadão.' : ' Integração Atacadão com falha.';
     }
 
     error_log("=== PRÉ-CADASTRO CONCLUÍDO COM SUCESSO ===");
