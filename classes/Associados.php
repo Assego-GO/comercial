@@ -371,31 +371,39 @@ class Associados
             // ========================================
             // CRIAR DOCUMENTO COM STATUS CORRETO
             // ========================================
-            $ehAgregado = isset($dados['tipoAssociado']) && $dados['tipoAssociado'] === 'Agregado';
-            $statusFluxo = $ehAgregado ? 'AGUARDANDO_ASSINATURA' : 'DIGITALIZADO';
-            $tipoDocumento = $ehAgregado ? 'FICHA_AGREGADO' : 'FICHA_ASSOCIADO';
-            $observacaoDoc = $ehAgregado ? 'Agregado - Aguardando assinatura da presidência' : 'Associado - Documento digitalizado';
+            // CORREÇÃO: Verificar parâmetro 'pular_documento_virtual' para evitar duplicação
+            // Quando uma ficha física é anexada, o documento é criado pela API, não aqui
+            $pularDocumentoVirtual = isset($dados['pular_documento_virtual']) && $dados['pular_documento_virtual'] === true;
             
-            try {
-                $stmt = $this->db->prepare("
-                    INSERT INTO Documentos_Associado (
-                        associado_id, tipo_documento, tipo_origem, nome_arquivo,
-                        caminho_arquivo, data_upload, observacao, status_fluxo, verificado
-                    ) VALUES (?, ?, 'VIRTUAL', 'documento_virtual.pdf', '', NOW(), ?, ?, 0)
-                ");
+            if (!$pularDocumentoVirtual) {
+                $ehAgregado = isset($dados['tipoAssociado']) && $dados['tipoAssociado'] === 'Agregado';
+                $statusFluxo = $ehAgregado ? 'AGUARDANDO_ASSINATURA' : 'DIGITALIZADO';
+                $tipoDocumento = $ehAgregado ? 'FICHA_AGREGADO' : 'FICHA_ASSOCIADO';
+                $observacaoDoc = $ehAgregado ? 'Agregado - Aguardando assinatura da presidência' : 'Associado - Documento digitalizado';
                 
-                $stmt->execute([
-                    $associadoId,
-                    $tipoDocumento,
-                    $observacaoDoc,
-                    $statusFluxo
-                ]);
-                
-                error_log("✅ Documento criado - Status: {$statusFluxo} - Tipo: {$tipoDocumento}");
-                
-            } catch (Exception $e) {
-                error_log("⚠ Erro ao criar documento: " . $e->getMessage());
-                // Não lança exceção para não interromper o cadastro
+                try {
+                    $stmt = $this->db->prepare("
+                        INSERT INTO Documentos_Associado (
+                            associado_id, tipo_documento, tipo_origem, nome_arquivo,
+                            caminho_arquivo, data_upload, observacao, status_fluxo, verificado
+                        ) VALUES (?, ?, 'VIRTUAL', 'documento_virtual.pdf', '', NOW(), ?, ?, 0)
+                    ");
+                    
+                    $stmt->execute([
+                        $associadoId,
+                        $tipoDocumento,
+                        $observacaoDoc,
+                        $statusFluxo
+                    ]);
+                    
+                    error_log("✅ Documento criado - Status: {$statusFluxo} - Tipo: {$tipoDocumento}");
+                    
+                } catch (Exception $e) {
+                    error_log("⚠ Erro ao criar documento: " . $e->getMessage());
+                    // Não lança exceção para não interromper o cadastro
+                }
+            } else {
+                error_log("ℹ️ Documento virtual não criado - Ficha física será anexada pela API");
             }
 
             // Registrar na auditoria

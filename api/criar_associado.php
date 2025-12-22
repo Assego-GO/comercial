@@ -267,6 +267,13 @@ try {
         }
     }
 
+    // CORREÇÃO: Se uma ficha física for anexada, não criar documento virtual
+    // Isso evita duplicação de documentos na tabela Documentos_Associado
+    if (isset($_FILES['ficha_assinada']) && $_FILES['ficha_assinada']['error'] === UPLOAD_ERR_OK) {
+        $dados['pular_documento_virtual'] = true;
+        error_log("ℹ️ Ficha física detectada - documento virtual será pulado");
+    }
+
     $associados = new Associados();
     $documentos = new Documentos();
     $indicacoes = new Indicacoes(); // ✅ NOVO
