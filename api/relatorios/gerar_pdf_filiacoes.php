@@ -139,122 +139,104 @@ class ASSEGOPDF extends TCPDF {
     // RODAPÉ PROFISSIONAL COM ÍCONES SVG
     // ============================================
     public function Footer() {
-        $this->SetY(-42);
+        $this->SetY(-28);
         
         // Caminho para os ícones SVG (na pasta icons)
         $iconsPath = dirname(__DIR__, 2) . '/pages/img/';
         
-        // Linha superior do rodapé (dourada)
+        // Linha fina dourada superior
         $this->SetDrawColor($this->corOuro[0], $this->corOuro[1], $this->corOuro[2]);
-        $this->SetLineWidth(1);
-        $this->Line(10, $this->GetY(), 200, $this->GetY());
+        $this->SetLineWidth(0.5);
+        $this->Line(15, $this->GetY(), 195, $this->GetY());
         
         $this->Ln(3);
         
-        // Faixa azul com hashtag
-        $yFaixa = $this->GetY();
-        $this->SetFillColor($this->corPrimaria[0], $this->corPrimaria[1], $this->corPrimaria[2]);
-        $this->Rect(10, $yFaixa, 190, 10, 'F');
-        
-        // Detalhes dourados nos cantos
-        $this->SetFillColor($this->corOuro[0], $this->corOuro[1], $this->corOuro[2]);
-        $this->Rect(10, $yFaixa, 4, 10, 'F');
-        $this->Rect(196, $yFaixa, 4, 10, 'F');
-        
-        // Texto #ASSEGONÃOPARA na faixa azul
-        $this->SetTextColor(255, 255, 255);
-        $this->SetFont('helvetica', 'B', 13);
-        $this->SetXY(15, $yFaixa + 2.5);
-        $this->Cell(180, 5, '#ASSEGONÃOPARA', 0, 1, 'C');
-        
-        $this->Ln(4);
-        
-        // Área de informações de contato
-        $yContato = $this->GetY();
-        $iconSize = 7; // TAMANHO MAIOR para os ícones
-        
-        // ========== COLUNA 1 - ENDEREÇO ==========
-        $xCol1 = 15;
-        
-        // Ícone de localização SVG (VERMELHO - cor já está no SVG)
-        if (file_exists($iconsPath . 'location.svg')) {
-            $this->ImageSVG($iconsPath . 'location.svg', $xCol1, $yContato, $iconSize, $iconSize);
-        }
-        
-        // Endereço em NEGRITO - alinhado com o meio do ícone
-        $this->SetXY($xCol1 + $iconSize + 2, $yContato + 0.5);
-        $this->SetTextColor($this->corCinzaEscuro[0], $this->corCinzaEscuro[1], $this->corCinzaEscuro[2]);
-        $this->SetFont('helvetica', 'B', 9);
-        $this->Cell(55, 4, 'Rua 87, esq. c/132, nº 561', 0, 1, 'L');
-        
-        $this->SetX($xCol1 + $iconSize + 2);
-        $this->SetFont('helvetica', 'B', 8);
-        $this->Cell(55, 4, 'Setor Sul - Goiânia-GO | CEP: 74093-300', 0, 0, 'L');
-        
-        // ========== COLUNA 2 - TELEFONES ==========
-        $xCol2 = 88;
-        
-        // Ícone de telefone SVG (AZUL - cor já está no SVG)
-        if (file_exists($iconsPath . 'phone.svg')) {
-            $this->ImageSVG($iconsPath . 'phone.svg', $xCol2, $yContato, $iconSize, $iconSize);
-        }
-        
-        // Número em NEGRITO
-        $this->SetXY($xCol2 + $iconSize + 2, $yContato + 1);
-        $this->SetTextColor($this->corCinzaEscuro[0], $this->corCinzaEscuro[1], $this->corCinzaEscuro[2]);
-        $this->SetFont('helvetica', 'B', 10);
-        $this->Cell(40, 5, '(62) 3281-3177', 0, 0, 'L');
-        
-        // Ícone de WhatsApp SVG (VERDE - cor já está no SVG)
-        if (file_exists($iconsPath . 'whatsapp.svg')) {
-            $this->ImageSVG($iconsPath . 'whatsapp.svg', $xCol2, $yContato + 7, $iconSize, $iconSize);
-        }
-        
-        // Número em NEGRITO
-        $this->SetXY($xCol2 + $iconSize + 2, $yContato + 8);
-        $this->SetTextColor($this->corCinzaEscuro[0], $this->corCinzaEscuro[1], $this->corCinzaEscuro[2]);
-        $this->SetFont('helvetica', 'B', 10);
-        $this->Cell(40, 5, '(62) 9.9246-9099', 0, 0, 'L');
-        
-        // ========== COLUNA 3 - SITE E REDES ==========
-        $xCol3 = 145;
-        
-        // Ícone de website SVG (AZUL - cor já está no SVG)
-        if (file_exists($iconsPath . 'website.svg')) {
-            $this->ImageSVG($iconsPath . 'website.svg', $xCol3, $yContato, $iconSize, $iconSize);
-        }
-        
-        $this->SetXY($xCol3 + $iconSize + 2, $yContato + 1);
+        // ===== LINHA 1 - #ASSEGONÃOPARA centralizado =====
         $this->SetTextColor($this->corPrimaria[0], $this->corPrimaria[1], $this->corPrimaria[2]);
         $this->SetFont('helvetica', 'B', 10);
-        $this->Cell(45, 5, 'www.assego.com.br', 0, 1, 'L');
+        $this->Cell(190, 5, '#ASSEGONÃOPARA', 0, 1, 'C');
         
-        // Ícone de Facebook SVG (AZUL FACEBOOK - cor já está no SVG)
-        if (file_exists($iconsPath . 'facebook.svg')) {
-            $this->ImageSVG($iconsPath . 'facebook.svg', $xCol3, $yContato + 7, $iconSize, $iconSize);
-        }
+        $this->Ln(1);
         
-        $this->SetXY($xCol3 + $iconSize + 2, $yContato + 8);
+        // ===== LINHA 2 - Contatos em linha =====
+        $yContato = $this->GetY();
+        $iconSize = 4;
+        
+        // Configuração de texto padrão - NEGRITO
         $this->SetTextColor($this->corCinzaEscuro[0], $this->corCinzaEscuro[1], $this->corCinzaEscuro[2]);
-        $this->SetFont('helvetica', 'B', 9);
-        $this->Cell(15, 5, 'assego', 0, 0, 'L');
+        $this->SetFont('helvetica', 'B', 7);
         
-        // Ícone de Instagram SVG (ROSA - cor já está no SVG)
-        $xInsta = $xCol3 + 27;
-        if (file_exists($iconsPath . 'instagram.svg')) {
-            $this->ImageSVG($iconsPath . 'instagram.svg', $xInsta, $yContato + 7, $iconSize, $iconSize);
+        $xPos = 15;
+        
+        // Endereço
+        if (file_exists($iconsPath . 'location.svg')) {
+            $this->ImageSVG($iconsPath . 'location.svg', $xPos, $yContato, $iconSize, $iconSize);
         }
+        $this->SetXY($xPos + $iconSize + 1, $yContato + 0.5);
+        $this->Cell(55, 3, 'Rua 87, esq. c/132, nº 561 - Setor Sul, Goiânia-GO', 0, 0, 'L');
         
-        $this->SetXY($xInsta + $iconSize + 2, $yContato + 8);
+        // Separador
+        $xPos = 80;
+        $this->SetTextColor(180, 180, 180);
+        $this->SetXY($xPos, $yContato + 0.5);
+        $this->Cell(3, 3, '|', 0, 0, 'C');
+        
+        // Telefone
+        $xPos = 85;
         $this->SetTextColor($this->corCinzaEscuro[0], $this->corCinzaEscuro[1], $this->corCinzaEscuro[2]);
-        $this->SetFont('helvetica', 'B', 9);
-        $this->Cell(15, 5, 'assego', 0, 0, 'L');
+        if (file_exists($iconsPath . 'phone.svg')) {
+            $this->ImageSVG($iconsPath . 'phone.svg', $xPos, $yContato, $iconSize, $iconSize);
+        }
+        $this->SetXY($xPos + $iconSize + 1, $yContato + 0.5);
+        $this->Cell(22, 3, '(62) 3281-3177', 0, 0, 'L');
+        
+        // Separador
+        $xPos = 113;
+        $this->SetTextColor(180, 180, 180);
+        $this->SetXY($xPos, $yContato + 0.5);
+        $this->Cell(3, 3, '|', 0, 0, 'C');
+        
+        // WhatsApp
+        $xPos = 118;
+        $this->SetTextColor($this->corCinzaEscuro[0], $this->corCinzaEscuro[1], $this->corCinzaEscuro[2]);
+        if (file_exists($iconsPath . 'whatsapp.svg')) {
+            $this->ImageSVG($iconsPath . 'whatsapp.svg', $xPos, $yContato, $iconSize, $iconSize);
+        }
+        $this->SetXY($xPos + $iconSize + 1, $yContato + 0.5);
+        $this->Cell(22, 3, '(62) 9.9246-9099', 0, 0, 'L');
+        
+        // Separador
+        $xPos = 146;
+        $this->SetTextColor(180, 180, 180);
+        $this->SetXY($xPos, $yContato + 0.5);
+        $this->Cell(3, 3, '|', 0, 0, 'C');
+        
+        // Site
+        $xPos = 151;
+        $this->SetTextColor($this->corPrimaria[0], $this->corPrimaria[1], $this->corPrimaria[2]);
+        if (file_exists($iconsPath . 'website.svg')) {
+            $this->ImageSVG($iconsPath . 'website.svg', $xPos, $yContato, $iconSize, $iconSize);
+        }
+        $this->SetXY($xPos + $iconSize + 1, $yContato + 0.5);
+        $this->Cell(28, 3, 'www.assego.com.br', 0, 0, 'L');
+        
+        // Separador
+        $xPos = 183;
+        $this->SetTextColor(180, 180, 180);
+        $this->SetXY($xPos, $yContato + 0.5);
+        $this->Cell(3, 3, '|', 0, 0, 'C');
+        
+        // Instagram @assego
+        $xPos = 188;
+        $this->SetTextColor($this->corCinzaEscuro[0], $this->corCinzaEscuro[1], $this->corCinzaEscuro[2]);
+        $this->SetXY($xPos, $yContato + 0.5);
+        $this->Cell(12, 3, '@assego', 0, 0, 'L');
         
         // Número da página no canto inferior direito
-        $this->SetXY(-25, -8);
-        $this->SetFont('helvetica', '', 8);
-        $this->SetTextColor(100, 100, 100);
-        $this->Cell(15, 5, $this->getAliasNumPage() . '/' . $this->getAliasNbPages(), 0, 0, 'R');
+        $this->SetXY(185, $yContato + 5);
+        $this->SetTextColor(150, 150, 150);
+        $this->SetFont('helvetica', 'B', 7);
+        $this->Cell(10, 3, $this->getAliasNumPage() . '/' . $this->getAliasNbPages(), 0, 0, 'R');
     }
     
     // ============================================
@@ -481,6 +463,50 @@ try {
     ]);
     $indicadores = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
+    // ============================================
+    // BUSCAR DESFILIAÇÕES POR INDICADOR NO PERÍODO
+    // ============================================
+    $sqlDesfiliacoesPorIndicador = "
+        SELECT 
+            hi.indicador_id,
+            COUNT(DISTINCT a.id) as qtd_desfiliados,
+            SUM(CASE 
+                WHEN sa.tipo_associado IN ('Agregado', 'Agregado (Sem servico juridico)') THEN :val_agreg1
+                WHEN sa.tipo_associado IN ('Aluno', 'Soldado 1a Classe', 'Soldado 2a Classe') THEN :val_aluno1
+                WHEN EXISTS(SELECT 1 FROM Servicos_Associado sa2 WHERE sa2.associado_id = a.id AND sa2.servico_id = 2) THEN :val_jur_soc1
+                ELSE :val_social1
+            END) as valor_desconto
+        FROM Associados a
+        INNER JOIN Historico_Indicacoes hi ON hi.associado_id = a.id
+        LEFT JOIN Contrato c ON a.id = c.associado_id
+        LEFT JOIN Servicos_Associado sa ON a.id = sa.associado_id AND sa.servico_id = 1
+        WHERE c.dataDesfiliacao IS NOT NULL 
+        AND c.dataDesfiliacao > '1900-01-01'
+        AND c.dataDesfiliacao BETWEEN :data_inicio AND :data_fim
+        AND LOWER(a.situacao) = 'desfiliado'
+        GROUP BY hi.indicador_id
+    ";
+    
+    $stmtDesfilPorInd = $db->prepare($sqlDesfiliacoesPorIndicador);
+    $stmtDesfilPorInd->execute([
+        ':data_inicio' => $dataInicio, 
+        ':data_fim' => $dataFim,
+        ':val_agreg1' => $valoresComissao['Agregado/Al Sd'],
+        ':val_aluno1' => $valoresComissao['Agregado/Al Sd'],
+        ':val_jur_soc1' => $valoresComissao['Jurídico+Social'],
+        ':val_social1' => $valoresComissao['Social']
+    ]);
+    $desfiliacoesPorIndicador = $stmtDesfilPorInd->fetchAll(PDO::FETCH_ASSOC);
+    
+    // Indexar desfiliações por indicador_id
+    $desfiliacoesByIndicador = [];
+    foreach ($desfiliacoesPorIndicador as $desfil) {
+        $desfiliacoesByIndicador[$desfil['indicador_id']] = [
+            'qtd' => (int)$desfil['qtd_desfiliados'],
+            'desconto' => (float)$desfil['valor_desconto']
+        ];
+    }
+    
     // Processar dados
     $dados = [];
     $totais = [
@@ -489,26 +515,40 @@ try {
         'aluno_sd' => 0,
         'agregado' => 0,
         'total' => 0,
+        'desfiliados' => 0,
+        'desconto' => 0,
         'comissao' => 0
     ];
     
     foreach ($indicadores as $ind) {
-        $comissao = 0;
-        $comissao += ($ind['qtd_social'] ?? 0) * $valoresComissao['Social'];
-        $comissao += ($ind['qtd_juridico_social'] ?? 0) * $valoresComissao['Jurídico+Social'];
-        $comissao += ($ind['qtd_aluno_sd'] ?? 0) * $valoresComissao['Agregado/Al Sd'];
-        $comissao += ($ind['qtd_agregado'] ?? 0) * $valoresComissao['Agregado/Al Sd'];
+        $comissaoBruta = 0;
+        $comissaoBruta += ($ind['qtd_social'] ?? 0) * $valoresComissao['Social'];
+        $comissaoBruta += ($ind['qtd_juridico_social'] ?? 0) * $valoresComissao['Jurídico+Social'];
+        $comissaoBruta += ($ind['qtd_aluno_sd'] ?? 0) * $valoresComissao['Agregado/Al Sd'];
+        $comissaoBruta += ($ind['qtd_agregado'] ?? 0) * $valoresComissao['Agregado/Al Sd'];
+        
+        // Buscar desfiliações deste indicador
+        $desfiliacoesInd = $desfiliacoesByIndicador[$ind['id']] ?? ['qtd' => 0, 'desconto' => 0];
+        $qtdDesfiliados = $desfiliacoesInd['qtd'];
+        $valorDesconto = $desfiliacoesInd['desconto'];
+        
+        // Calcular comissão final (não pode ser negativa)
+        $comissaoFinal = max(0, $comissaoBruta - $valorDesconto);
         
         $dados[] = [
+            'id' => $ind['id'],
             'nome' => $ind['nome_completo'],
             'social' => (int)($ind['qtd_social'] ?? 0),
             'juridico_social' => (int)($ind['qtd_juridico_social'] ?? 0),
             'aluno_sd' => (int)($ind['qtd_aluno_sd'] ?? 0),
             'agregado' => (int)($ind['qtd_agregado'] ?? 0),
             'total' => (int)($ind['qtd_total'] ?? 0),
+            'desfiliados' => $qtdDesfiliados,
+            'desconto' => $valorDesconto,
             'pix_tipo' => $ind['pix_tipo'] ?? '',
             'pix_chave' => $ind['pix_chave'] ?? '',
-            'comissao' => $comissao
+            'comissao_bruta' => $comissaoBruta,
+            'comissao' => $comissaoFinal
         ];
         
         $totais['social'] += (int)($ind['qtd_social'] ?? 0);
@@ -516,7 +556,9 @@ try {
         $totais['aluno_sd'] += (int)($ind['qtd_aluno_sd'] ?? 0);
         $totais['agregado'] += (int)($ind['qtd_agregado'] ?? 0);
         $totais['total'] += (int)($ind['qtd_total'] ?? 0);
-        $totais['comissao'] += $comissao;
+        $totais['desfiliados'] += $qtdDesfiliados;
+        $totais['desconto'] += $valorDesconto;
+        $totais['comissao'] += $comissaoFinal;
     }
     
     // ============================================
@@ -536,8 +578,8 @@ try {
     $pdf->setPrintFooter(true);
     $pdf->SetMargins(10, 42, 10);
     $pdf->SetHeaderMargin(5);
-    $pdf->SetFooterMargin(50);
-    $pdf->SetAutoPageBreak(true, 52);
+    $pdf->SetFooterMargin(30);
+    $pdf->SetAutoPageBreak(true, 35);
     
     // ============================================
     // PÁGINA 1 - RELAÇÃO DE INDICAÇÕES
@@ -555,24 +597,28 @@ try {
     $pdf->Ln(3);
     
     // Cabeçalho da tabela principal
-    $colunas = ['DIRETOR / REPRESENTANTE', 'Social', 'Jur+Soc', 'Al/Sd', 'Agreg.', 'TOTAL', 'PIX Tipo', 'PIX Chave', 'COMISSÃO'];
-    $larguras = [42, 12, 12, 12, 12, 12, 18, 32, 25];
-    $alinhamentos = ['L', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'R'];
+    $colunas = ['DIRETOR / REPRESENTANTE', 'Social', 'Jur+Soc', 'Al/Sd', 'Agreg.', 'TOTAL', 'Desfil.', 'PIX Tipo', 'PIX Chave', 'BRUTO', 'DESC. DESFIL.', 'LÍQUIDO'];
+    $larguras = [40, 10, 10, 10, 10, 10, 10, 14, 20, 18, 20, 18];
+    $alinhamentos = ['L', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'R', 'R', 'R'];
     
     $pdf->headerTabela($colunas, $larguras);
     
     // Dados
     $zebra = false;
     foreach ($dados as $row) {
+        $descontoStr = $row['desconto'] > 0 ? '-R$ ' . number_format($row['desconto'], 2, ',', '.') : 'R$ 0,00';
         $dadosLinha = [
-            mb_strimwidth($row['nome'], 0, 26, '...'),
+            mb_strimwidth($row['nome'], 0, 22, '...'),
             $row['social'],
             $row['juridico_social'],
             $row['aluno_sd'],
             $row['agregado'],
             $row['total'],
+            $row['desfiliados'],
             $row['pix_tipo'] ?: '-',
-            mb_strimwidth($row['pix_chave'] ?: '-', 0, 18, '...'),
+            mb_strimwidth($row['pix_chave'] ?: '-', 0, 12, '...'),
+            'R$ ' . number_format($row['comissao_bruta'], 2, ',', '.'),
+            $descontoStr,
             'R$ ' . number_format($row['comissao'], 2, ',', '.')
         ];
         $pdf->linhaTabela($dadosLinha, $larguras, $alinhamentos, 5, $zebra);
@@ -580,6 +626,9 @@ try {
     }
     
     // Linha de total
+    $descontoTotalStr = $totais['desconto'] > 0 ? '-R$ ' . number_format($totais['desconto'], 2, ',', '.') : 'R$ 0,00';
+    // Calcular comissão bruta total
+    $comissaoBrutaTotal = $totais['comissao'] + $totais['desconto'];
     $dadosTotal = [
         'TOTAL GERAL',
         $totais['social'],
@@ -587,8 +636,11 @@ try {
         $totais['aluno_sd'],
         $totais['agregado'],
         $totais['total'],
+        $totais['desfiliados'],
         '-',
         '-',
+        'R$ ' . number_format($comissaoBrutaTotal, 2, ',', '.'),
+        $descontoTotalStr,
         'R$ ' . number_format($totais['comissao'], 2, ',', '.')
     ];
     $pdf->linhaTotal($dadosTotal, $larguras, $alinhamentos);
@@ -936,6 +988,7 @@ try {
         WHERE c.dataDesfiliacao IS NOT NULL 
         AND c.dataDesfiliacao > '1900-01-01'
         AND c.dataDesfiliacao BETWEEN :data_inicio AND :data_fim
+        AND LOWER(a.situacao) = 'desfiliado'
         GROUP BY 
             COALESCE(NULLIF(TRIM(m.patente), ''), 'N/Inform.'),
             COALESCE(NULLIF(TRIM(m.corporacao), ''), 'N/Inform.')
@@ -1078,7 +1131,7 @@ try {
     
     $pdf->tituloSecao('Relatório de Desfiliados', 'Lista Detalhada com Tempo de Permanência');
     
-    // Buscar desfiliados
+    // Buscar desfiliados (somente quem está atualmente desfiliado, excluindo refiliados)
     $sqlDesfiliados = "
         SELECT 
             a.id as matricula,
@@ -1105,6 +1158,7 @@ try {
         WHERE c.dataDesfiliacao IS NOT NULL 
         AND c.dataDesfiliacao > '1900-01-01'
         AND c.dataDesfiliacao BETWEEN :data_inicio AND :data_fim
+        AND LOWER(a.situacao) = 'desfiliado'
         ORDER BY a.nome ASC
     ";
     
