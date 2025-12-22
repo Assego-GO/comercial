@@ -35,6 +35,15 @@ if (!$temPermissaoRelatorios) {
     exit;
 }
 
+// Verificar se pode ver o relatório de Filiações e Desfiliações
+// Permitido apenas para: SUPER_ADMIN, PRESIDENTE, TI e barbara.oliveira@assego.com.br
+$permissoes = Permissoes::getInstance();
+$emailUsuario = $usuarioLogado['email'] ?? '';
+$podeVerFiliacoesDesfiliacoes = $permissoes->hasRole('SUPER_ADMIN') || 
+                                  $permissoes->hasRole('PRESIDENTE') || 
+                                  $permissoes->hasRole('TI') ||
+                                  strtolower($emailUsuario) === 'barbara.oliveira@assego.com.br';
+
 // Define o título da página
 $page_title = 'Relatórios Comerciais - ASSEGO';
 
@@ -1283,6 +1292,7 @@ if (empty($patentesDB)) {
                         </div>
                     </div>
 
+                    <?php if ($podeVerFiliacoesDesfiliacoes): ?>
                     <div class="action-card" data-type="filiacoes" onclick="selecionarRelatorio('filiacoes')">
                         <div class="action-icon" style="background: linear-gradient(135deg, #9333ea 0%, #7c3aed 100%);">
                             <i class="fas fa-file-invoice-dollar"></i>
@@ -1292,6 +1302,7 @@ if (empty($patentesDB)) {
                             <p>Resumo completo de filiações e desfiliações</p>
                         </div>
                     </div>
+                    <?php endif; ?>
                 </div>
             </div>
 
