@@ -59,15 +59,22 @@ try {
     // ============================================
     
     // Query para buscar indicadores e suas filiações no período
-    // Nota: Considera todas as indicações no período, independente da situação atual
+    // Busca por dataFiliacao em Contrato
+    // Faz match do campo indicacao com a tabela Indicadores pelo nome exato
     $sql = "
         SELECT 
-            i.id as indicador_id,
-            COALESCE(i.nome_completo, hi.indicador_nome) as indicador_nome,
-            i.patente as indicador_patente,
-            i.corporacao as indicador_corporacao,
-            i.pix_tipo,
-            i.pix_chave,
+            COALESCE(i.id, i_match.id, 0) as indicador_id,
+            COALESCE(
+                i.nome_completo, 
+                hi.indicador_nome, 
+                i_match.nome_completo,
+                NULLIF(TRIM(a.indicacao), ''), 
+                'SEM INDICAÇÃO'
+            ) as indicador_nome,
+            COALESCE(i.patente, i_match.patente) as indicador_patente,
+            COALESCE(i.corporacao, i_match.corporacao) as indicador_corporacao,
+            COALESCE(i.pix_tipo, i_match.pix_tipo) as pix_tipo,
+            COALESCE(i.pix_chave, i_match.pix_chave) as pix_chave,
             
             -- Contagem por tipo de serviço
             SUM(CASE 
@@ -92,14 +99,25 @@ try {
                 WHEN sa.tipo_associado = 'Remido 50%'
                 THEN 1 ELSE 0 END) as qtd_remido_50,
             
-            COUNT(DISTINCT hi.associado_id) as qtd_total
+            COUNT(DISTINCT a.id) as qtd_total
             
-        FROM Historico_Indicacoes hi
-        INNER JOIN Associados a ON hi.associado_id = a.id
+        FROM Associados a
+        INNER JOIN Contrato c ON a.id = c.associado_id
+        LEFT JOIN Historico_Indicacoes hi ON a.id = hi.associado_id
         LEFT JOIN Indicadores i ON hi.indicador_id = i.id
+        -- Match do campo indicacao com a tabela Indicadores (busca por nome exato)
+        LEFT JOIN Indicadores i_match ON i.id IS NULL 
+            AND i_match.ativo = 1
+            AND i_match.nome_completo COLLATE utf8mb4_unicode_ci = TRIM(a.indicacao) COLLATE utf8mb4_unicode_ci
         LEFT JOIN Servicos_Associado sa ON a.id = sa.associado_id AND sa.ativo = 1 AND sa.servico_id = 1
-        WHERE DATE(hi.data_indicacao) BETWEEN :data_inicio AND :data_fim
-        GROUP BY i.id, i.nome_completo, hi.indicador_nome, i.patente, i.corporacao, i.pix_tipo, i.pix_chave
+        WHERE DATE(c.dataFiliacao) BETWEEN :data_inicio AND :data_fim
+        GROUP BY 
+            COALESCE(i.id, i_match.id, 0),
+            COALESCE(i.nome_completo, hi.indicador_nome, i_match.nome_completo, NULLIF(TRIM(a.indicacao), ''), 'SEM INDICAÇÃO'),
+            COALESCE(i.patente, i_match.patente), 
+            COALESCE(i.corporacao, i_match.corporacao), 
+            COALESCE(i.pix_tipo, i_match.pix_tipo), 
+            COALESCE(i.pix_chave, i_match.pix_chave)
         HAVING qtd_total > 0
         ORDER BY qtd_total DESC
     ";

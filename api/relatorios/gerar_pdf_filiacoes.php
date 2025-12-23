@@ -385,81 +385,66 @@ try {
     ];
     
     // ============================================
-    // BUSCAR INDICADORES COM INDICAÇÕES NO PERÍODO
+    // BUSCAR INDICADORES COM FILIAÇÕES NO PERÍODO (baseado em dataFiliacao)
     // ============================================
+    // VERSÃO CORRIGIDA: Busca por dataFiliacao em Contrato E também considera campo indicacao
+    // Faz match do campo indicacao com a tabela Indicadores para pegar dados do indicador (PIX, etc)
     $sql = "
         SELECT 
-            i.id,
-            i.nome_completo,
-            i.patente,
-            i.corporacao,
-            i.pix_tipo,
-            i.pix_chave,
-            i.ativo,
+            COALESCE(i.id, i_match.id, 0) as id,
+            COALESCE(i.nome_completo, hi.indicador_nome, i_match.nome_completo, NULLIF(TRIM(a.indicacao), ''), 'SEM INDICAÇÃO') as nome_completo,
+            COALESCE(i.patente, i_match.patente) as patente,
+            COALESCE(i.corporacao, i_match.corporacao) as corporacao,
+            COALESCE(i.pix_tipo, i_match.pix_tipo) as pix_tipo,
+            COALESCE(i.pix_chave, i_match.pix_chave) as pix_chave,
+            COALESCE(i.ativo, i_match.ativo, 1) as ativo,
             
-            (SELECT COUNT(DISTINCT hi.associado_id) 
-             FROM Historico_Indicacoes hi 
-             INNER JOIN Associados a ON hi.associado_id = a.id
-             LEFT JOIN Servicos_Associado sa ON a.id = sa.associado_id AND sa.ativo = 1 AND sa.servico_id = 1
-             WHERE hi.indicador_id = i.id 
-             AND DATE(hi.data_indicacao) BETWEEN :di1 AND :df1
-             AND sa.tipo_associado = 'Contribuinte'
-             AND NOT EXISTS(SELECT 1 FROM Servicos_Associado sa2 WHERE sa2.associado_id = a.id AND sa2.servico_id = 2 AND sa2.ativo = 1)
-            ) as qtd_social,
+            -- Contagem por tipo de serviço
+            SUM(CASE 
+                WHEN sa.tipo_associado = 'Contribuinte' 
+                     AND NOT EXISTS(SELECT 1 FROM Servicos_Associado sa2 WHERE sa2.associado_id = a.id AND sa2.servico_id = 2 AND sa2.ativo = 1)
+                THEN 1 ELSE 0 END) as qtd_social,
             
-            (SELECT COUNT(DISTINCT hi.associado_id) 
-             FROM Historico_Indicacoes hi 
-             INNER JOIN Associados a ON hi.associado_id = a.id
-             LEFT JOIN Servicos_Associado sa ON a.id = sa.associado_id AND sa.ativo = 1 AND sa.servico_id = 1
-             WHERE hi.indicador_id = i.id 
-             AND DATE(hi.data_indicacao) BETWEEN :di2 AND :df2
-             AND sa.tipo_associado = 'Contribuinte'
-             AND EXISTS(SELECT 1 FROM Servicos_Associado sa2 WHERE sa2.associado_id = a.id AND sa2.servico_id = 2 AND sa2.ativo = 1)
-            ) as qtd_juridico_social,
+            SUM(CASE 
+                WHEN sa.tipo_associado = 'Contribuinte'
+                     AND EXISTS(SELECT 1 FROM Servicos_Associado sa2 WHERE sa2.associado_id = a.id AND sa2.servico_id = 2 AND sa2.ativo = 1)
+                THEN 1 ELSE 0 END) as qtd_juridico_social,
             
-            (SELECT COUNT(DISTINCT hi.associado_id) 
-             FROM Historico_Indicacoes hi 
-             INNER JOIN Associados a ON hi.associado_id = a.id
-             LEFT JOIN Servicos_Associado sa ON a.id = sa.associado_id AND sa.ativo = 1 AND sa.servico_id = 1
-             WHERE hi.indicador_id = i.id 
-             AND DATE(hi.data_indicacao) BETWEEN :di3 AND :df3
-             AND sa.tipo_associado IN ('Aluno', 'Soldado 1a Classe', 'Soldado 2a Classe')
-            ) as qtd_aluno_sd,
+            SUM(CASE 
+                WHEN sa.tipo_associado IN ('Aluno', 'Soldado 1ª Classe', 'Soldado 2ª Classe')
+                THEN 1 ELSE 0 END) as qtd_aluno_sd,
             
-            (SELECT COUNT(DISTINCT hi.associado_id) 
-             FROM Historico_Indicacoes hi 
-             INNER JOIN Associados a ON hi.associado_id = a.id
-             LEFT JOIN Servicos_Associado sa ON a.id = sa.associado_id AND sa.ativo = 1 AND sa.servico_id = 1
-             WHERE hi.indicador_id = i.id 
-             AND DATE(hi.data_indicacao) BETWEEN :di4 AND :df4
-             AND sa.tipo_associado IN ('Agregado', 'Agregado (Sem servico juridico)')
-            ) as qtd_agregado,
+            SUM(CASE 
+                WHEN sa.tipo_associado IN ('Agregado', 'Agregado (Sem serviço jurídico)')
+                THEN 1 ELSE 0 END) as qtd_agregado,
             
-            (SELECT COUNT(DISTINCT hi.associado_id) 
-             FROM Historico_Indicacoes hi 
-             WHERE hi.indicador_id = i.id 
-             AND DATE(hi.data_indicacao) BETWEEN :di5 AND :df5
-            ) as qtd_total
+            COUNT(DISTINCT a.id) as qtd_total
             
-        FROM Indicadores i
-        WHERE i.ativo = 1
-        AND EXISTS (
-            SELECT 1 FROM Historico_Indicacoes hi2 
-            WHERE hi2.indicador_id = i.id 
-            AND DATE(hi2.data_indicacao) BETWEEN :di6 AND :df6
-        )
-        ORDER BY (SELECT COUNT(*) FROM Historico_Indicacoes hi3 WHERE hi3.indicador_id = i.id AND DATE(hi3.data_indicacao) BETWEEN :di7 AND :df7) DESC
+        FROM Associados a
+        INNER JOIN Contrato c ON a.id = c.associado_id
+        LEFT JOIN Historico_Indicacoes hi ON a.id = hi.associado_id
+        LEFT JOIN Indicadores i ON hi.indicador_id = i.id
+        -- Match do campo indicacao com a tabela Indicadores (busca por nome exato)
+        LEFT JOIN Indicadores i_match ON i.id IS NULL 
+            AND i_match.ativo = 1
+            AND i_match.nome_completo COLLATE utf8mb4_unicode_ci = TRIM(a.indicacao) COLLATE utf8mb4_unicode_ci
+        LEFT JOIN Servicos_Associado sa ON a.id = sa.associado_id AND sa.ativo = 1 AND sa.servico_id = 1
+        WHERE DATE(c.dataFiliacao) BETWEEN :di1 AND :df1
+        GROUP BY 
+            COALESCE(i.id, i_match.id, 0),
+            COALESCE(i.nome_completo, hi.indicador_nome, i_match.nome_completo, NULLIF(TRIM(a.indicacao), ''), 'SEM INDICAÇÃO'),
+            COALESCE(i.patente, i_match.patente), 
+            COALESCE(i.corporacao, i_match.corporacao), 
+            COALESCE(i.pix_tipo, i_match.pix_tipo), 
+            COALESCE(i.pix_chave, i_match.pix_chave),
+            COALESCE(i.ativo, i_match.ativo, 1)
+        HAVING qtd_total > 0
+        ORDER BY qtd_total DESC
     ";
     
     $stmt = $db->prepare($sql);
     $stmt->execute([
-        ':di1' => $dataInicio, ':df1' => $dataFim,
-        ':di2' => $dataInicio, ':df2' => $dataFim,
-        ':di3' => $dataInicio, ':df3' => $dataFim,
-        ':di4' => $dataInicio, ':df4' => $dataFim,
-        ':di5' => $dataInicio, ':df5' => $dataFim,
-        ':di6' => $dataInicio, ':df6' => $dataFim,
-        ':di7' => $dataInicio, ':df7' => $dataFim
+        ':di1' => $dataInicio, ':df1' => $dataFim
     ]);
     $indicadores = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
@@ -913,10 +898,15 @@ try {
             'Aluno Oficial' => 'Al. Of.',
             'Aluno Soldado' => 'Al. Sd',
             'Primeiro Tenente' => '1º Ten',
+            'Primeiro-Tenente' => '1º Ten',
             'Segundo Tenente' => '2º Ten',
+            'Segundo-Tenente' => '2º Ten',
             'Primeiro Sargento' => '1º Sgt',
+            'Primeiro-Sargento' => '1º Sgt',
             'Segundo Sargento' => '2º Sgt',
+            'Segundo-Sargento' => '2º Sgt',
             'Terceiro Sargento' => '3º Sgt',
+            'Terceiro-Sargento' => '3º Sgt',
             'Soldado 1ª Classe' => 'Sd 1ª Cl',
             'Soldado 2ª Classe' => 'Sd 2ª Cl',
             'Soldado' => 'Sd',
