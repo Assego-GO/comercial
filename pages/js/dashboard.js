@@ -5364,24 +5364,59 @@ function calcularServicosModal() {
     const valorBaseSocial = 181.46;
     const valorBaseJuridico = 45.37;
     
-    // Mapeamento de percentuais por tipo
-    const percentuaisPorTipo = {
+    // Mapeamento de percentuais do SOCIAL por tipo
+    const percentuaisSocialPorTipo = {
         'Contribuinte': 100,
         'Aluno': 50,
-        'Soldado 1ª Classe': 50,
+        'Soldado 1ª Classe': 100,
         'Soldado 2ª Classe': 50,
+        'Agregado': 50,
         'Agregado (Sem serviço jurídico)': 50,
         'Remido 50%': 50,
-        'Remido': 50,
-        'Benemérito (Sem serviço jurídico)': 0
+        'Remido': 0,           // Remido = 0% em tudo
+        'Benemérito': 0,       // Benemérito = 0% em tudo
+        'Benemérito (Sem serviço jurídico)': 0,
+        'Benemerito': 0,
+        'Benemerito (Sem serviço juridico)': 0,
+        'Pensionista': 100,
+        'Reserva': 100,
+        'Ativa': 100,
+        'Titular': 100,
+        'Afastado': 100
     };
     
-    const percentual = percentuaisPorTipo[tipoSelecionado] || 100;
+    // Tipos que NÃO têm direito ao serviço jurídico (apenas Agregado)
+    const tiposSemJuridico = [
+        'Agregado', 
+        'Agregado (Sem serviço jurídico)'
+    ];
     
-    // Verifica se permite serviço jurídico
-    const semJuridico = tipoSelecionado.includes('Sem serviço jurídico');
+    // Mapeamento de percentuais do JURÍDICO por tipo
+    const percentuaisJuridicoPorTipo = {
+        'Contribuinte': 100,
+        'Aluno': 100,
+        'Soldado 1ª Classe': 100,
+        'Soldado 2ª Classe': 100,
+        'Agregado': 0,
+        'Agregado (Sem serviço jurídico)': 0,
+        'Remido 50%': 50,
+        'Remido': 0,
+        'Benemérito': 0,
+        'Benemérito (Sem serviço jurídico)': 0,
+        'Benemerito': 0,
+        'Benemerito (Sem serviço juridico)': 0,
+        'Pensionista': 100,
+        'Reserva': 100,
+        'Ativa': 100,
+        'Titular': 100,
+        'Afastado': 100
+    };
     
-    // Desabilita jurídico se não permitido
+    const percentualSocial = percentuaisSocialPorTipo[tipoSelecionado] ?? 100;
+    const percentualJuridico = percentuaisJuridicoPorTipo[tipoSelecionado] ?? 100;
+    const semJuridico = tiposSemJuridico.some(t => tipoSelecionado.toLowerCase().includes(t.toLowerCase()));
+    
+    // Desabilita jurídico se não permitido (apenas para Agregado)
     if (checkJuridico) {
         checkJuridico.disabled = semJuridico;
         if (semJuridico) {
@@ -5390,25 +5425,25 @@ function calcularServicosModal() {
     }
     
     // Calcula valores
-    const valorSocial = (valorBaseSocial * percentual / 100);
-    const valorJuridico = (checkJuridico && checkJuridico.checked && !semJuridico) ? (valorBaseJuridico * percentual / 100) : 0;
+    const valorSocial = (valorBaseSocial * percentualSocial / 100);
+    const valorJuridico = (checkJuridico && checkJuridico.checked && !semJuridico) ? (valorBaseJuridico * percentualJuridico / 100) : 0;
     const valorTotal = valorSocial + valorJuridico;
-    const servicosAtivos = (valorJuridico > 0 ? 2 : 1);
+    const servicosAtivos = (checkJuridico && checkJuridico.checked && !semJuridico ? 2 : 1);
     
     // Atualiza displays
     document.getElementById('displayValorSocial').textContent = valorSocial.toFixed(2);
-    document.getElementById('displayPercentualSocial').textContent = percentual;
+    document.getElementById('displayPercentualSocial').textContent = percentualSocial;
     document.getElementById('displayValorJuridico').textContent = valorJuridico.toFixed(2);
-    document.getElementById('displayPercentualJuridico').textContent = percentual;
+    document.getElementById('displayPercentualJuridico').textContent = semJuridico ? 0 : percentualJuridico;
     document.getElementById('displayTotalCalculado').textContent = valorTotal.toFixed(2);
     document.getElementById('displayValorTotal').textContent = `R$ ${valorTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
     document.getElementById('displayServicosAtivos').textContent = servicosAtivos;
     
     // Atualiza campos hidden
     document.getElementById('edit_valorSocial').value = valorSocial.toFixed(2);
-    document.getElementById('edit_percentualAplicadoSocial').value = percentual;
+    document.getElementById('edit_percentualAplicadoSocial').value = percentualSocial;
     document.getElementById('edit_valorJuridico').value = valorJuridico.toFixed(2);
-    document.getElementById('edit_percentualAplicadoJuridico').value = percentual;
+    document.getElementById('edit_percentualAplicadoJuridico').value = semJuridico ? 0 : percentualJuridico;
     
     // Atualiza opacidade do container jurídico
     const containerJuridico = document.getElementById('servicoJuridicoContainer');

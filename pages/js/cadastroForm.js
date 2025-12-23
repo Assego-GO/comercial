@@ -768,9 +768,18 @@ function controlarServicoJuridico() {
     const infoTipoAssociado = document.getElementById('infoTipoAssociado');
     const textoInfoTipo = document.getElementById('textoInfoTipo');
     
-    const tiposSemJuridico = ['Benemérito', 'Benemerito', 'Agregado'];
+    // Tipos que NÃO têm direito ao serviço jurídico (apenas Agregado)
+    const tiposSemJuridico = [
+        'Agregado',
+        'Agregado (Sem serviço jurídico)'
+    ];
     
-    if (tiposSemJuridico.includes(tipoAssociado)) {
+    // Verifica se o tipo selecionado está na lista de sem jurídico
+    const semJuridico = tiposSemJuridico.some(t => 
+        tipoAssociado && tipoAssociado.toLowerCase().includes(t.toLowerCase())
+    );
+    
+    if (semJuridico) {
         console.log('❌ Tipo não tem direito ao serviço jurídico');
         
         if (servicoJuridicoCheckbox) {
@@ -941,9 +950,12 @@ function preencherSelectTiposAssociado() {
         const option = document.createElement('option');
         option.value = tipo;
         
-        const tiposSemJuridico = ['Benemérito', 'Benemerito', 'Agregado'];
-        if (tiposSemJuridico.includes(tipo)) {
-            option.textContent = `${tipo} (Sem serviço jurídico)`;
+        // Tipos que não têm direito ao serviço jurídico (apenas Agregado)
+        const tiposSemJuridico = ['Agregado'];
+        const semJuridico = tiposSemJuridico.some(t => tipo.toLowerCase().includes(t.toLowerCase()));
+        
+        if (semJuridico) {
+            option.textContent = tipo.includes('(Sem serviço jurídico)') ? tipo : `${tipo} (Sem serviço jurídico)`;
             option.setAttribute('data-restricao', 'sem-juridico');
             option.style.background = '#fff3cd';
             option.style.color = '#856404';
@@ -971,10 +983,28 @@ function useHardcodedData() {
         { tipo_associado: "Aluno", servico_id: "1", percentual_valor: "50.00" },
         { tipo_associado: "Aluno", servico_id: "2", percentual_valor: "100.00" },
         { tipo_associado: "Agregado", servico_id: "1", percentual_valor: "50.00" },
-        { tipo_associado: "Agregado", servico_id: "2", percentual_valor: "0.00" }
+        { tipo_associado: "Agregado", servico_id: "2", percentual_valor: "0.00" },
+        { tipo_associado: "Agregado (Sem serviço jurídico)", servico_id: "1", percentual_valor: "50.00" },
+        { tipo_associado: "Agregado (Sem serviço jurídico)", servico_id: "2", percentual_valor: "0.00" },
+        { tipo_associado: "Remido", servico_id: "1", percentual_valor: "0.00" },
+        { tipo_associado: "Remido", servico_id: "2", percentual_valor: "0.00" },
+        { tipo_associado: "Remido 50%", servico_id: "1", percentual_valor: "50.00" },
+        { tipo_associado: "Remido 50%", servico_id: "2", percentual_valor: "50.00" },
+        { tipo_associado: "Benemerito", servico_id: "1", percentual_valor: "0.00" },
+        { tipo_associado: "Benemerito", servico_id: "2", percentual_valor: "0.00" },
+        { tipo_associado: "Benemérito", servico_id: "1", percentual_valor: "0.00" },
+        { tipo_associado: "Benemérito", servico_id: "2", percentual_valor: "0.00" },
+        { tipo_associado: "Benemérito (Sem serviço jurídico)", servico_id: "1", percentual_valor: "0.00" },
+        { tipo_associado: "Benemérito (Sem serviço jurídico)", servico_id: "2", percentual_valor: "0.00" },
+        { tipo_associado: "Soldado 1ª Classe", servico_id: "1", percentual_valor: "100.00" },
+        { tipo_associado: "Soldado 1ª Classe", servico_id: "2", percentual_valor: "100.00" },
+        { tipo_associado: "Soldado 2ª Classe", servico_id: "1", percentual_valor: "50.00" },
+        { tipo_associado: "Soldado 2ª Classe", servico_id: "2", percentual_valor: "100.00" },
+        { tipo_associado: "Pensionista", servico_id: "1", percentual_valor: "100.00" },
+        { tipo_associado: "Pensionista", servico_id: "2", percentual_valor: "100.00" }
     ];
 
-    tiposAssociadoData = ["Contribuinte", "Aluno", "Agregado", "Remido", "Benemerito"];
+    tiposAssociadoData = ["Contribuinte", "Aluno", "Agregado", "Remido", "Remido 50%", "Benemerito", "Benemérito", "Soldado 1ª Classe", "Soldado 2ª Classe", "Pensionista"];
     dadosCarregados = true;
 }
 
