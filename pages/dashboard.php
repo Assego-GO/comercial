@@ -514,6 +514,7 @@ $headerComponent = HeaderComponent::create([
                             <option value="" selected>Todos</option>
                             <option value="Filiado">Filiado</option>
                             <option value="PreCadastro">Pré-cadastro</option>
+                            <option value="Isento">Isento</option>
                             <option value="Desfiliado">Desfiliado</option>
                             <option value="Falecido">Falecido</option>
                         </select>

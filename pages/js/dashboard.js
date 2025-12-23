@@ -568,6 +568,8 @@ function renderizarTabela(dados) {
             situacaoBadge = '<span class="status-badge active"><i class="fas fa-check-circle"></i> Filiado</span>';
         } else if (situacaoNormalizada === 'falecido') {
             situacaoBadge = '<span class="status-badge deceased"><i class="fas fa-cross"></i> Falecido</span>';
+        } else if (situacaoNormalizada === 'isento') {
+            situacaoBadge = '<span class="status-badge" style="background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%); color: white;"><i class="fas fa-user-shield"></i> Isento</span>';
         } else {
             situacaoBadge = '<span class="status-badge inactive"><i class="fas fa-times-circle"></i> Desfiliado</span>';
         }
@@ -1227,6 +1229,13 @@ function atualizarHeaderModal(associado) {
                 </div>
             `;
         }
+    } else if (situacaoNormalizada === 'isento') {
+        statusPill.innerHTML = `
+            <div class="status-pill" style="background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%); color: white;">
+                <i class="fas fa-user-shield"></i>
+                Isento
+            </div>
+        `;
     } else {
         statusPill.innerHTML = `
             <div class="status-pill inactive">
@@ -4812,6 +4821,7 @@ function preencherTabVisaoGeralEditavel(associado) {
                             <option value="Filiado" ${associado.situacao === 'Filiado' ? 'selected' : ''}>Filiado</option>
                             <option value="Desfiliado" ${associado.situacao === 'Desfiliado' ? 'selected' : ''}>Desfiliado</option>
                             <option value="Falecido" ${associado.situacao === 'Falecido' ? 'selected' : ''}>Falecido</option>
+                            <option value="Isento" ${associado.situacao === 'Isento' ? 'selected' : ''} style="background-color: #fff3cd; color: #856404;">Isento</option>
                         </select>
                     </div>
                     <div class="overview-item">
