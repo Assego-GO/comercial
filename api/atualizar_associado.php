@@ -600,11 +600,12 @@ error_log("=== FIM PROCESSAMENTO DOCUMENTO ===");
             }
 
             // SERVIÇO JURÍDICO (ID = 2) - OPCIONAL
+            // Benemérito e Remido podem ter jurídico com valor 0
             $servicoJuridicoMarcado = !empty($_POST['servicoJuridico']);
             $valorJuridicoStr = trim($_POST['valorJuridico'] ?? '0');
             $valorJuridico = floatval($valorJuridicoStr);
 
-            if ($servicoJuridicoMarcado && $valorJuridico > 0) {
+            if ($servicoJuridicoMarcado) {
                 $novosServicos[2] = [
                     'tipo_associado' => $tipoAssociadoServico,
                     'valor_aplicado' => $valorJuridico,

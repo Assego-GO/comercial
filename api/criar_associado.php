@@ -406,9 +406,8 @@ try {
             error_log("✓ Serviço Social salvo");
         }
 
-        // Serviço Jurídico
-        if (isset($_POST['servicoJuridico']) && $_POST['servicoJuridico'] && 
-            isset($_POST['valorJuridico']) && floatval($_POST['valorJuridico']) > 0) {
+        // Serviço Jurídico - Benemérito e Remido podem ter com valor 0
+        if (isset($_POST['servicoJuridico']) && $_POST['servicoJuridico']) {
             
             $stmt = $db->prepare("
                 INSERT INTO Servicos_Associado (
@@ -417,7 +416,7 @@ try {
                 ) VALUES (?, 2, ?, 1, NOW(), ?, ?, ?)
             ");
             
-            $valorJuridico = floatval($_POST['valorJuridico']);
+            $valorJuridico = floatval($_POST['valorJuridico'] ?? 0);
             $percentualJuridico = floatval($_POST['percentualAplicadoJuridico'] ?? 100);
             
             $stmt->execute([

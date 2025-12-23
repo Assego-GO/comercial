@@ -5132,11 +5132,10 @@ function preencherTabFinanceiroEditavel(associado) {
     const situacaoFinAtual = associado.situacaoFinanceira || associado.situacao_financeira || '';
     const localDebitoAtual = associado.localDebito || associado.local_debito || '';
     
-    // Verificar se é agregado ou benemérito (sem serviço jurídico)
+    // Verificar se é agregado (único tipo sem direito ao serviço jurídico)
     const categoriaLower = categoriaAtual.toLowerCase().trim();
     const isAgregado = categoriaLower === 'agregado';
-    const isBenemerito = categoriaLower === 'benemérito';
-    const semJuridico = isAgregado || isBenemerito || tipoServicoAtual.includes('Sem serviço jurídico');
+    const semJuridico = isAgregado || tipoServicoAtual.toLowerCase().includes('agregado');
     
     // Adicionar valores atuais se não estiverem na lista
     let categoriasOptions = [...categoriasAssociado];
@@ -5436,9 +5435,9 @@ function calcularServicosModal() {
     
     // Calcula valores
     const valorSocial = (valorBaseSocial * percentualSocial / 100);
-    const valorJuridico = (checkJuridico && checkJuridico.checked && !semJuridico) ? (valorBaseJuridico * percentualJuridico / 100) : 0;
+    const valorJuridico = (checkJuridico && checkJuridico.checked) ? (valorBaseJuridico * percentualJuridico / 100) : 0;
     const valorTotal = valorSocial + valorJuridico;
-    const servicosAtivos = (checkJuridico && checkJuridico.checked && !semJuridico ? 2 : 1);
+    const servicosAtivos = (checkJuridico && checkJuridico.checked ? 2 : 1);
     
     // Atualiza displays
     document.getElementById('displayValorSocial').textContent = valorSocial.toFixed(2);
